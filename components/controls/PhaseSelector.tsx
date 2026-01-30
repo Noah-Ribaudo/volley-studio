@@ -2,7 +2,7 @@
 
 import { Button } from '@/components/ui/button'
 import { Phase, RALLY_PHASES } from '@/lib/types'
-import type { RallyPhase } from '@/lib/sim/types'
+import type { RallyPhase } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { Eye, EyeOff } from 'lucide-react'
 import { getPhaseInfo, getPhaseIcon, isRallyPhase as checkIsRallyPhase } from '@/lib/phaseIcons'

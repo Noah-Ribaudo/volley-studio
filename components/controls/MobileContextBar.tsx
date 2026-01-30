@@ -3,7 +3,7 @@
 import { useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Phase, PHASES, RALLY_PHASES, Rotation, ROTATIONS } from '@/lib/types'
-import type { RallyPhase } from '@/lib/sim/types'
+import type { RallyPhase } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { getPhaseInfo, getCompactPhaseIcon, isRallyPhase as checkIsRallyPhase } from '@/lib/phaseIcons'
 import { ArrowLeft01Icon, ArrowRight01Icon, ArrowDown01Icon } from "@hugeicons/core-free-icons"

@@ -13,7 +13,6 @@ export default function VolleyballLayout({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
-  const playbackMode = useAppStore((state) => state.playbackMode)
   const currentRotation = useAppStore((state) => state.currentRotation)
   const currentPhase = useAppStore((state) => state.currentPhase)
   const visiblePhases = useAppStore((state) => state.visiblePhases)
@@ -28,25 +27,15 @@ export default function VolleyballLayout({
   }
 
   // Determine if we should show the contextual bar (phase carousel + rotation)
-  // Only show on whiteboard page in edit/paused mode
+  // Only show on whiteboard page
   const isWhiteboardPage = pathname === '/volleyball'
-  const isLiveMode = playbackMode === 'live'
-  const showContextBar = isWhiteboardPage && !isLiveMode
-
-  // Calculate bottom padding:
-  // - Bottom nav: h-14 (56px) + safe area
-  // - Context bar (if shown): h-12 (48px) positioned above nav
-  // - When context bar shows: extra ~3rem for the bar
-  const reducedPadding = isWhiteboardPage && isLiveMode
+  const showContextBar = isWhiteboardPage
 
   // Different padding based on what's visible:
-  // - Live mode on whiteboard: just safe area (nav is hidden)
   // - Whiteboard with context bar: nav + context bar = ~6.5rem
   // - Other pages: just nav = ~3.5rem
   let paddingClass = '[padding-bottom:calc(3.5rem+env(safe-area-inset-bottom,0px))]'
-  if (reducedPadding) {
-    paddingClass = '[padding-bottom:env(safe-area-inset-bottom,0px)]'
-  } else if (showContextBar) {
+  if (showContextBar) {
     paddingClass = '[padding-bottom:calc(6.5rem+env(safe-area-inset-bottom,0px))]'
   }
 
@@ -69,7 +58,7 @@ export default function VolleyballLayout({
         >
           {children}
         </main>
-        {/* Mobile contextual bar (phase/rotation) - only on whiteboard in edit mode */}
+        {/* Mobile contextual bar (phase/rotation) - only on whiteboard */}
         {showContextBar && (
           <MobileContextBar
             currentRotation={currentRotation}

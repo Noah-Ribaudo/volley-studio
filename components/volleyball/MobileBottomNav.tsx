@@ -48,18 +48,8 @@ const navItems = [
 
 export function MobileBottomNav() {
   const pathname = usePathname()
-  const playbackMode = useAppStore((state) => state.playbackMode)
   const currentTeam = useAppStore((state) => state.currentTeam)
   const showLearnTab = useAppStore((state) => state.showLearnTab)
-
-  // Hide during live playback mode on the main whiteboard page
-  // This prevents double nav bars (MobilePlaybackBar handles controls in live mode)
-  const isWhiteboardPage = pathname === '/volleyball'
-  const isLiveMode = playbackMode === 'live'
-
-  if (isWhiteboardPage && isLiveMode) {
-    return null
-  }
 
   const hasTeam = Boolean(currentTeam)
 

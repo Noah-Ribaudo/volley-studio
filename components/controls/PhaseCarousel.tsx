@@ -3,7 +3,7 @@
 import { useRef, useEffect, useCallback, useState, useLayoutEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Phase, RALLY_PHASES } from '@/lib/types'
-import type { RallyPhase } from '@/lib/sim/types'
+import type { RallyPhase } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { getPhaseInfo, getCompactPhaseIcon } from '@/lib/phaseIcons'
 

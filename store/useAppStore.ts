@@ -47,24 +47,7 @@ export interface TeamConflictInfo {
   // The pending save data that triggered the conflict
   pendingData: Partial<Team>
 }
-import type { RallyPhase, VerbosityPreset, TeamSide, PlaybackMode, Game, Rally, WorldSnapshot } from '@/lib/sim/types'
-import type { ContactRecord } from '@/lib/sim/fsm'
-
-// Rally end info - captured when rally ends, cleared when user dismisses
-export interface RallyEndInfo {
-  reason: string
-  winner: "HOME" | "AWAY"
-  lastContact: ContactRecord | null
-  possessionChain: ContactRecord[]
-  homeScore: number
-  awayScore: number
-  frozenPositions: PositionCoordinates
-  frozenAwayPositions: PositionCoordinates
-}
-import { createGame, createRally } from '@/lib/sim/types'
-import { generateUUID } from '@/lib/utils'
-import type { WorldState } from '@/lib/sim/world'
-import { syncWhiteboardToWorld, playersToWhiteboardPositions } from '@/lib/sim/sync'
+import type { RallyPhase } from '@/lib/types'
 import {
   createRotationPhaseKey,
   DEFAULT_BASE_ORDER,
@@ -72,9 +55,8 @@ import {
   getRoleZone
 } from '@/lib/rotations'
 import { ROLES, COURT_ZONES } from '@/lib/types'
-import { getWhiteboardPositions, getAutoArrows } from '@/lib/sim/whiteboard'
+import { getWhiteboardPositions, getAutoArrows } from '@/lib/whiteboard'
 import { getNextPhaseInFlow, getPrevPhaseInFlow } from '@/lib/phaseFlow'
-import type { NormalizedPosition } from '@/lib/model/types'
 import type { LearningProgress, LearningPanelPosition } from '@/lib/learning/types'
 
 // Internal storage uses normalized coordinates (0-1)
@@ -131,10 +113,6 @@ interface AppState {
   showRotationRules: boolean
   baseOrder: Role[]
 
-  // NOTE: isPaused was removed - use playbackMode instead
-  // playbackMode === 'paused' = whiteboard mode
-  // playbackMode === 'live' = simulation mode
-
   // Phase visibility
   visiblePhases: Set<RallyPhase>
   phaseOrder: RallyPhase[] // Custom order for whiteboard phases
@@ -150,23 +128,6 @@ interface AppState {
   fullStatusLabels: boolean // Show full words on status badges instead of first letter (default: true)
   showLearnTab: boolean // Show the Learn tab in mobile navigation (default: false)
   debugHitboxes: boolean // Show touch target hitboxes with green highlight (default: false)
-
-  // Thought verbosity (Phase 4.5) - controls which thoughts are visible
-  thoughtVerbosity: VerbosityPreset
-
-  // Unified WorldState (Phase 5) - single source of truth for simulation
-  // null when no simulation is active
-  worldState: WorldState | null
-
-  // Whiteboard influence on simulation (0-1)
-  // 0 = AI fully autonomous, 1 = AI follows whiteboard positions exactly
-  whiteboardInfluence: number
-
-  // Game & Rally History (Phase 6)
-  game: Game | null              // Current game with all rallies
-  playbackMode: PlaybackMode     // Current playback state
-  replayRallyIndex: number | null // Index of rally being replayed (null = live)
-  rallyEndInfo: RallyEndInfo | null // Captured when rally ends, cleared on dismiss
 
   // Practice mode (local storage) - stored in normalized coordinates (0-1)
   localPositions: Record<string, NormalizedPositionCoordinates>
@@ -248,26 +209,6 @@ interface AppState {
   // Attack ball actions (for whiteboard defense phase)
   setAttackBallPosition: (rotation: Rotation, phase: Phase, position: Position) => void
   clearAttackBallPosition: (rotation: Rotation, phase: Phase) => void
-  // Thought verbosity action (Phase 4.5)
-  setThoughtVerbosity: (preset: VerbosityPreset) => void
-  // WorldState actions (Phase 5)
-  setWorldState: (world: WorldState | null) => void
-  updateWorldState: (updater: (world: WorldState) => WorldState) => void
-  setWhiteboardInfluence: (influence: number) => void
-  // Sync actions - convert between whiteboard and simulation state
-  initWorldFromWhiteboard: (serving?: TeamSide) => WorldState
-  syncWhiteboardFromWorld: () => void
-  // Game & Rally actions (Phase 6)
-  startNewGame: () => Game
-  startNewRally: () => Rally | null
-  endCurrentRally: (winner: TeamSide, reason: string) => void
-  addRallySnapshot: (trigger: WorldSnapshot['trigger']) => void
-  setPlaybackMode: (mode: PlaybackMode) => void
-  selectReplayRally: (index: number | null) => void
-  returnToLive: () => void
-  // Rally end info actions
-  setRallyEndInfo: (info: RallyEndInfo) => void
-  clearRallyEndInfo: () => void
 
   // Learning mode actions
   setLearningMode: (active: boolean) => void
@@ -473,13 +414,6 @@ export const useAppStore = create<AppState>()(
       fullStatusLabels: true, // Default to showing full words on status badges
       showLearnTab: false, // Default to hiding Learn tab in mobile nav
       debugHitboxes: false, // Default to hiding hitbox debug overlay
-      thoughtVerbosity: 'standard' as VerbosityPreset, // Default to standard verbosity
-      worldState: null, // No active simulation by default
-      whiteboardInfluence: 0.3, // Default: AI has autonomy but considers whiteboard
-      game: null, // No game until started
-      playbackMode: 'paused' as PlaybackMode, // Start in whiteboard mode
-      replayRallyIndex: null, // Not replaying
-      rallyEndInfo: null, // No rally end info until rally ends
       localPositions: {},
       localArrows: {},
       arrowCurves: {},
@@ -906,252 +840,6 @@ export const useAppStore = create<AppState>()(
         }
       }),
 
-      // Thought verbosity action (Phase 4.5)
-      setThoughtVerbosity: (preset) => set({ thoughtVerbosity: preset }),
-
-      // WorldState actions (Phase 5)
-      setWorldState: (world) => set({ worldState: world }),
-
-      updateWorldState: (updater) => set((state) => {
-        if (!state.worldState) return {}
-        return { worldState: updater(state.worldState) }
-      }),
-
-      setWhiteboardInfluence: (influence) => set({
-        whiteboardInfluence: Math.max(0, Math.min(1, influence))
-      }),
-
-      // Initialize WorldState from current whiteboard positions
-      initWorldFromWhiteboard: (serving = 'HOME') => {
-        const state = get()
-        const homePositions = getCurrentPositions(
-          state.currentRotation,
-          state.currentPhase,
-          state.localPositions,
-          state.customLayouts,
-          state.currentTeam,
-          state.isReceivingContext,
-          state.baseOrder,
-          state.showLibero
-        )
-
-        // Create away positions (mirrored for now)
-        const awayPositions = null // Will use mirroring in syncWhiteboardToWorld
-
-        const world = syncWhiteboardToWorld(
-          homePositions,
-          awayPositions,
-          state.currentRotation,
-          serving as TeamSide
-        )
-
-        set({ worldState: world })
-        return world
-      },
-
-      // Update whiteboard from current simulation state
-      syncWhiteboardFromWorld: () => {
-        const state = get()
-        if (!state.worldState) return
-
-        const homePositions = playersToWhiteboardPositions(
-          state.worldState.players,
-          'HOME'
-        )
-
-        const key = createRotationPhaseKey(
-          state.currentRotation,
-          state.currentPhase
-        )
-
-        set({
-          localPositions: {
-            ...state.localPositions,
-            [key]: homePositions
-          }
-        })
-      },
-
-      // Game & Rally actions (Phase 6)
-      startNewGame: () => {
-        const state = get()
-        const game = createGame({
-          homeRotation: state.currentRotation,
-          awayRotation: state.currentRotation,
-          serving: 'HOME',
-        })
-        set({ game, playbackMode: 'paused', replayRallyIndex: null })
-        return game
-      },
-
-      startNewRally: () => {
-        const state = get()
-        if (!state.game) return null
-        if (!state.worldState) return null
-
-        const rally = createRally({
-          id: generateUUID(),
-          index: state.game.rallies.length + 1,
-          startTick: state.worldState.tick,
-          homeRotation: state.game.homeRotation,
-          awayRotation: state.game.awayRotation,
-          serving: state.game.serving,
-        })
-
-        // Add initial snapshot
-        const snapshot: WorldSnapshot = {
-          tick: state.worldState.tick,
-          timeMs: state.worldState.timeMs,
-          worldStateJson: JSON.stringify(state.worldState),
-          trigger: 'rally_start',
-        }
-        rally.snapshots.push(snapshot)
-
-        set({
-          game: {
-            ...state.game,
-            rallies: [...state.game.rallies, rally],
-            currentRallyIndex: state.game.rallies.length,
-          },
-          playbackMode: 'live',
-        })
-        return rally
-      },
-
-      endCurrentRally: (winner, reason) => {
-        const state = get()
-        if (!state.game) return
-        if (!state.worldState) return
-
-        const currentRally = state.game.rallies[state.game.currentRallyIndex]
-        if (!currentRally) return
-
-        // Add final snapshot
-        const snapshot: WorldSnapshot = {
-          tick: state.worldState.tick,
-          timeMs: state.worldState.timeMs,
-          worldStateJson: JSON.stringify(state.worldState),
-          trigger: 'rally_end',
-        }
-
-        const updatedRally: Rally = {
-          ...currentRally,
-          endTick: state.worldState.tick,
-          winner,
-          reason: reason as Rally['reason'],
-          snapshots: [...currentRally.snapshots, snapshot],
-        }
-
-        // Update score
-        const homeScore = state.game.homeScore + (winner === 'HOME' ? 1 : 0)
-        const awayScore = state.game.awayScore + (winner === 'AWAY' ? 1 : 0)
-
-        // Rotate if receiving team won (sideout)
-        let newServing = state.game.serving
-        let newHomeRotation = state.game.homeRotation
-        let newAwayRotation = state.game.awayRotation
-
-        if (winner !== state.game.serving) {
-          // Sideout - receiving team won, they rotate and now serve
-          newServing = winner
-          if (winner === 'HOME') {
-            newHomeRotation = ((state.game.homeRotation % 6) + 1) as Rotation
-          } else {
-            newAwayRotation = ((state.game.awayRotation % 6) + 1) as Rotation
-          }
-        }
-
-        const updatedRallies = [...state.game.rallies]
-        updatedRallies[state.game.currentRallyIndex] = updatedRally
-
-        set({
-          game: {
-            ...state.game,
-            rallies: updatedRallies,
-            homeScore,
-            awayScore,
-            homeRotation: newHomeRotation,
-            awayRotation: newAwayRotation,
-            serving: newServing,
-          },
-          playbackMode: 'paused', // Pause after rally ends
-          currentRotation: newServing === 'HOME' ? newHomeRotation : state.currentRotation,
-        })
-      },
-
-      addRallySnapshot: (trigger) => {
-        const state = get()
-        if (!state.game) return
-        if (!state.worldState) return
-
-        const currentRally = state.game.rallies[state.game.currentRallyIndex]
-        if (!currentRally) return
-
-        const snapshot: WorldSnapshot = {
-          tick: state.worldState.tick,
-          timeMs: state.worldState.timeMs,
-          worldStateJson: JSON.stringify(state.worldState),
-          trigger,
-        }
-
-        const updatedRally: Rally = {
-          ...currentRally,
-          snapshots: [...currentRally.snapshots, snapshot],
-        }
-
-        const updatedRallies = [...state.game.rallies]
-        updatedRallies[state.game.currentRallyIndex] = updatedRally
-
-        set({
-          game: {
-            ...state.game,
-            rallies: updatedRallies,
-          },
-        })
-      },
-
-      setPlaybackMode: (mode) => set({ playbackMode: mode }),
-
-      selectReplayRally: (index) => {
-        const state = get()
-        if (!state.game) return
-        if (index === null) {
-          // Return to live
-          set({ replayRallyIndex: null, playbackMode: 'paused' })
-          return
-        }
-        if (index < 0 || index >= state.game.rallies.length) return
-
-        const rally = state.game.rallies[index]
-        if (!rally.snapshots.length) return
-
-        // Load the first snapshot of the rally
-        const snapshot = rally.snapshots[0]
-        const worldState = JSON.parse(snapshot.worldStateJson)
-
-        set({
-          replayRallyIndex: index,
-          playbackMode: 'replay_paused',
-          worldState,
-        })
-      },
-
-      returnToLive: () => {
-        const state = get()
-        set({
-          replayRallyIndex: null,
-          playbackMode: 'paused',
-        })
-        // Re-initialize world from whiteboard if needed
-        if (!state.worldState) {
-          get().initWorldFromWhiteboard()
-        }
-      },
-
-      // Rally end info actions
-      setRallyEndInfo: (info) => set({ rallyEndInfo: info }),
-      clearRallyEndInfo: () => set({ rallyEndInfo: null }),
-
       // Learning mode actions
       setLearningMode: (active) => set({ learningMode: active }),
 
@@ -1292,8 +980,6 @@ export const useAppStore = create<AppState>()(
           hideAwayTeam: state.hideAwayTeam,
           showLearnTab: state.showLearnTab,
           attackBallPositions: state.attackBallPositions,
-          thoughtVerbosity: state.thoughtVerbosity,
-          whiteboardInfluence: state.whiteboardInfluence,
           // Learning mode progress
           learningLessonId: state.learningLessonId,
           learningStepIndex: state.learningStepIndex,
@@ -1365,18 +1051,6 @@ export const useAppStore = create<AppState>()(
         if (state && state.localStatusFlags === undefined) {
           state.localStatusFlags = {}
         }
-        // Set default for thoughtVerbosity if missing
-        if (state && state.thoughtVerbosity === undefined) {
-          state.thoughtVerbosity = 'standard'
-        }
-        // Set default for whiteboardInfluence if missing
-        if (state && state.whiteboardInfluence === undefined) {
-          state.whiteboardInfluence = 0.3
-        }
-        // WorldState is transient - always null on rehydrate
-        if (state) {
-          state.worldState = null
-        }
         // Conflict state is transient - always clear on rehydrate
         if (state) {
           state.layoutLoadedTimestamps = {}
@@ -1384,9 +1058,6 @@ export const useAppStore = create<AppState>()(
           state.teamLoadedTimestamp = null
           state.teamConflict = null
         }
-        // NOTE: isPaused was removed - playbackMode is the source of truth
-        // playbackMode defaults to 'paused' in initial state
-
         // Learning mode - never start in learning mode on load
         if (state) {
           state.learningMode = false

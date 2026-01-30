@@ -14,8 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { ROLES, ROLE_INFO, RALLY_PHASE_INFO } from '@/lib/types'
-import type { RallyPhase, VerbosityPreset } from '@/lib/sim/types'
+import { ROLES, ROLE_INFO, RALLY_PHASE_INFO, RallyPhase } from '@/lib/types'
 import type { LearningPanelPosition } from '@/lib/learning/types'
 import { cn, getTextColorForOklch } from '@/lib/utils'
 import ThemePicker from '@/components/ThemePicker'
@@ -41,8 +40,6 @@ import { CSS } from '@dnd-kit/utilities'
 
 export default function SettingsPage() {
   const {
-    // Playback state
-    playbackMode,
     // Display toggles
     showPosition,
     showPlayer,
@@ -61,9 +58,6 @@ export default function SettingsPage() {
     // Role highlight
     highlightedRole,
     setHighlightedRole,
-    // AI settings
-    thoughtVerbosity,
-    setThoughtVerbosity,
     // Phase visibility and order
     visiblePhases,
     togglePhaseVisibility,
@@ -105,9 +99,6 @@ export default function SettingsPage() {
   }
 
   const hasTeam = Boolean(currentTeam)
-  const isLiveMode = playbackMode === 'live'
-  const isPausedMode = playbackMode === 'paused'
-  const isReplayMode = playbackMode === 'replay' || playbackMode === 'replay_paused'
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
@@ -322,38 +313,6 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* AI & Simulation */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">AI & Simulation</CardTitle>
-            <CardDescription>Configure AI behavior during simulation</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="verbosity" className="text-sm font-medium">
-                Thought Verbosity
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                Control how much detail the AI shares about its decisions
-              </p>
-              <Select
-                value={thoughtVerbosity}
-                onValueChange={(val) => setThoughtVerbosity(val as VerbosityPreset)}
-              >
-                <SelectTrigger id="verbosity" className="mt-2">
-                  <SelectValue placeholder="Select verbosity" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="beginner">Beginner (Essential only)</SelectItem>
-                  <SelectItem value="standard">Standard</SelectItem>
-                  <SelectItem value="expert">Expert (Detailed)</SelectItem>
-                  <SelectItem value="debug">Debug (All)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Learning */}
         <Card>
           <CardHeader>
@@ -382,28 +341,6 @@ export default function SettingsPage() {
                   <SelectItem value="inline">Inline (bottom bar)</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Current Mode Info */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Current Mode</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-3">
-              <div
-                className={cn(
-                  'w-3 h-3 rounded-full',
-                  isLiveMode && 'bg-green-500 animate-pulse',
-                  isPausedMode && 'bg-yellow-500',
-                  isReplayMode && 'bg-blue-500'
-                )}
-              />
-              <span className="text-sm font-medium capitalize">
-                {playbackMode.replace('_', ' ')}
-              </span>
             </div>
           </CardContent>
         </Card>

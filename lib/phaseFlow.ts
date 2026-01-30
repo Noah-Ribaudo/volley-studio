@@ -1,7 +1,7 @@
 // Phase Flow Utilities
 // Single source of truth for rally phase progression logic
 
-import type { RallyPhase } from '@/lib/sim/types'
+import type { RallyPhase } from '@/lib/types'
 
 /**
  * Phase flow mapping: what comes after each phase in the rally cycle

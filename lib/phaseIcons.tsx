@@ -1,7 +1,7 @@
 // Phase Icons and Utilities
 // Shared resources for all phase-related components
 
-import type { RallyPhase } from '@/lib/sim/types'
+import type { RallyPhase } from '@/lib/types'
 import { RALLY_PHASES, RALLY_PHASE_INFO, PHASE_INFO, Phase } from '@/lib/types'
 
 // Icons for all RallyPhases - used across PhaseSelector, ControlRail, and PhaseControl

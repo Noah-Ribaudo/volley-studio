@@ -1,9 +1,20 @@
 // Core Types for 5-1 Volleyball Rotation App
 
 import type { FlagType } from './database.types'
-import type { RallyPhase } from './sim/types'
 
 export type Role = 'S' | 'OH1' | 'OH2' | 'MB1' | 'MB2' | 'OPP' | 'L'
+
+// Rally phases for the whiteboard
+export type RallyPhase =
+  | 'PRE_SERVE'
+  | 'SERVE_IN_AIR'
+  | 'SERVE_RECEIVE'
+  | 'TRANSITION_TO_OFFENSE'
+  | 'SET_PHASE'
+  | 'ATTACK_PHASE'
+  | 'TRANSITION_TO_DEFENSE'
+  | 'DEFENSE_PHASE'
+  | 'BALL_DEAD'
 
 /**
  * @deprecated Use RallyPhase instead. Legacy phase strings kept for backward compatibility.

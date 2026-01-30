@@ -4,24 +4,18 @@ import { useEffect, useState, useMemo, useRef, useCallback, useLayoutEffect, Sus
 import { useSearchParams } from 'next/navigation'
 import { useAppStore, getCurrentPositions, getCurrentArrows, getActiveLineupPositionSource } from '@/store/useAppStore'
 import { useAdminStore } from '@/store/useAdminStore'
-import { useSimulation } from '@/hooks/useSimulation'
 import { usePresets } from '@/hooks/usePresets'
 import { VolleyballCourt } from '@/components/court'
-import { PlaybackBar } from '@/components/controls'
 import { RosterManagementCard } from '@/components/roster'
 import { AdminUnlockDialog, AdminModeIndicator } from '@/components/admin'
-import { Role, ROLES, RALLY_PHASES, Position, PositionCoordinates, ROTATIONS, PositionAssignments, POSITION_SOURCE_INFO } from '@/lib/types'
+import { Role, ROLES, RALLY_PHASES, Position, PositionCoordinates, ROTATIONS, POSITION_SOURCE_INFO, RallyPhase } from '@/lib/types'
 import { getActiveAssignments } from '@/lib/lineups'
-import type { RallyPhase } from '@/lib/sim/types'
-import { getWhiteboardPositions } from '@/lib/sim/whiteboard'
+import { getWhiteboardPositions } from '@/lib/whiteboard'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
-import { Button } from '@/components/ui/button'
 import { LearningPanel } from '@/components/learning/LearningPanel'
 import { allLessons } from '@/lib/learning/allModules'
-import { createRotationPhaseKey, getBackRowMiddle } from '@/lib/rotations'
-import { getServerRole } from '@/lib/sim/rotation'
+import { createRotationPhaseKey, getBackRowMiddle, getRoleZone } from '@/lib/rotations'
 import { validateRotationLegality } from '@/lib/model/legality'
-import { toast } from 'sonner'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { useSwipeNavigation } from '@/hooks/useSwipeNavigation'
 import { useWhiteboardSync } from '@/hooks/useWhiteboardSync'
@@ -30,7 +24,7 @@ import { SwipeHint } from '@/components/mobile'
 import { ConflictResolutionModal } from '@/components/volleyball/ConflictResolutionModal'
 import { isAdminModeAvailable } from '@/lib/admin-auth'
 
-// Constants for court display (previously unused state)
+// Constants for court display
 const ANIMATION_MODE = 'css' as const
 const TOKEN_SCALES = { desktop: 1.5, mobile: 1.5 }
 const TOKEN_DIMENSIONS = { widthOffset: 0, heightOffset: 0 }
@@ -41,6 +35,17 @@ const ANIMATION_CONFIG = {
   collisionRadius: 0.12,
   separationStrength: 6,
   maxSeparation: 3,
+}
+
+// Helper to get server role from rotation
+function getServerRole(rotation: number, baseOrder: Role[]): Role {
+  // Zone 1 (back right) is where the server is
+  for (const role of baseOrder) {
+    if (getRoleZone(rotation as 1|2|3|4|5|6, role, baseOrder) === 1) {
+      return role
+    }
+  }
+  return 'S' // fallback
 }
 
 function HomePageContent() {
@@ -79,15 +84,7 @@ function HomePageContent() {
     attackBallPositions,
     setAttackBallPosition,
     clearAttackBallPosition,
-    // Unified playback controls (Phase 6)
-    playbackMode,
-    setPlaybackMode,
-    game,
-    startNewGame,
-    rallyEndInfo,
-    setRallyEndInfo,
-    clearRallyEndInfo,
-    // Context UI (Phase 1)
+    // Context UI
     contextPlayer,
     setContextPlayer,
     // Learning mode
@@ -147,7 +144,7 @@ function HomePageContent() {
     }
   }, [isAdminMode, currentTeam, currentLayoutJson, saveCurrentAsPreset])
 
-  // Swipe navigation for mobile - navigate between rotations
+  // Swipe navigation for mobile - navigate between phases
   const nextRotation = useCallback(() => {
     const idx = ROTATIONS.indexOf(currentRotation)
     setRotation(ROTATIONS[(idx + 1) % ROTATIONS.length])
@@ -158,11 +155,11 @@ function HomePageContent() {
     setRotation(ROTATIONS[(idx - 1 + ROTATIONS.length) % ROTATIONS.length])
   }, [currentRotation, setRotation])
 
-  // Swipe left/right to change rotations on mobile (only in edit mode)
+  // Swipe left/right to change phases on mobile
   const { swipeState, handlers: swipeHandlers } = useSwipeNavigation({
     onSwipeLeft: nextPhase,
     onSwipeRight: prevPhase,
-    enabled: isMobile && playbackMode === 'paused',
+    enabled: isMobile,
     threshold: 50,
   })
 
@@ -201,61 +198,6 @@ function HomePageContent() {
     window.addEventListener('resize', updateOffset)
     return () => window.removeEventListener('resize', updateOffset)
   }, [hideAwayTeam, awayTeamHidePercent])
-
-  // Simulation engine for Play mode
-  const isPlayMode = playbackMode === 'live'
-  const [simState, simControls] = useSimulation({
-    isRunning: isPlayMode,
-    showLibero,
-    onError: () => {
-      toast.error('Simulation encountered an error. Switching back to Edit mode.')
-      setPlaybackMode('paused')
-    },
-  })
-
-  // Capture rally end state when phase becomes BALL_DEAD (only once per rally)
-  const prevPhaseRef = useRef<RallyPhase | null>(null)
-  useEffect(() => {
-    // Clear rally end state when leaving play mode
-    if (!isPlayMode && rallyEndInfo) {
-      clearRallyEndInfo()
-      prevPhaseRef.current = null
-      return
-    }
-
-    // Only capture state when transitioning INTO BALL_DEAD phase
-    if (isPlayMode &&
-        simState.phase === "BALL_DEAD" &&
-        prevPhaseRef.current !== "BALL_DEAD" &&
-        simState.rallyEndReason &&
-        simState.rallyWinner) {
-      setRallyEndInfo({
-        reason: simState.rallyEndReason,
-        winner: simState.rallyWinner,
-        lastContact: simState.lastContact,
-        possessionChain: simState.possessionChain,
-        homeScore: simState.homeScore,
-        awayScore: simState.awayScore,
-        frozenPositions: simState.playerPositions,
-        frozenAwayPositions: simState.awayPlayerPositions,
-      })
-    }
-
-    prevPhaseRef.current = simState.phase
-  }, [isPlayMode, simState.phase, simState.rallyEndReason, simState.rallyWinner, simState.lastContact, simState.possessionChain, simState.homeScore, simState.awayScore, simState.playerPositions, simState.awayPlayerPositions, rallyEndInfo, clearRallyEndInfo, setRallyEndInfo])
-
-  // Handler to dismiss rally end banner and start next rally
-  const handleNextRally = useCallback(() => {
-    clearRallyEndInfo()
-    simControls.serve()
-  }, [simControls, clearRallyEndInfo])
-
-  // Handler to dismiss rally end banner and return to edit mode
-  const handleBackToEdit = useCallback(() => {
-    clearRallyEndInfo()
-    simControls.reset()
-    setPlaybackMode('paused')
-  }, [setPlaybackMode, clearRallyEndInfo, simControls])
 
   const [rosterSheetOpen, setRosterSheetOpen] = useState(false)
 
@@ -348,7 +290,6 @@ function HomePageContent() {
   }, [awayPositionKey])
 
   // Positions are already in normalized format (0-1)
-  // Use positions directly for legality validation
   const normalizedPositions = positions
 
   const currentArrows = getCurrentArrows(
@@ -381,22 +322,15 @@ function HomePageContent() {
   }, [isUsingPreset, presetLayouts, currentRotation, currentPhase, localStatusFlags, rotationPhaseKey])
 
   // Validate legality - only for PRE_SERVE and SERVE_RECEIVE phases
-  // In all other phases, players can be anywhere, so no violations apply
   const violations = useMemo(() => {
-    // Only validate for pre-serve phases
     if (currentPhase === 'PRE_SERVE' || currentPhase === 'SERVE_RECEIVE') {
-      // Determine which MB is replaced by libero (if enabled)
       const replacedMB = showLibero ? getBackRowMiddle(currentRotation, baseOrder) : null
 
-      // Ensure all required roles have positions (provide defaults for missing)
       const validPositions: Record<Role, Position> = {} as Record<Role, Position>
       for (const role of ROLES) {
-        // Skip libero if not shown - provide default position (won't be validated anyway)
         if (role === 'L' && !showLibero) {
           validPositions[role] = { x: 0.5, y: 0.5 }
         }
-        // When libero is enabled, use libero's position for the replaced MB
-        // This ensures proper zone validation (libero takes MB's zone responsibilities)
         else if (showLibero && role === replacedMB) {
           validPositions[role] = normalizedPositions['L'] || normalizedPositions[replacedMB] || { x: 0.5, y: 0.5 }
         }
@@ -412,7 +346,6 @@ function HomePageContent() {
         baseOrder
       )
     }
-    // For all other phases, return empty array (no violations)
     return []
   }, [currentRotation, normalizedPositions, baseOrder, currentPhase, showLibero])
 
@@ -433,14 +366,6 @@ function HomePageContent() {
     ? (legalityViolations[rotationPhaseKey] || [])
     : []
 
-  // Handler to start play mode
-  const handleStartPlay = useCallback(() => {
-    if (!game) {
-      startNewGame()
-    }
-    setPlaybackMode('live')
-  }, [game, startNewGame, setPlaybackMode])
-
   // Handler to start learning mode
   const handleStartLearning = useCallback(() => {
     startLesson(allLessons[0].id)
@@ -454,8 +379,6 @@ function HomePageContent() {
       {/* Main Content Area - full screen */}
       <div className="flex-1 min-h-0 overflow-hidden">
         {/* Court Container - scales to fit available space */}
-        {/* On mobile: let court be full width and natural height (may overflow) */}
-        {/* On desktop: constrain to max-w-3xl and fit in available height */}
         <div className="w-full h-auto sm:h-full sm:max-w-3xl mx-auto px-0 sm:px-2 relative">
           {/* Gradient overlay to fade out content behind the menu when away team is hidden */}
           {hideAwayTeam && (
@@ -469,37 +392,8 @@ function HomePageContent() {
             />
           )}
 
-          {/* Floating Control Panel - desktop only, or mobile in non-edit mode */}
-          {(!isMobile || playbackMode !== 'paused') && (
-            <PlaybackBar
-            playbackMode={playbackMode}
-            onPlaybackModeChange={handleStartPlay}
-            // Edit mode props
-            currentRotation={currentRotation}
-            currentPhase={currentPhase}
-            onNext={nextPhase}
-            onPrev={prevPhase}
-            onPhaseChange={setPhase}
-            onRotationChange={setRotation}
-            visiblePhases={visiblePhases}
-            // Live mode props
-            homeScore={simState.homeScore}
-            awayScore={simState.awayScore}
-            simPhase={simState.phase}
-            currentSpeed={simControls.currentSpeed}
-            onSpeedChange={simControls.setSpeed}
-            onServe={simControls.serve}
-            // Rally end props
-            rallyEndInfo={rallyEndInfo}
-            onNextRally={handleNextRally}
-            onBackToEdit={handleBackToEdit}
-            onRosterOpen={() => setRosterSheetOpen(true)}
-            onLearnOpen={handleStartLearning}
-          />
-          )}
-
           {/* Preset mode indicator - shown when viewing preset positions */}
-          {isUsingPreset && !isPlayMode && (
+          {isUsingPreset && (
             <div className="absolute top-16 left-1/2 -translate-x-1/2 z-30">
               <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/90 backdrop-blur-sm rounded-full border border-border shadow-sm">
                 <span className="text-xs text-muted-foreground">
@@ -519,46 +413,38 @@ function HomePageContent() {
               ...(swipeOffset !== 0 ? { transform: `translateX(${swipeOffset}px)` } : {}),
               transition: swipeState.swiping ? 'none' : 'transform 0.2s ease-out',
             }}
-            {...(isMobile && playbackMode === 'paused' ? swipeHandlers : {})}
+            {...(isMobile ? swipeHandlers : {})}
           >
               <VolleyballCourt
-                mode={isPlayMode ? "simulation" : "whiteboard"}
-                positions={isPlayMode
-                  ? (rallyEndInfo ? rallyEndInfo.frozenPositions : simState.playerPositions)
-                  : positions}
-                awayPositions={isPlayMode
-                  ? (rallyEndInfo
-                    ? rallyEndInfo.frozenAwayPositions
-                    : simState.awayPlayerPositions)
-                  : awayPositions}
+                mode="whiteboard"
+                positions={positions}
+                awayPositions={awayPositions}
                 highlightedRole={highlightedRole}
-                rotation={isPlayMode ? simState.rotation : currentRotation}
+                rotation={currentRotation}
                 baseOrder={baseOrder}
                 roster={currentTeam?.roster || []}
                 assignments={currentTeam ? getActiveAssignments(currentTeam) : {}}
                 onPositionChange={(role, position) => {
-                  if (!isPlayMode) {
-                    updateLocalPosition(currentRotation, currentPhase, role, position)
-                  }
+                  updateLocalPosition(currentRotation, currentPhase, role, position)
                 }}
-                onAwayPositionChange={isPlayMode ? undefined : handleAwayPositionChange}
+                onAwayPositionChange={handleAwayPositionChange}
                 onRoleClick={setHighlightedRole}
-                editable={!isPlayMode && isEditingAllowed}
-                animationMode={isPlayMode ? "raf" : ANIMATION_MODE}
-                animationConfig={isPlayMode ? { durationMs: 350, easingFn: "cubic" } : ANIMATION_CONFIG}
-                arrows={isPlayMode ? {} : currentArrows}
-                arrowCurves={isPlayMode ? {} : currentArrowCurves}
-                onArrowCurveChange={(isPlayMode || !isEditingAllowed) ? undefined : (role, curve) => {
+                editable={isEditingAllowed}
+                animationMode={ANIMATION_MODE}
+                animationConfig={ANIMATION_CONFIG}
+                arrows={currentArrows}
+                arrowCurves={currentArrowCurves}
+                onArrowCurveChange={isEditingAllowed ? (role, curve) => {
                   setArrowCurve(currentRotation, currentPhase, role, curve)
-                }}
+                } : undefined}
                 showLibero={showLibero}
-                onArrowChange={(isPlayMode || !isEditingAllowed) ? undefined : (role, position) => {
+                onArrowChange={isEditingAllowed ? (role, position) => {
                   if (!position) {
                     clearArrow(currentRotation, currentPhase, role)
                     return
                   }
                   updateArrow(currentRotation, currentPhase, role, position)
-                }}
+                } : undefined}
                 showPosition={showPosition}
                 showPlayer={showPlayer}
                 circleTokens={circleTokens}
@@ -566,37 +452,33 @@ function HomePageContent() {
                 tokenScaleMobile={TOKEN_SCALES.mobile}
                 tokenWidthOffset={TOKEN_DIMENSIONS.widthOffset}
                 tokenHeightOffset={TOKEN_DIMENSIONS.heightOffset}
-                legalityViolations={isPlayMode ? [] : currentViolations}
-                currentPhase={isPlayMode ? simState.phase : currentPhase}
-                attackBallPosition={isPlayMode ? null : currentAttackBallPosition}
-                onAttackBallChange={(isPlayMode || !isEditingAllowed) ? undefined : (pos) => {
+                legalityViolations={currentViolations}
+                currentPhase={currentPhase}
+                attackBallPosition={currentAttackBallPosition}
+                onAttackBallChange={isEditingAllowed ? (pos) => {
                   if (pos) {
                     setAttackBallPosition(currentRotation, currentPhase, pos)
                   } else {
                     clearAttackBallPosition(currentRotation, currentPhase)
                   }
-                }}
-                ballPosition={isPlayMode ? simState.ballPosition : (currentPhase === 'PRE_SERVE' ? (() => {
+                } : undefined}
+                ballPosition={currentPhase === 'PRE_SERVE' ? (() => {
                   // Calculate ball position for whiteboard PRE_SERVE - ball is held by server
                   const serverRole = getServerRole(currentRotation, baseOrder) as Role
                   const serverPos = positions[serverRole]
                   if (!serverPos) return undefined
-                  // Position at 2:30 on clock face (right side, slightly down)
-                  // cos(300°) ≈ 0.5, sin(300°) ≈ -0.866
                   return {
-                    x: serverPos.x + 0.04,  // Right
-                    y: serverPos.y - 0.03   // Slightly up (negative y is up on court)
+                    x: serverPos.x + 0.04,
+                    y: serverPos.y - 0.03
                   }
-                })() : undefined)}
-                ballHeight={isPlayMode ? simState.ballHeight : (currentPhase === 'PRE_SERVE' ? 0.15 : undefined)}
-                ballContactFlash={isPlayMode ? simState.recentContact : undefined}
-                fsmPhase={isPlayMode ? simState.phase : undefined}
+                })() : undefined}
+                ballHeight={currentPhase === 'PRE_SERVE' ? 0.15 : undefined}
                 contextPlayer={contextPlayer}
                 onContextPlayerChange={setContextPlayer}
-                statusFlags={isPlayMode ? {} : currentStatusFlags}
-                onStatusToggle={(isPlayMode || !isEditingAllowed) ? undefined : (role, status) => {
+                statusFlags={currentStatusFlags}
+                onStatusToggle={isEditingAllowed ? (role, status) => {
                   togglePlayerStatus(currentRotation, currentPhase, role, status)
-                }}
+                } : undefined}
                 fullStatusLabels={fullStatusLabels}
                 hasTeam={Boolean(currentTeam)}
                 onManageRoster={() => setRosterSheetOpen(true)}
@@ -604,7 +486,7 @@ function HomePageContent() {
               />
 
           {/* Swipe hint for mobile users - shows once */}
-          {isMobile && playbackMode === 'paused' && (
+          {isMobile && (
             <SwipeHint
               storageKey="whiteboard-swipe-hint-seen"
               autoHideMs={4000}
@@ -626,7 +508,6 @@ function HomePageContent() {
           <RosterManagementCard />
         </SheetContent>
       </Sheet>
-
 
       {/* Learning Panel */}
       <LearningPanel />

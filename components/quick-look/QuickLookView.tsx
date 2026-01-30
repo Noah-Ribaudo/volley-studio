@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { Rotation, ROTATIONS, Role } from '@/lib/types'
-import { getWhiteboardPositions } from '@/lib/sim/whiteboard'
+import { getWhiteboardPositions } from '@/lib/whiteboard'
 import { VolleyballCourt } from '@/components/court'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'

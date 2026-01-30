@@ -10,8 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { RALLY_PHASES, RALLY_PHASE_INFO } from "@/lib/types";
-import type { RallyPhase, PlaybackMode } from "@/lib/sim/types";
+import { RALLY_PHASES, RALLY_PHASE_INFO, RallyPhase } from "@/lib/types";
 import { PHASE_COLORS } from "@/lib/phaseIcons";
 
 interface PhaseControlProps {
@@ -40,13 +39,12 @@ export function PhaseControl({
   const {
     currentPhase: storePhase,
     setPhase,
-    playbackMode,
     visiblePhases,
   } = useAppStore();
 
   // Use prop values or fall back to store
   const currentPhase = (propPhase ?? storePhase) as RallyPhase;
-  const isManual = propMode === "manual" || playbackMode === "paused";
+  const isManual = propMode === "manual" || propMode === undefined; // Always manual in whiteboard-only mode
   const onPhaseChange = propOnPhaseChange ?? ((phase: RallyPhase) => setPhase(phase));
 
   // Get phase info for display
@@ -89,12 +87,6 @@ export function PhaseControl({
     >
       <PhaseIndicator phase={currentPhase} />
       <span className="text-sm font-medium">{phaseShortLabel}</span>
-      {playbackMode === "live" && (
-        <span className="flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-green-400 opacity-75" />
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
-        </span>
-      )}
     </div>
   );
 }

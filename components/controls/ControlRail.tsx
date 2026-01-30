@@ -2,7 +2,7 @@
 
 import { Button } from '@/components/ui/button'
 import { Phase, PHASES, RALLY_PHASES, Rotation, ROTATIONS, Role, ROLES, ROLE_INFO } from '@/lib/types'
-import type { RallyPhase } from '@/lib/sim/types'
+import type { RallyPhase } from '@/lib/types'
 import { cn, getTextColorForOklch } from '@/lib/utils'
 import { getPhaseInfo, getCompactPhaseIcon, isRallyPhase as checkIsRallyPhase } from '@/lib/phaseIcons'
 

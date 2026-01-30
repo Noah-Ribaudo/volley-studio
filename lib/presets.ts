@@ -7,9 +7,8 @@
 
 import { supabase, isSupabaseConfigured } from './supabase'
 import type { PresetSystem } from './database.types'
-import type { Rotation, Phase, LayoutExtendedData, PositionCoordinates, CustomLayout } from './types'
-import { getWhiteboardPositions } from './sim/whiteboard'
-import type { RallyPhase } from './sim/types'
+import type { Rotation, Phase, LayoutExtendedData, PositionCoordinates, CustomLayout, RallyPhase } from './types'
+import { getWhiteboardPositions } from './whiteboard'
 import { RALLY_PHASES, DEFAULT_VISIBLE_PHASES } from './types'
 import { DEFAULT_BASE_ORDER } from './rotations'
 
