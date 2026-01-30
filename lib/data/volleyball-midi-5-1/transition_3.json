@@ -1,0 +1,30 @@
+{
+  "rotation": 3,
+  "trigger": "ServeContact",
+  "movements": [
+    {
+      "player": "S",
+      "to": { "x": 0.85, "y": 0.52 },
+      "intent": "reach_setting_window",
+      "timing": "immediate"
+    },
+    {
+      "player": "OH1",
+      "to": { "x": 0.5, "y": 0.52 },
+      "intent": "middle_approach",
+      "timing": "post_pass"
+    },
+    {
+      "player": "OPP",
+      "to": { "x": 0.15, "y": 0.55 },
+      "intent": "left_pin_approach",
+      "timing": "post_pass"
+    },
+    {
+      "player": "MB1",
+      "to": { "x": 0.85, "y": 0.55 },
+      "intent": "right_pin_approach",
+      "timing": "post_pass"
+    }
+  ]
+}

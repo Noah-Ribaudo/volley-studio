@@ -1,0 +1,34 @@
+{
+  "rotation": 5,
+  "description": "Setter front right (Z2), OH2 serves",
+  "players": {
+    "S": {
+      "slot": "Z2",
+      "pos": [0.85, 0.55]
+    },
+    "OH1": {
+      "slot": "Z4",
+      "pos": [0.15, 0.55]
+    },
+    "MB1": {
+      "slot": "Z6",
+      "pos": [-0.1, 0.85]
+    },
+    "MB2": {
+      "slot": "Z3",
+      "pos": [0.50, 0.52]
+    },
+    "OPP": {
+      "slot": "Z1",
+      "pos": [0.85, 0.90]
+    },
+    "OH2": {
+      "slot": "Z5",
+      "pos": [0.20, 0.85]
+    },
+    "L": {
+      "slot": "Z6",
+      "pos": [0.50, 0.85]
+    }
+  }
+}
