@@ -186,7 +186,6 @@ export function VolleyballCourt({
   const arrowLastUpdateRef = useRef<number>(0)
   const lastUpdateRef = useRef<number>(0)
   const positionAnimationRef = useRef<AnimationPlaybackControls | null>(null)
-  const bezierAnimationRef = useRef<AnimationPlaybackControls | null>(null)
   const onPositionChangeRef = useRef(onPositionChange)
   const onAwayPositionChangeRef = useRef(onAwayPositionChange)
 
@@ -568,10 +567,16 @@ export function VolleyballCourt({
 
   // Track previous animation trigger for detecting when Play is pressed
   const prevAnimationTriggerRef = useRef<number>(animationTrigger)
+  const bezierRafRef = useRef<number | null>(null)
+
+  // Easing function for bezier animation
+  const easeInOutCubic = (t: number) => (t < 0.5
+    ? 4 * t * t * t
+    : 1 - Math.pow(-2 * t + 2, 3) / 2)
 
   // Bezier path animation - runs when Play button is pressed (animationTrigger changes)
   // Animates players along their arrow paths (bezier curves) with collision avoidance
-  // Uses Motion for smooth, interruptible animation
+  // Uses RAF for precise timing control
   useEffect(() => {
     // Only run when trigger changes and is > 0
     if (animationTrigger === prevAnimationTriggerRef.current || animationTrigger === 0) {
@@ -581,7 +586,10 @@ export function VolleyballCourt({
     prevAnimationTriggerRef.current = animationTrigger
 
     // Cancel any existing bezier animation
-    stopAnimation(bezierAnimationRef.current)
+    if (bezierRafRef.current) {
+      cancelAnimationFrame(bezierRafRef.current)
+      bezierRafRef.current = null
+    }
 
     // Get start positions (current collision-free positions)
     const startPositions = { ...collisionFreePositions }
@@ -606,6 +614,9 @@ export function VolleyballCourt({
     // Mark animation as running
     setIsBezierAnimating(true)
 
+    const duration = cfg.durationMs
+    const startTime = performance.now()
+
     // Bezier interpolation: B(t) = (1-t)²P0 + 2(1-t)tP1 + t²P2
     // P0 = start, P1 = control point, P2 = end
     const interpolateBezier = (
@@ -628,65 +639,72 @@ export function VolleyballCourt({
       }
     }
 
-    // Use Motion's animate for smooth, interruptible bezier animation
-    bezierAnimationRef.current = animate(0, 1, {
-      duration: cfg.durationMs / 1000, // Motion uses seconds
-      ease: [0.4, 0, 0.2, 1], // Cubic bezier easing
-      onUpdate: (t) => {
-        const next: PositionCoordinates = {} as PositionCoordinates
+    const step = (now: number) => {
+      const elapsed = now - startTime
+      const rawT = Math.min(1, elapsed / duration)
+      const t = easeInOutCubic(rawT)
 
-        // Build agents for collision avoidance
-        const agents = activeRoles.map(role => {
-          const start = startPositions[role] || { x: 0.5, y: 0.5 }
-          const end = targets[role] || { x: 0.5, y: 0.5 }
-          const curve = arrowCurves[role]
+      const next: PositionCoordinates = {} as PositionCoordinates
 
-          // Get control point in normalized coordinates (if curve exists)
-          let control: Position | null = null
-          if (curve && arrows[role]) {
-            control = { x: curve.x, y: curve.y }
-          }
+      // Build agents for collision avoidance
+      const agents = activeRoles.map(role => {
+        const start = startPositions[role] || { x: 0.5, y: 0.5 }
+        const end = targets[role] || { x: 0.5, y: 0.5 }
+        const curve = arrowCurves[role]
 
-          // Interpolate along bezier path
-          const interpolated = interpolateBezier(start, end, control, t)
+        // Get control point in normalized coordinates (if curve exists)
+        let control: Position | null = null
+        if (curve && arrows[role]) {
+          control = { x: curve.x, y: curve.y }
+        }
 
-          return {
-            role,
-            position: interpolated,
-            target: end
-          }
+        // Interpolate along bezier path
+        const interpolated = interpolateBezier(start, end, control, t)
+
+        return {
+          role,
+          position: interpolated,
+          target: end
+        }
+      })
+
+      // Apply collision avoidance steering
+      activeRoles.forEach((role, idx) => {
+        const agent = agents[idx]
+        const steering = computeSteering(agent, agents, {
+          collisionRadius: cfg.collisionRadius,
+          separationStrength: cfg.separationStrength,
+          maxSeparation: cfg.maxSeparation
         })
 
-        // Apply collision avoidance steering
-        activeRoles.forEach((role, idx) => {
-          const agent = agents[idx]
-          const steering = computeSteering(agent, agents, {
-            collisionRadius: cfg.collisionRadius,
-            separationStrength: cfg.separationStrength,
-            maxSeparation: cfg.maxSeparation
-          })
-
-          // Apply steering offset (smaller for smoother curves)
-          const steered = clampPosition({
-            x: agent.position.x + steering.x * (cfg.collisionRadius * 0.15),
-            y: agent.position.y + steering.y * (cfg.collisionRadius * 0.15)
-          })
-          next[role] = steered
+        // Apply steering offset (smaller for smoother curves)
+        const steered = clampPosition({
+          x: agent.position.x + steering.x * (cfg.collisionRadius * 0.15),
+          y: agent.position.y + steering.y * (cfg.collisionRadius * 0.15)
         })
+        next[role] = steered
+      })
 
-        setAnimatedPositions(next)
-        currentPositionsRef.current = next
-      },
-      onComplete: () => {
-        bezierAnimationRef.current = null
+      setAnimatedPositions(next)
+      currentPositionsRef.current = next
+
+      if (rawT < 1) {
+        bezierRafRef.current = requestAnimationFrame(step)
+      } else {
+        // Animation complete
+        bezierRafRef.current = null
         setIsBezierAnimating(false)
-      },
-    })
+      }
+    }
+
+    bezierRafRef.current = requestAnimationFrame(step)
 
     return () => {
-      stopAnimation(bezierAnimationRef.current)
-      bezierAnimationRef.current = null
-      setIsBezierAnimating(false)
+      if (bezierRafRef.current) {
+        cancelAnimationFrame(bezierRafRef.current)
+        bezierRafRef.current = null
+        setIsBezierAnimating(false)
+      }
     }
   }, [animationTrigger, collisionFreePositions, arrows, arrowCurves, activeRoles, cfg])
 
