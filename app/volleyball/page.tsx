@@ -98,6 +98,8 @@ function HomePageContent() {
     // Preview mode
     isPreviewingMovement,
     setPreviewingMovement,
+    // Animation trigger
+    playAnimationTrigger,
   } = useAppStore()
 
   // Mobile detection
@@ -436,7 +438,7 @@ function HomePageContent() {
           >
               <VolleyballCourt
                 mode="whiteboard"
-                positions={effectivePositions}
+                positions={positions}
                 awayPositions={awayPositions}
                 highlightedRole={highlightedRole}
                 rotation={currentRotation}
@@ -502,6 +504,8 @@ function HomePageContent() {
                 hasTeam={Boolean(currentTeam)}
                 onManageRoster={() => setRosterSheetOpen(true)}
                 debugHitboxes={debugHitboxes}
+                animationTrigger={playAnimationTrigger}
+                isPreviewingMovement={isPreviewingMovement}
               />
 
           {/* Swipe hint for mobile users - shows once */}

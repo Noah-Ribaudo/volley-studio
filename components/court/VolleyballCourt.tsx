@@ -110,6 +110,10 @@ interface VolleyballCourtProps {
   onManageRoster?: () => void
   // Debug mode: show hit boxes with neon green highlight
   debugHitboxes?: boolean
+  // Animation trigger - incrementing counter to trigger bezier path animation
+  animationTrigger?: number
+  // Whether we're in preview mode (showing players at arrow endpoints after animation)
+  isPreviewingMovement?: boolean
 }
 
 export function VolleyballCourt({
@@ -157,6 +161,8 @@ export function VolleyballCourt({
   hasTeam,
   onManageRoster,
   debugHitboxes = false,
+  animationTrigger = 0,
+  isPreviewingMovement = false,
 }: VolleyballCourtProps) {
   // In simulation mode, disable editing
   const isEditable = mode === 'whiteboard' && editable
@@ -401,7 +407,35 @@ export function VolleyballCourt({
     return resolveCollisions(ensureCompletePositions(positions))
   }, [positions, resolveCollisions])
 
-  const displayPositions = animationMode === 'css' ? collisionFreePositions : animatedPositions
+  // Track whether bezier animation is currently running
+  const [isBezierAnimating, setIsBezierAnimating] = useState(false)
+
+  // Compute preview positions (at arrow endpoints) for when preview mode is active
+  const previewPositions = useMemo(() => {
+    const preview = { ...collisionFreePositions }
+    for (const role of activeRoles) {
+      const arrowEnd = arrows[role]
+      if (arrowEnd) {
+        preview[role] = arrowEnd
+      }
+    }
+    return resolveCollisions(preview)
+  }, [collisionFreePositions, arrows, activeRoles, resolveCollisions])
+
+  // Display positions: during animation use animatedPositions,
+  // in preview mode use previewPositions, otherwise use collisionFreePositions
+  const displayPositions = useMemo(() => {
+    if (isBezierAnimating) {
+      return animatedPositions
+    }
+    if (isPreviewingMovement) {
+      return previewPositions
+    }
+    if (animationMode === 'raf') {
+      return animatedPositions
+    }
+    return collisionFreePositions
+  }, [isBezierAnimating, isPreviewingMovement, animationMode, animatedPositions, previewPositions, collisionFreePositions])
 
   // Calculate screen position for a player token based on their displayed (collision-resolved) position
   // Uses hardcoded court dimensions (400x800, padding 40) since they're constants
@@ -522,6 +556,145 @@ export function VolleyballCourt({
       if (animationRafRef.current) cancelAnimationFrame(animationRafRef.current)
     }
   }, [collisionFreePositions, animationMode, cfg.durationMs, cfg.easingFn, cfg.collisionRadius, cfg.separationStrength, cfg.maxSeparation])
+
+  // Track previous animation trigger for detecting when Play is pressed
+  const prevAnimationTriggerRef = useRef<number>(animationTrigger)
+  const bezierAnimationRafRef = useRef<number | null>(null)
+
+  // Bezier path animation - runs when Play button is pressed (animationTrigger changes)
+  // Animates players along their arrow paths (bezier curves) with collision avoidance
+  useEffect(() => {
+    // Only run when trigger changes and is > 0
+    if (animationTrigger === prevAnimationTriggerRef.current || animationTrigger === 0) {
+      prevAnimationTriggerRef.current = animationTrigger
+      return
+    }
+    prevAnimationTriggerRef.current = animationTrigger
+
+    // Cancel any existing bezier animation
+    if (bezierAnimationRafRef.current) {
+      cancelAnimationFrame(bezierAnimationRafRef.current)
+      bezierAnimationRafRef.current = null
+    }
+
+    // Get start positions (current collision-free positions)
+    const startPositions = { ...collisionFreePositions }
+
+    // Build targets: for players with arrows, target is arrow endpoint; others stay in place
+    const targets: PositionCoordinates = {} as PositionCoordinates
+    const hasArrow: Set<Role> = new Set()
+
+    activeRoles.forEach(role => {
+      const arrowEnd = arrows[role]
+      if (arrowEnd) {
+        targets[role] = arrowEnd
+        hasArrow.add(role)
+      } else {
+        targets[role] = startPositions[role] || { x: 0.5, y: 0.5 }
+      }
+    })
+
+    // If no arrows, nothing to animate
+    if (hasArrow.size === 0) return
+
+    // Mark animation as running
+    setIsBezierAnimating(true)
+
+    const duration = cfg.durationMs
+    const startTime = performance.now()
+
+    // Bezier interpolation: B(t) = (1-t)²P0 + 2(1-t)tP1 + t²P2
+    // P0 = start, P1 = control point, P2 = end
+    const interpolateBezier = (
+      start: Position,
+      end: Position,
+      control: Position | null,
+      t: number
+    ): Position => {
+      if (!control) {
+        // Straight line interpolation
+        return {
+          x: start.x + (end.x - start.x) * t,
+          y: start.y + (end.y - start.y) * t,
+        }
+      }
+      const oneMinusT = 1 - t
+      return {
+        x: oneMinusT * oneMinusT * start.x + 2 * oneMinusT * t * control.x + t * t * end.x,
+        y: oneMinusT * oneMinusT * start.y + 2 * oneMinusT * t * control.y + t * t * end.y,
+      }
+    }
+
+    const step = (now: number) => {
+      const elapsed = now - startTime
+      const rawT = Math.min(1, elapsed / duration)
+      const easeFn = cfg.easingFn === 'quad' ? easeInOutQuad : easeInOutCubic
+      const t = easeFn(rawT)
+
+      const next: PositionCoordinates = {} as PositionCoordinates
+
+      // Build agents for collision avoidance
+      const agents = activeRoles.map(role => {
+        const start = startPositions[role] || { x: 0.5, y: 0.5 }
+        const end = targets[role] || { x: 0.5, y: 0.5 }
+        const curve = arrowCurves[role]
+
+        // Get control point in normalized coordinates (if curve exists)
+        let control: Position | null = null
+        if (curve && arrows[role]) {
+          // ArrowCurveConfig has x, y for control point in normalized coordinates
+          control = { x: curve.x, y: curve.y }
+        }
+
+        // Interpolate along bezier path
+        const interpolated = interpolateBezier(start, end, control, t)
+
+        return {
+          role,
+          position: interpolated,
+          target: end
+        }
+      })
+
+      // Apply collision avoidance steering
+      activeRoles.forEach((role, idx) => {
+        const agent = agents[idx]
+        const steering = computeSteering(agent, agents, {
+          collisionRadius: cfg.collisionRadius,
+          separationStrength: cfg.separationStrength,
+          maxSeparation: cfg.maxSeparation
+        })
+
+        // Apply steering offset (smaller for smoother curves)
+        const steered = clampPosition({
+          x: agent.position.x + steering.x * (cfg.collisionRadius * 0.15),
+          y: agent.position.y + steering.y * (cfg.collisionRadius * 0.15)
+        })
+        next[role] = steered
+      })
+
+      setAnimatedPositions(next)
+      currentPositionsRef.current = next
+
+      if (rawT < 1) {
+        bezierAnimationRafRef.current = requestAnimationFrame(step)
+      } else {
+        // Animation complete
+        bezierAnimationRafRef.current = null
+        setIsBezierAnimating(false)
+      }
+    }
+
+    bezierAnimationRafRef.current = requestAnimationFrame(step)
+
+    return () => {
+      if (bezierAnimationRafRef.current) {
+        cancelAnimationFrame(bezierAnimationRafRef.current)
+        bezierAnimationRafRef.current = null
+        setIsBezierAnimating(false)
+      }
+    }
+  }, [animationTrigger, collisionFreePositions, arrows, arrowCurves, activeRoles, cfg])
 
   // Track previous positions for detecting phase changes
   const prevPositionsRef = useRef<PositionCoordinates>(positions)

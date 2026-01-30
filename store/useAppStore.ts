@@ -130,6 +130,7 @@ interface AppState {
   debugHitboxes: boolean // Show touch target hitboxes with green highlight (default: false)
   navMode: 'sidebar' | 'header' // Desktop navigation mode (default: 'header')
   isPreviewingMovement: boolean // Preview mode: show players at arrow endpoints (default: false, not persisted)
+  playAnimationTrigger: number // Counter to trigger play animation (incrementing triggers RAF animation)
 
   // Practice mode (local storage) - stored in normalized coordinates (0-1)
   localPositions: Record<string, NormalizedPositionCoordinates>
@@ -210,6 +211,7 @@ interface AppState {
   setDebugHitboxes: (show: boolean) => void
   setNavMode: (mode: 'sidebar' | 'header') => void
   setPreviewingMovement: (preview: boolean) => void
+  triggerPlayAnimation: () => void
   // Attack ball actions (for whiteboard defense phase)
   setAttackBallPosition: (rotation: Rotation, phase: Phase, position: Position) => void
   clearAttackBallPosition: (rotation: Rotation, phase: Phase) => void
@@ -420,6 +422,7 @@ export const useAppStore = create<AppState>()(
       debugHitboxes: false, // Default to hiding hitbox debug overlay
       navMode: 'header' as const, // Default to header nav (no sidebar)
       isPreviewingMovement: false, // Default to not previewing (not persisted)
+      playAnimationTrigger: 0, // Counter to trigger play animation
       localPositions: {},
       localArrows: {},
       arrowCurves: {},
@@ -830,6 +833,8 @@ export const useAppStore = create<AppState>()(
       setNavMode: (mode) => set({ navMode: mode }),
 
       setPreviewingMovement: (preview) => set({ isPreviewingMovement: preview }),
+
+      triggerPlayAnimation: () => set((state) => ({ playAnimationTrigger: state.playAnimationTrigger + 1 })),
 
       // Attack ball actions (for whiteboard defense phase)
       setAttackBallPosition: (rotation, phase, position) => set((state) => {

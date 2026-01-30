@@ -53,6 +53,7 @@ export function DesktopHeaderNav() {
   const prevPhase = useAppStore((state) => state.prevPhase)
   const isPreviewingMovement = useAppStore((state) => state.isPreviewingMovement)
   const setPreviewingMovement = useAppStore((state) => state.setPreviewingMovement)
+  const triggerPlayAnimation = useAppStore((state) => state.triggerPlayAnimation)
 
   // Get visible phases
   const phasesToShow = visiblePhases
@@ -180,7 +181,10 @@ export function DesktopHeaderNav() {
               variant="outline"
               size="sm"
               className="h-8 gap-1.5"
-              onClick={() => setPreviewingMovement(true)}
+              onClick={() => {
+                triggerPlayAnimation()
+                setPreviewingMovement(true)
+              }}
             >
               <Play className="h-4 w-4" />
               <span>Play</span>
