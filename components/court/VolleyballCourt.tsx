@@ -676,17 +676,12 @@ export function VolleyballCourt({
     return pos
   }
 
-  // Get mouse/touch position relative to SVG
+  // Get mouse/touch position in SVG coordinates
+  // Uses getScreenCTM() to correctly handle preserveAspectRatio scaling
   const getEventPosition = useCallback((e: MouseEvent | TouchEvent) => {
     if (!svgRef.current) return { x: 0, y: 0 }
 
     const svg = svgRef.current
-    const rect = svg.getBoundingClientRect()
-
-    // Scale from screen coordinates to SVG viewBox coordinates
-    // Note: In half-court mode, viewBox starts at vbY, so we add it to get correct SVG y
-    const scaleX = viewBoxWidth / rect.width
-    const scaleY = vbH / rect.height
 
     let clientX: number, clientY: number
     if ('touches' in e) {
@@ -697,11 +692,17 @@ export function VolleyballCourt({
       clientY = e.clientY
     }
 
-    return {
-      x: (clientX - rect.left) * scaleX,
-      y: (clientY - rect.top) * scaleY + vbY
-    }
-  }, [viewBoxWidth, vbH, vbY])
+    // Use SVG's coordinate transformation for accurate conversion
+    // This properly handles preserveAspectRatio centering/letterboxing
+    const point = svg.createSVGPoint()
+    point.x = clientX
+    point.y = clientY
+    const ctm = svg.getScreenCTM()
+    if (!ctm) return { x: 0, y: 0 }
+    const svgPoint = point.matrixTransform(ctm.inverse())
+
+    return { x: svgPoint.x, y: svgPoint.y }
+  }, [])
 
   // Clear long-press state and timer
   const clearLongPress = useCallback(() => {
@@ -970,42 +971,20 @@ export function VolleyballCourt({
 
     setDraggingCurveRole(role)
 
-    const getEventPos = (event: MouseEvent | TouchEvent): { clientX: number; clientY: number } => {
-      if ('touches' in event) {
-        return { clientX: event.touches[0].clientX, clientY: event.touches[0].clientY }
-      }
-      return { clientX: event.clientX, clientY: event.clientY }
-    }
-
     const handleMove = (moveEvent: MouseEvent | TouchEvent) => {
       moveEvent.preventDefault()
 
-      const { clientX, clientY } = getEventPos(moveEvent)
-      const svgEl = document.querySelector('[data-court-svg]') as SVGSVGElement | null
-      if (!svgEl) return
-
-      // Use SVG's coordinate transformation to properly convert screen coords to SVG coords
-      // This handles preserveAspectRatio and any scaling correctly
-      const point = svgEl.createSVGPoint()
-      point.x = clientX
-      point.y = clientY
-      const ctm = svgEl.getScreenCTM()
-      if (!ctm) return
-      const svgPoint = point.matrixTransform(ctm.inverse())
-
-      // Convert from SVG coords to normalized (0-1) coords
-      // Court area starts at padding (40) and has dimensions 400x800
-      const desiredMidpointX = (svgPoint.x - 40) / 400
-      const desiredMidpointY = (svgPoint.y - 40) / 800
+      // Use shared coordinate conversion (screen → SVG → normalized)
+      const svgPos = getEventPosition(moveEvent)
+      const desiredMidpoint = toNormalizedCoords(svgPos.x, svgPos.y)
 
       // For a quadratic bezier, midpoint at t=0.5 is: 0.25*start + 0.5*control + 0.25*end
       // To make the midpoint appear at the mouse position, we need to solve for control:
       // control = 2*midpoint - 0.5*start - 0.5*end
-      const controlX = 2 * desiredMidpointX - 0.5 * startPos.x - 0.5 * endPos.x
-      const controlY = 2 * desiredMidpointY - 0.5 * startPos.y - 0.5 * endPos.y
+      const controlX = 2 * desiredMidpoint.x - 0.5 * startPos.x - 0.5 * endPos.x
+      const controlY = 2 * desiredMidpoint.y - 0.5 * startPos.y - 0.5 * endPos.y
 
       // Clamp control point to court bounds (with some margin)
-      // but allow the midpoint to track the mouse as closely as possible
       const clampedControlX = Math.max(-0.5, Math.min(1.5, controlX))
       const clampedControlY = Math.max(-0.2, Math.min(1.2, controlY))
 
@@ -1024,7 +1003,7 @@ export function VolleyballCourt({
     document.addEventListener('mouseup', handleEnd)
     document.addEventListener('touchmove', handleMove, { passive: false })
     document.addEventListener('touchend', handleEnd)
-  }, [onArrowCurveChange, positions, arrows])
+  }, [onArrowCurveChange, positions, arrows, getEventPosition])
 
   // Handle mobile touch with hold-to-prime detection for arrow creation
   const handleMobileTouchStart = useCallback((role: Role, e: React.TouchEvent) => {
