@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import TextureModeLoader from "@/components/TextureModeLoader";
 import ThemeInitializer from "@/components/ThemeInitializer";
+import { ConvexClientProvider } from "@/components/ConvexClientProvider";
 import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
@@ -44,10 +45,12 @@ export default function RootLayout({
       <body
         className="antialiased min-h-screen bg-background text-foreground"
       >
-        <ThemeInitializer />
-        <TextureModeLoader />
-        <Toaster richColors position="top-center" />
-        {children}
+        <ConvexClientProvider>
+          <ThemeInitializer />
+          <TextureModeLoader />
+          <Toaster richColors position="top-center" />
+          {children}
+        </ConvexClientProvider>
       </body>
     </html>
   );

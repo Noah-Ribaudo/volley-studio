@@ -1,130 +1,41 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQuery, useMutation } from 'convex/react'
+import { api } from '@/convex/_generated/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { TeamCard, CreateTeamDialog, TeamSearchBar } from '@/components/team'
-import { Team } from '@/lib/types'
-import { getAllTeams, searchTeams, createTeam, isSupabaseConfigured } from '@/lib/teams'
-import type { PresetSystem } from '@/lib/database.types'
 import Link from 'next/link'
+
+// Generate a URL-friendly slug from team name
+function generateSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '_')
+    .replace(/-+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '')
+}
 
 export default function TeamsPage() {
   const router = useRouter()
-  const [teams, setTeams] = useState<Team[]>([])
   const [searchQuery, setSearchQuery] = useState('')
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [isSupabaseReady, setIsSupabaseReady] = useState(false)
 
-  // Check Supabase configuration
-  useEffect(() => {
-    setIsSupabaseReady(isSupabaseConfigured())
-  }, [])
+  // Convex queries - automatically reactive
+  const teams = useQuery(api.teams.search, { query: searchQuery })
+  const createTeam = useMutation(api.teams.create)
 
-  // Load teams
-  const loadTeams = useCallback(async () => {
-    if (!isSupabaseReady) return
-
-    setIsLoading(true)
-    setError(null)
-
-    try {
-      if (searchQuery) {
-        const result = await searchTeams({ query: searchQuery, limit: 20 })
-        setTeams(result.teams)
-      } else {
-        const data = await getAllTeams()
-        setTeams(data)
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load teams')
-    } finally {
-      setIsLoading(false)
-    }
-  }, [searchQuery, isSupabaseReady])
-
-  useEffect(() => {
-    loadTeams()
-  }, [loadTeams])
+  const isLoading = teams === undefined
 
   // Handle team creation
-  const handleCreateTeam = async (name: string, password?: string, presetSystem?: PresetSystem) => {
-    const newTeam = await createTeam(name, password, presetSystem)
-    router.push(`/volleyball/teams/${newTeam.slug}`)
-  }
-
-  // Not configured UI
-  if (!isSupabaseReady) {
-    return (
-      <main className="min-h-screen bg-gradient-to-b from-background to-muted/30">
-        <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b">
-          <div className="container mx-auto px-4 py-3">
-            <div className="flex items-center gap-3">
-              <Link href="/volleyball">
-                <Button variant="ghost" size="sm">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="mr-1"
-                  >
-                    <path d="m15 18-6-6 6-6"/>
-                  </svg>
-                  Back
-                </Button>
-              </Link>
-              <h1 className="text-xl font-bold">Teams</h1>
-            </div>
-          </div>
-        </header>
-
-        <div className="container mx-auto px-4 py-8 max-w-2xl">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-center py-8">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="48"
-                  height="48"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="mx-auto mb-4 text-muted-foreground"
-                >
-                  <path d="M20 16V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v9m16 0H4m16 0 1.28 2.55a1 1 0 0 1-.9 1.45H3.62a1 1 0 0 1-.9-1.45L4 16"/>
-                </svg>
-                <h2 className="text-lg font-semibold mb-2">Supabase Not Configured</h2>
-                <p className="text-muted-foreground mb-4">
-                  To use team management features, you need to set up Supabase.
-                </p>
-                <ol className="text-left text-sm text-muted-foreground space-y-2 max-w-md mx-auto">
-                  <li>1. Create a free account at supabase.com</li>
-                  <li>2. Create a new project</li>
-                  <li>3. Run the SQL from <code className="bg-muted px-1 rounded">supabase/schema.sql</code></li>
-                  <li>4. Add your credentials to <code className="bg-muted px-1 rounded">.env.local</code></li>
-                </ol>
-                <div className="mt-6">
-                  <Link href="/volleyball">
-                    <Button>Back to Practice Mode</Button>
-                  </Link>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </main>
-    )
+  const handleCreateTeam = async (name: string, password?: string) => {
+    const slug = generateSlug(name)
+    await createTeam({ name, slug, password })
+    router.push(`/volleyball/teams/${slug}`)
   }
 
   return (
@@ -164,15 +75,6 @@ export default function TeamsPage() {
           onChange={setSearchQuery}
         />
 
-        {/* Error */}
-        {error && (
-          <Card className="border-destructive bg-destructive/10">
-            <CardContent className="pt-4">
-              <p className="text-sm text-destructive">{error}</p>
-            </CardContent>
-          </Card>
-        )}
-
         {/* Create Team Card - Standalone */}
         {!searchQuery && (
           <Card className="bg-accent/30 border-accent/50">
@@ -199,19 +101,38 @@ export default function TeamsPage() {
         )}
 
         {/* Teams List */}
-        {!isLoading && teams.length > 0 && (
+        {!isLoading && teams && teams.length > 0 && (
           <div className="space-y-3">
             {teams.map(team => (
               <TeamCard
-                key={team.id}
-                team={team}
+                key={team._id}
+                team={{
+                  id: team._id,
+                  name: team.name,
+                  slug: team.slug,
+                  password: team.password,
+                  archived: team.archived,
+                  roster: team.roster.map(p => ({
+                    id: p.id,
+                    name: p.name,
+                    number: p.number ?? 0,
+                  })),
+                  lineups: team.lineups.map(l => ({
+                    ...l,
+                    position_source: l.position_source as 'custom' | 'full-5-1' | '5-1-libero' | '6-2' | undefined,
+                  })),
+                  active_lineup_id: team.activeLineupId ?? null,
+                  position_assignments: team.positionAssignments,
+                  created_at: new Date(team._creationTime).toISOString(),
+                  updated_at: new Date(team._creationTime).toISOString(),
+                }}
               />
             ))}
           </div>
         )}
 
         {/* Empty State */}
-        {!isLoading && teams.length === 0 && searchQuery && (
+        {!isLoading && teams && teams.length === 0 && searchQuery && (
           <Card>
             <CardContent className="pt-6">
               <div className="text-center py-8">
@@ -244,4 +165,3 @@ export default function TeamsPage() {
     </main>
   )
 }
-
