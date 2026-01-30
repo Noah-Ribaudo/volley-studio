@@ -51,7 +51,7 @@ export function CourtGrid({ width, height, showZones = true, rotation, baseOrder
 
   // Get current theme to determine court background color
   const theme = useThemeStore((state) => state.theme)
-  const isLightTheme = theme === 'white' || theme === 'pink'
+  const isLightTheme = theme === 'light'
   const courtBackgroundColor = isLightTheme ? '#e5e7eb' : '#1f2937' // Light gray for light themes, dark gray for dark themes
 
   // Get zone-to-role mapping if rotation is provided (HOME team only for now)

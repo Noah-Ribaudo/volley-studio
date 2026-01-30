@@ -299,7 +299,7 @@ export function VolleyballCourt({
 
   // Get theme for line color
   const theme = useThemeStore((state) => state.theme)
-  const isLightTheme = theme === 'white' || theme === 'pink'
+  const isLightTheme = theme === 'light'
   const lineColor = isLightTheme ? '#9ca3af' : '#6b7280'
 
   // Determine token scale based on device
