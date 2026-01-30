@@ -32,7 +32,7 @@ const VISIBLE_SIDES = 2
 /**
  * Mobile contextual bar that sits directly above the bottom tab bar.
  * Contains phase carousel, navigation arrows, and rotation selector.
- * Only appears on Whiteboard and Learn pages.
+ * Compact design to maximize court visibility.
  */
 export function MobileContextBar({
   currentRotation,
@@ -61,7 +61,7 @@ export function MobileContextBar({
   } = useCarouselAnimation({
     items: phasesToShow,
     currentIndex,
-    gap: 8,
+    gap: 6,
     enabled: true,
   })
 
@@ -84,12 +84,39 @@ export function MobileContextBar({
       className="fixed left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-t md:hidden"
       style={{ bottom: 'calc(3.5rem + env(safe-area-inset-bottom, 0px))' }}
     >
-      <div className="flex items-center px-1 py-1.5 gap-0.5">
-        {/* Left: Previous phase button - narrow but tall touch target */}
+      <div className="flex items-center px-1 py-1 gap-0.5">
+        {/* Rotation selector - moved to left for easier thumb access */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="h-8 px-2 shrink-0 gap-0.5">
+              <span className="font-semibold text-sm">R{currentRotation}</span>
+              <HugeiconsIcon icon={ArrowDown01Icon} className="h-3 w-3" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" side="top" className="mb-2">
+            {ROTATIONS.map((rotation) => (
+              <DropdownMenuItem
+                key={rotation}
+                onClick={() => onRotationChange(rotation)}
+                className={cn(
+                  "py-2",
+                  rotation === currentRotation && "bg-accent"
+                )}
+              >
+                Rotation {rotation}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* Divider */}
+        <div className="w-px h-6 bg-border shrink-0" />
+
+        {/* Left: Previous phase button */}
         <Button
           variant="ghost"
           size="icon"
-          className="h-10 w-8 shrink-0"
+          className="h-8 w-7 shrink-0"
           onClick={onPrev}
           aria-label="Previous phase"
         >
@@ -99,7 +126,7 @@ export function MobileContextBar({
         {/* Phase carousel with edge fade */}
         <div
           ref={containerRef}
-          className="flex-1 relative overflow-hidden h-10 min-w-0"
+          className="flex-1 relative overflow-hidden h-8 min-w-0"
           style={{
             maskImage: 'linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%)',
             WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%)',
@@ -107,7 +134,7 @@ export function MobileContextBar({
         >
           <div
             ref={innerRef}
-            className="flex items-center gap-2 h-full whitespace-nowrap"
+            className="flex items-center gap-1.5 h-full whitespace-nowrap"
             style={{
               transform: `translateX(${baseOffset + slideOffset}px)`,
               transition: animationPhase === 'sliding' ? `transform ${SLIDE_DURATION}ms ease-out` : 'none',
@@ -133,7 +160,7 @@ export function MobileContextBar({
                   aria-label={info.name}
                   title={info.name}
                   className={cn(
-                    "h-9 flex items-center justify-center gap-1.5 flex-shrink-0 px-2.5 min-w-[3.5rem]",
+                    "h-7 flex items-center justify-center gap-1 flex-shrink-0 px-2 min-w-[3rem]",
                     isHighlighted
                       ? 'shadow-sm bg-primary text-primary-foreground'
                       : 'hover:opacity-80 hover:bg-muted',
@@ -149,7 +176,7 @@ export function MobileContextBar({
                   }}
                 >
                   {getCompactPhaseIcon(phase)}
-                  <span className="text-xs font-medium capitalize whitespace-nowrap">
+                  <span className="text-[11px] font-medium capitalize whitespace-nowrap">
                     {info.name}
                   </span>
                 </Button>
@@ -158,43 +185,16 @@ export function MobileContextBar({
           </div>
         </div>
 
-        {/* Right: Next phase button - narrow but tall touch target */}
+        {/* Right: Next phase button */}
         <Button
           variant="ghost"
           size="icon"
-          className="h-10 w-8 shrink-0"
+          className="h-8 w-7 shrink-0"
           onClick={onNext}
           aria-label="Next phase"
         >
           <HugeiconsIcon icon={ArrowRight01Icon} className="h-4 w-4" />
         </Button>
-
-        {/* Divider */}
-        <div className="w-px h-7 bg-border shrink-0" />
-
-        {/* Rotation dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-10 px-2.5 shrink-0 gap-0.5">
-              <span className="font-semibold text-sm">R{currentRotation}</span>
-              <HugeiconsIcon icon={ArrowDown01Icon} className="h-3 w-3" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" side="top" className="mb-2">
-            {ROTATIONS.map((rotation) => (
-              <DropdownMenuItem
-                key={rotation}
-                onClick={() => onRotationChange(rotation)}
-                className={cn(
-                  "py-2.5",
-                  rotation === currentRotation && "bg-accent"
-                )}
-              >
-                Rotation {rotation}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
     </div>
   )

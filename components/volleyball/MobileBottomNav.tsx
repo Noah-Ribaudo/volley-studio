@@ -8,7 +8,6 @@ import {
   PresentationBarChart01Icon,
   Timer01Icon,
   UserGroupIcon,
-  BookOpen01Icon,
   Settings01Icon,
   AddTeamIcon,
 } from "@hugeicons/core-free-icons"
@@ -21,7 +20,7 @@ const navItems = [
     icon: PresentationBarChart01Icon,
   },
   {
-    title: 'Roster',
+    title: 'Teams',
     url: '/volleyball/roster',
     icon: UserGroupIcon,
     // Uses AddTeamIcon when no team is selected
@@ -34,12 +33,6 @@ const navItems = [
     icon: Timer01Icon,
   },
   {
-    title: 'Learn',
-    url: '/volleyball/learn',
-    icon: BookOpen01Icon,
-    requiresShowLearnTab: true,
-  },
-  {
     title: 'Settings',
     url: '/volleyball/settings',
     icon: Settings01Icon,
@@ -49,14 +42,8 @@ const navItems = [
 export function MobileBottomNav() {
   const pathname = usePathname()
   const currentTeam = useAppStore((state) => state.currentTeam)
-  const showLearnTab = useAppStore((state) => state.showLearnTab)
 
   const hasTeam = Boolean(currentTeam)
-
-  // Filter out Learn tab if showLearnTab is false
-  const visibleNavItems = navItems.filter(item =>
-    !item.requiresShowLearnTab || showLearnTab
-  )
 
   return (
     <nav
@@ -66,7 +53,7 @@ export function MobileBottomNav() {
       }}
     >
       <div className="flex items-center justify-around h-14">
-        {visibleNavItems.map((item) => {
+        {navItems.map((item) => {
           const isActive = item.url === '/volleyball'
             ? pathname === item.url
             : pathname?.startsWith(item.url)
