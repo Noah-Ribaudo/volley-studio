@@ -436,7 +436,7 @@ function HomePageContent() {
           >
               <VolleyballCourt
                 mode="whiteboard"
-                positions={positions}
+                positions={effectivePositions}
                 awayPositions={awayPositions}
                 highlightedRole={highlightedRole}
                 rotation={currentRotation}
