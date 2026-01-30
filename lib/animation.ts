@@ -1,22 +1,12 @@
-// Animation utilities: easing functions, vector helpers, and simple collision avoidance
+// Animation utilities: vector helpers and collision avoidance
+// Note: Easing and interpolation now handled by Motion (see motion-utils.ts)
 import { Position, Role, ROLE_PRIORITY } from './types'
 
 export const DEFAULT_ANIMATION_CONFIG = {
-  DURATION_MS: 1500,
-  EASING_CSS: 'cubic-bezier(0.4, 0, 0.2, 1)',
   COLLISION_RADIUS: 0.12, // Normalized (was 12 in percentage)
   SEPARATION_STRENGTH: 6,
   MAX_SEPARATION: 3,
 } as const
-
-// Easing functions (t in [0,1])
-export const easeInOutCubic = (t: number) => (t < 0.5
-  ? 4 * t * t * t
-  : 1 - Math.pow(-2 * t + 2, 3) / 2)
-
-export const easeInOutQuad = (t: number) => (t < 0.5
-  ? 2 * t * t
-  : 1 - Math.pow(-2 * t + 2, 2) / 2)
 
 // Basic vector helpers
 export const vecSub = (a: Position, b: Position): Position => ({ x: a.x - b.x, y: a.y - b.y })
@@ -80,20 +70,6 @@ export function computeSteering(
   return vecNormalize(blended)
 }
 
-// Interpolate between two positions with easing
-export function interpolatePosition(
-  from: Position,
-  to: Position,
-  t: number,
-  easing: (t: number) => number = easeInOutCubic
-): Position {
-  const e = easing(Math.max(0, Math.min(1, t)))
-  return {
-    x: from.x + (to.x - from.x) * e,
-    y: from.y + (to.y - from.y) * e
-  }
-}
-
 // Clamp position to court bounds (0-1 normalized coordinates)
 export function clampPosition(pos: Position): Position {
   return {
@@ -101,8 +77,3 @@ export function clampPosition(pos: Position): Position {
     y: Math.max(0, Math.min(1, pos.y))
   }
 }
-
-
-
-
-

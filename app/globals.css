@@ -286,56 +286,5 @@
   display: none;
 }
 
-/* Phase carousel animations */
-@keyframes carousel-slide-left {
-  0% { transform: translateX(20%); }
-  100% { transform: translateX(0); }
-}
-
-@keyframes carousel-slide-right {
-  0% { transform: translateX(-20%); }
-  100% { transform: translateX(0); }
-}
-
-.animate-carousel-left {
-  animation: carousel-slide-left 200ms ease-out forwards;
-}
-
-.animate-carousel-right {
-  animation: carousel-slide-right 200ms ease-out forwards;
-}
-
-/* Fade animations */
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes floatIn {
-  from {
-    opacity: 0;
-    transform: translateY(12px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-.animate-fadeIn {
-  animation: fadeIn 300ms ease-out;
-}
-
-.animate-floatIn {
-  animation: floatIn 400ms ease-out;
-}
-
-/* Bob animation */
-@keyframes bob {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
-}
-
-.animate-bob {
-  animation: bob 2.5s ease-in-out infinite;
-}
+/* Note: Phase carousel animations moved to Motion in useCarouselAnimation.ts */
+/* Note: Fade animations like fadeIn, floatIn, bob were unused and removed */
