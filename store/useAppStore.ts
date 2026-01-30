@@ -128,6 +128,7 @@ interface AppState {
   fullStatusLabels: boolean // Show full words on status badges instead of first letter (default: true)
   showLearnTab: boolean // Show the Learn tab in mobile navigation (default: false)
   debugHitboxes: boolean // Show touch target hitboxes with green highlight (default: false)
+  navMode: 'sidebar' | 'header' // Desktop navigation mode (default: 'header')
 
   // Practice mode (local storage) - stored in normalized coordinates (0-1)
   localPositions: Record<string, NormalizedPositionCoordinates>
@@ -206,6 +207,7 @@ interface AppState {
   setFullStatusLabels: (full: boolean) => void
   setShowLearnTab: (show: boolean) => void
   setDebugHitboxes: (show: boolean) => void
+  setNavMode: (mode: 'sidebar' | 'header') => void
   // Attack ball actions (for whiteboard defense phase)
   setAttackBallPosition: (rotation: Rotation, phase: Phase, position: Position) => void
   clearAttackBallPosition: (rotation: Rotation, phase: Phase) => void
@@ -414,6 +416,7 @@ export const useAppStore = create<AppState>()(
       fullStatusLabels: true, // Default to showing full words on status badges
       showLearnTab: false, // Default to hiding Learn tab in mobile nav
       debugHitboxes: false, // Default to hiding hitbox debug overlay
+      navMode: 'header' as const, // Default to header nav (no sidebar)
       localPositions: {},
       localArrows: {},
       arrowCurves: {},
@@ -821,6 +824,8 @@ export const useAppStore = create<AppState>()(
 
       setDebugHitboxes: (show) => set({ debugHitboxes: show }),
 
+      setNavMode: (mode) => set({ navMode: mode }),
+
       // Attack ball actions (for whiteboard defense phase)
       setAttackBallPosition: (rotation, phase, position) => set((state) => {
         const key = createRotationPhaseKey(rotation, phase)
@@ -979,6 +984,7 @@ export const useAppStore = create<AppState>()(
           tokenSize: state.tokenSize,
           hideAwayTeam: state.hideAwayTeam,
           showLearnTab: state.showLearnTab,
+          navMode: state.navMode,
           attackBallPositions: state.attackBallPositions,
           // Learning mode progress
           learningLessonId: state.learningLessonId,

@@ -74,6 +74,9 @@ export default function SettingsPage() {
     // Debug
     debugHitboxes,
     setDebugHitboxes,
+    // Navigation
+    navMode,
+    setNavMode,
   } = useAppStore()
 
   // DnD sensors for phase reordering
@@ -126,13 +129,31 @@ export default function SettingsPage() {
             <CardTitle className="text-base">Appearance</CardTitle>
             <CardDescription>Customize the look and feel</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label className="text-sm font-medium">Theme</Label>
-                <p className="text-xs text-muted-foreground">Choose light, dark, or system</p>
+                <p className="text-xs text-muted-foreground">Choose light or dark</p>
               </div>
               <ThemePicker />
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label className="text-sm font-medium">Desktop Navigation</Label>
+                <p className="text-xs text-muted-foreground">Header bar or sidebar</p>
+              </div>
+              <Select
+                value={navMode}
+                onValueChange={(val) => setNavMode(val as 'sidebar' | 'header')}
+              >
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="header">Header</SelectItem>
+                  <SelectItem value="sidebar">Sidebar</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
