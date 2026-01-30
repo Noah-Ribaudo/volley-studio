@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useRef, useLayoutEffect, useState } from 'react'
+import { animate, stopAnimation, type AnimationPlaybackControls } from '@/lib/motion-utils'
 
 // Animation timing constants (in ms)
 export const CAROUSEL_TIMING = {
@@ -44,6 +45,8 @@ interface UseCarouselAnimationResult {
  *
  * Handles the dim → slide → highlight animation sequence when
  * the current phase changes. Used by both PlaybackBar and MobilePlaybackBar.
+ *
+ * Uses Motion for interruptible, smooth animations.
  */
 export function useCarouselAnimation<T>({
   items,
@@ -62,7 +65,12 @@ export function useCarouselAnimation<T>({
   const prevIndexRef = useRef(currentIndex)
   const hasMeasured = useRef(false)
 
+  // Track current animation for cleanup/interruption
+  const animationRef = useRef<AnimationPlaybackControls | null>(null)
+  const pendingIndexRef = useRef<number | null>(null)
+
   const { DIM_DURATION, SLIDE_DURATION, HIGHLIGHT_DURATION } = CAROUSEL_TIMING
+  const totalDuration = DIM_DURATION + SLIDE_DURATION + HIGHLIGHT_DURATION
 
   // Get item index at offset from a given center index (looping)
   const getItemAtOffset = useCallback((offset: number) => {
@@ -109,7 +117,7 @@ export function useCarouselAnimation<T>({
     }
   }, [gap])
 
-  // Handle index changes with animation
+  // Handle index changes with animation - using Motion for interruptibility
   useLayoutEffect(() => {
     if (!enabled) return
 
@@ -117,12 +125,14 @@ export function useCarouselAnimation<T>({
 
     if (!hasMeasured.current) {
       hasMeasured.current = true
-      // displayIndex is already initialized with currentIndex via useState
       prevIndexRef.current = newIndex
       return
     }
 
     if (prevIndexRef.current === newIndex) return
+
+    // Stop any existing animation when a new one starts (interruptibility)
+    stopAnimation(animationRef.current)
 
     const len = items.length
     const rawDiff = newIndex - prevIndexRef.current
@@ -133,26 +143,54 @@ export function useCarouselAnimation<T>({
       direction = rawDiff > 0 ? -1 : 1
     }
 
-    setAnimationPhase('dimming')
+    const slideDistance = measureSlideDistance(direction)
+    pendingIndexRef.current = newIndex
 
-    setTimeout(() => {
-      const slideDistance = measureSlideDistance(direction)
-      setAnimationPhase('sliding')
-      setSlideOffset(slideDistance)
-    }, DIM_DURATION)
+    // Use a single Motion animation that drives all phases based on progress
+    // This makes the animation fully interruptible
+    animationRef.current = animate(0, 1, {
+      duration: totalDuration / 1000, // Motion uses seconds
+      ease: 'linear', // We control easing per-phase
+      onUpdate: (progress) => {
+        const elapsed = progress * totalDuration
 
-    setTimeout(() => {
-      setSlideOffset(0)
-      setDisplayIndex(newIndex)
-      setAnimationPhase('highlighting')
-    }, DIM_DURATION + SLIDE_DURATION)
-
-    setTimeout(() => {
-      setAnimationPhase('idle')
-    }, DIM_DURATION + SLIDE_DURATION + HIGHLIGHT_DURATION)
+        if (elapsed < DIM_DURATION) {
+          // Dimming phase
+          setAnimationPhase('dimming')
+          setSlideOffset(0)
+        } else if (elapsed < DIM_DURATION + SLIDE_DURATION) {
+          // Sliding phase - ease the slide with cubic bezier feel
+          setAnimationPhase('sliding')
+          const slideProgress = (elapsed - DIM_DURATION) / SLIDE_DURATION
+          // Apply easing to slide progress
+          const easedProgress = slideProgress < 0.5
+            ? 2 * slideProgress * slideProgress
+            : 1 - Math.pow(-2 * slideProgress + 2, 2) / 2
+          setSlideOffset(slideDistance * easedProgress)
+        } else {
+          // Highlighting phase
+          setAnimationPhase('highlighting')
+          // At this point, snap to final position
+          setSlideOffset(0)
+          if (pendingIndexRef.current !== null) {
+            setDisplayIndex(pendingIndexRef.current)
+            pendingIndexRef.current = null
+          }
+        }
+      },
+      onComplete: () => {
+        setAnimationPhase('idle')
+        setSlideOffset(0)
+        animationRef.current = null
+      },
+    })
 
     prevIndexRef.current = newIndex
-  }, [currentIndex, items.length, measureSlideDistance, enabled, DIM_DURATION, SLIDE_DURATION, HIGHLIGHT_DURATION])
+
+    return () => {
+      stopAnimation(animationRef.current)
+    }
+  }, [currentIndex, items.length, measureSlideDistance, enabled, DIM_DURATION, SLIDE_DURATION, HIGHLIGHT_DURATION, totalDuration])
 
   // Calculate base offset when displayIndex or items change
   useLayoutEffect(() => {
