@@ -14,9 +14,9 @@ interface TeamCardProps {
 export function TeamCard({ team }: TeamCardProps) {
   const [showAccessDialog, setShowAccessDialog] = useState(false)
   const rosterCount = team.roster?.length || 0
-  const updatedDate = new Date(team.updated_at).toLocaleDateString()
+  const updatedDate = team.updated_at ? new Date(team.updated_at).toLocaleDateString() : undefined
   const hasPassword = team.password && team.password.trim() !== ''
-  
+
   const handleOpenClick = (e: React.MouseEvent) => {
     if (hasPassword) {
       e.preventDefault()
@@ -24,7 +24,7 @@ export function TeamCard({ team }: TeamCardProps) {
     }
     // If no password, let the Link handle navigation normally
   }
-  
+
   return (
     <>
       <Card className="group hover:shadow-md transition-shadow">
@@ -33,7 +33,7 @@ export function TeamCard({ team }: TeamCardProps) {
             <div className="flex-1 min-w-0">
               <h3 className="font-semibold text-lg truncate">{team.name}</h3>
               <p className="text-sm text-muted-foreground">
-                {rosterCount} player{rosterCount !== 1 ? 's' : ''} • Updated {updatedDate}
+                {rosterCount} player{rosterCount !== 1 ? 's' : ''}{updatedDate && <> • Updated {updatedDate}</>}
                 {hasPassword && (
                   <span className="ml-2 inline-flex items-center">
                     <svg
@@ -55,11 +55,11 @@ export function TeamCard({ team }: TeamCardProps) {
                 )}
               </p>
             </div>
-            
+
             <div className="flex gap-2">
               {hasPassword ? (
-                <Button 
-                  size="sm" 
+                <Button
+                  size="sm"
                   variant="default"
                   onClick={handleOpenClick}
                 >
@@ -74,7 +74,7 @@ export function TeamCard({ team }: TeamCardProps) {
               )}
             </div>
           </div>
-        
+
           {/* Roster preview */}
           {rosterCount > 0 && (
             <div className="mt-3 flex flex-wrap gap-1">
@@ -95,7 +95,7 @@ export function TeamCard({ team }: TeamCardProps) {
           )}
         </CardContent>
       </Card>
-      
+
       {hasPassword && (
         <TeamAccessDialog
           team={team}

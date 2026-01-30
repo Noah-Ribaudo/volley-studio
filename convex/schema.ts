@@ -34,12 +34,27 @@ export default defineSchema({
   customLayouts: defineTable({
     teamId: v.id("teams"),
     rotation: v.number(), // 1-6
-    phase: v.string(), // 'serve', 'receive', 'attack', 'defense'
+    phase: v.string(), // 'PRE_SERVE', 'SERVE_RECEIVE', etc.
     positions: v.record(
       v.string(),
       v.object({ x: v.number(), y: v.number() })
     ), // {role: {x, y}}
-    flags: v.optional(v.record(v.string(), v.array(v.string()))), // {role: ['attacking-1', ...]}
+    // Extended data (arrows, status tags, curves, attack ball)
+    flags: v.optional(
+      v.object({
+        arrows: v.optional(
+          v.record(v.string(), v.union(v.object({ x: v.number(), y: v.number() }), v.null()))
+        ),
+        arrowFlips: v.optional(v.record(v.string(), v.boolean())),
+        arrowCurves: v.optional(
+          v.record(v.string(), v.object({ x: v.number(), y: v.number() }))
+        ),
+        statusFlags: v.optional(v.record(v.string(), v.array(v.string()))),
+        attackBallPosition: v.optional(
+          v.union(v.object({ x: v.number(), y: v.number() }), v.null())
+        ),
+      })
+    ),
   })
     .index("by_team", ["teamId"])
     .index("by_team_rotation_phase", ["teamId", "rotation", "phase"]),

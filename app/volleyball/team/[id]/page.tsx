@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback, use } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQuery, useMutation } from 'convex/react'
+import { api } from '@/convex/_generated/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -9,23 +11,23 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { VolleyballCourt } from '@/components/court'
-import { 
-  RotationControlBar, 
-  PhaseSelector, 
+import {
+  RotationControlBar,
+  PhaseSelector,
   RoleHighlighter,
-  RotationInfoCard 
+  RotationInfoCard
 } from '@/components/controls'
 import { RosterEditor } from '@/components/roster/RosterEditor'
 import { PositionAssigner } from '@/components/roster/PositionAssigner'
 import { PasswordInput } from '@/components/ui/password-input'
-import { Team, CustomLayout, Role, Phase, Rotation, Position, RosterPlayer, PositionAssignments, RALLY_PHASES, DEFAULT_VISIBLE_PHASES } from '@/lib/types'
+import { Role, Phase, Rotation, Position, RosterPlayer, PositionAssignments, RALLY_PHASES, DEFAULT_VISIBLE_PHASES, CustomLayout, PositionCoordinates } from '@/lib/types'
 import { DEFAULT_BASE_ORDER } from '@/lib/rotations'
 import type { RallyPhase } from '@/lib/sim/types'
-import { getTeam, updateTeam, getTeamLayouts, saveLayout, isSupabaseConfigured, getTeamShareUrl } from '@/lib/teams'
 import { getWhiteboardPositions } from '@/lib/sim/whiteboard'
 import { getCurrentPositions as getStorePositions, useAppStore } from '@/store/useAppStore'
 import { getNextPhaseInFlow } from '@/lib/sim/whiteboard'
 import Link from 'next/link'
+import type { Id } from '@/convex/_generated/dataModel'
 
 interface TeamPageProps {
   params: Promise<{ id: string }>
@@ -35,14 +37,18 @@ export default function TeamPage({ params }: TeamPageProps) {
   const { id } = use(params)
   const router = useRouter()
   const showLibero = useAppStore((state) => state.showLibero)
-  
-  // Team state
-  const [team, setTeam] = useState<Team | null>(null)
-  const [layouts, setLayouts] = useState<CustomLayout[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [isSaving, setIsSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  
+
+  // Convex queries and mutations
+  const team = useQuery(api.teams.getBySlug, { slug: id })
+  const layouts = useQuery(
+    api.layouts.getByTeam,
+    team?._id ? { teamId: team._id } : "skip"
+  )
+  const updateTeam = useMutation(api.teams.update)
+  const updateRoster = useMutation(api.teams.updateRoster)
+  const updatePositionAssignments = useMutation(api.teams.updatePositionAssignments)
+  const saveLayout = useMutation(api.layouts.save)
+
   // UI state
   const [currentRotation, setCurrentRotation] = useState<Rotation>(1)
   const [currentPhase, setCurrentPhase] = useState<Phase>('PRE_SERVE')
@@ -50,49 +56,38 @@ export default function TeamPage({ params }: TeamPageProps) {
   const [visiblePhases, setVisiblePhases] = useState<Set<RallyPhase>>(new Set(DEFAULT_VISIBLE_PHASES))
   const [editingName, setEditingName] = useState(false)
   const [newName, setNewName] = useState('')
-  
+  const [isSaving, setIsSaving] = useState(false)
+
   // Password state
   const [settingsPassword, setSettingsPassword] = useState('')
   const [settingsPasswordError, setSettingsPasswordError] = useState('')
   const [settingsUnlocked, setSettingsUnlocked] = useState(false)
-  
-  // Load team data
+
+  // Update name input when team loads
   useEffect(() => {
-    const loadTeam = async () => {
-      if (!isSupabaseConfigured()) {
-        setError('Supabase not configured')
-        setIsLoading(false)
-        return
-      }
-      
-      try {
-        const teamData = await getTeam(id)
-        if (!teamData) {
-          setError('Team not found')
-          return
-        }
-        setTeam(teamData)
-        setNewName(teamData.name)
-        
-        // Check if team has password - if not, unlock settings immediately
-        const hasPassword = teamData.password && teamData.password.trim() !== ''
-        setSettingsUnlocked(!hasPassword)
-        
-        const layoutData = await getTeamLayouts(id)
-        setLayouts(layoutData)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load team')
-      } finally {
-        setIsLoading(false)
-      }
+    if (team) {
+      setNewName(team.name)
+      // Check if team has password - if not, unlock settings immediately
+      const hasPassword = team.password && team.password.trim() !== ''
+      setSettingsUnlocked(!hasPassword)
     }
-    
-    loadTeam()
-  }, [id])
-  
+  }, [team])
+
+  // Convert Convex layouts to CustomLayout format
+  const customLayouts: CustomLayout[] = (layouts || []).map(l => ({
+    id: l._id,
+    _id: l._id,
+    team_id: l.teamId,
+    teamId: l.teamId,
+    rotation: l.rotation as Rotation,
+    phase: l.phase as Phase,
+    positions: l.positions as unknown as PositionCoordinates,
+    flags: l.flags || null,
+  }))
+
   // Get current positions (from layout or whiteboard defaults)
   const getCurrentPositions = useCallback(() => {
-    const layout = layouts.find(
+    const layout = customLayouts.find(
       l => l.rotation === currentRotation && l.phase === currentPhase
     )
     if (layout) {
@@ -113,45 +108,45 @@ export default function TeamPage({ params }: TeamPageProps) {
       currentRotation,
       currentPhase,
       {},
-      layouts,
+      customLayouts,
       null,
       true,
       DEFAULT_BASE_ORDER,
       showLibero
     )
-  }, [layouts, currentRotation, currentPhase])
-  
+  }, [customLayouts, currentRotation, currentPhase, showLibero])
+
   // Phase navigation functions using RallyPhase flow
   const nextPhase = useCallback(() => {
     if (RALLY_PHASES.includes(currentPhase as RallyPhase)) {
-      let nextPhase = getNextPhaseInFlow(currentPhase as RallyPhase)
+      let next = getNextPhaseInFlow(currentPhase as RallyPhase)
       let loopedBack = false
       let iterations = 0
       const maxIterations = RALLY_PHASES.length
-      
+
       // Skip hidden phases
-      while (!visiblePhases.has(nextPhase) && iterations < maxIterations) {
+      while (!visiblePhases.has(next) && iterations < maxIterations) {
         iterations++
-        if (nextPhase === 'PRE_SERVE' && currentPhase !== 'PRE_SERVE') {
+        if (next === 'PRE_SERVE' && currentPhase !== 'PRE_SERVE') {
           loopedBack = true
           break
         }
-        const current = nextPhase
-        nextPhase = getNextPhaseInFlow(current)
-        if (nextPhase === currentPhase as RallyPhase) {
+        const current = next
+        next = getNextPhaseInFlow(current)
+        if (next === currentPhase as RallyPhase) {
           break
         }
       }
-      
-      if (loopedBack || (nextPhase === 'PRE_SERVE' && currentPhase !== 'PRE_SERVE')) {
-        setCurrentPhase(nextPhase as Phase)
+
+      if (loopedBack || (next === 'PRE_SERVE' && currentPhase !== 'PRE_SERVE')) {
+        setCurrentPhase(next as Phase)
         setCurrentRotation(currentRotation === 6 ? 1 : (currentRotation + 1) as Rotation)
       } else {
-        setCurrentPhase(nextPhase as Phase)
+        setCurrentPhase(next as Phase)
       }
     }
   }, [currentPhase, currentRotation, visiblePhases])
-  
+
   const prevPhase = useCallback(() => {
     if (RALLY_PHASES.includes(currentPhase as RallyPhase)) {
       const phaseFlow: Record<RallyPhase, RallyPhase> = {
@@ -165,35 +160,35 @@ export default function TeamPage({ params }: TeamPageProps) {
         'DEFENSE_PHASE': 'TRANSITION_TO_DEFENSE',
         'BALL_DEAD': 'DEFENSE_PHASE',
       }
-      
-      let prevPhase = phaseFlow[currentPhase as RallyPhase] || 'PRE_SERVE'
+
+      let prev = phaseFlow[currentPhase as RallyPhase] || 'PRE_SERVE'
       let loopedBack = false
       let iterations = 0
       const maxIterations = RALLY_PHASES.length
-      
+
       // Skip hidden phases
-      while (!visiblePhases.has(prevPhase) && iterations < maxIterations) {
+      while (!visiblePhases.has(prev) && iterations < maxIterations) {
         iterations++
-        if (prevPhase === 'DEFENSE_PHASE' && currentPhase === 'PRE_SERVE') {
+        if (prev === 'DEFENSE_PHASE' && currentPhase === 'PRE_SERVE') {
           loopedBack = true
           break
         }
-        const current = prevPhase
-        prevPhase = phaseFlow[current] || 'PRE_SERVE'
-        if (prevPhase === currentPhase as RallyPhase) {
+        const current = prev
+        prev = phaseFlow[current] || 'PRE_SERVE'
+        if (prev === currentPhase as RallyPhase) {
           break
         }
       }
-      
-      if (loopedBack || (prevPhase === 'DEFENSE_PHASE' && currentPhase === 'PRE_SERVE')) {
-        setCurrentPhase(prevPhase as Phase)
+
+      if (loopedBack || (prev === 'DEFENSE_PHASE' && currentPhase === 'PRE_SERVE')) {
+        setCurrentPhase(prev as Phase)
         setCurrentRotation(currentRotation === 1 ? 6 : (currentRotation - 1) as Rotation)
       } else {
-        setCurrentPhase(prevPhase as Phase)
+        setCurrentPhase(prev as Phase)
       }
     }
   }, [currentPhase, currentRotation, visiblePhases])
-  
+
   // Keyboard navigation for phases
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -205,7 +200,7 @@ export default function TeamPage({ params }: TeamPageProps) {
       ) {
         return
       }
-      
+
       if (e.key === 'ArrowRight') {
         e.preventDefault()
         nextPhase()
@@ -214,115 +209,113 @@ export default function TeamPage({ params }: TeamPageProps) {
         prevPhase()
       }
     }
-    
+
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [nextPhase, prevPhase])
-  
-  // Handle position change (save to Supabase)
+
+  // Handle position change (save to Convex)
   const handlePositionChange = async (role: Role, position: Position) => {
-    if (!team) return
-    
-    // Update local state immediately for responsiveness
+    if (!team?._id) return
+
+    // Get current positions and update
     const currentPositions = getCurrentPositions()
     const newPositions = { ...currentPositions, [role]: position }
-    
-    const existingLayout = layouts.find(
-      l => l.rotation === currentRotation && l.phase === currentPhase
-    )
-    
-    if (existingLayout) {
-      setLayouts(layouts.map(l => 
-        l.id === existingLayout.id 
-          ? { ...l, positions: newPositions }
-          : l
-      ))
-    } else {
-      // Add new layout to state (will be saved)
-      const tempLayout: CustomLayout = {
-        id: `temp-${Date.now()}`,
-        team_id: team.id,
+
+    // Save to Convex
+    try {
+      await saveLayout({
+        teamId: team._id,
         rotation: currentRotation,
         phase: currentPhase,
         positions: newPositions,
-        created_at: new Date().toISOString()
-      }
-      setLayouts([...layouts, tempLayout])
-    }
-    
-    // Save to Supabase (debounced would be better in production)
-    try {
-      await saveLayout(team.id, currentRotation, currentPhase, newPositions)
+      })
     } catch (err) {
       console.error('Failed to save layout:', err)
     }
   }
-  
+
   // Handle name update
   const handleNameUpdate = async () => {
-    if (!team || !newName.trim()) return
-    
+    if (!team?._id || !newName.trim()) return
+
     setIsSaving(true)
     try {
-      const updated = await updateTeam(team.id, { name: newName.trim() })
-      setTeam(updated)
+      await updateTeam({ id: team._id, name: newName.trim() })
       setEditingName(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update name')
+      console.error('Failed to update name:', err)
     } finally {
       setIsSaving(false)
     }
   }
-  
+
   // Handle roster update
   const handleRosterUpdate = async (roster: RosterPlayer[]) => {
-    if (!team) return
-    
+    if (!team?._id) return
+
     setIsSaving(true)
     try {
-      const updated = await updateTeam(team.id, { roster })
-      setTeam(updated)
+      await updateRoster({
+        id: team._id,
+        roster: roster.map(p => ({
+          id: p.id,
+          name: p.name,
+          number: p.number,
+        })),
+      })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update roster')
+      console.error('Failed to update roster:', err)
     } finally {
       setIsSaving(false)
     }
   }
-  
+
   // Handle position assignments update
   const handleAssignmentsUpdate = async (assignments: PositionAssignments) => {
-    if (!team) return
-    
+    if (!team?._id) return
+
     setIsSaving(true)
     try {
-      const updated = await updateTeam(team.id, { position_assignments: assignments })
-      setTeam(updated)
+      // Filter out undefined values for Convex compatibility
+      const cleanAssignments: Record<string, string> = {}
+      for (const [key, value] of Object.entries(assignments)) {
+        if (value !== undefined) {
+          cleanAssignments[key] = value
+        }
+      }
+      await updatePositionAssignments({
+        id: team._id,
+        positionAssignments: cleanAssignments,
+      })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update assignments')
+      console.error('Failed to update assignments:', err)
     } finally {
       setIsSaving(false)
     }
   }
-  
+
   // Copy share link
   const copyShareLink = () => {
-    const url = getTeamShareUrl(id)
+    const url = typeof window !== 'undefined'
+      ? `${window.location.origin}/volleyball/teams/${team?.slug || id}`
+      : `/volleyball/teams/${team?.slug || id}`
     navigator.clipboard.writeText(url)
     alert('Share link copied to clipboard!')
   }
-  
+
   // Handle settings password verification
   const handleSettingsPasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setSettingsPasswordError('')
-    
+
     if (!team || !team.password) return
-    
+
     if (!settingsPassword.trim()) {
       setSettingsPasswordError('Please enter a password')
       return
     }
-    
+
     if (settingsPassword.trim() === team.password) {
       setSettingsUnlocked(true)
       setSettingsPassword('')
@@ -331,9 +324,9 @@ export default function TeamPage({ params }: TeamPageProps) {
       setSettingsPasswordError('Incorrect password')
     }
   }
-  
+
   // Loading state
-  if (isLoading) {
+  if (team === undefined) {
     return (
       <main className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -343,9 +336,9 @@ export default function TeamPage({ params }: TeamPageProps) {
       </main>
     )
   }
-  
+
   // Error state
-  if (error || !team) {
+  if (team === null) {
     return (
       <main className="min-h-screen bg-gradient-to-b from-background to-muted/30">
         <div className="container mx-auto px-4 py-8 max-w-2xl">
@@ -353,7 +346,7 @@ export default function TeamPage({ params }: TeamPageProps) {
             <CardContent className="pt-6">
               <div className="text-center py-8">
                 <h2 className="text-lg font-semibold mb-2">
-                  {error || 'Team not found'}
+                  Team not found
                 </h2>
                 <Link href="/volleyball/teams">
                   <Button>Back to Teams</Button>
@@ -365,7 +358,25 @@ export default function TeamPage({ params }: TeamPageProps) {
       </main>
     )
   }
-  
+
+  // Convert team to expected format
+  const teamData = {
+    id: team._id,
+    _id: team._id,
+    name: team.name,
+    slug: team.slug,
+    password: team.password,
+    archived: team.archived,
+    roster: team.roster.map(p => ({
+      id: p.id,
+      name: p.name,
+      number: p.number ?? 0,
+    })),
+    lineups: team.lineups || [],
+    active_lineup_id: team.activeLineupId || null,
+    position_assignments: team.positionAssignments || {},
+  }
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-background to-muted/30">
       {/* Header */}
@@ -392,7 +403,7 @@ export default function TeamPage({ params }: TeamPageProps) {
                   Teams
                 </Button>
               </Link>
-              
+
               {/* Team name (editable) */}
               {editingName ? (
                 <div className="flex items-center gap-2">
@@ -422,7 +433,7 @@ export default function TeamPage({ params }: TeamPageProps) {
                 </button>
               )}
             </div>
-            
+
             <Button variant="outline" size="sm" onClick={copyShareLink}>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -445,7 +456,7 @@ export default function TeamPage({ params }: TeamPageProps) {
           </div>
         </div>
       </header>
-      
+
       <div className="container mx-auto px-4 py-6 max-w-7xl">
         <Tabs defaultValue="court" className="space-y-4">
           <TabsList className="grid w-full grid-cols-3">
@@ -453,7 +464,7 @@ export default function TeamPage({ params }: TeamPageProps) {
             <TabsTrigger value="roster">Roster</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
-          
+
           {/* Court Tab */}
           <TabsContent value="court" className="space-y-4">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -470,7 +481,7 @@ export default function TeamPage({ params }: TeamPageProps) {
                     />
                   </CardContent>
                 </Card>
-                
+
                 {/* Phase Selector */}
                 <Card>
                   <CardContent className="pt-4">
@@ -493,7 +504,7 @@ export default function TeamPage({ params }: TeamPageProps) {
                     />
                   </CardContent>
                 </Card>
-                
+
                 {/* Role Highlighter */}
                 <Card>
                   <CardContent className="pt-4">
@@ -504,7 +515,7 @@ export default function TeamPage({ params }: TeamPageProps) {
                   </CardContent>
                 </Card>
               </div>
-              
+
               {/* Center Column - Court */}
               <div className="lg:col-span-1 space-y-4">
                 {/* Volleyball Court */}
@@ -512,14 +523,14 @@ export default function TeamPage({ params }: TeamPageProps) {
                   positions={getCurrentPositions()}
                   highlightedRole={highlightedRole}
                   rotation={currentRotation}
-                  roster={team.roster}
-                  assignments={team.position_assignments}
+                  roster={teamData.roster}
+                  assignments={teamData.position_assignments}
                   onPositionChange={handlePositionChange}
                   onRoleClick={setHighlightedRole}
                   editable={true}
                 />
               </div>
-              
+
               {/* Right Column - Info */}
               <div className="lg:col-span-1 space-y-4">
                 {/* Rotation Info */}
@@ -527,7 +538,7 @@ export default function TeamPage({ params }: TeamPageProps) {
               </div>
             </div>
           </TabsContent>
-          
+
           {/* Roster Tab */}
           <TabsContent value="roster" className="space-y-4">
             <div className="grid gap-4 lg:grid-cols-2">
@@ -537,21 +548,21 @@ export default function TeamPage({ params }: TeamPageProps) {
                 </CardHeader>
                 <CardContent>
                   <RosterEditor
-                    roster={team.roster}
+                    roster={teamData.roster}
                     onChange={handleRosterUpdate}
                     isLoading={isSaving}
                   />
                 </CardContent>
               </Card>
-              
+
               <Card>
                 <CardHeader>
                   <CardTitle>Position Assignments</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <PositionAssigner
-                    roster={team.roster}
-                    assignments={team.position_assignments}
+                    roster={teamData.roster}
+                    assignments={teamData.position_assignments}
                     onChange={handleAssignmentsUpdate}
                     isLoading={isSaving}
                     showLibero={showLibero}
@@ -560,7 +571,7 @@ export default function TeamPage({ params }: TeamPageProps) {
               </Card>
             </div>
           </TabsContent>
-          
+
           {/* Settings Tab */}
           <TabsContent value="settings" className="space-y-4">
             {!settingsUnlocked && team?.password && team.password.trim() !== '' ? (
@@ -626,22 +637,22 @@ export default function TeamPage({ params }: TeamPageProps) {
                         value={newName}
                         onChange={(e) => setNewName(e.target.value)}
                       />
-                      <Button 
-                        onClick={handleNameUpdate} 
+                      <Button
+                        onClick={handleNameUpdate}
                         disabled={isSaving || newName === team.name}
                       >
                         Update
                       </Button>
                     </div>
                   </div>
-                  
+
                   <Separator />
-                  
+
                   <div className="space-y-2">
                     <Label>Share Link</Label>
                     <div className="flex gap-2">
                       <Input
-                        value={typeof window !== 'undefined' ? getTeamShareUrl(team.id) : ''}
+                        value={typeof window !== 'undefined' ? `${window.location.origin}/volleyball/teams/${team.slug}` : ''}
                         readOnly
                       />
                       <Button variant="outline" onClick={copyShareLink}>
@@ -652,13 +663,13 @@ export default function TeamPage({ params }: TeamPageProps) {
                       Anyone with this link can view and edit this team
                     </p>
                   </div>
-                  
+
                   <Separator />
-                  
+
                   <div className="space-y-2">
                     <Label>Custom Layouts</Label>
                     <p className="text-sm text-muted-foreground">
-                      {layouts.length} custom layout{layouts.length !== 1 ? 's' : ''} saved
+                      {customLayouts.length} custom layout{customLayouts.length !== 1 ? 's' : ''} saved
                     </p>
                   </div>
                 </CardContent>
@@ -670,4 +681,3 @@ export default function TeamPage({ params }: TeamPageProps) {
     </main>
   )
 }
-

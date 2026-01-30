@@ -221,6 +221,7 @@ export interface Lineup {
 // Team data structure
 export interface Team {
   id: string
+  _id?: string // Convex document ID (optional for backward compatibility)
   name: string
   slug: string
   password?: string | null
@@ -230,19 +231,21 @@ export interface Team {
   active_lineup_id: string | null
   /** @deprecated Use lineups array and active_lineup_id instead */
   position_assignments: PositionAssignments
-  created_at: string
-  updated_at: string
+  created_at?: string
+  updated_at?: string
 }
 
 // Custom layout for a specific rotation/phase
 export interface CustomLayout {
   id: string
+  _id?: string // Convex document ID (optional for backward compatibility)
   team_id: string
+  teamId?: string // Convex field name
   rotation: Rotation
   phase: Phase // Can be legacy phase or RallyPhase
   positions: PositionCoordinates // Normalized coordinates (0-1)
   flags?: LayoutExtendedData | null // Extended data (arrows, status tags, etc.)
-  created_at: string
+  created_at?: string
   updated_at?: string | null // Used for conflict detection
 }
 

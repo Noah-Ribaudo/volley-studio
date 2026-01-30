@@ -1,5 +1,49 @@
 import { mutation } from "./_generated/server";
 
+// Clear all data (for development re-seeding)
+export const clearAllData = mutation({
+  args: {},
+  handler: async (ctx) => {
+    // Delete all layouts first (foreign key reference)
+    const layouts = await ctx.db.query("customLayouts").collect();
+    for (const layout of layouts) {
+      await ctx.db.delete(layout._id);
+    }
+
+    // Delete all teams
+    const teams = await ctx.db.query("teams").collect();
+    for (const team of teams) {
+      await ctx.db.delete(team._id);
+    }
+
+    return { message: `Cleared ${teams.length} teams and ${layouts.length} layouts` };
+  },
+});
+
+// Migration to fix old-format flags (convert {role: [...]} to {statusFlags: {role: [...]}})
+export const migrateLayoutFlags = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const layouts = await ctx.db.query("customLayouts").collect();
+    let migrated = 0;
+
+    for (const layout of layouts) {
+      // Check if flags exists and is in the old format
+      // Old format: { OPP: ["cannot-block", ...] }
+      // New format: { statusFlags: { OPP: ["cannot-block", ...] } }
+      if (layout.flags && !('statusFlags' in layout.flags) && !('arrows' in layout.flags)) {
+        // This is the old format - convert it
+        const oldFlags = layout.flags as unknown as Record<string, string[]>;
+        const newFlags = { statusFlags: oldFlags };
+        await ctx.db.patch(layout._id, { flags: newFlags });
+        migrated++;
+      }
+    }
+
+    return { message: `Migrated ${migrated} layouts` };
+  },
+});
+
 // Migration script to seed data from Supabase export
 export const seedFromSupabase = mutation({
   args: {},
@@ -78,7 +122,7 @@ export const seedFromSupabase = mutation({
           OH2: { x: 0.187, y: 0.49 },
           OPP: { x: 0.196, y: 0.234 },
         },
-        flags: { OPP: ["cannot-block", "back-row-hit"] },
+        flags: { statusFlags: { OPP: ["cannot-block", "back-row-hit"] } },
       },
       {
         rotation: 2,
@@ -91,7 +135,7 @@ export const seedFromSupabase = mutation({
           OH2: { x: 0.262, y: 0.472 },
           OPP: { x: 0.50, y: 0.459 },
         },
-        flags: { OPP: ["cannot-block", "back-row-hit"] },
+        flags: { statusFlags: { OPP: ["cannot-block", "back-row-hit"] } },
       },
     ];
 
