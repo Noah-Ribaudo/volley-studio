@@ -1,5 +1,8 @@
 'use client'
 
+import { useEffect, useRef, useState } from 'react'
+import { animate, SPRING, stopAnimation, type AnimationPlaybackControls } from '@/lib/motion-utils'
+
 interface MovementArrowProps {
   start: { x: number; y: number }
   end: { x: number; y: number }
@@ -19,6 +22,8 @@ interface MovementArrowProps {
   onMouseLeave?: () => void
   /** Debug mode: show hit boxes with neon green highlight */
   debugHitboxes?: boolean
+  /** Whether to animate the path drawing when arrow first appears */
+  animateIn?: boolean
 }
 
 export function MovementArrow({
@@ -34,8 +39,14 @@ export function MovementArrow({
   showCurveHandle = false,
   onMouseEnter,
   onMouseLeave,
-  debugHitboxes = false
+  debugHitboxes = false,
+  animateIn = false
 }: MovementArrowProps) {
+  const pathRef = useRef<SVGPathElement>(null)
+  const arrowheadRef = useRef<SVGPathElement>(null)
+  const animationRef = useRef<AnimationPlaybackControls | null>(null)
+  const [isAnimating, setIsAnimating] = useState(animateIn)
+
   // Calculate arrowhead direction
   const calculateArrowhead = () => {
     // If we have a control point, calculate the tangent at the end of the curve
@@ -103,6 +114,56 @@ export function MovementArrow({
     pathData = `M ${start.x} ${start.y} L ${end.x} ${end.y}`
   }
 
+  // Path draw animation on mount (when animateIn is true)
+  useEffect(() => {
+    if (!animateIn) return
+
+    const path = pathRef.current
+    const arrowhead = arrowheadRef.current
+    if (!path) return
+
+    // Get the total length of the path for dash animation
+    const pathLength = path.getTotalLength()
+
+    // Set up initial state - path hidden via dash offset
+    path.style.strokeDasharray = `${pathLength}`
+    path.style.strokeDashoffset = `${pathLength}`
+
+    // Hide arrowhead initially
+    if (arrowhead) {
+      arrowhead.style.opacity = '0'
+    }
+
+    // Animate path draw with spring
+    animationRef.current = animate(0, 1, {
+      duration: 0.3,
+      ease: [0.4, 0, 0.2, 1],
+      onUpdate: (progress) => {
+        // Draw the path
+        path.style.strokeDashoffset = `${pathLength * (1 - progress)}`
+
+        // Fade in arrowhead in the last 30% of animation
+        if (arrowhead) {
+          const arrowheadProgress = Math.max(0, (progress - 0.7) / 0.3)
+          arrowhead.style.opacity = String(arrowheadProgress)
+        }
+      },
+      onComplete: () => {
+        // Remove dash properties so path renders normally
+        path.style.strokeDasharray = ''
+        path.style.strokeDashoffset = ''
+        if (arrowhead) {
+          arrowhead.style.opacity = ''
+        }
+        setIsAnimating(false)
+      },
+    })
+
+    return () => {
+      stopAnimation(animationRef.current)
+    }
+  }, [animateIn])
+
   return (
     <g>
       {/* Invisible hit area for hover detection */}
@@ -121,6 +182,7 @@ export function MovementArrow({
       )}
       {/* Visible arrow path */}
       <path
+        ref={pathRef}
         d={pathData}
         fill="none"
         stroke={color}
@@ -132,6 +194,7 @@ export function MovementArrow({
       />
       {/* Arrowhead */}
       <path
+        ref={arrowheadRef}
         d={`M ${end.x} ${end.y} L ${arrowheadX1} ${arrowheadY1} M ${end.x} ${end.y} L ${arrowheadX2} ${arrowheadY2}`}
         fill="none"
         stroke={color}

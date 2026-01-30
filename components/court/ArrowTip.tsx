@@ -1,6 +1,8 @@
 'use client'
 
+import { useEffect, useRef } from 'react'
 import { Role, ROLE_INFO } from '@/lib/types'
+import { animate, SPRING, stopAnimation, type AnimationPlaybackControls } from '@/lib/motion-utils'
 
 interface ArrowTipProps {
   role: Role
@@ -20,8 +22,11 @@ interface ArrowTipProps {
 
 // Curved arrow tip that peeks out from behind the player token
 // Has a hand-drawn, sketchy feel with a swoopy curve
+// Uses Motion for spring entrance animation
 export function ArrowTip({ role, playerX, playerY, tokenRadius, onDragStart, direction = 'right', onMouseEnter, debugHitboxes = false }: ArrowTipProps) {
   const roleColor = ROLE_INFO[role].color
+  const groupRef = useRef<SVGGElement>(null)
+  const animationRef = useRef<AnimationPlaybackControls | null>(null)
 
   // Arrow dimensions - designed to feel hand-drawn
   const peekDistance = 16 // How far the arrow peeks out from the token edge
@@ -39,37 +44,49 @@ export function ArrowTip({ role, playerX, playerY, tokenRadius, onDragStart, dir
   const touchWidth = peekDistance + arrowheadSize + 30
   const touchHeight = 54
 
-  // Straight horizontal line from under the token to peek point
-  // No curve - straight out like coming out of a tunnel
-
   // Arrowhead points
   const headTipX = isLeft ? arrowEndX - arrowheadSize : arrowEndX + arrowheadSize
   const headBackTop = { x: arrowEndX, y: tipY - arrowheadSize * 0.5 }
   const headBackBottom = { x: arrowEndX, y: tipY + arrowheadSize * 0.5 }
 
   // Animation transform origin - from the token edge so it slides out horizontally
-  const transformOrigin = isLeft ? `${edgeX}px ${tipY}px` : `${edgeX}px ${tipY}px`
-  const slideDirection = isLeft ? 'slideOutLeft' : 'slideOutRight'
+  const slideStart = isLeft ? 12 : -12
+
+  // Spring entrance animation on mount
+  useEffect(() => {
+    const group = groupRef.current
+    if (!group) return
+
+    // Set initial state
+    group.style.opacity = '0'
+    group.style.transform = `translateX(${slideStart}px)`
+
+    // Animate with spring
+    animationRef.current = animate(0, 1, {
+      type: 'spring',
+      ...SPRING.snappy,
+      onUpdate: (progress) => {
+        const x = slideStart * (1 - progress)
+        group.style.opacity = String(progress)
+        group.style.transform = `translateX(${x}px)`
+      },
+    })
+
+    return () => {
+      stopAnimation(animationRef.current)
+    }
+  }, [slideStart])
 
   return (
     <g
+      ref={groupRef}
       className="arrow-tip"
       style={{
         opacity: 0,
-        transformOrigin,
-        animation: `${slideDirection} 150ms ease forwards`,
         pointerEvents: 'auto'
       }}
     >
       <style>{`
-        @keyframes slideOutRight {
-          from { opacity: 0; transform: translateX(-12px); }
-          to { opacity: 1; transform: translateX(0); }
-        }
-        @keyframes slideOutLeft {
-          from { opacity: 0; transform: translateX(12px); }
-          to { opacity: 1; transform: translateX(0); }
-        }
         .arrow-tip:hover .arrow-tip-visual {
           filter: brightness(1.1);
         }
