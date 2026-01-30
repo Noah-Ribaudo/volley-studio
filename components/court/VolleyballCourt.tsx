@@ -29,11 +29,14 @@ import { useThemeStore } from '@/store/useThemeStore'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import {
   computeSteering,
-  interpolatePosition,
   clampPosition,
-  easeInOutCubic,
-  easeInOutQuad
 } from '@/lib/animation'
+import {
+  animate,
+  SPRING,
+  stopAnimation,
+  type AnimationPlaybackControls,
+} from '@/lib/motion-utils'
 import { DEFAULT_BASE_ORDER, normalizeBaseOrder, isInBackRow, getRoleZone, getBackRowMiddle, getActiveRoles } from '@/lib/rotations'
 import { HoverCard, HoverCardTrigger, HoverCardContent } from '@/components/ui/hover-card'
 import { Badge } from '@/components/ui/badge'
@@ -181,8 +184,9 @@ export function VolleyballCourt({
   const rafRef = useRef<number | null>(null)
   const arrowRafRef = useRef<number | null>(null)
   const arrowLastUpdateRef = useRef<number>(0)
-  const animationRafRef = useRef<number | null>(null)
   const lastUpdateRef = useRef<number>(0)
+  const positionAnimationRef = useRef<AnimationPlaybackControls | null>(null)
+  const bezierAnimationRef = useRef<AnimationPlaybackControls | null>(null)
   const onPositionChangeRef = useRef(onPositionChange)
   const onAwayPositionChangeRef = useRef(onAwayPositionChange)
 
@@ -492,77 +496,82 @@ export function VolleyballCourt({
     onContextPlayerChange(role)
   }, [contextPlayer, onContextPlayerChange, getTokenScreenPosition])
 
-  // Handle animations when positions change
+  // Handle animations when positions change - using Motion springs
   useEffect(() => {
+    // Stop any existing animation
+    stopAnimation(positionAnimationRef.current)
+
     if (animationMode === 'css') {
-      // CSS transitions: render from derived positions; keep refs aligned for later RAF.
+      // CSS transitions: render from derived positions; keep refs aligned
       currentPositionsRef.current = collisionFreePositions
       return
     }
 
-    // RAF animation
-    if (animationRafRef.current) cancelAnimationFrame(animationRafRef.current)
-    const duration = cfg.durationMs
-    const start = performance.now()
-    const startPositions = currentPositionsRef.current
+    // Motion spring animation with collision avoidance
+    const startPositions = { ...currentPositionsRef.current }
     const adjustedTargets = collisionFreePositions
 
-    const step = (now: number) => {
-      const t = Math.min(1, (now - start) / duration)
-      // In simulation mode, only animate roles that have positions
-      const animatableRoles = activeRoles.filter(role => {
-        // In simulation mode, skip roles without positions (inactive/substituted)
-        if (mode === 'simulation' && !adjustedTargets[role]) return false
-        return true
-      })
-      const next: PositionCoordinates = { ...startPositions }
+    // Filter to animatable roles
+    const animatableRoles = activeRoles.filter(role => {
+      if (mode === 'simulation' && !adjustedTargets[role]) return false
+      return true
+    })
 
-      // current snapshot for steering
-      const agents = animatableRoles.map(role => ({
-        role,
-        position: currentPositionsRef.current[role] || { x: 0.5, y: 0.5 },
-        target: adjustedTargets[role] || { x: 0.5, y: 0.5 }
-      }))
+    // Animate using Motion's spring
+    positionAnimationRef.current = animate(0, 1, {
+      type: 'spring',
+      ...SPRING.player,
+      onUpdate: (progress) => {
+        const next: PositionCoordinates = { ...startPositions }
 
-      animatableRoles.forEach((role, idx) => {
-        const agent = agents[idx]
-        const steering = computeSteering(agent, agents, {
-          collisionRadius: cfg.collisionRadius,
-          separationStrength: cfg.separationStrength,
-          maxSeparation: cfg.maxSeparation
+        // Build agents for collision avoidance
+        const agents = animatableRoles.map(role => {
+          const startPos = startPositions[role] || { x: 0.5, y: 0.5 }
+          const targetPos = adjustedTargets[role] || { x: 0.5, y: 0.5 }
+          // Interpolate based on spring progress
+          const interpolated = {
+            x: startPos.x + (targetPos.x - startPos.x) * progress,
+            y: startPos.y + (targetPos.y - startPos.y) * progress,
+          }
+          return {
+            role,
+            position: interpolated,
+            target: targetPos
+          }
         })
-        const easeFn = cfg.easingFn === 'quad' ? easeInOutQuad : easeInOutCubic
-        const startPos = startPositions[role] || { x: 0.5, y: 0.5 }
-        const targetPos = adjustedTargets[role] || { x: 0.5, y: 0.5 }
-        const eased = interpolatePosition(startPos, targetPos, t, easeFn)
-        // Apply small steering offset - scaled to a fraction of the collision radius
-        const steered = clampPosition({
-          x: eased.x + steering.x * (cfg.collisionRadius * 0.2),
-          y: eased.y + steering.y * (cfg.collisionRadius * 0.2)
+
+        // Apply collision steering
+        animatableRoles.forEach((role, idx) => {
+          const agent = agents[idx]
+          const steering = computeSteering(agent, agents, {
+            collisionRadius: cfg.collisionRadius,
+            separationStrength: cfg.separationStrength,
+            maxSeparation: cfg.maxSeparation
+          })
+          // Apply small steering offset
+          const steered = clampPosition({
+            x: agent.position.x + steering.x * (cfg.collisionRadius * 0.2),
+            y: agent.position.y + steering.y * (cfg.collisionRadius * 0.2)
+          })
+          next[role] = steered
         })
-        next[role] = steered
-      })
 
-      setAnimatedPositions(next)
-
-      if (t < 1) {
-        animationRafRef.current = requestAnimationFrame(step)
-      }
-    }
-
-    animationRafRef.current = requestAnimationFrame(step)
+        setAnimatedPositions(next)
+        currentPositionsRef.current = next
+      },
+    })
 
     return () => {
-      if (animationRafRef.current) cancelAnimationFrame(animationRafRef.current)
+      stopAnimation(positionAnimationRef.current)
     }
-  }, [collisionFreePositions, animationMode, cfg.durationMs, cfg.easingFn, cfg.collisionRadius, cfg.separationStrength, cfg.maxSeparation])
+  }, [collisionFreePositions, animationMode, cfg.collisionRadius, cfg.separationStrength, cfg.maxSeparation, activeRoles, mode])
 
   // Track previous animation trigger for detecting when Play is pressed
   const prevAnimationTriggerRef = useRef<number>(animationTrigger)
-  const bezierAnimationRafRef = useRef<number | null>(null)
 
   // Bezier path animation - runs when Play button is pressed (animationTrigger changes)
   // Animates players along their arrow paths (bezier curves) with collision avoidance
+  // Uses Motion for smooth, interruptible animation
   useEffect(() => {
     // Only run when trigger changes and is > 0
     if (animationTrigger === prevAnimationTriggerRef.current || animationTrigger === 0) {
@@ -572,10 +581,7 @@ export function VolleyballCourt({
     prevAnimationTriggerRef.current = animationTrigger
 
     // Cancel any existing bezier animation
-    if (bezierAnimationRafRef.current) {
-      cancelAnimationFrame(bezierAnimationRafRef.current)
-      bezierAnimationRafRef.current = null
-    }
+    stopAnimation(bezierAnimationRef.current)
 
     // Get start positions (current collision-free positions)
     const startPositions = { ...collisionFreePositions }
@@ -600,9 +606,6 @@ export function VolleyballCourt({
     // Mark animation as running
     setIsBezierAnimating(true)
 
-    const duration = cfg.durationMs
-    const startTime = performance.now()
-
     // Bezier interpolation: B(t) = (1-t)²P0 + 2(1-t)tP1 + t²P2
     // P0 = start, P1 = control point, P2 = end
     const interpolateBezier = (
@@ -625,74 +628,65 @@ export function VolleyballCourt({
       }
     }
 
-    const step = (now: number) => {
-      const elapsed = now - startTime
-      const rawT = Math.min(1, elapsed / duration)
-      const easeFn = cfg.easingFn === 'quad' ? easeInOutQuad : easeInOutCubic
-      const t = easeFn(rawT)
+    // Use Motion's animate for smooth, interruptible bezier animation
+    bezierAnimationRef.current = animate(0, 1, {
+      duration: cfg.durationMs / 1000, // Motion uses seconds
+      ease: [0.4, 0, 0.2, 1], // Cubic bezier easing
+      onUpdate: (t) => {
+        const next: PositionCoordinates = {} as PositionCoordinates
 
-      const next: PositionCoordinates = {} as PositionCoordinates
+        // Build agents for collision avoidance
+        const agents = activeRoles.map(role => {
+          const start = startPositions[role] || { x: 0.5, y: 0.5 }
+          const end = targets[role] || { x: 0.5, y: 0.5 }
+          const curve = arrowCurves[role]
 
-      // Build agents for collision avoidance
-      const agents = activeRoles.map(role => {
-        const start = startPositions[role] || { x: 0.5, y: 0.5 }
-        const end = targets[role] || { x: 0.5, y: 0.5 }
-        const curve = arrowCurves[role]
+          // Get control point in normalized coordinates (if curve exists)
+          let control: Position | null = null
+          if (curve && arrows[role]) {
+            control = { x: curve.x, y: curve.y }
+          }
 
-        // Get control point in normalized coordinates (if curve exists)
-        let control: Position | null = null
-        if (curve && arrows[role]) {
-          // ArrowCurveConfig has x, y for control point in normalized coordinates
-          control = { x: curve.x, y: curve.y }
-        }
+          // Interpolate along bezier path
+          const interpolated = interpolateBezier(start, end, control, t)
 
-        // Interpolate along bezier path
-        const interpolated = interpolateBezier(start, end, control, t)
-
-        return {
-          role,
-          position: interpolated,
-          target: end
-        }
-      })
-
-      // Apply collision avoidance steering
-      activeRoles.forEach((role, idx) => {
-        const agent = agents[idx]
-        const steering = computeSteering(agent, agents, {
-          collisionRadius: cfg.collisionRadius,
-          separationStrength: cfg.separationStrength,
-          maxSeparation: cfg.maxSeparation
+          return {
+            role,
+            position: interpolated,
+            target: end
+          }
         })
 
-        // Apply steering offset (smaller for smoother curves)
-        const steered = clampPosition({
-          x: agent.position.x + steering.x * (cfg.collisionRadius * 0.15),
-          y: agent.position.y + steering.y * (cfg.collisionRadius * 0.15)
+        // Apply collision avoidance steering
+        activeRoles.forEach((role, idx) => {
+          const agent = agents[idx]
+          const steering = computeSteering(agent, agents, {
+            collisionRadius: cfg.collisionRadius,
+            separationStrength: cfg.separationStrength,
+            maxSeparation: cfg.maxSeparation
+          })
+
+          // Apply steering offset (smaller for smoother curves)
+          const steered = clampPosition({
+            x: agent.position.x + steering.x * (cfg.collisionRadius * 0.15),
+            y: agent.position.y + steering.y * (cfg.collisionRadius * 0.15)
+          })
+          next[role] = steered
         })
-        next[role] = steered
-      })
 
-      setAnimatedPositions(next)
-      currentPositionsRef.current = next
-
-      if (rawT < 1) {
-        bezierAnimationRafRef.current = requestAnimationFrame(step)
-      } else {
-        // Animation complete
-        bezierAnimationRafRef.current = null
+        setAnimatedPositions(next)
+        currentPositionsRef.current = next
+      },
+      onComplete: () => {
+        bezierAnimationRef.current = null
         setIsBezierAnimating(false)
-      }
-    }
-
-    bezierAnimationRafRef.current = requestAnimationFrame(step)
+      },
+    })
 
     return () => {
-      if (bezierAnimationRafRef.current) {
-        cancelAnimationFrame(bezierAnimationRafRef.current)
-        bezierAnimationRafRef.current = null
-        setIsBezierAnimating(false)
-      }
+      stopAnimation(bezierAnimationRef.current)
+      bezierAnimationRef.current = null
+      setIsBezierAnimating(false)
     }
   }, [animationTrigger, collisionFreePositions, arrows, arrowCurves, activeRoles, cfg])
 
