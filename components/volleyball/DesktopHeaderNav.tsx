@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Layout, Users, Timer, Settings, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react'
+import { Layout, Users, Timer, Settings, ChevronLeft, ChevronRight, ChevronDown, Play, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -51,6 +51,8 @@ export function DesktopHeaderNav() {
   const setPhase = useAppStore((state) => state.setPhase)
   const nextPhase = useAppStore((state) => state.nextPhase)
   const prevPhase = useAppStore((state) => state.prevPhase)
+  const isPreviewingMovement = useAppStore((state) => state.isPreviewingMovement)
+  const setPreviewingMovement = useAppStore((state) => state.setPreviewingMovement)
 
   // Get visible phases
   const phasesToShow = visiblePhases
@@ -158,6 +160,32 @@ export function DesktopHeaderNav() {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* Divider */}
+          <div className="w-px h-6 bg-border" />
+
+          {/* Play/Reset buttons */}
+          {isPreviewingMovement ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5"
+              onClick={() => setPreviewingMovement(false)}
+            >
+              <RotateCcw className="h-4 w-4" />
+              <span>Reset</span>
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5"
+              onClick={() => setPreviewingMovement(true)}
+            >
+              <Play className="h-4 w-4" />
+              <span>Play</span>
+            </Button>
+          )}
         </div>
       )}
     </header>

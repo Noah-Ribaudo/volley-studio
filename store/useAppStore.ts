@@ -129,6 +129,7 @@ interface AppState {
   showLearnTab: boolean // Show the Learn tab in mobile navigation (default: false)
   debugHitboxes: boolean // Show touch target hitboxes with green highlight (default: false)
   navMode: 'sidebar' | 'header' // Desktop navigation mode (default: 'header')
+  isPreviewingMovement: boolean // Preview mode: show players at arrow endpoints (default: false, not persisted)
 
   // Practice mode (local storage) - stored in normalized coordinates (0-1)
   localPositions: Record<string, NormalizedPositionCoordinates>
@@ -208,6 +209,7 @@ interface AppState {
   setShowLearnTab: (show: boolean) => void
   setDebugHitboxes: (show: boolean) => void
   setNavMode: (mode: 'sidebar' | 'header') => void
+  setPreviewingMovement: (preview: boolean) => void
   // Attack ball actions (for whiteboard defense phase)
   setAttackBallPosition: (rotation: Rotation, phase: Phase, position: Position) => void
   clearAttackBallPosition: (rotation: Rotation, phase: Phase) => void
@@ -417,6 +419,7 @@ export const useAppStore = create<AppState>()(
       showLearnTab: false, // Default to hiding Learn tab in mobile nav
       debugHitboxes: false, // Default to hiding hitbox debug overlay
       navMode: 'header' as const, // Default to header nav (no sidebar)
+      isPreviewingMovement: false, // Default to not previewing (not persisted)
       localPositions: {},
       localArrows: {},
       arrowCurves: {},
@@ -825,6 +828,8 @@ export const useAppStore = create<AppState>()(
       setDebugHitboxes: (show) => set({ debugHitboxes: show }),
 
       setNavMode: (mode) => set({ navMode: mode }),
+
+      setPreviewingMovement: (preview) => set({ isPreviewingMovement: preview }),
 
       // Attack ball actions (for whiteboard defense phase)
       setAttackBallPosition: (rotation, phase, position) => set((state) => {

@@ -95,6 +95,9 @@ function HomePageContent() {
     // Player status flags
     localStatusFlags,
     togglePlayerStatus,
+    // Preview mode
+    isPreviewingMovement,
+    setPreviewingMovement,
   } = useAppStore()
 
   // Mobile detection
@@ -289,9 +292,6 @@ function HomePageContent() {
     }))
   }, [awayPositionKey])
 
-  // Positions are already in normalized format (0-1)
-  const normalizedPositions = positions
-
   const currentArrows = getCurrentArrows(
     currentRotation,
     currentPhase,
@@ -303,6 +303,25 @@ function HomePageContent() {
     currentTeam,
     isUsingPreset ? presetLayouts : undefined
   )
+
+  // When previewing movement, move players to their arrow endpoints
+  const effectivePositions = useMemo(() => {
+    if (!isPreviewingMovement) return positions
+
+    // Clone positions and replace with arrow endpoints where arrows exist
+    const previewPositions = { ...positions }
+    for (const role of ROLES) {
+      const arrowEnd = currentArrows[role]
+      if (arrowEnd && positions[role]) {
+        previewPositions[role] = arrowEnd
+      }
+    }
+    return previewPositions
+  }, [isPreviewingMovement, positions, currentArrows])
+
+  // Positions are already in normalized format (0-1)
+  // Use effectivePositions which applies preview transformation when active
+  const normalizedPositions = effectivePositions
 
   // Get arrow curve preferences for current rotation/phase
   const currentArrowCurves = arrowCurves[createRotationPhaseKey(currentRotation, currentPhase)] || {}
