@@ -9,6 +9,7 @@
  */
 
 import type * as customLayouts from "../customLayouts.js";
+import type * as seed from "../seed.js";
 import type * as teams from "../teams.js";
 
 import type {
@@ -19,6 +20,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   customLayouts: typeof customLayouts;
+  seed: typeof seed;
   teams: typeof teams;
 }>;
 
