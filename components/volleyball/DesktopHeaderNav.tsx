@@ -100,11 +100,11 @@ export function DesktopHeaderNav() {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="h-8 px-3 gap-1.5 min-w-[100px]">
-                  <span className="text-sm font-medium">
+                <Button variant="outline" className="h-8 px-3 gap-1.5 w-[160px] justify-between">
+                  <span className="text-sm font-medium truncate">
                     {getPhaseInfo(currentPhase).name}
                   </span>
-                  <ChevronDown className="h-3 w-3 opacity-50" />
+                  <ChevronDown className="h-3 w-3 opacity-50 shrink-0" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="center">
