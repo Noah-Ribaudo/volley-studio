@@ -21,7 +21,7 @@ const navItems = [
   },
   {
     title: 'Teams',
-    url: '/volleyball/roster',
+    url: '/volleyball/teams',
     icon: UserGroupIcon,
     // Uses AddTeamIcon when no team is selected
     emptyIcon: AddTeamIcon,

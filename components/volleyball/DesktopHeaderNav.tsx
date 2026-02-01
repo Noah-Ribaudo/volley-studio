@@ -24,7 +24,7 @@ const navItems = [
   },
   {
     title: 'Teams',
-    url: '/volleyball/roster',
+    url: '/volleyball/teams',
     icon: Users,
   },
   {
