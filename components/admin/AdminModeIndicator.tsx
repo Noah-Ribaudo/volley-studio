@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { PRESET_SYSTEMS, PRESET_SYSTEM_INFO, type PresetSystem } from '@/lib/database.types'
+import { PRESET_SYSTEMS, PRESET_SYSTEM_INFO, type PresetSystem } from '@/lib/presetTypes'
 
 export function AdminModeIndicator() {
   const {

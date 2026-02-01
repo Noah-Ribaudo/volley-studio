@@ -6,7 +6,7 @@
  */
 
 import { supabase, isSupabaseConfigured } from './supabase'
-import type { PresetSystem } from './database.types'
+import type { PresetSystem } from '@/lib/presetTypes'
 import type { Rotation, Phase, LayoutExtendedData, PositionCoordinates, CustomLayout, RallyPhase } from './types'
 import { getWhiteboardPositions } from './whiteboard'
 import { RALLY_PHASES, DEFAULT_VISIBLE_PHASES } from './types'

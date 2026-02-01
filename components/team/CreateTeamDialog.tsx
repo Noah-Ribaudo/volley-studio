@@ -15,7 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { PRESET_SYSTEMS, PRESET_SYSTEM_INFO, type PresetSystem } from '@/lib/database.types'
+import { PRESET_SYSTEMS, PRESET_SYSTEM_INFO, type PresetSystem } from '@/lib/presetTypes'
 
 interface CreateTeamDialogProps {
   onCreateTeam: (name: string, password?: string, presetSystem?: PresetSystem) => Promise<void>

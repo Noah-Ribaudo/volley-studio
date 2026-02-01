@@ -1,7 +1,7 @@
 // Team CRUD operations with Supabase
 import { getSupabase, isSupabaseConfigured } from './supabase'
 import { Team, CustomLayout, Rotation, Phase, PositionCoordinates, LayoutExtendedData, Lineup } from './types'
-import type { Json, PresetSystem } from './database.types'
+import type { Json, PresetSystem } from '@/lib/presetTypes'
 import { migrateTeamToLineups } from './lineups'
 import { copyPresetsToTeam } from './presets'
 

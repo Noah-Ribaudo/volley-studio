@@ -2,7 +2,7 @@
 
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { PresetSystem } from '@/lib/database.types'
+import type { PresetSystem } from '@/lib/presetTypes'
 import { isAdminAuthenticated, authenticateAdmin, clearAdminAuth } from '@/lib/admin-auth'
 
 interface AdminState {
