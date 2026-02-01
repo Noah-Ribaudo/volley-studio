@@ -27,6 +27,7 @@ import {
 } from '@/lib/types'
 import { useThemeStore } from '@/store/useThemeStore'
 import { useIsMobile } from '@/hooks/useIsMobile'
+import { useReducedMotion } from '@/hooks/useReducedMotion'
 import {
   computeSteering,
   clampPosition,
@@ -305,8 +306,11 @@ export function VolleyballCourt({
   const isMobile = useIsMobile()
   const tokenScale = isMobile ? tokenScaleMobile : tokenScaleDesktop
 
+  // Detect reduced motion preference
+  const prefersReducedMotion = useReducedMotion()
+
   const cfg = {
-    durationMs: animationConfig?.durationMs ?? 500,
+    durationMs: prefersReducedMotion ? 0 : (animationConfig?.durationMs ?? 500),
     easingCss: animationConfig?.easingCss ?? 'cubic-bezier(0.4, 0, 0.2, 1)',
     easingFn: animationConfig?.easingFn ?? 'cubic',
     collisionRadius: animationConfig?.collisionRadius ?? 0.12, // Normalized (was 12 in percentage)

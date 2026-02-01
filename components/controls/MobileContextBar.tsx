@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useCarouselAnimation, CAROUSEL_TIMING } from '@/hooks/useCarouselAnimation'
+import { useReducedMotion } from '@/hooks/useReducedMotion'
 
 interface MobileContextBarProps {
   currentRotation: Rotation
@@ -50,7 +51,10 @@ export function MobileContextBar({
     : PHASES
   const currentIndex = phasesToShow.findIndex(p => p === currentPhase)
 
-  // Use shared carousel animation hook
+  // Detect reduced motion preference
+  const prefersReducedMotion = useReducedMotion()
+
+  // Use shared carousel animation hook (disabled if reduced motion preferred)
   const {
     animationPhase,
     slideOffset,
@@ -62,7 +66,7 @@ export function MobileContextBar({
     items: phasesToShow,
     currentIndex,
     gap: 6,
-    enabled: true,
+    enabled: !prefersReducedMotion,
   })
 
   // Get phase at offset from display index
@@ -88,7 +92,7 @@ export function MobileContextBar({
         {/* Rotation selector - moved to left for easier thumb access */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 px-2 shrink-0 gap-0.5">
+            <Button variant="ghost" className="h-10 px-2 shrink-0 gap-0.5">
               <span className="font-semibold text-sm">R{currentRotation}</span>
               <HugeiconsIcon icon={ArrowDown01Icon} className="h-3 w-3" />
             </Button>
@@ -116,7 +120,7 @@ export function MobileContextBar({
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-7 shrink-0"
+          className="h-11 w-11 shrink-0"
           onClick={onPrev}
           aria-label="Previous phase"
         >
@@ -176,7 +180,7 @@ export function MobileContextBar({
                   }}
                 >
                   {getCompactPhaseIcon(phase)}
-                  <span className="text-[11px] font-medium capitalize whitespace-nowrap">
+                  <span className="text-xs font-medium capitalize whitespace-nowrap">
                     {info.name}
                   </span>
                 </Button>
@@ -189,7 +193,7 @@ export function MobileContextBar({
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-7 shrink-0"
+          className="h-11 w-11 shrink-0"
           onClick={onNext}
           aria-label="Next phase"
         >

@@ -75,7 +75,7 @@ export function MobileBottomNav() {
               )}
             >
               <HugeiconsIcon icon={IconComponent} className="h-5 w-5" />
-              <span className="text-[10px]">{item.title}</span>
+              <span className="text-xs">{item.title}</span>
             </Link>
           )
         })}

@@ -33,13 +33,9 @@ export default function VolleyballLayout({
   const isWhiteboardPage = pathname === '/volleyball'
   const showContextBar = isWhiteboardPage
 
-  // Different padding based on what's visible:
-  // - Whiteboard with context bar: nav (3.5rem) + context bar (~2.5rem) = ~6rem
-  // - Other pages: just nav = ~3.5rem
-  let paddingClass = '[padding-bottom:calc(3.5rem+env(safe-area-inset-bottom,0px))]'
-  if (showContextBar) {
-    paddingClass = '[padding-bottom:calc(6rem+env(safe-area-inset-bottom,0px))]'
-  }
+  // Always reserve space for context bar to prevent layout jump
+  // This keeps the layout stable when navigating between pages
+  const paddingClass = '[padding-bottom:calc(6rem+env(safe-area-inset-bottom,0px))]'
 
   // Header mode - no sidebar, just top nav on desktop
   if (navMode === 'header') {
