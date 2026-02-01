@@ -1,32 +1,23 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js'
+/**
+ * Supabase stub - Supabase has been removed from this project
+ * This file exists to prevent import errors in legacy code
+ * TODO: Remove all Supabase references and migrate to Convex
+ */
 
-// Minimal Database type for Supabase (no longer using actual database types)
-type Database = any
+// Stub type to satisfy TypeScript
+type SupabaseStub = any
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+// Supabase is not configured and not available
+export const supabase: SupabaseStub | null = null
 
-// Only create client if configured
-let supabaseClient: SupabaseClient<Database> | null = null
-
-if (supabaseUrl && supabaseAnonKey) {
-  supabaseClient = createClient<Database>(supabaseUrl, supabaseAnonKey)
-}
-
-// Export the client (null when not configured)
-export const supabase: SupabaseClient<Database> | null = supabaseClient
-
-// Helper to check if Supabase is configured
+// Always returns false - Supabase is not configured
 export const isSupabaseConfigured = () => {
-  return Boolean(supabaseUrl && supabaseAnonKey && supabaseClient)
+  return false
 }
 
-// Get the client safely (throws if not configured)
-export const getSupabase = (): SupabaseClient<Database> => {
-  if (!supabaseClient) {
-    throw new Error(
-      'Supabase is not configured. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to .env.local and deploy settings, then run the SQL in supabase/schema.sql.'
-    )
-  }
-  return supabaseClient
+// Always throws - Supabase is not available
+export const getSupabase = (): never => {
+  throw new Error(
+    'Supabase is no longer available in this project. Please use Convex for data storage.'
+  )
 }
