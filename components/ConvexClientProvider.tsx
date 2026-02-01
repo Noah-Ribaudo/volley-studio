@@ -7,7 +7,10 @@ export function ConvexClientProvider({ children }: { children: ReactNode }) {
   const convex = useMemo(() => {
     const url = process.env.NEXT_PUBLIC_CONVEX_URL;
     if (!url) {
-      throw new Error("NEXT_PUBLIC_CONVEX_URL environment variable is required");
+      throw new Error(
+        "Configuration Error: NEXT_PUBLIC_CONVEX_URL environment variable is required. " +
+        "Please add it to your .env.local file to connect to the database."
+      );
     }
     return new ConvexReactClient(url);
   }, []);
