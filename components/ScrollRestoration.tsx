@@ -12,7 +12,12 @@ export default function ScrollRestoration() {
     // Restore scroll position on mount
     const savedPositions = sessionStorage.getItem(SCROLL_KEY)
     if (savedPositions) {
-      const positions = JSON.parse(savedPositions)
+      let positions: Record<string, number> = {}
+      try {
+        positions = JSON.parse(savedPositions)
+      } catch {
+        // Corrupted session storage, start fresh
+      }
       const savedY = positions[pathname]
       if (savedY !== undefined) {
         // Small delay to ensure content is rendered
@@ -29,7 +34,12 @@ export default function ScrollRestoration() {
 
     const saveScrollPosition = () => {
       const savedPositions = sessionStorage.getItem(SCROLL_KEY)
-      const positions = savedPositions ? JSON.parse(savedPositions) : {}
+      let positions: Record<string, number> = {}
+      try {
+        positions = savedPositions ? JSON.parse(savedPositions) : {}
+      } catch {
+        // Corrupted session storage, start fresh
+      }
       positions[pathname] = window.scrollY
       sessionStorage.setItem(SCROLL_KEY, JSON.stringify(positions))
     }

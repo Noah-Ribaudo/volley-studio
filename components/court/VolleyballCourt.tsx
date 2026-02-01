@@ -609,7 +609,9 @@ export function VolleyballCourt({
     })
 
     // If no arrows, nothing to animate
-    if (hasArrow.size === 0) return
+    if (hasArrow.size === 0) {
+      return
+    }
 
     // Mark animation as running
     setIsBezierAnimating(true)
