@@ -670,17 +670,32 @@ export function VolleyballCourt({
         return {
           role,
           position: interpolated,
-          target: end
+          target: end,
+          speed: 0.8 // default cruising speed for look-ahead calculation
         }
       })
 
-      // Apply collision avoidance steering
-      activeRoles.forEach((role, idx) => {
-        const agent = agents[idx]
-        const steering = computeSteering(agent, agents, {
+      // Improvement #3: Sequential Priority Processing
+      // Sort agents by priority (lower number = higher priority = processed first)
+      const sortedRoles = [...activeRoles].sort((a, b) =>
+        (ROLE_PRIORITY[a] ?? 99) - (ROLE_PRIORITY[b] ?? 99)
+      )
+
+      // Process sequentially - each agent sees updated positions of higher-priority agents
+      sortedRoles.forEach(role => {
+        const agent = agents.find(a => a.role === role)!
+
+        // Update agent's position to reflect any already-processed higher-priority agents
+        const updatedAgents = agents.map(a => {
+          const updatedPos = next[a.role]
+          return updatedPos ? { ...a, position: updatedPos } : a
+        })
+
+        const steering = computeSteering(agent, updatedAgents, {
           collisionRadius: cfg.collisionRadius,
           separationStrength: cfg.separationStrength,
-          maxSeparation: cfg.maxSeparation
+          maxSeparation: cfg.maxSeparation,
+          lookAheadTime: 0.4 // Look ahead 0.4 seconds for smoother anticipatory movement
         })
 
         // Apply steering offset (smaller for smoother curves)
@@ -688,6 +703,8 @@ export function VolleyballCourt({
           x: agent.position.x + steering.x * (cfg.collisionRadius * 0.15),
           y: agent.position.y + steering.y * (cfg.collisionRadius * 0.15)
         })
+
+        // Immediately store this agent's final position for next agents to see
         next[role] = steered
       })
 
