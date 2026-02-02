@@ -86,58 +86,68 @@
         style="pointer-events: none;"
       >OH2</text>
 
-      <!-- Radial menu (hidden by default) -->
+      <!-- Radial menu (hidden by default) - appears as ring AROUND token -->
       <g id="radialMenu" style="display: none;">
-        <!-- Background circle -->
+        <!-- Outer ring background -->
         <circle
           cx="0"
           cy="0"
-          r="80"
-          fill="rgba(0, 0, 0, 0.85)"
+          r="100"
+          fill="none"
+          stroke="rgba(0, 0, 0, 0.85)"
+          stroke-width="40"
+        />
+
+        <!-- Outer ring border -->
+        <circle
+          cx="0"
+          cy="0"
+          r="100"
+          fill="none"
           stroke="rgba(255, 255, 255, 0.3)"
           stroke-width="2"
         />
 
-        <!-- Center circle (cancel zone) -->
+        <!-- Inner ring border -->
         <circle
           cx="0"
           cy="0"
-          r="25"
-          fill="rgba(60, 60, 60, 0.9)"
-          stroke="rgba(255, 255, 255, 0.5)"
-          stroke-width="1.5"
+          r="60"
+          fill="none"
+          stroke="rgba(255, 255, 255, 0.3)"
+          stroke-width="2"
         />
 
-        <!-- Segments -->
+        <!-- Segments (positioned in the ring area) -->
         <!-- UP - Draw Path -->
         <g id="seg-up" class="segment">
-          <circle class="highlight" cx="0" cy="-52" r="30" fill="rgba(57, 255, 20, 0.3)" stroke="rgba(57, 255, 20, 0.8)" stroke-width="2" style="display: none;"/>
-          <text class="icon" x="0" y="-52" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="24" font-weight="bold">↑</text>
-          <text class="label" x="0" y="-32" text-anchor="middle" dominant-baseline="middle" fill="rgba(255,255,255,0.8)" font-size="11">Draw Path</text>
+          <circle class="highlight" cx="0" cy="-80" r="28" fill="rgba(57, 255, 20, 0.3)" stroke="rgba(57, 255, 20, 0.8)" stroke-width="2" style="display: none;"/>
+          <text class="icon" x="0" y="-80" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="24" font-weight="bold">↑</text>
+          <text class="label" x="0" y="-60" text-anchor="middle" dominant-baseline="middle" fill="rgba(255,255,255,0.8)" font-size="10">Draw</text>
         </g>
 
         <!-- RIGHT - Assign -->
         <g id="seg-right" class="segment">
-          <circle class="highlight" cx="52" cy="0" r="30" fill="rgba(57, 255, 20, 0.3)" stroke="rgba(57, 255, 20, 0.8)" stroke-width="2" style="display: none;"/>
-          <text class="icon" x="52" y="0" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="24" font-weight="bold">👤</text>
-          <text class="label" x="52" y="20" text-anchor="middle" dominant-baseline="middle" fill="rgba(255,255,255,0.8)" font-size="11">Assign</text>
+          <circle class="highlight" cx="80" cy="0" r="28" fill="rgba(57, 255, 20, 0.3)" stroke="rgba(57, 255, 20, 0.8)" stroke-width="2" style="display: none;"/>
+          <text class="icon" x="80" y="0" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="24" font-weight="bold">👤</text>
+          <text class="label" x="80" y="18" text-anchor="middle" dominant-baseline="middle" fill="rgba(255,255,255,0.8)" font-size="10">Assign</text>
         </g>
 
         <!-- DOWN - Highlight -->
         <g id="seg-down" class="segment">
-          <circle class="highlight" cx="0" cy="52" r="30" fill="rgba(57, 255, 20, 0.3)" stroke="rgba(57, 255, 20, 0.8)" stroke-width="2" style="display: none;"/>
-          <text class="icon" x="0" y="52" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="24" font-weight="bold">★</text>
-          <text class="label" x="0" y="72" text-anchor="middle" dominant-baseline="middle" fill="rgba(255,255,255,0.8)" font-size="11">Highlight</text>
+          <circle class="highlight" cx="0" cy="80" r="28" fill="rgba(57, 255, 20, 0.3)" stroke="rgba(57, 255, 20, 0.8)" stroke-width="2" style="display: none;"/>
+          <text class="icon" x="0" y="80" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="24" font-weight="bold">★</text>
+          <text class="label" x="0" y="98" text-anchor="middle" dominant-baseline="middle" fill="rgba(255,255,255,0.8)" font-size="10">Highlight</text>
         </g>
 
         <!-- LEFT - Tags -->
         <g id="seg-left" class="segment">
-          <circle class="highlight" cx="-52" cy="0" r="30" fill="rgba(57, 255, 20, 0.3)" stroke="rgba(57, 255, 20, 0.8)" stroke-width="2" style="display: none;"/>
-          <text class="icon" x="-52" y="0" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="24" font-weight="bold">🏷</text>
-          <text class="label" x="-52" y="20" text-anchor="middle" dominant-baseline="middle" fill="rgba(255,255,255,0.8)" font-size="11">Tags</text>
+          <circle class="highlight" cx="-80" cy="0" r="28" fill="rgba(57, 255, 20, 0.3)" stroke="rgba(57, 255, 20, 0.8)" stroke-width="2" style="display: none;"/>
+          <text class="icon" x="-80" y="0" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="24" font-weight="bold">🏷</text>
+          <text class="label" x="-80" y="18" text-anchor="middle" dominant-baseline="middle" fill="rgba(255,255,255,0.8)" font-size="10">Tags</text>
         </g>
 
-        <!-- Drag indicator line -->
+        <!-- Drag indicator line (from token center to ring) -->
         <line
           id="dragLine"
           x1="0"
@@ -242,8 +252,8 @@
         }
       }
 
-      // Update drag line
-      const lineLength = 64; // 80% of menu radius
+      // Update drag line (extends from token center to ring)
+      const lineLength = 80; // Extends to ring radius
       const endX = Math.cos(angle) * lineLength;
       const endY = -Math.sin(angle) * lineLength;
       dragLine.setAttribute('x2', endX);
