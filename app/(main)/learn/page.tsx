@@ -48,7 +48,7 @@ export default function LearnPage() {
   // Handle starting a lesson
   const handleStartLesson = (lessonId: string) => {
     startLesson(lessonId)
-    router.push('/volleyball')
+    router.push('/')
   }
 
   // Handle continuing a lesson
@@ -56,7 +56,7 @@ export default function LearnPage() {
     if (learningLessonId) {
       // Re-enable learning mode and go to whiteboard
       useAppStore.getState().setLearningMode(true)
-      router.push('/volleyball')
+      router.push('/')
     }
   }
 

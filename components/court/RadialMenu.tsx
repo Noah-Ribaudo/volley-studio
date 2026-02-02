@@ -87,93 +87,105 @@ export function RadialMenu({ center, dragAngle, hasArrow, mobileScale = 1 }: Rad
   }, [hasArrow])
 
   return (
-    <g className="radial-menu" style={{ pointerEvents: 'none' }}>
-      {/* Background circle */}
-      <circle
-        cx={center.x}
-        cy={center.y}
-        r={radius}
-        fill="rgba(0, 0, 0, 0.8)"
-        stroke="rgba(255, 255, 255, 0.3)"
-        strokeWidth={2}
-      />
+    <div
+      className="fixed inset-0 z-50 pointer-events-none"
+      style={{ touchAction: 'none' }}
+    >
+      <svg
+        width="100%"
+        height="100%"
+        className="absolute inset-0"
+        style={{ pointerEvents: 'none' }}
+      >
+        <g className="radial-menu">
+          {/* Background circle */}
+          <circle
+            cx={center.x}
+            cy={center.y}
+            r={radius}
+            fill="rgba(0, 0, 0, 0.8)"
+            stroke="rgba(255, 255, 255, 0.3)"
+            strokeWidth={2}
+          />
 
-      {/* Center circle (cancel zone) */}
-      <circle
-        cx={center.x}
-        cy={center.y}
-        r={innerRadius}
-        fill="rgba(60, 60, 60, 0.9)"
-        stroke="rgba(255, 255, 255, 0.5)"
-        strokeWidth={1.5}
-      />
+          {/* Center circle (cancel zone) */}
+          <circle
+            cx={center.x}
+            cy={center.y}
+            r={innerRadius}
+            fill="rgba(60, 60, 60, 0.9)"
+            stroke="rgba(255, 255, 255, 0.5)"
+            strokeWidth={1.5}
+          />
 
-      {/* Segment indicators */}
-      {segments.map((segment) => {
-        const angle = SEGMENT_ANGLES[segment]
-        const labelRadius = radius * 0.65
-        const iconX = center.x + Math.cos(angle) * labelRadius
-        const iconY = center.y - Math.sin(angle) * labelRadius
+          {/* Segment indicators */}
+          {segments.map((segment) => {
+            const angle = SEGMENT_ANGLES[segment]
+            const labelRadius = radius * 0.65
+            const iconX = center.x + Math.cos(angle) * labelRadius
+            const iconY = center.y - Math.sin(angle) * labelRadius
 
-        const isActive = activeSegment === segment
+            const isActive = activeSegment === segment
 
-        return (
-          <g key={segment}>
-            {/* Active segment highlight */}
-            {isActive && (
-              <circle
-                cx={iconX}
-                cy={iconY}
-                r={25 * mobileScale}
-                fill="rgba(57, 255, 20, 0.3)"
-                stroke="rgba(57, 255, 20, 0.8)"
-                strokeWidth={2}
-              />
-            )}
+            return (
+              <g key={segment}>
+                {/* Active segment highlight */}
+                {isActive && (
+                  <circle
+                    cx={iconX}
+                    cy={iconY}
+                    r={25 * mobileScale}
+                    fill="rgba(57, 255, 20, 0.3)"
+                    stroke="rgba(57, 255, 20, 0.8)"
+                    strokeWidth={2}
+                  />
+                )}
 
-            {/* Segment icon */}
-            <text
-              x={iconX}
-              y={iconY}
-              fill={isActive ? '#39ff14' : '#fff'}
-              fontSize={20 * mobileScale}
-              fontWeight="bold"
-              textAnchor="middle"
-              dominantBaseline="middle"
-              style={{ userSelect: 'none' }}
-            >
-              {SEGMENT_ICONS[segment]}
-            </text>
+                {/* Segment icon */}
+                <text
+                  x={iconX}
+                  y={iconY}
+                  fill={isActive ? '#39ff14' : '#fff'}
+                  fontSize={20 * mobileScale}
+                  fontWeight="bold"
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  style={{ userSelect: 'none' }}
+                >
+                  {SEGMENT_ICONS[segment]}
+                </text>
 
-            {/* Segment label */}
-            <text
-              x={iconX}
-              y={iconY + 18 * mobileScale}
-              fill={isActive ? '#39ff14' : 'rgba(255, 255, 255, 0.8)'}
-              fontSize={9 * mobileScale}
-              fontWeight={isActive ? 'bold' : 'normal'}
-              textAnchor="middle"
-              dominantBaseline="middle"
-              style={{ userSelect: 'none' }}
-            >
-              {SEGMENT_LABELS[segment]}
-            </text>
-          </g>
-        )
-      })}
+                {/* Segment label */}
+                <text
+                  x={iconX}
+                  y={iconY + 18 * mobileScale}
+                  fill={isActive ? '#39ff14' : 'rgba(255, 255, 255, 0.8)'}
+                  fontSize={9 * mobileScale}
+                  fontWeight={isActive ? 'bold' : 'normal'}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  style={{ userSelect: 'none' }}
+                >
+                  {SEGMENT_LABELS[segment]}
+                </text>
+              </g>
+            )
+          })}
 
-      {/* Drag indicator line */}
-      {dragAngle !== null && (
-        <line
-          x1={center.x}
-          y1={center.y}
-          x2={center.x + Math.cos(dragAngle) * radius * 0.8}
-          y2={center.y - Math.sin(dragAngle) * radius * 0.8}
-          stroke="rgba(57, 255, 20, 0.6)"
-          strokeWidth={2}
-          strokeLinecap="round"
-        />
-      )}
-    </g>
+        {/* Drag indicator line */}
+        {dragAngle !== null && (
+          <line
+            x1={center.x}
+            y1={center.y}
+            x2={center.x + Math.cos(dragAngle) * radius * 0.8}
+            y2={center.y - Math.sin(dragAngle) * radius * 0.8}
+            stroke="rgba(57, 255, 20, 0.6)"
+            strokeWidth={2}
+            strokeLinecap="round"
+          />
+        )}
+      </g>
+      </svg>
+    </div>
   )
 }

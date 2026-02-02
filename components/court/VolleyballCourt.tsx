@@ -144,6 +144,7 @@ export function VolleyballCourt({
   onPositionChange,
   onAwayPositionChange,
   onRoleClick,
+  onHighlightChange,
   editable = true,
   animationMode = 'css',
   animationConfig,
@@ -1253,6 +1254,15 @@ export function VolleyballCourt({
       const RADIAL_DURATION = 250 // 250ms to open radial menu
 
       let hasStartedDrag = false
+
+      // Block click handler from also firing on mobile
+      recentTouchRef.current = true
+      if (recentTouchTimeoutRef.current) {
+        clearTimeout(recentTouchTimeoutRef.current)
+      }
+      recentTouchTimeoutRef.current = setTimeout(() => {
+        recentTouchRef.current = false
+      }, 300)
 
       // Store touch start for movement detection
       longPressTouchStartRef.current = { x: startX, y: startY, role }

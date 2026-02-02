@@ -548,7 +548,7 @@ export default function RosterPage() {
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <Link href="/volleyball">
+              <Link href="/">
                 <Button variant="ghost" size="icon" className="min-w-11 min-h-11" aria-label="Back to whiteboard">
                   <HugeiconsIcon icon={ArrowLeft01Icon} className="h-5 w-5" />
                 </Button>
@@ -573,7 +573,7 @@ export default function RosterPage() {
 
               {/* Switch team link - deliberate action to go to Teams page */}
               {isTeamLoaded && (
-                <Link href="/volleyball/teams">
+                <Link href="/teams">
                   <Button variant="ghost" size="sm" className="text-xs gap-1">
                     Switch Team
                     <HugeiconsIcon icon={ArrowRight01Icon} className="h-3 w-3" />
