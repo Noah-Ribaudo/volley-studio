@@ -310,6 +310,11 @@ export interface ArrowCurveConfig {
   y: number  // Control point Y in normalized coordinates (0-1)
 }
 
+// Token tags for radial menu system
+export type TokenTag = 'Blocker' | 'Target' | 'Decoy' | 'Server'
+
+export const TOKEN_TAGS: TokenTag[] = ['Blocker', 'Target', 'Decoy', 'Server']
+
 // Extended data stored in the `flags` JSONB column of custom_layouts
 // This stores arrows, status tags, arrow curves, and attack ball position per layout
 export interface LayoutExtendedData {
@@ -318,5 +323,6 @@ export interface LayoutExtendedData {
   arrowCurves?: Partial<Record<Role, ArrowCurveConfig>> // Arrow curve direction and intensity
   statusFlags?: Partial<Record<Role, PlayerStatus[]>> // Player status badges (multiple per player)
   attackBallPosition?: Position | null              // Attack ball position for defense phase
+  tagFlags?: Partial<Record<Role, TokenTag[]>>     // Token tags (multiple per player)
 }
 

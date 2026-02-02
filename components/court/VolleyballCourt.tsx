@@ -24,10 +24,15 @@ import {
   COURT_ZONES,
   PlayerStatus,
   ArrowCurveConfig,
+  TokenTag,
 } from '@/lib/types'
 import { useThemeStore } from '@/store/useThemeStore'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
+import { useInteractionStore } from '@/store/useInteractionStore'
+import { RadialMenu, getActiveSegment } from './RadialMenu'
+import { PlayerPicker } from './PlayerPicker'
+import { TagPicker } from './TagPicker'
 import {
   computeSteering,
   clampPosition,
@@ -118,6 +123,12 @@ interface VolleyballCourtProps {
   animationTrigger?: number
   // Whether we're in preview mode (showing players at arrow endpoints after animation)
   isPreviewingMovement?: boolean
+  // Token tags per role (for radial menu system)
+  tagFlags?: Partial<Record<Role, TokenTag[]>>
+  // Callback when tags are changed
+  onTagsChange?: (role: Role, tags: TokenTag[]) => void
+  // Callback to assign a player to a role (for radial menu player picker)
+  onPlayerAssign?: (role: Role, playerId: string) => void
 }
 
 export function VolleyballCourt({
@@ -167,6 +178,9 @@ export function VolleyballCourt({
   debugHitboxes = false,
   animationTrigger = 0,
   isPreviewingMovement = false,
+  tagFlags = {},
+  onTagsChange,
+  onPlayerAssign,
 }: VolleyballCourtProps) {
   // In simulation mode, disable editing
   const isEditable = mode === 'whiteboard' && editable
@@ -294,6 +308,15 @@ export function VolleyballCourt({
 
   // Context UI anchor position (screen coordinates)
   const [contextAnchorPosition, setContextAnchorPosition] = useState<{ x: number; y: number } | null>(null)
+
+  // Radial menu state (for mobile interaction mode)
+  const interactionMode = useInteractionStore((state) => state.mode)
+  const [radialMenuRole, setRadialMenuRole] = useState<Role | null>(null)
+  const [radialMenuPosition, setRadialMenuPosition] = useState<{ x: number; y: number } | null>(null)
+  const [radialMenuDragAngle, setRadialMenuDragAngle] = useState<number | null>(null)
+  const radialMenuTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const [showPlayerPicker, setShowPlayerPicker] = useState<Role | null>(null)
+  const [showTagPicker, setShowTagPicker] = useState<Role | null>(null)
 
   // Note: handleContextPlayerToggle is defined after getTokenScreenPosition (line ~425)
 
@@ -1213,7 +1236,7 @@ export function VolleyballCourt({
     document.addEventListener('touchend', handleEnd)
   }, [onArrowCurveChange, positions, arrows, getEventPosition])
 
-  // Handle mobile touch with hold-to-prime detection for arrow creation
+  // Handle mobile touch with radial menu or classic mode
   const handleMobileTouchStart = useCallback((role: Role, e: React.TouchEvent) => {
     if (!isEditable) return
 
@@ -1224,141 +1247,133 @@ export function VolleyballCourt({
     const startY = touch.clientY
     const svgPos = toSvgCoords(positions[role] || { x: 0.5, y: 0.5 })
 
-    // Store touch start position for movement detection
-    longPressTouchStartRef.current = { x: startX, y: startY, role }
+    // **RADIAL MENU MODE**
+    if (interactionMode === 'radial') {
+      const MOVE_THRESHOLD = 10
+      const RADIAL_DURATION = 250 // 250ms to open radial menu
 
-    // Movement threshold in pixels (if finger moves more than this, it's a drag not a hold)
-    const MOVE_THRESHOLD = 10
-    // Prime duration in ms (~400ms hold to prime)
-    const PRIME_DURATION = 400
-    // Long press duration in ms (for legacy tooltip behavior)
-    const LONG_PRESS_DURATION = 800
+      let hasStartedDrag = false
 
-    let hasStartedDrag = false
-    let isPrimed = false
-    let isLongPressActive = false
+      // Store touch start for movement detection
+      longPressTouchStartRef.current = { x: startX, y: startY, role }
 
-    // Clear any existing prime timer
-    if (primeTimerRef.current) {
-      clearTimeout(primeTimerRef.current)
-      primeTimerRef.current = null
-    }
-
-    // If a different role is already primed, clear it (don't switch, just cancel)
-    if (primedRole && primedRole !== role) {
-      setPrimedRole(null)
-    }
-
-    // Start prime timer (~400ms hold)
-    primeTimerRef.current = setTimeout(() => {
-      // Prime activated - vibrate to indicate ready state
-      isPrimed = true
-      if (navigator.vibrate) {
-        navigator.vibrate(50)
+      // Clear any existing radial menu timer
+      if (radialMenuTimerRef.current) {
+        clearTimeout(radialMenuTimerRef.current)
+        radialMenuTimerRef.current = null
       }
-      // Set the primed role for visual feedback
-      setPrimedRole(role)
-    }, PRIME_DURATION)
 
-    // Start long-press timer (legacy behavior for tooltip)
-    longPressTimerRef.current = setTimeout(() => {
-      // Long press activated - vibrate and show tooltip
-      isLongPressActive = true
-      activateLongPress(role, svgPos)
-    }, LONG_PRESS_DURATION)
+      // Start radial menu timer
+      radialMenuTimerRef.current = setTimeout(() => {
+        // Radial menu activated - vibrate and show menu
+        if (navigator.vibrate) {
+          navigator.vibrate(50)
+        }
+        setRadialMenuRole(role)
+        setRadialMenuPosition({ x: startX, y: startY })
+        setRadialMenuDragAngle(null)
+      }, RADIAL_DURATION)
 
-    const handleMove = (ev: TouchEvent) => {
-      const currentTouch = ev.touches[0]
-      const dx = currentTouch.clientX - startX
-      const dy = currentTouch.clientY - startY
-      const distance = Math.sqrt(dx * dx + dy * dy)
+      const handleMove = (ev: TouchEvent) => {
+        const currentTouch = ev.touches[0]
+        const dx = currentTouch.clientX - startX
+        const dy = currentTouch.clientY - startY
+        const distance = Math.sqrt(dx * dx + dy * dy)
 
-      // If finger moved past threshold and we haven't started a drag yet
-      if (distance > MOVE_THRESHOLD && !hasStartedDrag) {
-        hasStartedDrag = true
-
-        // Clear the prime timer since we're moving
-        if (primeTimerRef.current) {
-          clearTimeout(primeTimerRef.current)
-          primeTimerRef.current = null
+        // If radial menu is open, track drag angle
+        if (radialMenuRole === role && radialMenuPosition) {
+          const angle = Math.atan2(startY - currentTouch.clientY, currentTouch.clientX - startX)
+          setRadialMenuDragAngle(angle)
+          return
         }
 
-        // Clear the long-press timer since we're moving
-        if (longPressTimerRef.current) {
-          clearTimeout(longPressTimerRef.current)
-          longPressTimerRef.current = null
-        }
-
-        if (isLongPressActive) {
-          // Long press was already active - start arrow drag
-          clearLongPress()
-          // Clear prime state since we're creating/moving an arrow via drag
-          setPrimedRole(null)
-          // Start arrow drag from this point
-          handleArrowDragStart(role, { nativeEvent: ev, preventDefault: () => {}, stopPropagation: () => {} } as unknown as React.TouchEvent)
-        } else {
-          // Long press wasn't active yet - start normal player drag
-          // Note: Do NOT clear prime state on player drag - user can drag player while primed,
-          // then tap court to place arrow. Prime persists until explicit cancel.
-          handleDragStart(role, { nativeEvent: ev, preventDefault: () => {}, stopPropagation: () => {} } as unknown as React.TouchEvent)
-        }
-
-        // Remove these listeners since the drag handlers will set up their own
-        document.removeEventListener('touchmove', handleMove)
-        document.removeEventListener('touchend', handleEnd)
-      } else if (isLongPressActive && !hasStartedDrag) {
-        // Long press active but no drag started yet - any movement starts arrow drag
-        ev.preventDefault()
-        if (distance > 2) { // Small threshold to detect intentional drag
+        // If finger moved past threshold, start player drag
+        if (distance > MOVE_THRESHOLD && !hasStartedDrag) {
           hasStartedDrag = true
-          clearLongPress()
-          // Clear prime state since we're creating/moving an arrow via drag
-          setPrimedRole(null)
-          handleArrowDragStart(role, { nativeEvent: ev, preventDefault: () => {}, stopPropagation: () => {} } as unknown as React.TouchEvent)
+
+          // Clear the radial menu timer since we're moving
+          if (radialMenuTimerRef.current) {
+            clearTimeout(radialMenuTimerRef.current)
+            radialMenuTimerRef.current = null
+          }
+
+          // Start normal player drag
+          handleDragStart(role, { nativeEvent: ev, preventDefault: () => {}, stopPropagation: () => {} } as unknown as React.TouchEvent)
+
+          // Remove these listeners since the drag handlers will set up their own
           document.removeEventListener('touchmove', handleMove)
           document.removeEventListener('touchend', handleEnd)
         }
       }
-    }
 
-    const handleEnd = () => {
-      // Clear prime timer if still pending
-      if (primeTimerRef.current) {
-        clearTimeout(primeTimerRef.current)
-        primeTimerRef.current = null
-      }
-
-      // Clear long-press timer if still pending
-      if (longPressTimerRef.current) {
-        clearTimeout(longPressTimerRef.current)
-        longPressTimerRef.current = null
-      }
-
-      // If we didn't start a drag
-      if (!hasStartedDrag) {
-        clearLongPress()
-
-        // If primed, block the click handler from also firing
-        // (user held long enough to prime, so they don't want to open context menu)
-        if (isPrimed) {
-          recentTouchRef.current = true
-          if (recentTouchTimeoutRef.current) {
-            clearTimeout(recentTouchTimeoutRef.current)
-          }
-          recentTouchTimeoutRef.current = setTimeout(() => {
-            recentTouchRef.current = false
-          }, 300)
+      const handleEnd = () => {
+        // Clear radial menu timer if still pending
+        if (radialMenuTimerRef.current) {
+          clearTimeout(radialMenuTimerRef.current)
+          radialMenuTimerRef.current = null
         }
-        // If NOT primed (quick tap), let the click handler fire to open context menu
+
+        // If radial menu is open, execute the selected segment action
+        if (radialMenuRole === role && radialMenuPosition) {
+          const hasArrow = !!arrows[role]
+          const activeSegment = getActiveSegment(radialMenuDragAngle, hasArrow)
+
+          if (activeSegment) {
+            // Execute segment action
+            if (activeSegment === 'draw-path') {
+              // Activate primed state for arrow creation
+              setPrimedRole(role)
+            } else if (activeSegment === 'clear-path') {
+              // Clear the arrow
+              if (onArrowChange) {
+                onArrowChange(role, null)
+              }
+            } else if (activeSegment === 'assign-player') {
+              // Open player picker
+              setShowPlayerPicker(role)
+            } else if (activeSegment === 'highlight') {
+              // Toggle highlight
+              if (onHighlightChange) {
+                onHighlightChange(highlightedRole === role ? null : role)
+              }
+            } else if (activeSegment === 'tags') {
+              // Open tag picker
+              setShowTagPicker(role)
+            }
+          }
+
+          // Close radial menu
+          setRadialMenuRole(null)
+          setRadialMenuPosition(null)
+          setRadialMenuDragAngle(null)
+        }
+
+        document.removeEventListener('touchmove', handleMove)
+        document.removeEventListener('touchend', handleEnd)
       }
 
-      document.removeEventListener('touchmove', handleMove)
-      document.removeEventListener('touchend', handleEnd)
+      document.addEventListener('touchmove', handleMove, { passive: false })
+      document.addEventListener('touchend', handleEnd)
+      return
     }
 
-    document.addEventListener('touchmove', handleMove, { passive: false })
-    document.addEventListener('touchend', handleEnd)
-  }, [isEditable, positions, toSvgCoords, activateLongPress, clearLongPress, clearPrime, handleDragStart, handleArrowDragStart, primedRole])
+    // **CLASSIC MODE** (simplified - just tap-to-menu, no prime/long-press)
+    // In classic mode, we simply open the context menu on tap (handled by click event)
+    // No need for timers or complex gesture detection
+  }, [
+    isEditable,
+    positions,
+    toSvgCoords,
+    interactionMode,
+    radialMenuRole,
+    radialMenuPosition,
+    radialMenuDragAngle,
+    arrows,
+    highlightedRole,
+    onArrowChange,
+    onHighlightChange,
+    handleDragStart,
+  ])
 
   // Handle away player drag end
   const handleAwayDragEnd = useCallback(() => {
@@ -2759,6 +2774,46 @@ export function VolleyballCourt({
           } : undefined}
           hasTeam={hasTeam}
           onManageRoster={onManageRoster}
+        />
+      )}
+
+      {/* Radial menu overlay (rendered in SVG if open) */}
+      {radialMenuRole && radialMenuPosition && svgRef.current && (
+        <RadialMenu
+          center={radialMenuPosition}
+          dragAngle={radialMenuDragAngle}
+          hasArrow={!!arrows[radialMenuRole]}
+          mobileScale={tokenScale}
+        />
+      )}
+
+      {/* Player picker overlay */}
+      {showPlayerPicker && (
+        <PlayerPicker
+          role={showPlayerPicker}
+          roster={roster}
+          assignments={assignments}
+          onSelect={(playerId) => {
+            if (onPlayerAssign) {
+              onPlayerAssign(showPlayerPicker, playerId)
+            }
+            setShowPlayerPicker(null)
+          }}
+          onClose={() => setShowPlayerPicker(null)}
+        />
+      )}
+
+      {/* Tag picker overlay */}
+      {showTagPicker && (
+        <TagPicker
+          role={showTagPicker}
+          currentTags={tagFlags[showTagPicker] || []}
+          onTagsChange={(tags) => {
+            if (onTagsChange) {
+              onTagsChange(showTagPicker, tags)
+            }
+          }}
+          onClose={() => setShowTagPicker(null)}
         />
       )}
     </div>
