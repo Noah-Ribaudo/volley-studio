@@ -1,12 +1,12 @@
 'use client'
 
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Phase, PHASES, RALLY_PHASES, Rotation, ROTATIONS } from '@/lib/types'
+import { Phase, PHASES, RALLY_PHASES, Rotation, ROTATIONS, PositionCoordinates } from '@/lib/types'
 import type { RallyPhase } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { getPhaseInfo, getCompactPhaseIcon, isRallyPhase as checkIsRallyPhase } from '@/lib/phaseIcons'
-import { ArrowLeft01Icon, ArrowRight01Icon, ArrowDown01Icon } from "@hugeicons/core-free-icons"
+import { ArrowLeft01Icon, ArrowRight01Icon, ArrowDown01Icon, PrinterIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   DropdownMenu,
@@ -16,6 +16,9 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useCarouselAnimation, CAROUSEL_TIMING } from '@/hooks/useCarouselAnimation'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
+import { PrintDialog } from '@/components/print'
+import { useAppStore, getCurrentPositions } from '@/store/useAppStore'
+import { getActiveAssignments } from '@/lib/lineups'
 
 interface MobileContextBarProps {
   currentRotation: Rotation
@@ -44,12 +47,33 @@ export function MobileContextBar({
   onPrev,
   visiblePhases,
 }: MobileContextBarProps) {
+  const [printDialogOpen, setPrintDialogOpen] = useState(false)
+  
+  // Get data needed for print dialog
+  const currentTeam = useAppStore((state) => state.currentTeam)
+  const baseOrder = useAppStore((state) => state.baseOrder)
+  const localPositions = useAppStore((state) => state.localPositions)
+  const customLayouts = useAppStore((state) => state.customLayouts)
+
   // Determine which phases to show
   const isRallyPhase = checkIsRallyPhase(currentPhase)
   const phasesToShow = isRallyPhase
     ? (visiblePhases ? RALLY_PHASES.filter(p => visiblePhases.has(p)) : RALLY_PHASES)
     : PHASES
   const currentIndex = phasesToShow.findIndex(p => p === currentPhase)
+  
+  // Function to get positions for any rotation/phase (used by print dialog)
+  const getPositionsForRotation = useCallback((rotation: Rotation, phase: Phase): PositionCoordinates => {
+    return getCurrentPositions(
+      rotation,
+      phase,
+      localPositions,
+      customLayouts,
+      currentTeam,
+      true,
+      baseOrder
+    )
+  }, [localPositions, customLayouts, currentTeam, baseOrder])
 
   // Detect reduced motion preference
   const prefersReducedMotion = useReducedMotion()
@@ -112,6 +136,17 @@ export function MobileContextBar({
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {/* Print button */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-10 w-10 shrink-0"
+          onClick={() => setPrintDialogOpen(true)}
+          aria-label="Print rotations"
+        >
+          <HugeiconsIcon icon={PrinterIcon} className="h-4 w-4" />
+        </Button>
 
         {/* Divider */}
         <div className="w-px h-6 bg-border shrink-0" />
@@ -200,6 +235,20 @@ export function MobileContextBar({
           <HugeiconsIcon icon={ArrowRight01Icon} className="h-4 w-4" />
         </Button>
       </div>
+
+      {/* Print Dialog */}
+      <PrintDialog
+        open={printDialogOpen}
+        onOpenChange={setPrintDialogOpen}
+        currentRotation={currentRotation}
+        currentPhase={currentPhase}
+        getPositionsForRotation={getPositionsForRotation}
+        roster={currentTeam?.roster}
+        assignments={currentTeam ? getActiveAssignments(currentTeam) : undefined}
+        baseOrder={baseOrder}
+        teamName={currentTeam?.name}
+        visiblePhases={phasesToShow as RallyPhase[]}
+      />
     </div>
   )
 }
