@@ -332,8 +332,11 @@
     // Mouse/Touch handlers
     token.addEventListener('mousedown', (e) => {
       e.preventDefault();
-      startX = e.clientX;
-      startY = e.clientY;
+
+      // Get token center position instead of cursor position
+      const rect = token.getBoundingClientRect();
+      startX = rect.left + rect.width / 2;
+      startY = rect.top + rect.height / 2;
       currentAngle = null;
 
       debugMode.textContent = 'Holding...';
