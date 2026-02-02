@@ -86,79 +86,66 @@
         style="pointer-events: none;"
       >OH2</text>
 
-      <!-- Radial menu (hidden by default) - appears as ring AROUND token -->
+      <!-- Radial menu (hidden by default) - GTA-style wedge segments -->
       <g id="radialMenu" style="display: none;">
-        <!-- Outer ring background -->
-        <circle
-          cx="0"
-          cy="0"
-          r="100"
-          fill="none"
-          stroke="rgba(0, 0, 0, 0.85)"
-          stroke-width="40"
-        />
+        <!-- Background circle (darkens area) -->
+        <circle cx="0" cy="0" r="110" fill="rgba(0, 0, 0, 0.5)"/>
 
-        <!-- Outer ring border -->
-        <circle
-          cx="0"
-          cy="0"
-          r="100"
-          fill="none"
-          stroke="rgba(255, 255, 255, 0.3)"
-          stroke-width="2"
-        />
-
-        <!-- Inner ring border -->
-        <circle
-          cx="0"
-          cy="0"
-          r="60"
-          fill="none"
-          stroke="rgba(255, 255, 255, 0.3)"
-          stroke-width="2"
-        />
-
-        <!-- Segments (positioned in the ring area) -->
+        <!-- Wedge segments - pie slices -->
         <!-- UP - Draw Path -->
         <g id="seg-up" class="segment">
-          <circle class="highlight" cx="0" cy="-80" r="28" fill="rgba(57, 255, 20, 0.3)" stroke="rgba(57, 255, 20, 0.8)" stroke-width="2" style="display: none;"/>
-          <text class="icon" x="0" y="-80" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="24" font-weight="bold">↑</text>
-          <text class="label" x="0" y="-60" text-anchor="middle" dominant-baseline="middle" fill="rgba(255,255,255,0.8)" font-size="10">Draw</text>
+          <path
+            class="wedge"
+            d="M 0,0 L 0,-50 A 50,50 0 0,1 35.36,-35.36 Z"
+            fill="rgba(70, 70, 80, 0.95)"
+            stroke="rgba(255, 255, 255, 0.6)"
+            stroke-width="2"
+          />
+          <text class="icon" x="0" y="-70" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="28" font-weight="bold">↑</text>
+          <text class="label" x="0" y="-48" text-anchor="middle" dominant-baseline="middle" fill="rgba(255,255,255,0.9)" font-size="11" font-weight="600">DRAW</text>
         </g>
 
         <!-- RIGHT - Assign -->
         <g id="seg-right" class="segment">
-          <circle class="highlight" cx="80" cy="0" r="28" fill="rgba(57, 255, 20, 0.3)" stroke="rgba(57, 255, 20, 0.8)" stroke-width="2" style="display: none;"/>
-          <text class="icon" x="80" y="0" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="24" font-weight="bold">👤</text>
-          <text class="label" x="80" y="18" text-anchor="middle" dominant-baseline="middle" fill="rgba(255,255,255,0.8)" font-size="10">Assign</text>
+          <path
+            class="wedge"
+            d="M 0,0 L 50,0 A 50,50 0 0,1 35.36,35.36 Z"
+            fill="rgba(70, 70, 80, 0.95)"
+            stroke="rgba(255, 255, 255, 0.6)"
+            stroke-width="2"
+          />
+          <text class="icon" x="70" y="0" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="28" font-weight="bold">👤</text>
+          <text class="label" x="48" y="0" text-anchor="middle" dominant-baseline="middle" fill="rgba(255,255,255,0.9)" font-size="11" font-weight="600">ASSIGN</text>
         </g>
 
         <!-- DOWN - Highlight -->
         <g id="seg-down" class="segment">
-          <circle class="highlight" cx="0" cy="80" r="28" fill="rgba(57, 255, 20, 0.3)" stroke="rgba(57, 255, 20, 0.8)" stroke-width="2" style="display: none;"/>
-          <text class="icon" x="0" y="80" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="24" font-weight="bold">★</text>
-          <text class="label" x="0" y="98" text-anchor="middle" dominant-baseline="middle" fill="rgba(255,255,255,0.8)" font-size="10">Highlight</text>
+          <path
+            class="wedge"
+            d="M 0,0 L 35.36,35.36 A 50,50 0 0,1 -35.36,35.36 Z"
+            fill="rgba(70, 70, 80, 0.95)"
+            stroke="rgba(255, 255, 255, 0.6)"
+            stroke-width="2"
+          />
+          <text class="icon" x="0" y="70" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="28" font-weight="bold">★</text>
+          <text class="label" x="0" y="48" text-anchor="middle" dominant-baseline="middle" fill="rgba(255,255,255,0.9)" font-size="11" font-weight="600">HIGHLIGHT</text>
         </g>
 
         <!-- LEFT - Tags -->
         <g id="seg-left" class="segment">
-          <circle class="highlight" cx="-80" cy="0" r="28" fill="rgba(57, 255, 20, 0.3)" stroke="rgba(57, 255, 20, 0.8)" stroke-width="2" style="display: none;"/>
-          <text class="icon" x="-80" y="0" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="24" font-weight="bold">🏷</text>
-          <text class="label" x="-80" y="18" text-anchor="middle" dominant-baseline="middle" fill="rgba(255,255,255,0.8)" font-size="10">Tags</text>
+          <path
+            class="wedge"
+            d="M 0,0 L -35.36,35.36 A 50,50 0 0,1 -50,0 Z"
+            fill="rgba(70, 70, 80, 0.95)"
+            stroke="rgba(255, 255, 255, 0.6)"
+            stroke-width="2"
+          />
+          <text class="icon" x="-70" y="0" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="28" font-weight="bold">🏷</text>
+          <text class="label" x="-48" y="0" text-anchor="middle" dominant-baseline="middle" fill="rgba(255,255,255,0.9)" font-size="11" font-weight="600">TAGS</text>
         </g>
 
-        <!-- Drag indicator line (from token center to ring) -->
-        <line
-          id="dragLine"
-          x1="0"
-          y1="0"
-          x2="0"
-          y2="0"
-          stroke="rgba(57, 255, 20, 0.6)"
-          stroke-width="2"
-          stroke-linecap="round"
-          style="display: none;"
-        />
+        <!-- Selection indicator (glowing wedge overlay) -->
+        <path id="selectionWedge" d="" fill="rgba(57, 255, 20, 0.4)" stroke="rgba(57, 255, 20, 1)" stroke-width="2" style="display: none;"/>
       </g>
     </g>
 
@@ -190,7 +177,6 @@
     const token = document.getElementById('token');
     const tokenGroup = document.getElementById('tokenGroup');
     const radialMenu = document.getElementById('radialMenu');
-    const dragLine = document.getElementById('dragLine');
 
     const debugMode = document.getElementById('mode');
     const debugMousePos = document.getElementById('mousePos');
@@ -227,9 +213,8 @@
       const dy = svgY - 200;
       const distance = Math.sqrt(dx * dx + dy * dy);
 
-      if (distance < 5) {
+      if (distance < 40) {
         clearHighlights();
-        dragLine.style.display = 'none';
         debugSegment.textContent = 'None (center)';
         return;
       }
@@ -245,28 +230,40 @@
       if (active) {
         const seg = document.getElementById(`seg-${active}`);
         if (seg) {
-          seg.querySelector('.highlight').style.display = 'block';
-          seg.querySelector('.icon').setAttribute('fill', '#39ff14');
-          seg.querySelector('.label').setAttribute('fill', '#39ff14');
-          seg.querySelector('.label').setAttribute('font-weight', 'bold');
+          const wedge = seg.querySelector('.wedge');
+          const icon = seg.querySelector('.icon');
+          const label = seg.querySelector('.label');
+
+          // Highlight the wedge
+          wedge.setAttribute('fill', 'rgba(57, 255, 20, 0.3)');
+          wedge.setAttribute('stroke', 'rgba(57, 255, 20, 1)');
+          wedge.setAttribute('stroke-width', '3');
+
+          // Brighten icon and label
+          icon.setAttribute('fill', '#39ff14');
+          label.setAttribute('fill', '#39ff14');
+          label.setAttribute('font-weight', 'bold');
         }
       }
-
-      // Update drag line (extends from token center to ring)
-      const lineLength = 80; // Extends to ring radius
-      const endX = Math.cos(angle) * lineLength;
-      const endY = -Math.sin(angle) * lineLength;
-      dragLine.setAttribute('x2', endX);
-      dragLine.setAttribute('y2', endY);
-      dragLine.style.display = 'block';
     }
 
     function clearHighlights() {
-      document.querySelectorAll('.highlight').forEach(h => h.style.display = 'none');
-      document.querySelectorAll('.icon').forEach(i => i.setAttribute('fill', 'white'));
-      document.querySelectorAll('.label').forEach(l => {
-        l.setAttribute('fill', 'rgba(255,255,255,0.8)');
-        l.setAttribute('font-weight', 'normal');
+      document.querySelectorAll('.segment').forEach(seg => {
+        const wedge = seg.querySelector('.wedge');
+        const icon = seg.querySelector('.icon');
+        const label = seg.querySelector('.label');
+
+        if (wedge) {
+          wedge.setAttribute('fill', 'rgba(70, 70, 80, 0.95)');
+          wedge.setAttribute('stroke', 'rgba(255, 255, 255, 0.6)');
+          wedge.setAttribute('stroke-width', '2');
+        }
+
+        if (icon) icon.setAttribute('fill', 'white');
+        if (label) {
+          label.setAttribute('fill', 'rgba(255,255,255,0.9)');
+          label.setAttribute('font-weight', '600');
+        }
       });
     }
 
@@ -282,7 +279,6 @@
 
     function closeMenu() {
       radialMenu.style.display = 'none';
-      dragLine.style.display = 'none';
       clearHighlights();
       menuOpen = false;
       isDragging = false;
