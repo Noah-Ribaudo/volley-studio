@@ -1,5 +1,7 @@
 'use client'
 
+import { SafeAreaHeader } from '@/components/ui/SafeAreaHeader'
+
 import { useAppStore } from '@/store/useAppStore'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
@@ -106,7 +108,7 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-md border-b border-border">
+      <SafeAreaHeader>
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center gap-3">
             <Link href="/">
@@ -120,7 +122,7 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
-      </header>
+      </SafeAreaHeader>
 
       <div className="container mx-auto px-4 py-6 pb-32 max-w-2xl space-y-6">
         {/* Appearance */}

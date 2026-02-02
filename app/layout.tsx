@@ -59,12 +59,15 @@ export default function RootLayout({
         <ConvexClientProvider>
           <ThemeInitializer />
           <TextureModeLoader />
-          <Toaster richColors position="top-center" />
-          {process.env.VERCEL_ENV === 'preview' && (
-            <div className="fixed top-0 left-0 right-0 z-50 bg-amber-500 text-black text-center text-xs py-1 font-medium">
-              🚧 Preview Build
-            </div>
-          )}
+          <Toaster 
+            richColors 
+            position="top-center" 
+            toastOptions={{
+              style: {
+                marginTop: 'env(safe-area-inset-top, 0px)',
+              },
+            }}
+          />
           {children}
         </ConvexClientProvider>
       </body>

@@ -1,5 +1,7 @@
 'use client'
 
+import { SafeAreaHeader } from '@/components/ui/SafeAreaHeader'
+
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery, useMutation } from 'convex/react'
@@ -41,7 +43,7 @@ export default function TeamsPage() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-background to-muted/30">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b">
+      <SafeAreaHeader>
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center gap-3">
             <Link href="/">
@@ -66,7 +68,7 @@ export default function TeamsPage() {
             <h1 className="text-xl font-bold">Teams</h1>
           </div>
         </div>
-      </header>
+      </SafeAreaHeader>
 
       <div className="container mx-auto px-4 py-6 max-w-2xl space-y-4">
         {/* Search */}

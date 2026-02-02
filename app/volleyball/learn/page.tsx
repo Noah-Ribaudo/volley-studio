@@ -1,5 +1,7 @@
 'use client'
 
+import { SafeAreaHeader } from '@/components/ui/SafeAreaHeader'
+
 import { useRouter } from 'next/navigation'
 import { useAppStore } from '@/store/useAppStore'
 import { allLessons, getLessonById } from '@/lib/learning/allModules'
@@ -67,7 +69,7 @@ export default function LearnPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-md border-b border-border">
+      <SafeAreaHeader>
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center gap-3">
             <Link href="/volleyball">
@@ -83,7 +85,7 @@ export default function LearnPage() {
             </div>
           </div>
         </div>
-      </header>
+      </SafeAreaHeader>
 
       <div className="container mx-auto px-4 py-4 pb-32 max-w-2xl space-y-6">
         {/* Overall Progress */}

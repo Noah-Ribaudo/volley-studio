@@ -187,6 +187,8 @@
     background-color: var(--background);
     color: var(--foreground);
     font-family: var(--font-sans);
+    /* Ensure background extends behind iOS status bar */
+    min-height: 100%;
   }
 
   * {
@@ -196,6 +198,8 @@
   body {
     background-color: var(--background);
     color: var(--foreground);
+    /* Full height for iOS */
+    min-height: 100dvh;
   }
 
   /* Tighter tracking on headings */
@@ -267,6 +271,17 @@
     bottom: calc(env(safe-area-inset-bottom, 0px) + var(--fixed-offset-bottom, 0px));
   }
 
+  /* Sticky header with safe area - for iOS Liquid Glass compatibility */
+  .sticky-header-safe {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    padding-top: env(safe-area-inset-top, 0px);
+    /* Extend background behind status bar */
+    margin-top: calc(-1 * env(safe-area-inset-top, 0px));
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
   /* Tight letter spacing utility */
   .tracking-tight {
     letter-spacing: var(--tracking-tight);
@@ -321,9 +336,29 @@
     -webkit-print-color-adjust: exact;
   }
 
+  /* Player tokens - ensure visibility */
+  .player-token {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /* Force all elements to use exact colors */
+  * {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
   /* Page setup */
   @page {
     margin: 0.5in;
     size: letter;
+  }
+
+  /* Mobile print: single column, larger cards */
+  @media (max-width: 768px) {
+    .grid {
+      grid-template-columns: 1fr !important;
+      gap: 1rem !important;
+    }
   }
 }
