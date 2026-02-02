@@ -5,7 +5,7 @@ import { useMutation } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { useAppStore } from '@/store/useAppStore'
 import { createRotationPhaseKey } from '@/lib/rotations'
-import { Role, ArrowCurveConfig, PlayerStatus, Position, ArrowPositions, LayoutExtendedData } from '@/lib/types'
+import { Role, ArrowCurveConfig, PlayerStatus, Position, ArrowPositions, LayoutExtendedData, TokenTag } from '@/lib/types'
 import type { Id } from '@/convex/_generated/dataModel'
 
 // Debounce delay in milliseconds
@@ -43,6 +43,7 @@ export function useWhiteboardSync() {
     localArrows,
     arrowCurves,
     localStatusFlags,
+    localTagFlags,
     attackBallPositions,
   } = useAppStore()
 
@@ -56,6 +57,7 @@ export function useWhiteboardSync() {
     arrowsJson: string
     curvesJson: string
     statusJson: string
+    tagsJson: string
     attackBallJson: string
   } | null>(null)
 
@@ -70,6 +72,7 @@ export function useWhiteboardSync() {
   const arrowsJson = JSON.stringify(localArrows[key] || {})
   const curvesJson = JSON.stringify(arrowCurves[key] || {})
   const statusJson = JSON.stringify(localStatusFlags[key] || {})
+  const tagsJson = JSON.stringify(localTagFlags[key] || {})
   const attackBallJson = JSON.stringify(currentAttackBall || null)
 
   // Execute save function
@@ -81,6 +84,7 @@ export function useWhiteboardSync() {
         arrowFlips?: Record<string, boolean>
         arrowCurves?: Record<string, { x: number; y: number }>
         statusFlags?: Record<string, string[]>
+        tagFlags?: Record<string, string[]>
         attackBallPosition?: { x: number; y: number } | null
       } = {}
 
@@ -95,6 +99,9 @@ export function useWhiteboardSync() {
       }
       if (pending.flags.statusFlags && Object.keys(pending.flags.statusFlags).length > 0) {
         convexFlags.statusFlags = pending.flags.statusFlags as Record<string, string[]>
+      }
+      if (pending.flags.tagFlags && Object.keys(pending.flags.tagFlags).length > 0) {
+        convexFlags.tagFlags = pending.flags.tagFlags as Record<string, string[]>
       }
       if (pending.flags.attackBallPosition !== undefined) {
         convexFlags.attackBallPosition = pending.flags.attackBallPosition
@@ -126,6 +133,7 @@ export function useWhiteboardSync() {
       arrowsJson,
       curvesJson,
       statusJson,
+      tagsJson,
       attackBallJson,
     }
 
@@ -137,6 +145,7 @@ export function useWhiteboardSync() {
       prev.arrowsJson !== currentValues.arrowsJson ||
       prev.curvesJson !== currentValues.curvesJson ||
       prev.statusJson !== currentValues.statusJson ||
+      prev.tagsJson !== currentValues.tagsJson ||
       prev.attackBallJson !== currentValues.attackBallJson
     )
 
@@ -168,6 +177,12 @@ export function useWhiteboardSync() {
       const status = localStatusFlags[key]
       if (status && Object.keys(status).length > 0) {
         flags.statusFlags = status
+      }
+
+      // Extract tag flags for this rotation/phase
+      const tags = localTagFlags[key]
+      if (tags && Object.keys(tags).length > 0) {
+        flags.tagFlags = tags
       }
 
       // Extract attack ball position for this rotation/phase
@@ -213,6 +228,7 @@ export function useWhiteboardSync() {
     arrowsJson,
     curvesJson,
     statusJson,
+    tagsJson,
     attackBallJson,
     currentRotation,
     currentPhase,
@@ -270,6 +286,7 @@ export function useFlushWhiteboardSync() {
           arrowFlips?: Record<string, boolean>
           arrowCurves?: Record<string, { x: number; y: number }>
           statusFlags?: Record<string, string[]>
+          tagFlags?: Record<string, string[]>
           attackBallPosition?: { x: number; y: number } | null
         } = {}
 
@@ -281,6 +298,9 @@ export function useFlushWhiteboardSync() {
         }
         if (pending.flags.statusFlags && Object.keys(pending.flags.statusFlags).length > 0) {
           convexFlags.statusFlags = pending.flags.statusFlags as Record<string, string[]>
+        }
+        if (pending.flags.tagFlags && Object.keys(pending.flags.tagFlags).length > 0) {
+          convexFlags.tagFlags = pending.flags.tagFlags as Record<string, string[]>
         }
         if (pending.flags.attackBallPosition !== undefined) {
           convexFlags.attackBallPosition = pending.flags.attackBallPosition

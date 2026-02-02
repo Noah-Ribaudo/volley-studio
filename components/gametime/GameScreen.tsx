@@ -74,10 +74,10 @@ export function GameScreen() {
     if (ourScore === 0 && theirScore === 0) {
       // No points scored yet, just exit
       resetGame()
-      router.push('/volleyball')
+      router.push('/')
     } else if (window.confirm('Exit GameTime? Current game progress will be lost.')) {
       resetGame()
-      router.push('/volleyball')
+      router.push('/')
     }
   }
 

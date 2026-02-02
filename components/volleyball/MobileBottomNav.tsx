@@ -16,12 +16,12 @@ import { HugeiconsIcon } from "@hugeicons/react"
 const navItems = [
   {
     title: 'Whiteboard',
-    url: '/volleyball',
+    url: '/',
     icon: PresentationBarChart01Icon,
   },
   {
     title: 'Teams',
-    url: '/volleyball/teams',
+    url: '/teams',
     icon: UserGroupIcon,
     // Uses AddTeamIcon when no team is selected
     emptyIcon: AddTeamIcon,
@@ -29,12 +29,12 @@ const navItems = [
   },
   {
     title: 'Game',
-    url: '/volleyball/gametime',
+    url: '/gametime',
     icon: Timer01Icon,
   },
   {
     title: 'Settings',
-    url: '/volleyball/settings',
+    url: '/settings',
     icon: Settings01Icon,
   },
 ]
@@ -54,7 +54,7 @@ export function MobileBottomNav() {
     >
       <div className="flex items-center justify-around h-14">
         {navItems.map((item) => {
-          const isActive = item.url === '/volleyball'
+          const isActive = item.url === '/'
             ? pathname === item.url
             : pathname?.startsWith(item.url)
 

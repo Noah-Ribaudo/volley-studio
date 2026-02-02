@@ -21,9 +21,9 @@ export function generateSlug(name: string): string {
  */
 export function getTeamShareUrl(teamSlug: string): string {
   if (typeof window === 'undefined') {
-    return `/volleyball/teams/${teamSlug}`
+    return `/teams/${teamSlug}`
   }
-  return `${window.location.origin}/volleyball/teams/${teamSlug}`
+  return `${window.location.origin}/teams/${teamSlug}`
 }
 
 /**

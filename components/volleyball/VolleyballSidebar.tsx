@@ -19,22 +19,22 @@ import { Home, Layout, Users, Timer, Settings } from 'lucide-react'
 const navItems = [
   {
     title: 'Whiteboard',
-    url: '/volleyball',
+    url: '/',
     icon: Layout,
   },
   {
     title: 'Teams',
-    url: '/volleyball/roster',
+    url: '/roster',
     icon: Users,
   },
   {
     title: 'Game',
-    url: '/volleyball/gametime',
+    url: '/gametime',
     icon: Timer,
   },
   {
     title: 'Settings',
-    url: '/volleyball/settings',
+    url: '/settings',
     icon: Settings,
   },
 ]
@@ -67,7 +67,7 @@ export function VolleyballSidebar() {
                   <SidebarMenuButton
                     asChild
                     isActive={
-                      item.url === '/volleyball'
+                      item.url === '/'
                         ? pathname === item.url
                         : pathname?.startsWith(item.url)
                     }

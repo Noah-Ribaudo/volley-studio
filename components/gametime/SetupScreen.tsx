@@ -97,7 +97,7 @@ export function SetupScreen() {
           <div className="w-10" /> {/* Spacer for centering */}
           <h1 className="text-2xl font-bold text-center">GameTime</h1>
           <button
-            onClick={() => router.push('/volleyball')}
+            onClick={() => router.push('/')}
             className="w-10 h-10 flex items-center justify-center text-zinc-400 hover:text-white transition-colors"
           >
             <X className="w-6 h-6" />

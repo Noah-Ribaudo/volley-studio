@@ -26,26 +26,26 @@ export function TeamAccessDialog({ team, open, onOpenChange }: TeamAccessDialogP
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [isVerifying, setIsVerifying] = useState(false)
-  
+
   const handleViewOnly = () => {
-    router.push(`/volleyball/teams/${team.slug}?viewOnly=true`)
+    router.push(`/teams/${team.slug}?viewOnly=true`)
     onOpenChange(false)
   }
-  
+
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    
+
     if (!password.trim()) {
       setError('Please enter a password')
       return
     }
-    
+
     setIsVerifying(true)
-    
+
     // Simple password check (compare directly since it's stored as plain text)
     if (password.trim() === team.password) {
-      router.push(`/volleyball/teams/${team.slug}?edit=true`)
+      router.push(`/teams/${team.slug}?edit=true`)
       onOpenChange(false)
       setPassword('')
     } else {
@@ -53,7 +53,7 @@ export function TeamAccessDialog({ team, open, onOpenChange }: TeamAccessDialogP
       setIsVerifying(false)
     }
   }
-  
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
@@ -63,7 +63,7 @@ export function TeamAccessDialog({ team, open, onOpenChange }: TeamAccessDialogP
             This team is password protected. Choose how you want to access it.
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="space-y-4 py-4">
           {/* View Only Option - Primary */}
           <div className="space-y-2">
@@ -78,7 +78,7 @@ export function TeamAccessDialog({ team, open, onOpenChange }: TeamAccessDialogP
               View the team without making changes
             </p>
           </div>
-          
+
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t" />
@@ -89,7 +89,7 @@ export function TeamAccessDialog({ team, open, onOpenChange }: TeamAccessDialogP
               </span>
             </div>
           </div>
-          
+
           {/* Password Entry */}
           <form onSubmit={handlePasswordSubmit} className="space-y-4">
             <div className="space-y-2">
@@ -108,7 +108,7 @@ export function TeamAccessDialog({ team, open, onOpenChange }: TeamAccessDialogP
                 <p className="text-sm text-destructive">{error}</p>
               )}
             </div>
-            
+
             <Button
               type="submit"
               variant="outline"

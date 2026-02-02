@@ -66,7 +66,7 @@ export function TeamCard({ team }: TeamCardProps) {
                   Open
                 </Button>
               ) : (
-                <Link href={`/volleyball/teams/${team.slug}`}>
+                <Link href={`/teams/${team.slug}`}>
                   <Button size="sm" variant="default">
                     Open
                   </Button>

@@ -19,29 +19,29 @@ import { getPhaseInfo } from '@/lib/phaseIcons'
 const navItems = [
   {
     title: 'Whiteboard',
-    url: '/volleyball',
+    url: '/',
     icon: Layout,
   },
   {
     title: 'Teams',
-    url: '/volleyball/teams',
+    url: '/teams',
     icon: Users,
   },
   {
     title: 'Game',
-    url: '/volleyball/gametime',
+    url: '/gametime',
     icon: Timer,
   },
   {
     title: 'Settings',
-    url: '/volleyball/settings',
+    url: '/settings',
     icon: Settings,
   },
 ]
 
 export function DesktopHeaderNav() {
   const pathname = usePathname()
-  const isWhiteboardPage = pathname === '/volleyball'
+  const isWhiteboardPage = pathname === '/'
 
   // Only pull from store if on whiteboard page
   const currentRotation = useAppStore((state) => state.currentRotation)
@@ -64,7 +64,7 @@ export function DesktopHeaderNav() {
     <header className="hidden md:flex items-center h-12 px-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <nav className="flex items-center gap-1">
         {navItems.map((item) => {
-          const isActive = item.url === '/volleyball'
+          const isActive = item.url === '/'
             ? pathname === item.url
             : pathname?.startsWith(item.url)
 

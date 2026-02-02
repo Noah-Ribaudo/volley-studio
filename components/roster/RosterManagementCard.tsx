@@ -180,7 +180,7 @@ export function RosterManagementCard() {
 
             {/* Team actions */}
             {isTeamMode && (
-              <Link href="/volleyball/roster" className="shrink-0">
+              <Link href="/roster" className="shrink-0">
                 <Button variant="ghost" size="sm" className="text-xs">
                   Manage
                 </Button>
@@ -241,7 +241,7 @@ export function RosterManagementCard() {
           {/* Team mode: link to full roster page for settings and team switching */}
           {isTeamMode && (
             <div className="pt-2 border-t">
-              <Link href="/volleyball/roster" className="w-full">
+              <Link href="/roster" className="w-full">
                 <Button variant="outline" size="sm" className="w-full text-xs">
                   Settings & Team Admin
                 </Button>
