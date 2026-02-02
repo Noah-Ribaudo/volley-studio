@@ -1248,8 +1248,12 @@ export function VolleyballCourt({
     const startY = touch.clientY
     const svgPos = toSvgCoords(positions[role] || { x: 0.5, y: 0.5 })
 
+    console.log('[RadialMenu] handleMobileTouchStart', { interactionMode, role, x: startX, y: startY })
+
     // **RADIAL MENU MODE**
     if (interactionMode === 'radial') {
+      console.log('[RadialMenu] Touch start in radial mode', { role, x: startX, y: startY })
+
       const MOVE_THRESHOLD = 10
       const RADIAL_DURATION = 250 // 250ms to open radial menu
 
@@ -1276,6 +1280,7 @@ export function VolleyballCourt({
       // Start radial menu timer
       radialMenuTimerRef.current = setTimeout(() => {
         // Radial menu activated - vibrate and show menu
+        console.log('[RadialMenu] Timer fired, showing menu', { role, x: startX, y: startY })
         if (navigator.vibrate) {
           navigator.vibrate(50)
         }
@@ -2787,15 +2792,19 @@ export function VolleyballCourt({
         />
       )}
 
-      {/* Radial menu overlay (rendered in SVG if open) */}
-      {radialMenuRole && radialMenuPosition && svgRef.current && (
-        <RadialMenu
-          center={radialMenuPosition}
-          dragAngle={radialMenuDragAngle}
-          hasArrow={!!arrows[radialMenuRole]}
-          mobileScale={tokenScale}
-        />
-      )}
+      {/* Radial menu overlay */}
+      {(() => {
+        const shouldShow = radialMenuRole && radialMenuPosition
+        console.log('[RadialMenu] Render check', { radialMenuRole, radialMenuPosition, shouldShow })
+        return shouldShow ? (
+          <RadialMenu
+            center={radialMenuPosition}
+            dragAngle={radialMenuDragAngle}
+            hasArrow={!!arrows[radialMenuRole]}
+            mobileScale={tokenScale}
+          />
+        ) : null
+      })()}
 
       {/* Player picker overlay */}
       {showPlayerPicker && (

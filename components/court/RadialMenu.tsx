@@ -71,6 +71,8 @@ export function getActiveSegment(dragAngle: number | null, hasArrow: boolean): R
 }
 
 export function RadialMenu({ center, dragAngle, hasArrow, mobileScale = 1 }: RadialMenuProps) {
+  console.log('[RadialMenu] Rendering', { center, dragAngle, hasArrow, mobileScale })
+
   const activeSegment = useMemo(() => getActiveSegment(dragAngle, hasArrow), [dragAngle, hasArrow])
 
   const radius = 60 * mobileScale
@@ -89,7 +91,10 @@ export function RadialMenu({ center, dragAngle, hasArrow, mobileScale = 1 }: Rad
   return (
     <div
       className="fixed inset-0 z-50 pointer-events-none"
-      style={{ touchAction: 'none' }}
+      style={{
+        touchAction: 'none',
+        backgroundColor: 'rgba(255, 0, 0, 0.1)' // Debug: red tint to verify overlay exists
+      }}
     >
       <svg
         width="100%"
