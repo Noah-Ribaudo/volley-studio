@@ -22,6 +22,7 @@ import {
   PositionSource,
   Lineup,
   ArrowCurveConfig,
+  TokenTag,
 } from '@/lib/types'
 
 // Conflict info - captured when a save conflict is detected
@@ -137,6 +138,7 @@ interface AppState {
   localArrows: Record<string, ArrowPositions> // Arrows in normalized coordinates (0-1)
   arrowCurves: Record<string, Partial<Record<Role, ArrowCurveConfig>>> // Track arrow curve direction and intensity
   localStatusFlags: Record<string, Partial<Record<Role, PlayerStatus[]>>> // Player status badges per rotation/phase (multiple per player)
+  localTagFlags: Record<string, Partial<Record<Role, TokenTag[]>>> // Token tags per rotation/phase (multiple per player)
 
   // Legality violations (for whiteboard mode)
   legalityViolations: Record<string, Array<{ type: string; zones: [string, string]; roles?: [Role, Role] }>>
@@ -188,6 +190,7 @@ interface AppState {
   setArrowCurve: (rotation: Rotation, phase: Phase, role: Role, curve: ArrowCurveConfig | null) => void
   getArrowCurve: (rotation: Rotation, phase: Phase, role: Role) => ArrowCurveConfig | null
   togglePlayerStatus: (rotation: Rotation, phase: Phase, role: Role, status: PlayerStatus) => void
+  setTokenTags: (rotation: Rotation, phase: Phase, role: Role, tags: TokenTag[]) => void
   setCurrentTeam: (team: Team | null) => void
   setCustomLayouts: (layouts: CustomLayout[]) => void
   populateFromLayouts: (layouts: CustomLayout[]) => void
@@ -398,6 +401,16 @@ export function getCurrentArrows(
   return manualArrows || {}
 }
 
+// Get current tags for a rotation/phase
+export function getCurrentTags(
+  rotation: Rotation,
+  phase: Phase,
+  localTagFlags: Record<string, Partial<Record<Role, TokenTag[]>>>
+): Partial<Record<Role, TokenTag[]>> {
+  const key = createRotationPhaseKey(rotation, phase)
+  return localTagFlags[key] || {}
+}
+
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
@@ -427,6 +440,7 @@ export const useAppStore = create<AppState>()(
       localArrows: {},
       arrowCurves: {},
       localStatusFlags: {},
+      localTagFlags: {},
       legalityViolations: {},
       attackBallPositions: {},
       currentTeam: null,
@@ -703,6 +717,37 @@ export const useAppStore = create<AppState>()(
         }
       }),
 
+      setTokenTags: (rotation, phase, role, tags) => set((state) => {
+        const key = createRotationPhaseKey(rotation, phase)
+        const currentFlags = state.localTagFlags[key] ?? {}
+
+        // Clean up if no tags remain for this role
+        if (tags.length === 0) {
+          const { [role]: _, ...remainingRoles } = currentFlags
+          if (Object.keys(remainingRoles).length === 0) {
+            // Remove the key entirely if no flags remain
+            const { [key]: __, ...remainingKeys } = state.localTagFlags
+            return { localTagFlags: remainingKeys }
+          }
+          return {
+            localTagFlags: {
+              ...state.localTagFlags,
+              [key]: remainingRoles
+            }
+          }
+        }
+
+        return {
+          localTagFlags: {
+            ...state.localTagFlags,
+            [key]: {
+              ...currentFlags,
+              [role]: tags
+            }
+          }
+        }
+      }),
+
       setCurrentTeam: (team) => set({
         currentTeam: team,
         // Track when we loaded this team for conflict detection
@@ -719,6 +764,7 @@ export const useAppStore = create<AppState>()(
         const newLocalArrows: Record<string, ArrowPositions> = {}
         const newArrowCurves: Record<string, Partial<Record<Role, ArrowCurveConfig>>> = {}
         const newLocalStatusFlags: Record<string, Partial<Record<Role, PlayerStatus[]>>> = {}
+        const newLocalTagFlags: Record<string, Partial<Record<Role, TokenTag[]>>> = {}
         const newAttackBallPositions: Record<string, Position> = {}
         const newLoadedTimestamps: Record<string, string | null> = {}
 
@@ -748,6 +794,9 @@ export const useAppStore = create<AppState>()(
             if (flags.statusFlags) {
               newLocalStatusFlags[key] = flags.statusFlags
             }
+            if (flags.tagFlags) {
+              newLocalTagFlags[key] = flags.tagFlags
+            }
             if (flags.attackBallPosition) {
               newAttackBallPositions[key] = flags.attackBallPosition
             }
@@ -759,6 +808,7 @@ export const useAppStore = create<AppState>()(
           localArrows: newLocalArrows,
           arrowCurves: newArrowCurves,
           localStatusFlags: newLocalStatusFlags,
+          localTagFlags: newLocalTagFlags,
           attackBallPositions: newAttackBallPositions,
           layoutLoadedTimestamps: newLoadedTimestamps,
           layoutConflict: null, // Clear any existing conflict when loading fresh data
@@ -940,7 +990,8 @@ export const useAppStore = create<AppState>()(
         const { [key]: __, ...remainingArrows } = state.localArrows
         const { [key]: ___, ...remainingCurves } = state.arrowCurves
         const { [key]: ____, ...remainingStatus } = state.localStatusFlags
-        const { [key]: _____, ...remainingAttackBall } = state.attackBallPositions
+        const { [key]: _____, ...remainingTags } = state.localTagFlags
+        const { [key]: ______, ...remainingAttackBall } = state.attackBallPositions
 
         return {
           layoutConflict: null,
@@ -948,6 +999,7 @@ export const useAppStore = create<AppState>()(
           localArrows: remainingArrows,
           arrowCurves: remainingCurves,
           localStatusFlags: remainingStatus,
+          localTagFlags: remainingTags,
           attackBallPositions: remainingAttackBall,
         }
       }),
@@ -986,6 +1038,7 @@ export const useAppStore = create<AppState>()(
           localArrows: state.localArrows,
           arrowCurves: state.arrowCurves,
           localStatusFlags: state.localStatusFlags,
+          localTagFlags: state.localTagFlags,
           baseOrder: state.baseOrder,
           visiblePhases: Array.from(state.visiblePhases),
           phaseOrder: state.phaseOrder,
@@ -1066,6 +1119,10 @@ export const useAppStore = create<AppState>()(
         // Set default for localStatusFlags if missing
         if (state && state.localStatusFlags === undefined) {
           state.localStatusFlags = {}
+        }
+        // Set default for localTagFlags if missing
+        if (state && state.localTagFlags === undefined) {
+          state.localTagFlags = {}
         }
         // Conflict state is transient - always clear on rehydrate
         if (state) {

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo, useRef, useCallback, useLayoutEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { useAppStore, getCurrentPositions, getCurrentArrows, getActiveLineupPositionSource } from '@/store/useAppStore'
+import { useAppStore, getCurrentPositions, getCurrentArrows, getCurrentTags, getActiveLineupPositionSource } from '@/store/useAppStore'
 import { useAdminStore } from '@/store/useAdminStore'
 import { usePresets } from '@/hooks/usePresets'
 import { VolleyballCourt } from '@/components/court'
@@ -95,6 +95,9 @@ function HomePageContent() {
     // Player status flags
     localStatusFlags,
     togglePlayerStatus,
+    // Token tags
+    localTagFlags,
+    setTokenTags,
     // Preview mode
     isPreviewingMovement,
     setPreviewingMovement,
@@ -342,6 +345,11 @@ function HomePageContent() {
     return localStatusFlags[rotationPhaseKey] || {}
   }, [isUsingPreset, presetLayouts, currentRotation, currentPhase, localStatusFlags, rotationPhaseKey])
 
+  // Get token tags for current rotation/phase
+  const currentTagFlags = useMemo(() => {
+    return getCurrentTags(currentRotation, currentPhase, localTagFlags)
+  }, [currentRotation, currentPhase, localTagFlags])
+
   // Validate legality - only for PRE_SERVE and SERVE_RECEIVE phases
   const violations = useMemo(() => {
     if (currentPhase === 'PRE_SERVE' || currentPhase === 'SERVE_RECEIVE') {
@@ -506,6 +514,23 @@ function HomePageContent() {
                 debugHitboxes={debugHitboxes}
                 animationTrigger={playAnimationTrigger}
                 isPreviewingMovement={isPreviewingMovement}
+                tagFlags={currentTagFlags}
+                onTagsChange={isEditingAllowed ? (role, tags) => {
+                  setTokenTags(currentRotation, currentPhase, role, tags)
+                } : undefined}
+                onPlayerAssign={isEditingAllowed && currentTeam ? (role, playerId) => {
+                  // Update the team's active lineup with the new assignment
+                  const activeLineup = currentTeam.lineups.find(l => l.id === currentTeam.active_lineup_id)
+                  if (activeLineup) {
+                    const updatedAssignments = {
+                      ...activeLineup.position_assignments,
+                      [role]: playerId
+                    }
+                    // This will be handled by the team sync system
+                    // For now, just update locally through the store
+                    // TODO: Wire up to proper assignment change handler
+                  }
+                } : undefined}
               />
 
           {/* Swipe hint for mobile users - shows once */}
