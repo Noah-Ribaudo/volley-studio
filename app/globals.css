@@ -288,3 +288,42 @@
 
 /* Note: Phase carousel animations moved to Motion in useCarouselAnimation.ts */
 /* Note: Fade animations like fadeIn, floatIn, bob were unused and removed */
+
+/* =============================================================================
+   PRINT STYLES
+   ============================================================================= */
+
+@media print {
+  /* Hide non-print elements */
+  .no-print,
+  header,
+  nav,
+  footer,
+  .print-hide {
+    display: none !important;
+  }
+
+  /* Reset backgrounds for printing */
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Print-specific card styling */
+  .print-card {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Ensure SVGs render properly */
+  svg {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /* Page setup */
+  @page {
+    margin: 0.5in;
+    size: letter;
+  }
+}

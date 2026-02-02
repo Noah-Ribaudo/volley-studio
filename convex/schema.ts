@@ -1,8 +1,11 @@
 import { defineSchema, defineTable } from "convex/server";
+import { authTables } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 
 export default defineSchema({
+  ...authTables,
   teams: defineTable({
+    userId: v.optional(v.id("users")), // Owner of the team
     name: v.string(),
     slug: v.string(),
     password: v.optional(v.string()),
@@ -29,6 +32,7 @@ export default defineSchema({
   })
     .index("by_slug", ["slug"])
     .index("by_archived", ["archived"])
+    .index("by_user", ["userId"])
     .searchIndex("search_name", { searchField: "name" }),
 
   customLayouts: defineTable({
