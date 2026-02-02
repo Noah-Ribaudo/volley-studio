@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Radial Menu v2 - Integrated</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      width: 100vw;
+      height: 100vh;
+      background: #1a1a1a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: system-ui, -apple-system, sans-serif;
+      overflow: hidden;
+      touch-action: none;
+      user-select: none;
+    }
+
+    svg {
+      cursor: pointer;
+    }
+
+    .debug-info {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 15px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-family: monospace;
+      line-height: 1.6;
+    }
+
+    .instruction {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 15px;
+      border-radius: 8px;
+      font-size: 14px;
+      max-width: 250px;
+    }
+
+    .instruction h3 {
+      margin-bottom: 10px;
+      color: #667eea;
+    }
+  </style>
+</head>
+<body>
+  <svg width="400" height="400" viewBox="0 0 400 400" id="canvas">
+    <!-- Token group - everything is relative to this -->
+    <g id="tokenGroup" transform="translate(200, 200)">
+      <!-- Token circle -->
+      <circle
+        id="token"
+        cx="0"
+        cy="0"
+        r="40"
+        fill="url(#tokenGradient)"
+        stroke="rgba(255,255,255,0.3)"
+        stroke-width="2"
+      />
+
+      <!-- Token label -->
+      <text
+        x="0"
+        y="0"
+        text-anchor="middle"
+        dominant-baseline="middle"
+        fill="white"
+        font-size="24"
+        font-weight="bold"
+        style="pointer-events: none;"
+      >OH2</text>
+
+      <!-- Radial menu (hidden by default) -->
+      <g id="radialMenu" style="display: none;">
+        <!-- Background circle -->
+        <circle
+          cx="0"
+          cy="0"
+          r="80"
+          fill="rgba(0, 0, 0, 0.85)"
+          stroke="rgba(255, 255, 255, 0.3)"
+          stroke-width="2"
+        />
+
+        <!-- Center circle (cancel zone) -->
+        <circle
+          cx="0"
+          cy="0"
+          r="25"
+          fill="rgba(60, 60, 60, 0.9)"
+          stroke="rgba(255, 255, 255, 0.5)"
+          stroke-width="1.5"
+        />
+
+        <!-- Segments -->
+        <!-- UP - Draw Path -->
+        <g id="seg-up" class="segment">
+          <circle class="highlight" cx="0" cy="-52" r="30" fill="rgba(57, 255, 20, 0.3)" stroke="rgba(57, 255, 20, 0.8)" stroke-width="2" style="display: none;"/>
+          <text class="icon" x="0" y="-52" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="24" font-weight="bold">↑</text>
+          <text class="label" x="0" y="-32" text-anchor="middle" dominant-baseline="middle" fill="rgba(255,255,255,0.8)" font-size="11">Draw Path</text>
+        </g>
+
+        <!-- RIGHT - Assign -->
+        <g id="seg-right" class="segment">
+          <circle class="highlight" cx="52" cy="0" r="30" fill="rgba(57, 255, 20, 0.3)" stroke="rgba(57, 255, 20, 0.8)" stroke-width="2" style="display: none;"/>
+          <text class="icon" x="52" y="0" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="24" font-weight="bold">👤</text>
+          <text class="label" x="52" y="20" text-anchor="middle" dominant-baseline="middle" fill="rgba(255,255,255,0.8)" font-size="11">Assign</text>
+        </g>
+
+        <!-- DOWN - Highlight -->
+        <g id="seg-down" class="segment">
+          <circle class="highlight" cx="0" cy="52" r="30" fill="rgba(57, 255, 20, 0.3)" stroke="rgba(57, 255, 20, 0.8)" stroke-width="2" style="display: none;"/>
+          <text class="icon" x="0" y="52" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="24" font-weight="bold">★</text>
+          <text class="label" x="0" y="72" text-anchor="middle" dominant-baseline="middle" fill="rgba(255,255,255,0.8)" font-size="11">Highlight</text>
+        </g>
+
+        <!-- LEFT - Tags -->
+        <g id="seg-left" class="segment">
+          <circle class="highlight" cx="-52" cy="0" r="30" fill="rgba(57, 255, 20, 0.3)" stroke="rgba(57, 255, 20, 0.8)" stroke-width="2" style="display: none;"/>
+          <text class="icon" x="-52" y="0" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="24" font-weight="bold">🏷</text>
+          <text class="label" x="-52" y="20" text-anchor="middle" dominant-baseline="middle" fill="rgba(255,255,255,0.8)" font-size="11">Tags</text>
+        </g>
+
+        <!-- Drag indicator line -->
+        <line
+          id="dragLine"
+          x1="0"
+          y1="0"
+          x2="0"
+          y2="0"
+          stroke="rgba(57, 255, 20, 0.6)"
+          stroke-width="2"
+          stroke-linecap="round"
+          style="display: none;"
+        />
+      </g>
+    </g>
+
+    <!-- Gradient for token -->
+    <defs>
+      <linearGradient id="tokenGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+        <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+      </linearGradient>
+    </defs>
+  </svg>
+
+  <div class="debug-info">
+    <div>Mode: <span id="mode">Idle</span></div>
+    <div>Mouse: <span id="mousePos">-</span></div>
+    <div>Active: <span id="segment">None</span></div>
+    <div>Angle: <span id="angle">-</span></div>
+  </div>
+
+  <div class="instruction">
+    <h3>How to Use</h3>
+    <p><strong>Click and hold</strong> for 250ms to open menu.</p>
+    <p><strong>Drag</strong> to select segment.</p>
+    <p><strong>Release</strong> to execute.</p>
+    <p style="margin-top: 10px; font-size: 12px; opacity: 0.7;">Menu is now part of token - no positioning issues!</p>
+  </div>
+
+  <script>
+    const token = document.getElementById('token');
+    const tokenGroup = document.getElementById('tokenGroup');
+    const radialMenu = document.getElementById('radialMenu');
+    const dragLine = document.getElementById('dragLine');
+
+    const debugMode = document.getElementById('mode');
+    const debugMousePos = document.getElementById('mousePos');
+    const debugSegment = document.getElementById('segment');
+    const debugAngle = document.getElementById('angle');
+
+    let holdTimer = null;
+    let menuOpen = false;
+    let isDragging = false;
+
+    const HOLD_DURATION = 250;
+
+    function getActiveSegment(angle) {
+      if (angle === null) return null;
+
+      const normalized = ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+
+      if (normalized >= Math.PI * 7/4 || normalized < Math.PI / 4) return 'right';
+      if (normalized >= Math.PI / 4 && normalized < Math.PI * 3/4) return 'up';
+      if (normalized >= Math.PI * 3/4 && normalized < Math.PI * 5/4) return 'left';
+      if (normalized >= Math.PI * 5/4 && normalized < Math.PI * 7/4) return 'down';
+
+      return null;
+    }
+
+    function updateMenu(mouseX, mouseY) {
+      // Get SVG coordinates (token is at 200,200 in viewBox)
+      const svgRect = document.getElementById('canvas').getBoundingClientRect();
+      const svgX = ((mouseX - svgRect.left) / svgRect.width) * 400;
+      const svgY = ((mouseY - svgRect.top) / svgRect.height) * 400;
+
+      // Calculate angle from token center (200, 200)
+      const dx = svgX - 200;
+      const dy = svgY - 200;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance < 5) {
+        clearHighlights();
+        dragLine.style.display = 'none';
+        debugSegment.textContent = 'None (center)';
+        return;
+      }
+
+      const angle = Math.atan2(-dy, dx); // Note: -dy because SVG y is inverted
+      const active = getActiveSegment(angle);
+
+      debugAngle.textContent = `${(angle * 180 / Math.PI).toFixed(0)}°`;
+      debugSegment.textContent = active || 'None';
+
+      // Update highlights
+      clearHighlights();
+      if (active) {
+        const seg = document.getElementById(`seg-${active}`);
+        if (seg) {
+          seg.querySelector('.highlight').style.display = 'block';
+          seg.querySelector('.icon').setAttribute('fill', '#39ff14');
+          seg.querySelector('.label').setAttribute('fill', '#39ff14');
+          seg.querySelector('.label').setAttribute('font-weight', 'bold');
+        }
+      }
+
+      // Update drag line
+      const lineLength = 64; // 80% of menu radius
+      const endX = Math.cos(angle) * lineLength;
+      const endY = -Math.sin(angle) * lineLength;
+      dragLine.setAttribute('x2', endX);
+      dragLine.setAttribute('y2', endY);
+      dragLine.style.display = 'block';
+    }
+
+    function clearHighlights() {
+      document.querySelectorAll('.highlight').forEach(h => h.style.display = 'none');
+      document.querySelectorAll('.icon').forEach(i => i.setAttribute('fill', 'white'));
+      document.querySelectorAll('.label').forEach(l => {
+        l.setAttribute('fill', 'rgba(255,255,255,0.8)');
+        l.setAttribute('font-weight', 'normal');
+      });
+    }
+
+    function openMenu() {
+      radialMenu.style.display = 'block';
+      menuOpen = true;
+      debugMode.textContent = 'Menu Open';
+
+      if (navigator.vibrate) {
+        navigator.vibrate(50);
+      }
+    }
+
+    function closeMenu() {
+      radialMenu.style.display = 'none';
+      dragLine.style.display = 'none';
+      clearHighlights();
+      menuOpen = false;
+      isDragging = false;
+      debugMode.textContent = 'Idle';
+      debugSegment.textContent = 'None';
+      debugAngle.textContent = '-';
+    }
+
+    // Event handlers
+    token.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      debugMode.textContent = 'Holding...';
+
+      holdTimer = setTimeout(() => {
+        openMenu();
+      }, HOLD_DURATION);
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      debugMousePos.textContent = `${e.clientX}, ${e.clientY}`;
+
+      if (menuOpen) {
+        isDragging = true;
+        updateMenu(e.clientX, e.clientY);
+      }
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (holdTimer) {
+        clearTimeout(holdTimer);
+        holdTimer = null;
+      }
+
+      if (menuOpen && isDragging) {
+        const active = debugSegment.textContent;
+        if (active && active !== 'None' && active !== 'None (center)') {
+          console.log('Executed:', active);
+          alert(`Executed: ${active}`);
+        }
+      }
+
+      closeMenu();
+    });
+
+    // Touch support
+    token.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      token.dispatchEvent(new MouseEvent('mousedown'));
+    });
+
+    document.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      const touch = e.touches[0];
+      document.dispatchEvent(new MouseEvent('mousemove', {
+        clientX: touch.clientX,
+        clientY: touch.clientY
+      }));
+    }, { passive: false });
+
+    document.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      document.dispatchEvent(new MouseEvent('mouseup'));
+    });
+  </script>
+</body>
+</html>
