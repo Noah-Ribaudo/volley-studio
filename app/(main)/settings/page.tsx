@@ -16,9 +16,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { ROLES, ROLE_INFO, RALLY_PHASE_INFO, RallyPhase } from '@/lib/types'
+import { RALLY_PHASE_INFO, RallyPhase } from '@/lib/types'
 import type { LearningPanelPosition } from '@/lib/learning/types'
-import { cn, getTextColorForOklch } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 import ThemePicker from '@/components/ThemePicker'
 import { ArrowLeft01Icon, DragDropVerticalIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -57,9 +57,6 @@ export default function SettingsPage() {
     setFullStatusLabels,
     showLearnTab,
     setShowLearnTab,
-    // Role highlight
-    highlightedRole,
-    setHighlightedRole,
     // Phase visibility and order
     visiblePhases,
     togglePhaseVisibility,
@@ -286,53 +283,6 @@ export default function SettingsPage() {
                 </div>
               </SortableContext>
             </DndContext>
-          </CardContent>
-        </Card>
-
-        {/* Role Highlights */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Highlight Role</CardTitle>
-            <CardDescription>Focus on a specific position across rotations</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-4 gap-2">
-              {ROLES.map(role => {
-                const info = ROLE_INFO[role]
-                const isSelected = highlightedRole === role
-                return (
-                  <Button
-                    key={role}
-                    variant={isSelected ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setHighlightedRole(isSelected ? null : role)}
-                    className={cn(
-                      "h-10 px-4 transition-all border-2 font-bold",
-                      isSelected
-                        ? "shadow-lg border-primary/60 ring-2 ring-primary/40"
-                        : "border-transparent opacity-80 hover:opacity-100"
-                    )}
-                    style={{
-                      backgroundColor: isSelected ? info.color : undefined,
-                      color: isSelected ? getTextColorForOklch(info.color) : info.color,
-                      borderColor: isSelected ? info.color : undefined,
-                    }}
-                  >
-                    {role}
-                  </Button>
-                )
-              })}
-            </div>
-            {highlightedRole && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setHighlightedRole(null)}
-                className="mt-3 text-xs text-muted-foreground"
-              >
-                Clear highlight
-              </Button>
-            )}
           </CardContent>
         </Card>
 
