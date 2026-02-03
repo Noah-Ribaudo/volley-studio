@@ -183,10 +183,9 @@ export function PrintableRotationCard({
   return (
     <div
       className={cn(
-        "print-card inline-block",
+        "print-card w-full",
         mode === "pretty" ? "bg-white rounded-lg shadow-sm border border-gray-200 p-3" : "border border-black p-2"
       )}
-      style={{ width: "220px" }}
     >
       {/* Header */}
       <div className={cn(

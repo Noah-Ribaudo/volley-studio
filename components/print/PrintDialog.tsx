@@ -95,7 +95,7 @@ export function PrintDialog({
 
     if (scope === "all-rotations") {
       return (
-        <div className="grid grid-cols-2 gap-4 print:grid-cols-3 print:gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 print:grid-cols-3 print:gap-2">
           {ROTATIONS.map((rotation) => (
             <PrintableRotationCard
               key={rotation}
@@ -123,7 +123,7 @@ export function PrintDialog({
             <h3 className="text-sm font-medium text-gray-700 mb-2 print:text-black">
               {phase.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}
             </h3>
-            <div className="grid grid-cols-2 gap-4 print:grid-cols-3 print:gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 print:grid-cols-3 print:gap-2">
               {ROTATIONS.map((rotation) => (
                 <PrintableRotationCard
                   key={`${rotation}-${phase}`}
