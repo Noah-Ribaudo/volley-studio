@@ -1,6 +1,7 @@
 "use client";
 
-import { ConvexProvider, ConvexReactClient } from "convex/react";
+import { ConvexReactClient } from "convex/react";
+import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { ReactNode, useMemo } from "react";
 
 export function ConvexClientProvider({ children }: { children: ReactNode }) {
@@ -15,7 +16,9 @@ export function ConvexClientProvider({ children }: { children: ReactNode }) {
     return new ConvexReactClient(url);
   }, []);
 
-  // Using basic ConvexProvider until auth credentials are configured
-  // Switch back to ConvexAuthProvider once AUTH_GOOGLE_ID etc are set up
-  return <ConvexProvider client={convex}>{children}</ConvexProvider>;
+  return (
+    <ConvexAuthProvider client={convex}>
+      {children}
+    </ConvexAuthProvider>
+  );
 }

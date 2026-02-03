@@ -1,2 +1,2 @@
-export { SignInWithGoogle, SignInWithApple, SignOut } from "./SignIn";
+export { SignInWithGoogle, SignOut } from "./SignIn";
 export { UserMenu } from "./UserMenu";
