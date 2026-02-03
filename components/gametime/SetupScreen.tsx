@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQuery } from 'convex/react'
+import { api } from '@/convex/_generated/api'
 import { useGameTimeStore } from '@/store/useGameTimeStore'
-import { getAllTeams } from '@/lib/teams'
 import { Team, Role, RosterPlayer, Rotation, ROLE_INFO } from '@/lib/types'
 import { getRoleZone } from '@/lib/rotations'
 import { PositionSlot, PlayerGrid } from '@/components/team'
@@ -22,10 +23,34 @@ type SetupStep = 'team' | 'lineup' | 'settings'
 export function SetupScreen() {
   const router = useRouter()
   const [step, setStep] = useState<SetupStep>('team')
-  const [teams, setTeams] = useState<Team[]>([])
-  const [loading, setLoading] = useState(true)
   const [quickStartName, setQuickStartName] = useState('')
   const [selectedRole, setSelectedRole] = useState<Role | 'L' | null>(null)
+
+  // Fetch teams from Convex
+  const convexTeams = useQuery(api.teams.list)
+  const loading = convexTeams === undefined
+  
+  // Transform Convex teams to the Team format expected by the component
+  const teams: Team[] = (convexTeams ?? []).map(t => ({
+    id: t._id,
+    name: t.name,
+    slug: t.slug,
+    password: t.password,
+    archived: t.archived,
+    roster: t.roster.map(p => ({
+      id: p.id,
+      name: p.name,
+      number: p.number ?? 0,
+    })),
+    lineups: t.lineups.map(l => ({
+      ...l,
+      position_source: l.position_source as 'custom' | 'full-5-1' | '5-1-libero' | '6-2' | undefined,
+    })),
+    active_lineup_id: t.activeLineupId ?? null,
+    position_assignments: t.positionAssignments,
+    created_at: new Date(t._creationTime).toISOString(),
+    updated_at: new Date(t._creationTime).toISOString(),
+  }))
 
   const {
     team,
@@ -45,20 +70,6 @@ export function SetupScreen() {
     startGame,
     isLineupComplete,
   } = useGameTimeStore()
-
-  useEffect(() => {
-    async function loadTeams() {
-      try {
-        const loadedTeams = await getAllTeams()
-        setTeams(loadedTeams)
-      } catch {
-        // Ignore errors - teams just won't load
-      } finally {
-        setLoading(false)
-      }
-    }
-    loadTeams()
-  }, [])
 
   // Handle team selection
   const handleSelectTeam = (t: Team) => {

@@ -161,3 +161,15 @@ export const verifyPassword = query({
     return team.password === args.password;
   },
 });
+
+// Debug query - lists all teams without any index
+export const debugList = query({
+  args: {},
+  handler: async (ctx) => {
+    const allTeams = await ctx.db.query("teams").collect();
+    return {
+      count: allTeams.length,
+      teams: allTeams,
+    };
+  },
+});
