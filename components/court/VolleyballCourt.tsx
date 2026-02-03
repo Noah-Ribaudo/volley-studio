@@ -29,8 +29,6 @@ import {
 import { useThemeStore } from '@/store/useThemeStore'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
-import { useInteractionStore } from '@/store/useInteractionStore'
-import { RadialMenu, type RadialSegment } from './RadialMenu'
 import { PlayerPicker } from './PlayerPicker'
 import { TagPicker } from './TagPicker'
 import {
@@ -310,10 +308,7 @@ export function VolleyballCourt({
   // Context UI anchor position (screen coordinates)
   const [contextAnchorPosition, setContextAnchorPosition] = useState<{ x: number; y: number } | null>(null)
 
-  // Radial menu state (for mobile interaction mode)
-  const interactionMode = useInteractionStore((state) => state.mode)
-  const [radialMenuRole, setRadialMenuRole] = useState<Role | null>(null)
-  const [radialMenuPosition, setRadialMenuPosition] = useState<{ x: number; y: number } | null>(null)
+  // Picker state
   const [showPlayerPicker, setShowPlayerPicker] = useState<Role | null>(null)
   const [showTagPicker, setShowTagPicker] = useState<Role | null>(null)
 
@@ -1235,45 +1230,7 @@ export function VolleyballCourt({
     document.addEventListener('touchend', handleEnd)
   }, [onArrowCurveChange, positions, arrows, getEventPosition])
 
-  // Handle radial menu segment tap
-  const handleRadialSegmentTap = useCallback((segment: RadialSegment) => {
-    if (!radialMenuRole) return
-
-    const role = radialMenuRole
-
-    if (segment === 'draw-path') {
-      // Activate primed state for arrow creation
-      setPrimedRole(role)
-    } else if (segment === 'clear-path') {
-      // Clear the arrow
-      if (onArrowChange) {
-        onArrowChange(role, null)
-      }
-    } else if (segment === 'assign-player') {
-      // Open player picker
-      setShowPlayerPicker(role)
-    } else if (segment === 'highlight') {
-      // Toggle highlight
-      if (onHighlightChange) {
-        onHighlightChange(highlightedRole === role ? null : role)
-      }
-    } else if (segment === 'tags') {
-      // Open tag picker
-      setShowTagPicker(role)
-    }
-
-    // Close radial menu
-    setRadialMenuRole(null)
-    setRadialMenuPosition(null)
-  }, [radialMenuRole, onArrowChange, onHighlightChange, highlightedRole])
-
-  // Close radial menu
-  const handleRadialMenuClose = useCallback(() => {
-    setRadialMenuRole(null)
-    setRadialMenuPosition(null)
-  }, [])
-
-  // Handle mobile touch with radial menu or classic mode
+  // Handle mobile touch - drag to move, tap to open context menu
   const handleMobileTouchStart = useCallback((role: Role, e: React.TouchEvent) => {
     if (!isEditable) return
 
@@ -1283,68 +1240,62 @@ export function VolleyballCourt({
     const startX = touch.clientX
     const startY = touch.clientY
 
-    // **RADIAL MENU MODE** - Tap to open menu
-    if (interactionMode === 'radial') {
-      // Block click handler from also firing on mobile
-      recentTouchRef.current = true
-      if (recentTouchTimeoutRef.current) {
-        clearTimeout(recentTouchTimeoutRef.current)
-      }
-      recentTouchTimeoutRef.current = setTimeout(() => {
-        recentTouchRef.current = false
-      }, 300)
+    // Block click handler from also firing on mobile
+    recentTouchRef.current = true
+    if (recentTouchTimeoutRef.current) {
+      clearTimeout(recentTouchTimeoutRef.current)
+    }
+    recentTouchTimeoutRef.current = setTimeout(() => {
+      recentTouchRef.current = false
+    }, 300)
 
-      // Store touch start for movement detection
-      longPressTouchStartRef.current = { x: startX, y: startY, role }
+    // Store touch start for movement detection
+    longPressTouchStartRef.current = { x: startX, y: startY, role }
 
-      const MOVE_THRESHOLD = 10
-      let hasStartedDrag = false
+    const MOVE_THRESHOLD = 10
+    let hasStartedDrag = false
 
-      const handleMove = (ev: TouchEvent) => {
-        const currentTouch = ev.touches[0]
-        const dx = currentTouch.clientX - startX
-        const dy = currentTouch.clientY - startY
-        const distance = Math.sqrt(dx * dx + dy * dy)
+    const handleMove = (ev: TouchEvent) => {
+      const currentTouch = ev.touches[0]
+      const dx = currentTouch.clientX - startX
+      const dy = currentTouch.clientY - startY
+      const distance = Math.sqrt(dx * dx + dy * dy)
 
-        // If finger moved past threshold, start player drag instead of opening menu
-        if (distance > MOVE_THRESHOLD && !hasStartedDrag) {
-          hasStartedDrag = true
+      // If finger moved past threshold, start player drag
+      if (distance > MOVE_THRESHOLD && !hasStartedDrag) {
+        hasStartedDrag = true
 
-          // Start normal player drag
-          handleDragStart(role, { nativeEvent: ev, preventDefault: () => {}, stopPropagation: () => {} } as unknown as React.TouchEvent)
+        // Start normal player drag
+        handleDragStart(role, { nativeEvent: ev, preventDefault: () => {}, stopPropagation: () => {} } as unknown as React.TouchEvent)
 
-          // Remove these listeners since the drag handlers will set up their own
-          document.removeEventListener('touchmove', handleMove)
-          document.removeEventListener('touchend', handleEnd)
-        }
-      }
-
-      const handleEnd = () => {
+        // Remove these listeners since the drag handlers will set up their own
         document.removeEventListener('touchmove', handleMove)
         document.removeEventListener('touchend', handleEnd)
-
-        // If we didn't start a drag, open the radial menu
-        if (!hasStartedDrag) {
-          if (navigator.vibrate) {
-            navigator.vibrate(30)
-          }
-          setRadialMenuRole(role)
-          setRadialMenuPosition({ x: startX, y: startY })
-        }
       }
-
-      document.addEventListener('touchmove', handleMove, { passive: false })
-      document.addEventListener('touchend', handleEnd)
-      return
     }
 
-    // **CLASSIC MODE** (simplified - just tap-to-menu, no prime/long-press)
-    // In classic mode, we simply open the context menu on tap (handled by click event)
-    // No need for timers or complex gesture detection
+    const handleEnd = () => {
+      document.removeEventListener('touchmove', handleMove)
+      document.removeEventListener('touchend', handleEnd)
+
+      // If we didn't start a drag, open the context menu (bottom sheet)
+      if (!hasStartedDrag) {
+        if (navigator.vibrate) {
+          navigator.vibrate(30)
+        }
+        if (onContextPlayerChange) {
+          handleContextPlayerToggle(role, e)
+        }
+      }
+    }
+
+    document.addEventListener('touchmove', handleMove, { passive: false })
+    document.addEventListener('touchend', handleEnd)
   }, [
     isEditable,
-    interactionMode,
     handleDragStart,
+    onContextPlayerChange,
+    handleContextPlayerToggle,
   ])
 
   // Handle away player drag end
@@ -2746,16 +2697,6 @@ export function VolleyballCourt({
           } : undefined}
           hasTeam={hasTeam}
           onManageRoster={onManageRoster}
-        />
-      )}
-
-      {/* Radial menu overlay */}
-      {radialMenuRole && radialMenuPosition && (
-        <RadialMenu
-          center={radialMenuPosition}
-          hasArrow={!!arrows[radialMenuRole]}
-          onSegmentTap={handleRadialSegmentTap}
-          onClose={handleRadialMenuClose}
         />
       )}
 
