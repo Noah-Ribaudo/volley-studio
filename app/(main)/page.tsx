@@ -408,7 +408,7 @@ function HomePageContent() {
       {/* Main Content Area - full screen */}
       <div className="flex-1 min-h-0 overflow-hidden">
         {/* Court Container - scales to fit available space */}
-        <div className="w-full h-auto sm:h-full sm:max-w-3xl mx-auto px-0 sm:px-2 relative">
+        <div className="w-full h-full sm:max-w-3xl mx-auto px-0 sm:px-2 relative">
           {/* Gradient overlay to fade out content behind the menu when away team is hidden */}
           {hideAwayTeam && (
             <div
@@ -436,7 +436,7 @@ function HomePageContent() {
           {/* Court with swipe handlers for mobile */}
           <div
             ref={courtContainerRef}
-            className="relative w-full h-auto sm:h-full flex items-center justify-center py-2 sm:py-14"
+            className="relative w-full h-full flex items-center justify-center py-2 sm:py-14"
             style={{
               ...(courtOffset > 0 ? { transform: `translateY(-${courtOffset}px)` } : {}),
               ...(swipeOffset !== 0 ? { transform: `translateX(${swipeOffset}px)` } : {}),

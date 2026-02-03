@@ -7,6 +7,7 @@ import { MobileBottomNav } from '@/components/volleyball/MobileBottomNav'
 import { DesktopHeaderNav } from '@/components/volleyball/DesktopHeaderNav'
 import { MobileContextBar } from '@/components/controls'
 import { useAppStore } from '@/store/useAppStore'
+import { UserMenu } from '@/components/auth'
 
 export default function VolleyballLayout({
   children,
@@ -45,8 +46,9 @@ export default function VolleyballLayout({
         <DesktopHeaderNav />
 
         {/* Mobile top header - minimal, just for context */}
-        <header className="md:hidden flex items-center h-12 px-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <header className="md:hidden flex items-center justify-between h-12 px-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
           <span className="font-medium text-sm">Volleyball</span>
+          <UserMenu />
         </header>
 
         {/* Main content with bottom padding for mobile nav + context bar */}
@@ -81,9 +83,12 @@ export default function VolleyballLayout({
       <VolleyballSidebar />
       <SidebarInset className="h-dvh flex flex-col">
         {/* Mobile top header with menu button */}
-        <header className="md:hidden flex items-center h-12 px-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-          <SidebarTrigger className="h-8 w-8" />
-          <span className="ml-2 font-medium text-sm">Volleyball</span>
+        <header className="md:hidden flex items-center justify-between h-12 px-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+          <div className="flex items-center">
+            <SidebarTrigger className="h-8 w-8" />
+            <span className="ml-2 font-medium text-sm">Volleyball</span>
+          </div>
+          <UserMenu />
         </header>
         {/* Floating toggle button - desktop only */}
         <SidebarTrigger

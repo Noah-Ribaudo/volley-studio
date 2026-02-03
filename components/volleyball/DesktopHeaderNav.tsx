@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { Layout, Users, Timer, Settings, ChevronLeft, ChevronRight, ChevronDown, Play, RotateCcw, Printer } from 'lucide-react'
+import { UserMenu } from '@/components/auth'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -67,7 +68,7 @@ export function DesktopHeaderNav() {
   const phasesToShow = visiblePhases
     ? RALLY_PHASES.filter(p => visiblePhases.has(p))
     : RALLY_PHASES
-  
+
   // Function to get positions for any rotation/phase (used by print dialog)
   const getPositionsForRotation = (rotation: Rotation, phase: Phase) => {
     return getCurrentPositions(
@@ -226,6 +227,21 @@ export function DesktopHeaderNav() {
             <span>Print</span>
           </Button>
         </div>
+      )}
+
+      {/* User menu - show on right side when not on whiteboard */}
+      {!isWhiteboardPage && (
+        <div className="ml-auto">
+          <UserMenu />
+        </div>
+      )}
+
+      {/* User menu - show after whiteboard controls */}
+      {isWhiteboardPage && (
+        <>
+          <div className="w-px h-6 bg-border ml-2" />
+          <UserMenu />
+        </>
       )}
 
       {/* Print Dialog */}
