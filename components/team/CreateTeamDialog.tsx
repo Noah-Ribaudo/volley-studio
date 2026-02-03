@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { PasswordInput } from '@/components/ui/password-input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
@@ -25,7 +24,6 @@ interface CreateTeamDialogProps {
 export function CreateTeamDialog({ onCreateTeam, isLoading }: CreateTeamDialogProps) {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
-  const [password, setPassword] = useState('')
   const [presetSystem, setPresetSystem] = useState<PresetSystem | 'scratch'>('scratch')
   const [error, setError] = useState('')
 
@@ -40,9 +38,8 @@ export function CreateTeamDialog({ onCreateTeam, isLoading }: CreateTeamDialogPr
 
     try {
       const selectedPreset = presetSystem === 'scratch' ? undefined : presetSystem
-      await onCreateTeam(name.trim(), password.trim() || undefined, selectedPreset)
+      await onCreateTeam(name.trim(), undefined, selectedPreset)
       setName('')
-      setPassword('')
       setPresetSystem('scratch')
       setOpen(false)
     } catch (err) {
@@ -90,18 +87,6 @@ export function CreateTeamDialog({ onCreateTeam, isLoading }: CreateTeamDialogPr
                 placeholder="e.g., Varsity Squad"
                 autoFocus
               />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="password">Password (Optional)</Label>
-              <PasswordInput
-                id="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Optional team password"
-              />
-              <p className="text-xs text-muted-foreground">
-                Add a simple password to protect your team. This is optional.
-              </p>
             </div>
             <div className="grid gap-2">
               <Label>Starting Rotations</Label>

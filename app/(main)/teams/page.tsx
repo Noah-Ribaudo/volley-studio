@@ -34,9 +34,9 @@ export default function TeamsPage() {
   const isLoading = teams === undefined
 
   // Handle team creation
-  const handleCreateTeam = async (name: string, password?: string) => {
+  const handleCreateTeam = async (name: string, _password?: string, presetSystem?: string) => {
     const slug = generateSlug(name)
-    await createTeam({ name, slug, password })
+    await createTeam({ name, slug })
     router.push(`/teams/${slug}`)
   }
 
@@ -112,7 +112,6 @@ export default function TeamsPage() {
                   id: team._id,
                   name: team.name,
                   slug: team.slug,
-                  password: team.password,
                   archived: team.archived,
                   roster: team.roster.map(p => ({
                     id: p.id,
