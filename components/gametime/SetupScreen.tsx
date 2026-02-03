@@ -8,6 +8,7 @@ import { useGameTimeStore } from '@/store/useGameTimeStore'
 import { Team, Role, RosterPlayer, Rotation, ROLE_INFO } from '@/lib/types'
 import { getRoleZone } from '@/lib/rotations'
 import { PositionSlot, PlayerGrid } from '@/components/team'
+import { Facehash } from 'facehash'
 import { ChevronLeft, ChevronRight, Users, Zap, Check, X } from 'lucide-react'
 
 // Roles for lineup (no libero)
@@ -159,7 +160,7 @@ export function SetupScreen() {
                   className="w-full bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 border border-zinc-700 rounded-lg px-4 py-4 text-left transition-colors flex items-center justify-between"
                 >
                   <div className="flex items-center gap-3">
-                    <Users className="w-5 h-5 text-zinc-400" />
+                    <Facehash name={t.id} size={40} />
                     <div>
                       <div className="font-medium">{t.name}</div>
                       <div className="text-sm text-zinc-400">
