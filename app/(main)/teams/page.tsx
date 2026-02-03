@@ -6,7 +6,9 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '@/convex/_generated/api'
+import { Id } from '@/convex/_generated/dataModel'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { TeamCard, CreateTeamDialog, TeamSearchBar } from '@/components/team'
 import Link from 'next/link'
@@ -26,10 +28,14 @@ function generateSlug(name: string): string {
 export default function TeamsPage() {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
+  const [importCode, setImportCode] = useState('')
+  const [importError, setImportError] = useState('')
+  const [isImporting, setIsImporting] = useState(false)
 
   // Convex queries - automatically reactive
   const teams = useQuery(api.teams.search, { query: searchQuery })
   const createTeam = useMutation(api.teams.create)
+  const cloneTeam = useMutation(api.teams.clone)
 
   const isLoading = teams === undefined
 
@@ -38,6 +44,27 @@ export default function TeamsPage() {
     const slug = generateSlug(name)
     await createTeam({ name, slug })
     router.push(`/teams/${slug}`)
+  }
+
+  // Handle team import via code
+  const handleImportTeam = async () => {
+    if (!importCode.trim()) {
+      setImportError('Please enter a team code')
+      return
+    }
+
+    setImportError('')
+    setIsImporting(true)
+
+    try {
+      const newTeamId = await cloneTeam({ id: importCode.trim() as Id<"teams"> })
+      setImportCode('')
+      // The teams list will auto-refresh via Convex reactivity
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : 'Invalid team code')
+    } finally {
+      setIsImporting(false)
+    }
   }
 
   return (
@@ -77,21 +104,50 @@ export default function TeamsPage() {
           onChange={setSearchQuery}
         />
 
-        {/* Create Team Card - Standalone */}
+        {/* Create & Import Cards */}
         {!searchQuery && (
-          <Card className="bg-accent/30 border-accent/50">
-            <CardContent className="pt-4">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-lg">Create New Team</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Start a new team to manage players and rotations
-                  </p>
-                </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {/* Create Team Card */}
+            <Card className="bg-accent/30 border-accent/50">
+              <CardContent className="pt-4">
+                <h3 className="font-semibold text-lg">Create New Team</h3>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Start fresh with a new team
+                </p>
                 <CreateTeamDialog onCreateTeam={handleCreateTeam} />
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+
+            {/* Import Team Card */}
+            <Card className="border-dashed">
+              <CardContent className="pt-4">
+                <h3 className="font-semibold text-lg">Import Team</h3>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Paste a team code to copy it
+                </p>
+                <div className="flex gap-2">
+                  <Input
+                    value={importCode}
+                    onChange={(e) => {
+                      setImportCode(e.target.value)
+                      setImportError('')
+                    }}
+                    placeholder="Paste team code"
+                    className="flex-1"
+                  />
+                  <Button
+                    onClick={handleImportTeam}
+                    disabled={isImporting || !importCode.trim()}
+                  >
+                    {isImporting ? 'Importing...' : 'Import'}
+                  </Button>
+                </div>
+                {importError && (
+                  <p className="text-sm text-destructive mt-2">{importError}</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         )}
 
         {/* Loading */}

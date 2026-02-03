@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { auth } from "./auth";
 
 // Get all non-archived teams
 export const list = query({
@@ -52,6 +53,22 @@ export const search = query({
   },
 });
 
+// Get teams owned by the current user
+export const listMyTeams = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) {
+      return [];
+    }
+    return await ctx.db
+      .query("teams")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .filter((q) => q.eq(q.field("archived"), false))
+      .collect();
+  },
+});
+
 // Create a new team
 export const create = mutation({
   args: {
@@ -60,6 +77,9 @@ export const create = mutation({
     password: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    // Get the current user (if signed in)
+    const userId = await auth.getUserId(ctx);
+
     // Check if slug already exists
     const existing = await ctx.db
       .query("teams")
@@ -71,6 +91,7 @@ export const create = mutation({
     }
 
     return await ctx.db.insert("teams", {
+      userId: userId ?? undefined,
       name: args.name,
       slug: args.slug,
       password: args.password,
@@ -159,6 +180,63 @@ export const verifyPassword = query({
     if (!team) return false;
     if (!team.password) return true; // No password set
     return team.password === args.password;
+  },
+});
+
+// Clone a team by ID (for importing via team code)
+export const clone = mutation({
+  args: { id: v.id("teams") },
+  handler: async (ctx, args) => {
+    const userId = await auth.getUserId(ctx);
+    const original = await ctx.db.get(args.id);
+    if (!original) {
+      throw new Error("Team not found");
+    }
+
+    // Generate a unique slug for the copy
+    const baseSlug = `${original.slug}_copy`;
+    let slug = baseSlug;
+    let counter = 1;
+
+    while (true) {
+      const existing = await ctx.db
+        .query("teams")
+        .withIndex("by_slug", (q) => q.eq("slug", slug))
+        .first();
+      if (!existing) break;
+      slug = `${baseSlug}_${counter}`;
+      counter++;
+    }
+
+    // Create the copy with a new name, owned by current user
+    const newTeamId = await ctx.db.insert("teams", {
+      userId: userId ?? undefined,
+      name: `${original.name} (Copy)`,
+      slug,
+      archived: false,
+      roster: original.roster,
+      lineups: original.lineups,
+      activeLineupId: original.activeLineupId,
+      positionAssignments: original.positionAssignments,
+    });
+
+    // Also copy custom layouts if any exist
+    const layouts = await ctx.db
+      .query("customLayouts")
+      .withIndex("by_team", (q) => q.eq("teamId", args.id))
+      .collect();
+
+    for (const layout of layouts) {
+      await ctx.db.insert("customLayouts", {
+        teamId: newTeamId,
+        rotation: layout.rotation,
+        phase: layout.phase,
+        positions: layout.positions,
+        flags: layout.flags,
+      });
+    }
+
+    return newTeamId;
   },
 });
 

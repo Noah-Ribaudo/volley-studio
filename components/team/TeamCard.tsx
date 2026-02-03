@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Team } from '@/lib/types'
@@ -10,8 +11,15 @@ interface TeamCardProps {
 }
 
 export function TeamCard({ team }: TeamCardProps) {
+  const [copied, setCopied] = useState(false)
   const rosterCount = team.roster?.length || 0
   const updatedDate = team.updated_at ? new Date(team.updated_at).toLocaleDateString() : undefined
+
+  const handleCopyCode = async () => {
+    await navigator.clipboard.writeText(team.id)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   return (
     <Card className="group hover:shadow-md transition-shadow">
@@ -25,6 +33,51 @@ export function TeamCard({ team }: TeamCardProps) {
           </div>
 
           <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={handleCopyCode}
+              className="text-muted-foreground"
+            >
+              {copied ? (
+                <>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="mr-1"
+                  >
+                    <path d="M20 6 9 17l-5-5"/>
+                  </svg>
+                  Copied
+                </>
+              ) : (
+                <>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="mr-1"
+                  >
+                    <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+                    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+                  </svg>
+                  Code
+                </>
+              )}
+            </Button>
             <Link href={`/?team=${team.slug}`}>
               <Button size="sm" variant="default">
                 Whiteboard
