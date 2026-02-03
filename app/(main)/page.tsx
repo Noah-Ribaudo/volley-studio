@@ -436,7 +436,7 @@ function HomePageContent() {
           {/* Court with swipe handlers for mobile */}
           <div
             ref={courtContainerRef}
-            className="relative w-full h-auto sm:h-full flex items-center justify-center pt-2 sm:pt-14"
+            className="relative w-full h-auto sm:h-full flex items-center justify-center py-2 sm:py-14"
             style={{
               ...(courtOffset > 0 ? { transform: `translateY(-${courtOffset}px)` } : {}),
               ...(swipeOffset !== 0 ? { transform: `translateX(${swipeOffset}px)` } : {}),
