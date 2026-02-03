@@ -17,14 +17,6 @@ export default function SignInPage() {
     }
   }, [isAuthenticated, isLoading, router]);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-sm">

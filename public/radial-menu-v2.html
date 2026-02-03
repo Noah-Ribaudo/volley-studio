@@ -89,63 +89,60 @@
       <!-- Radial menu (hidden by default) - GTA-style wedge segments -->
       <g id="radialMenu" style="display: none;">
         <!-- Background circle (darkens area) -->
-        <circle cx="0" cy="0" r="110" fill="rgba(0, 0, 0, 0.5)"/>
+        <circle cx="0" cy="0" r="110" fill="rgba(0, 0, 0, 0.7)"/>
 
-        <!-- Wedge segments - pie slices -->
-        <!-- UP - Draw Path -->
+        <!-- Donut segments with gaps (arc from outer to inner radius) -->
+        <!-- UP - Draw Path (60° to 120° with 5° gaps on each side) -->
         <g id="seg-up" class="segment">
           <path
             class="wedge"
-            d="M 0,0 L 0,-50 A 50,50 0 0,1 35.36,-35.36 Z"
+            d="M -5.23,-49.72 A 50,50 0 0,1 5.23,-49.72 L 3.66,-34.83 A 35,35 0 0,0 -3.66,-34.83 Z"
             fill="rgba(70, 70, 80, 0.95)"
-            stroke="rgba(255, 255, 255, 0.6)"
+            stroke="rgba(255, 255, 255, 0.8)"
             stroke-width="2"
           />
-          <text class="icon" x="0" y="-70" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="28" font-weight="bold">↑</text>
-          <text class="label" x="0" y="-48" text-anchor="middle" dominant-baseline="middle" fill="rgba(255,255,255,0.9)" font-size="11" font-weight="600">DRAW</text>
+          <text class="icon" x="0" y="-68" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="28" font-weight="bold">↑</text>
+          <text class="label" x="0" y="-46" text-anchor="middle" dominant-baseline="middle" fill="rgba(255,255,255,0.95)" font-size="10" font-weight="600">DRAW</text>
         </g>
 
-        <!-- RIGHT - Assign -->
+        <!-- RIGHT - Assign (330° to 30° with 5° gaps) -->
         <g id="seg-right" class="segment">
           <path
             class="wedge"
-            d="M 0,0 L 50,0 A 50,50 0 0,1 35.36,35.36 Z"
+            d="M 49.72,-5.23 A 50,50 0 0,1 49.72,5.23 L 34.83,3.66 A 35,35 0 0,0 34.83,-3.66 Z"
             fill="rgba(70, 70, 80, 0.95)"
-            stroke="rgba(255, 255, 255, 0.6)"
+            stroke="rgba(255, 255, 255, 0.8)"
             stroke-width="2"
           />
-          <text class="icon" x="70" y="0" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="28" font-weight="bold">👤</text>
-          <text class="label" x="48" y="0" text-anchor="middle" dominant-baseline="middle" fill="rgba(255,255,255,0.9)" font-size="11" font-weight="600">ASSIGN</text>
+          <text class="icon" x="68" y="0" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="28" font-weight="bold">👤</text>
+          <text class="label" x="46" y="0" text-anchor="middle" dominant-baseline="middle" fill="rgba(255,255,255,0.95)" font-size="10" font-weight="600">ASSIGN</text>
         </g>
 
-        <!-- DOWN - Highlight -->
+        <!-- DOWN - Highlight (240° to 300° with 5° gaps) -->
         <g id="seg-down" class="segment">
           <path
             class="wedge"
-            d="M 0,0 L 35.36,35.36 A 50,50 0 0,1 -35.36,35.36 Z"
+            d="M 5.23,49.72 A 50,50 0 0,1 -5.23,49.72 L -3.66,34.83 A 35,35 0 0,0 3.66,34.83 Z"
             fill="rgba(70, 70, 80, 0.95)"
-            stroke="rgba(255, 255, 255, 0.6)"
+            stroke="rgba(255, 255, 255, 0.8)"
             stroke-width="2"
           />
-          <text class="icon" x="0" y="70" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="28" font-weight="bold">★</text>
-          <text class="label" x="0" y="48" text-anchor="middle" dominant-baseline="middle" fill="rgba(255,255,255,0.9)" font-size="11" font-weight="600">HIGHLIGHT</text>
+          <text class="icon" x="0" y="68" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="28" font-weight="bold">★</text>
+          <text class="label" x="0" y="46" text-anchor="middle" dominant-baseline="middle" fill="rgba(255,255,255,0.95)" font-size="10" font-weight="600">HIGHLIGHT</text>
         </g>
 
-        <!-- LEFT - Tags -->
+        <!-- LEFT - Tags (150° to 210° with 5° gaps) -->
         <g id="seg-left" class="segment">
           <path
             class="wedge"
-            d="M 0,0 L -35.36,35.36 A 50,50 0 0,1 -50,0 Z"
+            d="M -49.72,5.23 A 50,50 0 0,1 -49.72,-5.23 L -34.83,-3.66 A 35,35 0 0,0 -34.83,3.66 Z"
             fill="rgba(70, 70, 80, 0.95)"
-            stroke="rgba(255, 255, 255, 0.6)"
+            stroke="rgba(255, 255, 255, 0.8)"
             stroke-width="2"
           />
-          <text class="icon" x="-70" y="0" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="28" font-weight="bold">🏷</text>
-          <text class="label" x="-48" y="0" text-anchor="middle" dominant-baseline="middle" fill="rgba(255,255,255,0.9)" font-size="11" font-weight="600">TAGS</text>
+          <text class="icon" x="-68" y="0" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="28" font-weight="bold">🏷</text>
+          <text class="label" x="-46" y="0" text-anchor="middle" dominant-baseline="middle" fill="rgba(255,255,255,0.95)" font-size="10" font-weight="600">TAGS</text>
         </g>
-
-        <!-- Selection indicator (glowing wedge overlay) -->
-        <path id="selectionWedge" d="" fill="rgba(57, 255, 20, 0.4)" stroke="rgba(57, 255, 20, 1)" stroke-width="2" style="display: none;"/>
       </g>
     </g>
 
@@ -255,13 +252,13 @@
 
         if (wedge) {
           wedge.setAttribute('fill', 'rgba(70, 70, 80, 0.95)');
-          wedge.setAttribute('stroke', 'rgba(255, 255, 255, 0.6)');
+          wedge.setAttribute('stroke', 'rgba(255, 255, 255, 0.8)');
           wedge.setAttribute('stroke-width', '2');
         }
 
         if (icon) icon.setAttribute('fill', 'white');
         if (label) {
-          label.setAttribute('fill', 'rgba(255,255,255,0.9)');
+          label.setAttribute('fill', 'rgba(255,255,255,0.95)');
           label.setAttribute('font-weight', '600');
         }
       });

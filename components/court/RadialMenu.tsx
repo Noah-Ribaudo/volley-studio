@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 
 export type RadialSegment = 'draw-path' | 'clear-path' | 'assign-player' | 'highlight' | 'tags'
 
@@ -29,6 +29,16 @@ const ICON_RADIUS = 105
 const SEGMENT_GAP = 0.15 // Gap between segments in radians
 
 export function RadialMenu({ center, hasArrow, onSegmentTap, onClose }: RadialMenuProps) {
+  // Ignore events for a brief moment after mount to prevent
+  // the click event (which fires after touchend) from immediately closing
+  const readyRef = useRef(false)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      readyRef.current = true
+    }, 50)
+    return () => clearTimeout(timer)
+  }, [])
+
   // Filter segments based on state
   const visibleSegments = SEGMENTS.map(seg => {
     if (seg.id === 'draw-path' && hasArrow) {
@@ -38,18 +48,21 @@ export function RadialMenu({ center, hasArrow, onSegmentTap, onClose }: RadialMe
   })
 
   const handleSegmentClick = useCallback((segment: RadialSegment, e: React.MouseEvent | React.TouchEvent) => {
+    if (!readyRef.current) return
     e.stopPropagation()
     e.preventDefault()
     onSegmentTap(segment)
   }, [onSegmentTap])
 
   const handleCenterClick = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    if (!readyRef.current) return
     e.stopPropagation()
     e.preventDefault()
     onClose()
   }, [onClose])
 
   const handleBackdropClick = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    if (!readyRef.current) return
     e.stopPropagation()
     e.preventDefault()
     onClose()
