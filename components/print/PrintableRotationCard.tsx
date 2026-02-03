@@ -4,6 +4,20 @@ import { Role, ROLES, ROLE_INFO, PositionCoordinates, RosterPlayer, PositionAssi
 import { getRoleZone, isInBackRow } from "@/lib/rotations";
 import { cn } from "@/lib/utils";
 
+export interface PrintConfig {
+  showNumbersOnTokens: boolean;
+  showNamesOnCourt: boolean;
+  showRosterLegend: boolean;
+  showZoneNumbers: boolean;
+}
+
+export const DEFAULT_PRINT_CONFIG: PrintConfig = {
+  showNumbersOnTokens: true,
+  showNamesOnCourt: false,
+  showRosterLegend: true,
+  showZoneNumbers: false, // Will be overridden based on mode
+};
+
 interface PrintableRotationCardProps {
   rotation: Rotation;
   phase: Phase;
@@ -14,6 +28,7 @@ interface PrintableRotationCardProps {
   teamName?: string;
   mode: "pretty" | "plain";
   showPhase?: boolean;
+  config?: PrintConfig;
 }
 
 // Court dimensions for print (aspect ratio 1:1 for half court)
@@ -37,6 +52,7 @@ function PlayerTokenPrint({
   mode,
   rotation,
   baseOrder,
+  config,
 }: {
   role: Role;
   position: { x: number; y: number };
@@ -45,6 +61,7 @@ function PlayerTokenPrint({
   mode: "pretty" | "plain";
   rotation: Rotation;
   baseOrder?: Role[];
+  config: PrintConfig;
 }) {
   const svgPos = toSvgCoords(position);
   const roleInfo = ROLE_INFO[role];
@@ -53,7 +70,10 @@ function PlayerTokenPrint({
   const zone = getRoleZone(rotation, role, baseOrder || (ROLES.filter(r => r !== 'L') as Role[]));
   const isBack = isInBackRow(rotation, role, baseOrder);
 
-  const displayText = player?.number?.toString() || role;
+  // Determine what to show on the token
+  const displayText = config.showNumbersOnTokens
+    ? (player?.number?.toString() || role)
+    : role;
   const displayName = player?.name || roleInfo.name;
 
   if (mode === "plain") {
@@ -78,22 +98,24 @@ function PlayerTokenPrint({
         >
           {displayText}
         </text>
-        <text
-          x={svgPos.x}
-          y={svgPos.y + 20}
-          textAnchor="middle"
-          fontSize={7}
-          fill="black"
-        >
-          {displayName}
-        </text>
+        {config.showNamesOnCourt && (
+          <text
+            x={svgPos.x}
+            y={svgPos.y + 20}
+            textAnchor="middle"
+            fontSize={7}
+            fill="black"
+          >
+            {displayName}
+          </text>
+        )}
       </g>
     );
   }
 
   // Pretty mode - use role colors
   const bgColor = roleInfo.color || "#f97316";
-  
+
   return (
     <g>
       <circle
@@ -116,16 +138,18 @@ function PlayerTokenPrint({
       >
         {displayText}
       </text>
-      <text
-        x={svgPos.x}
-        y={svgPos.y + 20}
-        textAnchor="middle"
-        fontSize={7}
-        fill="#374151"
-        fontWeight="500"
-      >
-        {displayName}
-      </text>
+      {config.showNamesOnCourt && (
+        <text
+          x={svgPos.x}
+          y={svgPos.y + 20}
+          textAnchor="middle"
+          fontSize={7}
+          fill="#374151"
+          fontWeight="500"
+        >
+          {displayName}
+        </text>
+      )}
     </g>
   );
 }
@@ -140,8 +164,16 @@ export function PrintableRotationCard({
   teamName,
   mode,
   showPhase = true,
+  config: propConfig,
 }: PrintableRotationCardProps) {
   const activeRoles = ROLES.filter((r) => r !== "L");
+
+  // Merge default config with mode-specific defaults and passed config
+  const config: PrintConfig = {
+    ...DEFAULT_PRINT_CONFIG,
+    showZoneNumbers: mode === "plain", // Zone numbers default ON for plain, OFF for pretty
+    ...propConfig,
+  };
 
   const phaseName = phase
     .replace(/_/g, " ")
@@ -223,15 +255,15 @@ export function PrintableRotationCard({
           strokeWidth={2}
         />
 
-        {/* Zone labels (plain mode only) */}
-        {mode === "plain" && (
+        {/* Zone labels */}
+        {config.showZoneNumbers && (
           <>
-            <text x={35} y={25} fontSize={8} fill="#666">4</text>
-            <text x={100} y={25} fontSize={8} fill="#666">3</text>
-            <text x={165} y={25} fontSize={8} fill="#666">2</text>
-            <text x={35} y={140} fontSize={8} fill="#666">5</text>
-            <text x={100} y={140} fontSize={8} fill="#666">6</text>
-            <text x={165} y={140} fontSize={8} fill="#666">1</text>
+            <text x={35} y={25} fontSize={8} fill={mode === "plain" ? "#666" : "#9a3412"}>4</text>
+            <text x={100} y={25} fontSize={8} fill={mode === "plain" ? "#666" : "#9a3412"}>3</text>
+            <text x={165} y={25} fontSize={8} fill={mode === "plain" ? "#666" : "#9a3412"}>2</text>
+            <text x={35} y={140} fontSize={8} fill={mode === "plain" ? "#666" : "#9a3412"}>5</text>
+            <text x={100} y={140} fontSize={8} fill={mode === "plain" ? "#666" : "#9a3412"}>6</text>
+            <text x={165} y={140} fontSize={8} fill={mode === "plain" ? "#666" : "#9a3412"}>1</text>
           </>
         )}
 
@@ -249,29 +281,64 @@ export function PrintableRotationCard({
               mode={mode}
               rotation={rotation}
               baseOrder={baseOrder}
+              config={config}
             />
           );
         })}
       </svg>
 
-      {/* Legend (pretty mode) */}
-      {mode === "pretty" && (
-        <div className="mt-2 pt-2 border-t border-gray-100 flex flex-wrap gap-1 justify-center">
-          {activeRoles.map((role) => {
-            const info = ROLE_INFO[role];
-            return (
-              <span
-                key={role}
-                className="inline-flex items-center gap-1 text-xs"
-              >
-                <span
-                  className="w-2 h-2 rounded-full"
-                  style={{ backgroundColor: info.color }}
-                />
-                <span className="text-gray-600">{role}</span>
-              </span>
-            );
-          })}
+      {/* Roster Legend - shows player assignments */}
+      {config.showRosterLegend && (
+        <div className={cn(
+          "mt-2 pt-2",
+          mode === "pretty" ? "border-t border-gray-100" : "border-t border-black"
+        )}>
+          <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-xs">
+            {activeRoles.map((role) => {
+              const info = ROLE_INFO[role];
+              const playerId = assignments?.[role];
+              const player = roster?.find((p) => p.id === playerId);
+              return (
+                <div key={role} className="flex items-center gap-1.5 min-w-0">
+                  {mode === "pretty" && (
+                    <span
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{ backgroundColor: info.color }}
+                    />
+                  )}
+                  <span className={cn(
+                    "font-medium shrink-0",
+                    mode === "pretty" ? "text-gray-700" : "text-black"
+                  )}>
+                    {role}
+                  </span>
+                  {player?.number && (
+                    <span className={cn(
+                      mode === "pretty" ? "text-gray-500" : "text-black"
+                    )}>
+                      #{player.number}
+                    </span>
+                  )}
+                  {player?.name && (
+                    <span className={cn(
+                      "truncate",
+                      mode === "pretty" ? "text-gray-600" : "text-black"
+                    )}>
+                      {player.name}
+                    </span>
+                  )}
+                  {!player && (
+                    <span className={cn(
+                      "italic",
+                      mode === "pretty" ? "text-gray-400" : "text-gray-500"
+                    )}>
+                      {info.name}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>

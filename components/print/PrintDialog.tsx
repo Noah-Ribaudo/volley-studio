@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useReactToPrint } from "react-to-print";
 import {
   Dialog,
@@ -9,7 +9,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { PrintableRotationCard } from "./PrintableRotationCard";
+import { PrintableRotationCard, PrintConfig, DEFAULT_PRINT_CONFIG } from "./PrintableRotationCard";
 import {
   Role,
   ROLES,
@@ -25,6 +25,7 @@ import {
 } from "@/lib/types";
 import { Printer, FileText, Palette } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Switch } from "@/components/ui/switch";
 
 interface PrintDialogProps {
   open: boolean;
@@ -56,7 +57,19 @@ export function PrintDialog({
 }: PrintDialogProps) {
   const [mode, setMode] = useState<PrintMode>("pretty");
   const [scope, setScope] = useState<PrintScope>("current");
+  const [config, setConfig] = useState<PrintConfig>({
+    ...DEFAULT_PRINT_CONFIG,
+    showZoneNumbers: false, // Will be set based on mode
+  });
   const printRef = useRef<HTMLDivElement>(null);
+
+  // Update zone numbers default when mode changes
+  useEffect(() => {
+    setConfig(prev => ({
+      ...prev,
+      showZoneNumbers: mode === "plain",
+    }));
+  }, [mode]);
 
   const handlePrint = useReactToPrint({
     contentRef: printRef,
@@ -75,6 +88,7 @@ export function PrintDialog({
           baseOrder={baseOrder}
           teamName={teamName}
           mode={mode}
+          config={config}
         />
       );
     }
@@ -94,6 +108,7 @@ export function PrintDialog({
               teamName={teamName}
               mode={mode}
               showPhase={false}
+              config={config}
             />
           ))}
         </div>
@@ -121,6 +136,7 @@ export function PrintDialog({
                   teamName={teamName}
                   mode={mode}
                   showPhase={false}
+                  config={config}
                 />
               ))}
             </div>
@@ -215,6 +231,38 @@ export function PrintDialog({
               </button>
             </div>
           </div>
+        </div>
+
+        {/* Configuration toggles */}
+        <div className="flex flex-wrap gap-4 py-3 border-b">
+          <label className="flex items-center gap-2 text-sm">
+            <Switch
+              checked={config.showNumbersOnTokens}
+              onCheckedChange={(checked) => setConfig(prev => ({ ...prev, showNumbersOnTokens: checked }))}
+            />
+            <span className="text-gray-700">Numbers on tokens</span>
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <Switch
+              checked={config.showNamesOnCourt}
+              onCheckedChange={(checked) => setConfig(prev => ({ ...prev, showNamesOnCourt: checked }))}
+            />
+            <span className="text-gray-700">Names on court</span>
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <Switch
+              checked={config.showRosterLegend}
+              onCheckedChange={(checked) => setConfig(prev => ({ ...prev, showRosterLegend: checked }))}
+            />
+            <span className="text-gray-700">Roster legend</span>
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <Switch
+              checked={config.showZoneNumbers}
+              onCheckedChange={(checked) => setConfig(prev => ({ ...prev, showZoneNumbers: checked }))}
+            />
+            <span className="text-gray-700">Zone numbers</span>
+          </label>
         </div>
 
         {/* Preview */}
