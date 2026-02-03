@@ -1,195 +1,192 @@
 'use client'
 
-import { useMemo } from 'react'
-import { Position } from '@/lib/types'
+import { useCallback } from 'react'
 
 export type RadialSegment = 'draw-path' | 'clear-path' | 'assign-player' | 'highlight' | 'tags'
 
 interface RadialMenuProps {
-  /** Center position in SVG coordinates (pixels) */
+  /** Center position in screen coordinates (pixels) */
   center: { x: number; y: number }
-  /** Current drag angle in radians (null if not dragging) */
-  dragAngle: number | null
   /** Whether an arrow exists for this player (determines draw vs clear) */
   hasArrow: boolean
-  /** Mobile scale factor */
-  mobileScale?: number
+  /** Callback when a segment is tapped */
+  onSegmentTap: (segment: RadialSegment) => void
+  /** Callback when menu should close (tap on center or outside) */
+  onClose: () => void
 }
 
-const SEGMENT_ANGLES = {
-  'draw-path': Math.PI / 2,      // ↑ (90°)
-  'clear-path': Math.PI / 2,     // ↑ (90°) - same as draw-path, contextual
-  'assign-player': 0,            // → (0°)
-  'highlight': -Math.PI / 2,     // ↓ (270° or -90°)
-  'tags': Math.PI,               // ← (180°)
-} as const
+const SEGMENTS: { id: RadialSegment; angle: number; icon: string; label: string }[] = [
+  { id: 'draw-path', angle: Math.PI / 2, icon: '↗', label: 'DRAW' },
+  { id: 'assign-player', angle: 0, icon: '👤', label: 'ASSIGN' },
+  { id: 'highlight', angle: -Math.PI / 2, icon: '★', label: 'HIGHLIGHT' },
+  { id: 'tags', angle: Math.PI, icon: '🏷', label: 'TAGS' },
+]
 
-const SEGMENT_LABELS = {
-  'draw-path': 'Draw Path',
-  'clear-path': 'Clear Path',
-  'assign-player': 'Assign',
-  'highlight': 'Highlight',
-  'tags': 'Tags',
-} as const
+// Donut ring dimensions
+const INNER_RADIUS = 50
+const OUTER_RADIUS = 85
+const ICON_RADIUS = 105
+const SEGMENT_GAP = 0.15 // Gap between segments in radians
 
-const SEGMENT_ICONS = {
-  'draw-path': '↑',
-  'clear-path': '✕',
-  'assign-player': '👤',
-  'highlight': '★',
-  'tags': '🏷',
-} as const
+export function RadialMenu({ center, hasArrow, onSegmentTap, onClose }: RadialMenuProps) {
+  // Filter segments based on state
+  const visibleSegments = SEGMENTS.map(seg => {
+    if (seg.id === 'draw-path' && hasArrow) {
+      return { ...seg, id: 'clear-path' as RadialSegment, icon: '✕', label: 'CLEAR' }
+    }
+    return seg
+  })
 
-/**
- * Get the active segment based on drag angle
- */
-export function getActiveSegment(dragAngle: number | null, hasArrow: boolean): RadialSegment | null {
-  if (dragAngle === null) return null
+  const handleSegmentClick = useCallback((segment: RadialSegment, e: React.MouseEvent | React.TouchEvent) => {
+    e.stopPropagation()
+    e.preventDefault()
+    onSegmentTap(segment)
+  }, [onSegmentTap])
 
-  // Normalize angle to 0-2π range
-  const normalizedAngle = ((dragAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)
+  const handleCenterClick = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    e.stopPropagation()
+    e.preventDefault()
+    onClose()
+  }, [onClose])
 
-  // Define segment ranges (each segment is 90° wide, centered on its direction)
-  // Right (→): -45° to 45° (or 315° to 45°)
-  if (normalizedAngle >= Math.PI * 7/4 || normalizedAngle < Math.PI / 4) {
-    return 'assign-player'
+  const handleBackdropClick = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    e.stopPropagation()
+    e.preventDefault()
+    onClose()
+  }, [onClose])
+
+  // Create SVG arc path for a donut segment
+  const createArcPath = (startAngle: number, endAngle: number) => {
+    const innerStart = {
+      x: Math.cos(startAngle) * INNER_RADIUS,
+      y: -Math.sin(startAngle) * INNER_RADIUS,
+    }
+    const innerEnd = {
+      x: Math.cos(endAngle) * INNER_RADIUS,
+      y: -Math.sin(endAngle) * INNER_RADIUS,
+    }
+    const outerStart = {
+      x: Math.cos(startAngle) * OUTER_RADIUS,
+      y: -Math.sin(startAngle) * OUTER_RADIUS,
+    }
+    const outerEnd = {
+      x: Math.cos(endAngle) * OUTER_RADIUS,
+      y: -Math.sin(endAngle) * OUTER_RADIUS,
+    }
+
+    const largeArc = Math.abs(endAngle - startAngle) > Math.PI ? 1 : 0
+
+    return `
+      M ${outerStart.x} ${outerStart.y}
+      A ${OUTER_RADIUS} ${OUTER_RADIUS} 0 ${largeArc} 0 ${outerEnd.x} ${outerEnd.y}
+      L ${innerEnd.x} ${innerEnd.y}
+      A ${INNER_RADIUS} ${INNER_RADIUS} 0 ${largeArc} 1 ${innerStart.x} ${innerStart.y}
+      Z
+    `
   }
-  // Up (↑): 45° to 135°
-  if (normalizedAngle >= Math.PI / 4 && normalizedAngle < Math.PI * 3/4) {
-    return hasArrow ? 'clear-path' : 'draw-path'
-  }
-  // Left (←): 135° to 225°
-  if (normalizedAngle >= Math.PI * 3/4 && normalizedAngle < Math.PI * 5/4) {
-    return 'tags'
-  }
-  // Down (↓): 225° to 315°
-  if (normalizedAngle >= Math.PI * 5/4 && normalizedAngle < Math.PI * 7/4) {
-    return 'highlight'
-  }
-
-  return null
-}
-
-export function RadialMenu({ center, dragAngle, hasArrow, mobileScale = 1 }: RadialMenuProps) {
-  console.log('[RadialMenu] Rendering', { center, dragAngle, hasArrow, mobileScale })
-
-  const activeSegment = useMemo(() => getActiveSegment(dragAngle, hasArrow), [dragAngle, hasArrow])
-
-  const radius = 60 * mobileScale
-  const innerRadius = 20 * mobileScale
-
-  // Determine which segments to show
-  const segments: RadialSegment[] = useMemo(() => {
-    return [
-      hasArrow ? 'clear-path' : 'draw-path',
-      'assign-player',
-      'highlight',
-      'tags',
-    ]
-  }, [hasArrow])
 
   return (
     <div
-      className="fixed inset-0 z-50 pointer-events-none"
-      style={{
-        touchAction: 'none',
-        backgroundColor: 'rgba(255, 0, 0, 0.1)' // Debug: red tint to verify overlay exists
-      }}
+      className="fixed inset-0 z-50"
+      style={{ touchAction: 'none' }}
+      onClick={handleBackdropClick}
+      onTouchEnd={handleBackdropClick}
     >
+      {/* Backdrop with radial fade */}
+      <div
+        className="absolute inset-0 bg-black/50"
+        style={{
+          maskImage: `radial-gradient(circle 150px at ${center.x}px ${center.y}px, black 60%, transparent 100%)`,
+          WebkitMaskImage: `radial-gradient(circle 150px at ${center.x}px ${center.y}px, black 60%, transparent 100%)`,
+        }}
+      />
+
+      {/* SVG Menu */}
       <svg
-        width="100%"
-        height="100%"
-        className="absolute inset-0"
-        style={{ pointerEvents: 'none' }}
+        className="absolute"
+        style={{
+          left: center.x - 150,
+          top: center.y - 150,
+          width: 300,
+          height: 300,
+          overflow: 'visible',
+        }}
+        viewBox="-150 -150 300 300"
       >
-        <g className="radial-menu">
-          {/* Background circle */}
-          <circle
-            cx={center.x}
-            cy={center.y}
-            r={radius}
-            fill="rgba(0, 0, 0, 0.8)"
-            stroke="rgba(255, 255, 255, 0.3)"
-            strokeWidth={2}
-          />
+        {/* Segments */}
+        {visibleSegments.map((segment) => {
+          const segmentAngle = Math.PI / 2 // 90° per segment
+          const startAngle = segment.angle - segmentAngle / 2 + SEGMENT_GAP / 2
+          const endAngle = segment.angle + segmentAngle / 2 - SEGMENT_GAP / 2
 
-          {/* Center circle (cancel zone) */}
-          <circle
-            cx={center.x}
-            cy={center.y}
-            r={innerRadius}
-            fill="rgba(60, 60, 60, 0.9)"
-            stroke="rgba(255, 255, 255, 0.5)"
-            strokeWidth={1.5}
-          />
+          const iconX = Math.cos(segment.angle) * ICON_RADIUS
+          const iconY = -Math.sin(segment.angle) * ICON_RADIUS
 
-          {/* Segment indicators */}
-          {segments.map((segment) => {
-            const angle = SEGMENT_ANGLES[segment]
-            const labelRadius = radius * 0.65
-            const iconX = center.x + Math.cos(angle) * labelRadius
-            const iconY = center.y - Math.sin(angle) * labelRadius
+          const labelRadius = (INNER_RADIUS + OUTER_RADIUS) / 2
+          const labelX = Math.cos(segment.angle) * labelRadius
+          const labelY = -Math.sin(segment.angle) * labelRadius
 
-            const isActive = activeSegment === segment
+          return (
+            <g
+              key={segment.id}
+              className="cursor-pointer"
+              onClick={(e) => handleSegmentClick(segment.id, e)}
+              onTouchEnd={(e) => handleSegmentClick(segment.id, e)}
+            >
+              {/* Segment wedge */}
+              <path
+                d={createArcPath(startAngle, endAngle)}
+                className="fill-zinc-800/95 stroke-white/30 hover:fill-zinc-700/95 hover:stroke-primary active:fill-primary/30 active:stroke-primary transition-colors"
+                strokeWidth="2"
+              />
 
-            return (
-              <g key={segment}>
-                {/* Active segment highlight */}
-                {isActive && (
-                  <circle
-                    cx={iconX}
-                    cy={iconY}
-                    r={25 * mobileScale}
-                    fill="rgba(57, 255, 20, 0.3)"
-                    stroke="rgba(57, 255, 20, 0.8)"
-                    strokeWidth={2}
-                  />
-                )}
+              {/* Icon */}
+              <text
+                x={iconX}
+                y={iconY}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                className="fill-white text-2xl select-none pointer-events-none"
+                style={{ fontSize: '24px' }}
+              >
+                {segment.icon}
+              </text>
 
-                {/* Segment icon */}
-                <text
-                  x={iconX}
-                  y={iconY}
-                  fill={isActive ? '#39ff14' : '#fff'}
-                  fontSize={20 * mobileScale}
-                  fontWeight="bold"
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  style={{ userSelect: 'none' }}
-                >
-                  {SEGMENT_ICONS[segment]}
-                </text>
+              {/* Label */}
+              <text
+                x={labelX}
+                y={labelY}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                className="fill-white/90 font-semibold select-none pointer-events-none"
+                style={{ fontSize: '10px' }}
+              >
+                {segment.label}
+              </text>
+            </g>
+          )
+        })}
 
-                {/* Segment label */}
-                <text
-                  x={iconX}
-                  y={iconY + 18 * mobileScale}
-                  fill={isActive ? '#39ff14' : 'rgba(255, 255, 255, 0.8)'}
-                  fontSize={9 * mobileScale}
-                  fontWeight={isActive ? 'bold' : 'normal'}
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  style={{ userSelect: 'none' }}
-                >
-                  {SEGMENT_LABELS[segment]}
-                </text>
-              </g>
-            )
-          })}
-
-        {/* Drag indicator line */}
-        {dragAngle !== null && (
-          <line
-            x1={center.x}
-            y1={center.y}
-            x2={center.x + Math.cos(dragAngle) * radius * 0.8}
-            y2={center.y - Math.sin(dragAngle) * radius * 0.8}
-            stroke="rgba(57, 255, 20, 0.6)"
-            strokeWidth={2}
-            strokeLinecap="round"
-          />
-        )}
-      </g>
+        {/* Center close button */}
+        <circle
+          cx="0"
+          cy="0"
+          r={INNER_RADIUS - 5}
+          className="fill-zinc-900/80 stroke-white/20 hover:fill-zinc-800 cursor-pointer transition-colors"
+          strokeWidth="2"
+          onClick={handleCenterClick}
+          onTouchEnd={handleCenterClick}
+        />
+        <text
+          x="0"
+          y="0"
+          textAnchor="middle"
+          dominantBaseline="middle"
+          className="fill-white/60 select-none pointer-events-none"
+          style={{ fontSize: '20px' }}
+        >
+          ✕
+        </text>
       </svg>
     </div>
   )
