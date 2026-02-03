@@ -48,6 +48,87 @@ export function SignInWithGoogle() {
   );
 }
 
+export function SignInWithPassword() {
+  const { signIn } = useAuthActions();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [mode, setMode] = useState<"signIn" | "signUp">("signIn");
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+
+    const formData = new FormData(e.currentTarget);
+    const email = formData.get("email") as string;
+    const password = formData.get("password") as string;
+
+    try {
+      await signIn("password", { email, password, flow: mode });
+    } catch (err) {
+      console.error("Sign in error:", err);
+      setError(
+        mode === "signIn"
+          ? "Invalid email or password"
+          : "Could not create account. Email may already be in use."
+      );
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-3">
+      <div>
+        <input
+          type="email"
+          name="email"
+          placeholder="Email"
+          required
+          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+        />
+      </div>
+      <div>
+        <input
+          type="password"
+          name="password"
+          placeholder="Password"
+          required
+          minLength={8}
+          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+        />
+      </div>
+      {error && (
+        <p className="text-sm text-red-600">{error}</p>
+      )}
+      <button
+        type="submit"
+        disabled={isLoading}
+        className="w-full px-4 py-3 bg-orange-500 text-white font-medium rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {isLoading
+          ? mode === "signIn"
+            ? "Signing in..."
+            : "Creating account..."
+          : mode === "signIn"
+            ? "Sign in"
+            : "Create account"}
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          setMode(mode === "signIn" ? "signUp" : "signIn");
+          setError(null);
+        }}
+        className="w-full text-sm text-gray-500 hover:text-gray-700"
+      >
+        {mode === "signIn"
+          ? "Don't have an account? Sign up"
+          : "Already have an account? Sign in"}
+      </button>
+    </form>
+  );
+}
+
 export function SignOut() {
   const { signOut } = useAuthActions();
 

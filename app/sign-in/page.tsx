@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useConvexAuth } from "convex/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { SignInWithGoogle } from "@/components/auth/SignIn";
+import { SignInWithGoogle, SignInWithPassword } from "@/components/auth/SignIn";
 
 export default function SignInPage() {
   const { isAuthenticated, isLoading } = useConvexAuth();
@@ -49,12 +49,16 @@ export default function SignInPage() {
             </div>
           </div>
 
-          <Link
-            href="/volleyball"
-            className="block text-center text-sm text-gray-500 hover:text-gray-700 transition-colors"
-          >
-            Continue without signing in
-          </Link>
+          <SignInWithPassword />
+
+          <div className="pt-2">
+            <Link
+              href="/volleyball"
+              className="block text-center text-sm text-gray-500 hover:text-gray-700 transition-colors"
+            >
+              Continue without signing in
+            </Link>
+          </div>
         </div>
       </div>
     </div>
