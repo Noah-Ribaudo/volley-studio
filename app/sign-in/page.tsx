@@ -1,28 +1,11 @@
 "use client";
 
-import { useConvexAuth } from "convex/react";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-import { SignInWithGoogle, SignInWithApple } from "@/components/auth";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
+// Temporary sign-in page while auth credentials are being configured
+// TODO: Restore full auth once AUTH_GOOGLE_ID, AUTH_GOOGLE_SECRET are set up
 export default function SignInPage() {
-  const { isAuthenticated, isLoading } = useConvexAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      router.push("/");
-    }
-  }, [isAuthenticated, router]);
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500" />
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-sm">
@@ -36,13 +19,18 @@ export default function SignInPage() {
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-4">
-          <SignInWithGoogle />
-          <SignInWithApple />
+          <p className="text-center text-gray-500 text-sm">
+            Account sign-in coming soon!
+          </p>
+          <p className="text-center text-gray-400 text-xs">
+            For now, teams are shared publicly. Sign-in will let you save private teams.
+          </p>
+          <Link href="/volleyball" className="block">
+            <Button className="w-full">
+              Continue to Volley Studio
+            </Button>
+          </Link>
         </div>
-
-        <p className="text-center text-xs text-gray-500 mt-6">
-          By signing in, you agree to our Terms of Service and Privacy Policy
-        </p>
       </div>
     </div>
   );
