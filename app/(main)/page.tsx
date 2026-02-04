@@ -1,13 +1,9 @@
 'use client'
 
 import { useEffect, useState, useMemo, useRef, useCallback, useLayoutEffect, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
 import { useAppStore, getCurrentPositions, getCurrentArrows, getCurrentTags, getActiveLineupPositionSource } from '@/store/useAppStore'
-import { useAdminStore } from '@/store/useAdminStore'
-import { usePresets } from '@/hooks/usePresets'
 import { VolleyballCourt } from '@/components/court'
 import { RosterManagementCard } from '@/components/roster'
-import { AdminUnlockDialog, AdminModeIndicator } from '@/components/admin'
 import { Role, ROLES, RALLY_PHASES, Position, PositionCoordinates, ROTATIONS, POSITION_SOURCE_INFO, RallyPhase } from '@/lib/types'
 import { getActiveAssignments } from '@/lib/lineups'
 import { getWhiteboardPositions } from '@/lib/whiteboard'
@@ -22,7 +18,6 @@ import { useWhiteboardSync } from '@/hooks/useWhiteboardSync'
 import { useLineupPresets } from '@/hooks/useLineupPresets'
 import { SwipeHint } from '@/components/mobile'
 import { ConflictResolutionModal } from '@/components/volleyball/ConflictResolutionModal'
-import { isAdminModeAvailable } from '@/lib/admin-auth'
 
 // Constants for court display
 const ANIMATION_MODE = 'css' as const
@@ -49,9 +44,6 @@ function getServerRole(rotation: number, baseOrder: Role[]): Role {
 }
 
 function HomePageContent() {
-  const searchParams = useSearchParams()
-  const { requestAdminMode } = useAdminStore()
-
   const {
     currentRotation,
     currentPhase,
@@ -108,17 +100,6 @@ function HomePageContent() {
   // Mobile detection
   const isMobile = useIsMobile()
 
-  // Admin mode - check for ?admin=true query param
-  useEffect(() => {
-    const adminParam = searchParams.get('admin')
-    if (adminParam === 'true' && isAdminModeAvailable()) {
-      requestAdminMode()
-    }
-  }, [searchParams, requestAdminMode])
-
-  // Preset management for admin mode
-  const { isAdminMode, saveCurrentAsPreset } = usePresets()
-
   // Lineup preset management - loads presets when active lineup uses a preset source
   const { isUsingPreset, presetSystem, getPresetLayouts, isLoading: isLoadingPresets } = useLineupPresets()
   const presetLayouts = presetSystem ? getPresetLayouts(presetSystem) : []
@@ -127,30 +108,8 @@ function HomePageContent() {
   const isEditingAllowed = !isUsingPreset
   const activePositionSource = getActiveLineupPositionSource(currentTeam)
 
-  // Auto-save whiteboard changes to Supabase (team mode) or presets (admin mode)
+  // Auto-save whiteboard changes to Convex (team mode)
   useWhiteboardSync()
-
-  // Save to presets when admin makes changes (positions, arrows, status flags)
-  const rotationPhaseKeyForPresets = createRotationPhaseKey(currentRotation, currentPhase)
-  const currentLayoutJson = JSON.stringify({
-    positions: localPositions[rotationPhaseKeyForPresets],
-    arrows: localArrows[rotationPhaseKeyForPresets],
-    arrowCurves: arrowCurves[rotationPhaseKeyForPresets],
-    statusFlags: localStatusFlags[rotationPhaseKeyForPresets],
-    attackBall: attackBallPositions[rotationPhaseKeyForPresets],
-  })
-  const prevLayoutRef = useRef<string | null>(null)
-
-  useEffect(() => {
-    // Only save when in admin mode, no team selected, and layout has changed
-    if (isAdminMode && !currentTeam && currentLayoutJson !== prevLayoutRef.current) {
-      if (prevLayoutRef.current !== null) {
-        // Don't save on initial load, only on subsequent changes
-        saveCurrentAsPreset()
-      }
-      prevLayoutRef.current = currentLayoutJson
-    }
-  }, [isAdminMode, currentTeam, currentLayoutJson, saveCurrentAsPreset])
 
   // Swipe navigation for mobile - navigate between phases
   const nextRotation = useCallback(() => {
@@ -562,10 +521,6 @@ function HomePageContent() {
 
       {/* Conflict Resolution Modal - shown when save conflict is detected */}
       <ConflictResolutionModal />
-
-      {/* Admin Mode UI */}
-      <AdminUnlockDialog />
-      <AdminModeIndicator />
     </div>
   )
 }

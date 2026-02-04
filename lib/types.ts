@@ -235,7 +235,7 @@ export interface Team {
   _id?: string // Convex document ID (optional for backward compatibility)
   name: string
   slug: string
-  password?: string | null
+  hasPassword?: boolean // Whether team has a password set (password itself is never sent to client)
   archived?: boolean
   roster: RosterPlayer[]
   lineups: Lineup[]

@@ -1,8 +1,11 @@
 /**
  * Rotation Presets Data Layer
  *
- * Handles loading and saving admin-managed rotation presets from Supabase.
+ * Handles loading rotation presets for read-only display.
  * Falls back to code-based defaults when database is empty.
+ *
+ * Note: Supabase has been removed from this project, so these functions
+ * will always return defaults until presets are migrated to Convex.
  */
 
 import { supabase, isSupabaseConfigured } from './supabase'
@@ -32,8 +35,6 @@ export async function loadPresetsForSystem(system: PresetSystem): Promise<Rotati
     return []
   }
 
-  // Note: rotation_presets table needs to be created via migration
-  // Using type assertion since table types are generated from DB schema
   const { data, error } = await (supabase as any)
     .from('rotation_presets')
     .select('*')
@@ -63,7 +64,6 @@ export async function loadPreset(
     return null
   }
 
-  // Note: rotation_presets table needs to be created via migration
   const { data, error } = await (supabase as any)
     .from('rotation_presets')
     .select('*')
@@ -84,133 +84,6 @@ export async function loadPreset(
     positions: data.positions as unknown as PositionCoordinates,
     flags: data.flags as LayoutExtendedData | null,
   }
-}
-
-/**
- * Save or update a preset
- */
-export async function savePreset(
-  system: PresetSystem,
-  rotation: Rotation,
-  phase: Phase,
-  positions: PositionCoordinates,
-  flags?: LayoutExtendedData | null
-): Promise<{ success: boolean; error?: string }> {
-  if (!isSupabaseConfigured() || !supabase) {
-    return { success: false, error: 'Supabase not configured' }
-  }
-
-  // Note: rotation_presets table needs to be created via migration
-  // Using type assertion since table types are generated from DB schema
-  const { error } = await (supabase as any)
-    .from('rotation_presets')
-    .upsert(
-      {
-        system,
-        rotation,
-        phase,
-        positions: positions as unknown as Record<string, unknown>,
-        flags: flags as unknown as Record<string, unknown>,
-        updated_at: new Date().toISOString(),
-      },
-      {
-        onConflict: 'system,rotation,phase',
-      }
-    )
-
-  if (error) {
-    console.error('Failed to save preset:', error)
-    return { success: false, error: error.message }
-  }
-
-  return { success: true }
-}
-
-/**
- * Delete a preset
- */
-export async function deletePreset(
-  system: PresetSystem,
-  rotation: Rotation,
-  phase: Phase
-): Promise<{ success: boolean; error?: string }> {
-  if (!isSupabaseConfigured() || !supabase) {
-    return { success: false, error: 'Supabase not configured' }
-  }
-
-  // Note: rotation_presets table needs to be created via migration
-  const { error } = await (supabase as any)
-    .from('rotation_presets')
-    .delete()
-    .eq('system', system)
-    .eq('rotation', rotation)
-    .eq('phase', phase)
-
-  if (error) {
-    console.error('Failed to delete preset:', error)
-    return { success: false, error: error.message }
-  }
-
-  return { success: true }
-}
-
-/**
- * Copy all presets from a system to a team's custom layouts
- * Used when creating a new team from a preset system
- */
-export async function copyPresetsToTeam(
-  system: PresetSystem,
-  teamId: string
-): Promise<{ success: boolean; error?: string; layoutsCreated: number }> {
-  if (!isSupabaseConfigured() || !supabase) {
-    return { success: false, error: 'Supabase not configured', layoutsCreated: 0 }
-  }
-
-  // Load all presets for the system
-  const presets = await loadPresetsForSystem(system)
-
-  if (presets.length === 0) {
-    // No presets in DB, generate defaults and copy those
-    const defaults = generateDefaultPresets(system)
-    for (const preset of defaults) {
-      const { error } = await supabase
-        .from('custom_layouts')
-        .insert({
-          team_id: teamId,
-          rotation: preset.rotation,
-          phase: preset.phase,
-          positions: preset.positions as unknown as Record<string, unknown>,
-          flags: preset.flags as unknown as Record<string, unknown> | null,
-        } as any)
-
-      if (error) {
-        console.error('Failed to create layout from default:', error)
-      }
-    }
-    return { success: true, layoutsCreated: defaults.length }
-  }
-
-  // Copy each preset to the team's custom layouts
-  let layoutsCreated = 0
-  for (const preset of presets) {
-    const { error } = await supabase
-      .from('custom_layouts')
-      .insert({
-        team_id: teamId,
-        rotation: preset.rotation,
-        phase: preset.phase,
-        positions: preset.positions as unknown as Record<string, unknown>,
-        flags: preset.flags as unknown as Record<string, unknown> | null,
-      } as any)
-
-    if (error) {
-      console.error('Failed to create layout from preset:', error)
-    } else {
-      layoutsCreated++
-    }
-  }
-
-  return { success: true, layoutsCreated }
 }
 
 /**

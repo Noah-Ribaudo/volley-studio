@@ -30,13 +30,13 @@ export function SetupScreen() {
   // Fetch teams from Convex
   const convexTeams = useQuery(api.teams.list)
   const loading = convexTeams === undefined
-  
+
   // Transform Convex teams to the Team format expected by the component
   const teams: Team[] = (convexTeams ?? []).map(t => ({
     id: t._id,
     name: t.name,
     slug: t.slug,
-    password: t.password,
+    hasPassword: t.hasPassword,
     archived: t.archived,
     roster: t.roster.map(p => ({
       id: p.id,

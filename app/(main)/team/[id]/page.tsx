@@ -63,13 +63,15 @@ export default function TeamPage({ params }: TeamPageProps) {
   const [settingsPasswordError, setSettingsPasswordError] = useState('')
   const [settingsUnlocked, setSettingsUnlocked] = useState(false)
 
+  // Server-side password verification mutation
+  const verifyPasswordMutation = useMutation(api.teams.verifyPassword)
+
   // Update name input when team loads
   useEffect(() => {
     if (team) {
       setNewName(team.name)
       // Check if team has password - if not, unlock settings immediately
-      const hasPassword = team.password && team.password.trim() !== ''
-      setSettingsUnlocked(!hasPassword)
+      setSettingsUnlocked(!team.hasPassword)
     }
   }, [team])
 
@@ -304,24 +306,33 @@ export default function TeamPage({ params }: TeamPageProps) {
     alert('Share link copied to clipboard!')
   }
 
-  // Handle settings password verification
-  const handleSettingsPasswordSubmit = (e: React.FormEvent) => {
+  // Handle settings password verification (server-side)
+  const handleSettingsPasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSettingsPasswordError('')
 
-    if (!team || !team.password) return
+    if (!team || !team.hasPassword) return
 
     if (!settingsPassword.trim()) {
       setSettingsPasswordError('Please enter a password')
       return
     }
 
-    if (settingsPassword.trim() === team.password) {
-      setSettingsUnlocked(true)
-      setSettingsPassword('')
-      setSettingsPasswordError('')
-    } else {
-      setSettingsPasswordError('Incorrect password')
+    try {
+      const isValid = await verifyPasswordMutation({
+        id: team._id,
+        password: settingsPassword.trim()
+      })
+
+      if (isValid) {
+        setSettingsUnlocked(true)
+        setSettingsPassword('')
+        setSettingsPasswordError('')
+      } else {
+        setSettingsPasswordError('Incorrect password')
+      }
+    } catch (err) {
+      setSettingsPasswordError('Failed to verify password')
     }
   }
 
@@ -365,7 +376,7 @@ export default function TeamPage({ params }: TeamPageProps) {
     _id: team._id,
     name: team.name,
     slug: team.slug,
-    password: team.password,
+    hasPassword: team.hasPassword,
     archived: team.archived,
     roster: team.roster.map(p => ({
       id: p.id,
@@ -574,7 +585,7 @@ export default function TeamPage({ params }: TeamPageProps) {
 
           {/* Settings Tab */}
           <TabsContent value="settings" className="space-y-4">
-            {!settingsUnlocked && team?.password && team.password.trim() !== '' ? (
+            {!settingsUnlocked && team?.hasPassword ? (
               <Card>
                 <CardContent className="pt-6">
                   <div className="text-center py-8 space-y-4">

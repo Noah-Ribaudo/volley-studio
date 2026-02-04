@@ -18,7 +18,7 @@ interface PresetCache {
 /**
  * Hook to manage rotation presets for per-lineup position sources
  *
- * Unlike usePresets (admin mode), this hook:
+ * This hook:
  * - Loads presets only when a lineup uses a preset source
  * - Caches presets to avoid re-fetching
  * - Provides read-only position data for preset sources

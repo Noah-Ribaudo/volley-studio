@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useMutation } from 'convex/react'
+import { api } from '@/convex/_generated/api'
 import { Button } from '@/components/ui/button'
 import { PasswordInput } from '@/components/ui/password-input'
 import { Label } from '@/components/ui/label'
@@ -9,11 +11,11 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Team } from '@/lib/types'
+import type { Id } from '@/convex/_generated/dataModel'
 
 interface TeamAccessDialogProps {
   team: Team
@@ -26,6 +28,9 @@ export function TeamAccessDialog({ team, open, onOpenChange }: TeamAccessDialogP
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [isVerifying, setIsVerifying] = useState(false)
+
+  // Use the server-side password verification mutation
+  const verifyPassword = useMutation(api.teams.verifyPassword)
 
   const handleViewOnly = () => {
     router.push(`/teams/${team.slug}?viewOnly=true`)
@@ -43,13 +48,24 @@ export function TeamAccessDialog({ team, open, onOpenChange }: TeamAccessDialogP
 
     setIsVerifying(true)
 
-    // Simple password check (compare directly since it's stored as plain text)
-    if (password.trim() === team.password) {
-      router.push(`/teams/${team.slug}?edit=true`)
-      onOpenChange(false)
-      setPassword('')
-    } else {
-      setError('Incorrect password')
+    try {
+      // Verify password server-side (never expose password to client)
+      const teamId = (team._id || team.id) as Id<"teams">
+      const isValid = await verifyPassword({
+        id: teamId,
+        password: password.trim()
+      })
+
+      if (isValid) {
+        router.push(`/teams/${team.slug}?edit=true`)
+        onOpenChange(false)
+        setPassword('')
+      } else {
+        setError('Incorrect password')
+      }
+    } catch (err) {
+      setError('Failed to verify password')
+    } finally {
       setIsVerifying(false)
     }
   }
@@ -123,14 +139,3 @@ export function TeamAccessDialog({ team, open, onOpenChange }: TeamAccessDialogP
     </Dialog>
   )
 }
-
-
-
-
-
-
-
-
-
-
-

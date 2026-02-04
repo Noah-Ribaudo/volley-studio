@@ -4,6 +4,9 @@ import { SafeAreaHeader } from '@/components/ui/SafeAreaHeader'
 
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { useMutation } from 'convex/react'
+import { api } from '@/convex/_generated/api'
+import type { Id } from '@/convex/_generated/dataModel'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -75,6 +78,9 @@ export default function RosterPage() {
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false)
   const [isArchiving, setIsArchiving] = useState(false)
 
+  // Server-side password verification mutation
+  const verifyPasswordMutation = useMutation(api.teams.verifyPassword)
+
   // Set random names only after hydration
   useEffect(() => {
     if (!isHydrated) {
@@ -134,8 +140,7 @@ export default function RosterPage() {
       }
 
       setHasUnsavedChanges(false)
-      const hasPassword = currentTeam.password && currentTeam.password.trim() !== ''
-      setSettingsUnlocked(!hasPassword)
+      setSettingsUnlocked(!currentTeam.hasPassword)
     } else {
       setLocalTeamId(null)
       setLocalRoster([])
@@ -306,7 +311,7 @@ export default function RosterPage() {
           lineups: localLineups,
           active_lineup_id: activeLineupId,
           position_assignments: activeAssignments, // For backward compatibility
-          password: null,
+          hasPassword: false,
           archived: false,
           created_at: '',
           updated_at: ''
@@ -396,8 +401,7 @@ export default function RosterPage() {
       setCustomLayouts(layouts as CustomLayout[])
       populateFromLayouts(layouts as CustomLayout[])
 
-      const hasPassword = team.password && team.password.trim() !== ''
-      setSettingsUnlocked(!hasPassword)
+      setSettingsUnlocked(!team.hasPassword)
 
       setComboboxOpen(false)
       setPendingTeam(null)
@@ -459,20 +463,32 @@ export default function RosterPage() {
     )
   }, [teams, teamSearch])
 
-  const handleSettingsPasswordSubmit = (e: React.FormEvent) => {
+  const handleSettingsPasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSettingsPasswordError('')
-    if (!currentTeam || !currentTeam.password) return
+    if (!currentTeam || !currentTeam.hasPassword) return
     if (!settingsPassword.trim()) {
       setSettingsPasswordError('Please enter a password')
       return
     }
-    if (settingsPassword.trim() === currentTeam.password) {
-      setSettingsUnlocked(true)
-      setSettingsPassword('')
-      setSettingsPasswordError('')
-    } else {
-      setSettingsPasswordError('Incorrect password')
+
+    try {
+      // Verify password server-side (password is never sent to client)
+      const teamId = (currentTeam._id || currentTeam.id) as Id<"teams">
+      const isValid = await verifyPasswordMutation({
+        id: teamId,
+        password: settingsPassword.trim()
+      })
+
+      if (isValid) {
+        setSettingsUnlocked(true)
+        setSettingsPassword('')
+        setSettingsPasswordError('')
+      } else {
+        setSettingsPasswordError('Incorrect password')
+      }
+    } catch (err) {
+      setSettingsPasswordError('Failed to verify password')
     }
   }
 
@@ -770,7 +786,7 @@ export default function RosterPage() {
               </TabsContent>
 
               <TabsContent value="settings" className="mt-4">
-              {!settingsUnlocked && currentTeam?.password && currentTeam.password.trim() !== '' ? (
+              {!settingsUnlocked && currentTeam?.hasPassword ? (
                 <Card>
                   <CardContent className="pt-6">
                     <div className="text-center py-8 space-y-4">

@@ -108,7 +108,7 @@ export function RosterManagementCard() {
           lineups: [],
           active_lineup_id: null,
           position_assignments: localAssignments,
-          password: null,
+          hasPassword: false,
           archived: false,
           created_at: now,
           updated_at: now

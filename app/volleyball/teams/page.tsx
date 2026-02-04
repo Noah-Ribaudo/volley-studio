@@ -111,7 +111,7 @@ export default function TeamsPage() {
                   id: team._id,
                   name: team.name,
                   slug: team.slug,
-                  password: team.password,
+                  hasPassword: team.hasPassword,
                   archived: team.archived,
                   roster: team.roster.map(p => ({
                     id: p.id,
