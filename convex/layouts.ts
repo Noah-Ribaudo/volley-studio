@@ -1,5 +1,29 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { auth } from "./auth";
+import { Id } from "./_generated/dataModel";
+import { MutationCtx } from "./_generated/server";
+
+// Helper to verify the current user owns the team
+async function assertTeamOwnerForLayout(ctx: MutationCtx, teamId: Id<"teams">) {
+  const userId = await auth.getUserId(ctx);
+  if (!userId) {
+    throw new Error("Not authenticated");
+  }
+
+  const team = await ctx.db.get(teamId);
+  if (!team) {
+    throw new Error("Team not found");
+  }
+
+  // If team has an owner, verify it's the current user
+  // Teams without owners are allowed (legacy support during migration)
+  if (team.userId && team.userId !== userId) {
+    throw new Error("Unauthorized: You don't own this team");
+  }
+
+  return { userId, team };
+}
 
 // Get all layouts for a team
 export const getByTeam = query({
@@ -56,6 +80,9 @@ export const save = mutation({
     ),
   },
   handler: async (ctx, args) => {
+    // Verify user owns this team
+    await assertTeamOwnerForLayout(ctx, args.teamId);
+
     // Check if layout already exists
     const existing = await ctx.db
       .query("customLayouts")
@@ -88,6 +115,26 @@ export const save = mutation({
 export const remove = mutation({
   args: { id: v.id("customLayouts") },
   handler: async (ctx, args) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) {
+      throw new Error("Not authenticated");
+    }
+
+    const layout = await ctx.db.get(args.id);
+    if (!layout) {
+      throw new Error("Layout not found");
+    }
+
+    const team = await ctx.db.get(layout.teamId);
+    if (!team) {
+      throw new Error("Team not found");
+    }
+
+    // If team has an owner, verify it's the current user
+    if (team.userId && team.userId !== userId) {
+      throw new Error("Unauthorized: You don't own this team");
+    }
+
     await ctx.db.delete(args.id);
   },
 });
@@ -96,6 +143,9 @@ export const remove = mutation({
 export const removeAllForTeam = mutation({
   args: { teamId: v.id("teams") },
   handler: async (ctx, args) => {
+    // Verify user owns this team
+    await assertTeamOwnerForLayout(ctx, args.teamId);
+
     const layouts = await ctx.db
       .query("customLayouts")
       .withIndex("by_team", (q) => q.eq("teamId", args.teamId))

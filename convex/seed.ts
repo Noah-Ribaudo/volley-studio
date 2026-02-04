@@ -1,7 +1,52 @@
-import { mutation } from "./_generated/server";
+import { internalMutation } from "./_generated/server";
+import { v } from "convex/values";
+
+/**
+ * Internal admin/migration functions
+ * These are NOT callable from the client - only from:
+ * - Convex Dashboard
+ * - Other server functions
+ * - Scheduled jobs
+ */
+
+// Migration to assign unowned teams to a specific user by email
+// Run this from the Convex Dashboard with: { "email": "graystripe10@gmail.com" }
+export const assignUnownedTeamsToUser = internalMutation({
+  args: {
+    email: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Find the user by email
+    const user = await ctx.db
+      .query("users")
+      .filter((q) => q.eq(q.field("email"), args.email))
+      .first();
+
+    if (!user) {
+      throw new Error(`User with email ${args.email} not found`);
+    }
+
+    // Find all teams without an owner
+    const allTeams = await ctx.db.query("teams").collect();
+    const unownedTeams = allTeams.filter((team) => !team.userId);
+
+    // Assign each unowned team to the user
+    let assignedCount = 0;
+    for (const team of unownedTeams) {
+      await ctx.db.patch(team._id, { userId: user._id });
+      assignedCount++;
+    }
+
+    return {
+      message: `Assigned ${assignedCount} unowned teams to user ${args.email}`,
+      userId: user._id,
+      teamsAssigned: unownedTeams.map((t) => ({ id: t._id, name: t.name })),
+    };
+  },
+});
 
 // Clear all data (for development re-seeding)
-export const clearAllData = mutation({
+export const clearAllData = internalMutation({
   args: {},
   handler: async (ctx) => {
     // Delete all layouts first (foreign key reference)
@@ -21,7 +66,7 @@ export const clearAllData = mutation({
 });
 
 // Migration to fix old-format flags (convert {role: [...]} to {statusFlags: {role: [...]}})
-export const migrateLayoutFlags = mutation({
+export const migrateLayoutFlags = internalMutation({
   args: {},
   handler: async (ctx) => {
     const layouts = await ctx.db.query("customLayouts").collect();
@@ -45,7 +90,7 @@ export const migrateLayoutFlags = mutation({
 });
 
 // Migration script to seed data from Supabase export
-export const seedFromSupabase = mutation({
+export const seedFromSupabase = internalMutation({
   args: {},
   handler: async (ctx) => {
     // Check if data already exists
