@@ -1681,7 +1681,8 @@ export function VolleyballCourt({
           />
 
           {/* Lines connecting players to their home zone tags - rendered after background but before zone labels */}
-          {showZones && rotation && (
+          {/* Hide when: animating, or any arrows exist (movement planned makes zone lines confusing) */}
+          {showZones && rotation && !isBezierAnimating && !Object.values(arrows).some(Boolean) && (
             <g>
               {activeRoles.map(role => {
                 // Libero inherits the zone from the MB they're replacing
@@ -1729,7 +1730,8 @@ export function VolleyballCourt({
         </g>
 
         {/* Legality violation indicators - outside transform group to match player token coordinates */}
-        {legalityViolations.length > 0 && mode === 'whiteboard' && (
+        {/* Hide during animation since positions are changing */}
+        {legalityViolations.length > 0 && mode === 'whiteboard' && !isBezierAnimating && (
           <>
             {/* Draw violation lines */}
             {legalityViolations.map((violation, idx) => {
