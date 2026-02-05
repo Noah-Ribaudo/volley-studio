@@ -1,100 +1,53 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { SafeAreaHeader } from '@/components/ui/SafeAreaHeader'
+
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { Id } from '@/convex/_generated/dataModel'
-import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Card, CardContent } from '@/components/ui/card'
 import { TeamCard, CreateTeamDialog, ImportTeamDialog, TeamSearchBar } from '@/components/team'
-import { useAppStore } from '@/store/useAppStore'
-import type { Team } from '@/lib/types'
-import type { PresetSystem } from '@/lib/presetTypes'
-import { toast } from 'sonner'
-import { listLocalTeams, upsertLocalTeam } from '@/lib/localTeams'
-import { createTeamRepository } from '@/lib/teamRepository'
-import { migrateTeamToLineups } from '@/lib/lineups'
+import Link from 'next/link'
 
-const SEARCH_MIN_TEAM_COUNT = 10
+// Generate a URL-friendly slug from team name
+function generateSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '_')
+    .replace(/-+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '')
+}
 
 export default function TeamsPage() {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
   const [isImporting, setIsImporting] = useState(false)
-  const [localTeams, setLocalTeams] = useState<Team[]>([])
 
   // Convex queries - automatically reactive
-  const allCloudTeams = useQuery(api.teams.search, { query: '' })
   const teams = useQuery(api.teams.search, { query: searchQuery })
   const createTeam = useMutation(api.teams.create)
   const cloneTeam = useMutation(api.teams.clone)
-  const teamRepository = createTeamRepository({
-    createCloudTeam: createTeam,
-  })
 
   const isLoading = teams === undefined
-  const isCloudTeamCountLoading = allCloudTeams === undefined
 
-  const setCurrentTeam = useAppStore((state) => state.setCurrentTeam)
-  const currentTeam = useAppStore((state) => state.currentTeam)
-
-  useEffect(() => {
-    const storedTeams = listLocalTeams()
-    if (currentTeam?.id?.startsWith('local-') && !storedTeams.some((team) => team.id === currentTeam.id)) {
-      const next = upsertLocalTeam(currentTeam)
-      setLocalTeams(next)
-      return
-    }
-    setLocalTeams(storedTeams)
-  }, [currentTeam])
-
-  const cloudTeamCount = allCloudTeams?.length ?? 0
-  const totalTeamCount = cloudTeamCount + localTeams.length
-  const shouldShowSearch = totalTeamCount >= SEARCH_MIN_TEAM_COUNT
-  const hasAnyTeams = totalTeamCount > 0
-
-  useEffect(() => {
-    if (!shouldShowSearch && searchQuery) {
-      setSearchQuery('')
-    }
-  }, [searchQuery, shouldShowSearch])
-
-  // Handle team creation (cloud)
-  const handleCreateTeam = async (name: string, _password?: string, presetSystem?: PresetSystem) => {
-    const teamId = await teamRepository.createCloudTeam(name, presetSystem)
-    router.push(`/teams/${teamId}`)
-  }
-
-  // Handle local-only team creation (no account)
-  const handleCreateLocalTeam = (name: string, presetSystem?: PresetSystem) => {
-    const localTeam = teamRepository.createLocalTeam(name, presetSystem)
-    setLocalTeams(listLocalTeams())
-    setCurrentTeam(localTeam)
-    setSearchQuery('')
-    toast.success(`Created Unsaved (Local) team: ${name}`)
-    router.push(`/teams/${localTeam.id}`)
-  }
-
-  const openLocalTeamWhiteboard = (team: Team) => {
-    setCurrentTeam(team)
-    router.push('/')
-  }
-
-  const openLocalTeamEditor = (team: Team) => {
-    setCurrentTeam(team)
-    router.push(`/teams/${team.id}`)
+  // Handle team creation
+  const handleCreateTeam = async (name: string, _password?: string, presetSystem?: string) => {
+    const slug = generateSlug(name)
+    await createTeam({ name, slug })
+    router.push(`/teams/${slug}`)
   }
 
   // Handle team import via code
-  const handleImportTeam = async (teamCode: string, password?: string) => {
+  const handleImportTeam = async (teamCode: string) => {
     setIsImporting(true)
     try {
-      await cloneTeam({
-        id: teamCode as Id<"teams">,
-        password,
-      })
+      await cloneTeam({ id: teamCode as Id<"teams"> })
       // The teams list will auto-refresh via Convex reactivity
     } finally {
       setIsImporting(false)
@@ -102,70 +55,53 @@ export default function TeamsPage() {
   }
 
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen bg-gradient-to-b from-background to-muted/30">
+      {/* Header */}
+      <SafeAreaHeader>
+        <div className="container mx-auto px-4 py-3">
+          <div className="flex items-center gap-3">
+            <Link href="/">
+              <Button variant="ghost" size="sm">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="mr-1"
+                >
+                  <path d="m15 18-6-6 6-6"/>
+                </svg>
+                Back
+              </Button>
+            </Link>
+            <h1 className="text-xl font-bold">Teams</h1>
+          </div>
+        </div>
+      </SafeAreaHeader>
+
       <div className="container mx-auto px-4 py-6 max-w-2xl space-y-4">
-        <h1 className="text-xl font-bold">Teams</h1>
-        {/* Search (only after team list is large enough) */}
-        {shouldShowSearch && (
-          <TeamSearchBar
-            value={searchQuery}
-            onChange={setSearchQuery}
-          />
-        )}
-
-        {!shouldShowSearch && hasAnyTeams && !searchQuery && (
-          <p className="text-sm text-muted-foreground">
-            Search will appear automatically once you have more teams.
-          </p>
-        )}
-
-        {/* Empty first-run state */}
-        {!isLoading && !isCloudTeamCountLoading && !searchQuery && !hasAnyTeams && (
-          <Card className="border-dashed border-border/70 bg-card/60">
-            <CardContent className="pt-8 pb-8">
-              <div className="mx-auto max-w-md text-center space-y-3">
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="28"
-                    height="28"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-                    <circle cx="9" cy="7" r="4"/>
-                    <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                  </svg>
-                </div>
-                <h2 className="text-lg font-semibold">No teams yet</h2>
-                <p className="text-sm text-muted-foreground">
-                  Create your first team or import one with a team code.
-                </p>
-              </div>
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                <CreateTeamDialog onCreateTeam={handleCreateTeam} onCreateLocalTeam={handleCreateLocalTeam} />
-                <ImportTeamDialog onImportTeam={handleImportTeam} isLoading={isImporting} />
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {/* Search */}
+        <TeamSearchBar
+          value={searchQuery}
+          onChange={setSearchQuery}
+        />
 
         {/* Create & Import Cards */}
-        {!searchQuery && hasAnyTeams && (
+        {!searchQuery && (
           <div className="grid gap-4 sm:grid-cols-2">
             {/* Create Team Card */}
-            <Card className="bg-accent/50 border-accent/50">
+            <Card className="bg-accent/30 border-accent/50">
               <CardContent className="pt-4">
                 <h3 className="font-semibold text-lg">Create New Team</h3>
                 <p className="text-sm text-muted-foreground mb-3">
                   Start fresh with a new team
                 </p>
-                <CreateTeamDialog onCreateTeam={handleCreateTeam} onCreateLocalTeam={handleCreateLocalTeam} />
+                <CreateTeamDialog onCreateTeam={handleCreateTeam} />
               </CardContent>
             </Card>
 
@@ -182,68 +118,11 @@ export default function TeamsPage() {
           </div>
         )}
 
-        {/* Unsaved (Local) Teams */}
-        {!searchQuery && localTeams.length > 0 && (
-          <Card className="border-primary/40 bg-primary/5">
-            <CardContent className="pt-4">
-              <div className="space-y-3">
-                <div>
-                  <h3 className="font-semibold text-lg">Unsaved (Local)</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Stays on this device until you save to your account
-                  </p>
-                </div>
-                {localTeams.map((team) => (
-                  <div key={team.id} className="rounded-md border bg-background/60 p-3">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div className="min-w-0">
-                        <h4 className="font-medium leading-tight break-words">{team.name}</h4>
-                        <p className="text-xs text-muted-foreground">
-                          {team.roster.length} player{team.roster.length !== 1 ? 's' : ''}
-                        </p>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
-                        <Button size="sm" variant="outline" className="w-full sm:w-auto" onClick={() => openLocalTeamWhiteboard(team)}>
-                          Whiteboard
-                        </Button>
-                        <Button size="sm" className="w-full sm:w-auto" onClick={() => openLocalTeamEditor(team)}>
-                          Edit
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         {/* Loading */}
         {isLoading && (
-          <div className="space-y-3 py-1">
-            {[0, 1, 2].map((index) => (
-              <Card key={index} className="overflow-hidden">
-                <CardContent className="pt-4">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="flex-1 min-w-0 space-y-2">
-                      <Skeleton className="h-6 w-40 max-w-[70%]" />
-                      <Skeleton className="h-4 w-56 max-w-[85%]" />
-                    </div>
-                    <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:justify-end">
-                      <Skeleton className="h-8 w-16 rounded-md" />
-                      <Skeleton className="h-8 w-20 rounded-md" />
-                      <Skeleton className="h-8 w-14 rounded-md" />
-                    </div>
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-1">
-                    <Skeleton className="h-5 w-16 rounded-sm" />
-                    <Skeleton className="h-5 w-20 rounded-sm" />
-                    <Skeleton className="h-5 w-14 rounded-sm" />
-                    <Skeleton className="h-5 w-24 rounded-sm" />
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="text-center py-8">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
+            <p className="mt-2 text-sm text-muted-foreground">Loading teams...</p>
           </div>
         )}
 
@@ -253,7 +132,7 @@ export default function TeamsPage() {
             {teams.map(team => (
               <TeamCard
                 key={team._id}
-                team={migrateTeamToLineups({
+                team={{
                   id: team._id,
                   name: team.name,
                   slug: team.slug,
@@ -263,23 +142,22 @@ export default function TeamsPage() {
                     name: p.name,
                     number: p.number ?? 0,
                   })),
-                  lineups: (team.lineups || []).map(l => ({
+                  lineups: team.lineups.map(l => ({
                     ...l,
                     position_source: l.position_source as 'custom' | 'full-5-1' | '5-1-libero' | '6-2' | undefined,
-                    starting_rotation: (l.starting_rotation as 1 | 2 | 3 | 4 | 5 | 6 | undefined) ?? 1,
                   })),
                   active_lineup_id: team.activeLineupId ?? null,
-                  position_assignments: team.positionAssignments || {},
+                  position_assignments: team.positionAssignments,
                   created_at: new Date(team._creationTime).toISOString(),
                   updated_at: new Date(team._creationTime).toISOString(),
-                })}
+                }}
               />
             ))}
           </div>
         )}
 
         {/* Empty State */}
-        {!isLoading && teams && teams.length === 0 && searchQuery && shouldShowSearch && (
+        {!isLoading && teams && teams.length === 0 && searchQuery && (
           <Card>
             <CardContent className="pt-6">
               <div className="text-center py-8">

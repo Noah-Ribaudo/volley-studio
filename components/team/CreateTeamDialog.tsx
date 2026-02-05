@@ -21,15 +21,10 @@ import { PRESET_SYSTEMS, PRESET_SYSTEM_INFO, type PresetSystem } from '@/lib/pre
 
 interface CreateTeamDialogProps {
   onCreateTeam: (name: string, password?: string, presetSystem?: PresetSystem) => Promise<void>
-  onCreateLocalTeam?: (name: string, presetSystem?: PresetSystem) => void
   isLoading?: boolean
-  open?: boolean
-  onOpenChange?: (open: boolean) => void
-  hideTrigger?: boolean
-  triggerLabel?: string
 }
 
-function SignInPrompt({ onContinueWithoutAccount }: { onContinueWithoutAccount: () => void }) {
+function SignInPrompt({ onClose }: { onClose: () => void }) {
   const { signIn } = useAuthActions()
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
   const [isPasswordLoading, setIsPasswordLoading] = useState(false)
@@ -71,15 +66,15 @@ function SignInPrompt({ onContinueWithoutAccount }: { onContinueWithoutAccount: 
   return (
     <div className="space-y-4">
       <DialogHeader>
-        <DialogTitle>Quick sign-in to keep your teams as Saved (Cloud)</DialogTitle>
+        <DialogTitle>Quick sign-in to save your team</DialogTitle>
         <DialogDescription className="space-y-2 pt-2">
           <span className="block">
-            This is <strong>only</strong> so your teams and settings stay in Saved (Cloud) across devices.
-            I don't want your data for anything else — no tracking, no marketing, no selling to anyone.
+            This is <strong>only</strong> so your team data persists. I don't want your data
+            for anything else — no tracking, no marketing, no selling to anyone.
           </span>
           <span className="block text-xs">
             Don't want to sign in? That's fine — you can still use the whiteboard and all
-            the visualization tools in Unsaved (Local) mode.
+            the visualization tools without an account.
           </span>
         </DialogDescription>
       </DialogHeader>
@@ -129,7 +124,6 @@ function SignInPrompt({ onContinueWithoutAccount }: { onContinueWithoutAccount: 
           <input
             type="email"
             name="email"
-            aria-label="Email"
             placeholder="Email"
             required
             className="w-full px-3 py-2 bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -137,7 +131,6 @@ function SignInPrompt({ onContinueWithoutAccount }: { onContinueWithoutAccount: 
           <input
             type="password"
             name="password"
-            aria-label="Password"
             placeholder="Password (8+ characters)"
             required
             minLength={8}
@@ -173,20 +166,9 @@ function SignInPrompt({ onContinueWithoutAccount }: { onContinueWithoutAccount: 
       </div>
 
       <DialogFooter className="flex-col sm:flex-col gap-2">
-        <div className="relative w-full">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-border" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">or</span>
-          </div>
-        </div>
-        <Button type="button" variant="outline" onClick={onContinueWithoutAccount} className="w-full">
-          Continue in Unsaved (Local)
+        <Button type="button" variant="ghost" onClick={onClose} className="w-full">
+          Never mind, I'll just use the whiteboard
         </Button>
-        <p className="text-xs text-center text-muted-foreground">
-          Without sign-in, teams and settings stay Unsaved (Local) on this device
-        </p>
         <Link href="/privacy" className="text-xs text-center text-muted-foreground hover:text-foreground">
           Privacy policy (it's short, I promise)
         </Link>
@@ -199,22 +181,14 @@ function CreateTeamForm({
   onCreateTeam,
   isLoading,
   onClose,
-  localOnly,
 }: {
   onCreateTeam: (name: string, password?: string, presetSystem?: PresetSystem) => Promise<void>
   isLoading?: boolean
   onClose: () => void
-  localOnly?: boolean
 }) {
   const [name, setName] = useState('')
   const [presetSystem, setPresetSystem] = useState<PresetSystem | 'scratch'>('scratch')
   const [error, setError] = useState('')
-  const handlePresetOptionKeyDown = (nextValue: PresetSystem | 'scratch') => (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault()
-      setPresetSystem(nextValue)
-    }
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -241,9 +215,7 @@ function CreateTeamForm({
       <DialogHeader>
         <DialogTitle>Create New Team</DialogTitle>
         <DialogDescription>
-          {localOnly
-            ? 'This team will start as Unsaved (Local). Sign in later to move it to Saved (Cloud).'
-            : 'Enter a name for your team. You can add players and customize rotations after creating the team.'}
+          Enter a name for your team. You can add players and customize rotations after creating the team.
         </DialogDescription>
       </DialogHeader>
       <div className="grid gap-4 py-4">
@@ -253,11 +225,6 @@ function CreateTeamForm({
             id="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.currentTarget.form?.requestSubmit()
-              }
-            }}
             placeholder="e.g., Varsity Squad"
             autoFocus
           />
@@ -269,13 +236,7 @@ function CreateTeamForm({
             onValueChange={(value: string) => setPresetSystem(value as PresetSystem | 'scratch')}
             className="grid gap-2"
           >
-            <div
-              className="flex items-start space-x-3 rounded-md border p-3 cursor-pointer"
-              tabIndex={0}
-              onClick={() => setPresetSystem('scratch')}
-              onKeyDown={handlePresetOptionKeyDown('scratch')}
-              aria-label="Start Fresh"
-            >
+            <div className="flex items-start space-x-3 rounded-md border p-3">
               <RadioGroupItem value="scratch" id="preset-scratch" className="mt-0.5" />
               <div className="grid gap-0.5">
                 <Label htmlFor="preset-scratch" className="font-medium cursor-pointer">
@@ -287,14 +248,7 @@ function CreateTeamForm({
               </div>
             </div>
             {PRESET_SYSTEMS.map((system) => (
-              <div
-                key={system}
-                className="flex items-start space-x-3 rounded-md border p-3 cursor-pointer"
-                tabIndex={0}
-                onClick={() => setPresetSystem(system)}
-                onKeyDown={handlePresetOptionKeyDown(system)}
-                aria-label={PRESET_SYSTEM_INFO[system].name}
-              >
+              <div key={system} className="flex items-start space-x-3 rounded-md border p-3">
                 <RadioGroupItem value={system} id={`preset-${system}`} className="mt-0.5" />
                 <div className="grid gap-0.5">
                   <Label htmlFor={`preset-${system}`} className="font-medium cursor-pointer">
@@ -324,63 +278,32 @@ function CreateTeamForm({
   )
 }
 
-export function CreateTeamDialog({
-  onCreateTeam,
-  onCreateLocalTeam,
-  isLoading,
-  open,
-  onOpenChange,
-  hideTrigger = false,
-  triggerLabel = 'New Team',
-}: CreateTeamDialogProps) {
-  const [internalOpen, setInternalOpen] = useState(false)
-  const [showLocalForm, setShowLocalForm] = useState(false)
+export function CreateTeamDialog({ onCreateTeam, isLoading }: CreateTeamDialogProps) {
+  const [open, setOpen] = useState(false)
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth()
-  const isControlled = open !== undefined
-  const dialogOpen = isControlled ? open : internalOpen
-
-  const setDialogOpen = (nextOpen: boolean) => {
-    if (!isControlled) {
-      setInternalOpen(nextOpen)
-    }
-    onOpenChange?.(nextOpen)
-  }
-
-  const handleOpenChange = (isOpen: boolean) => {
-    setDialogOpen(isOpen)
-    if (!isOpen) setShowLocalForm(false)
-  }
-
-  const handleLocalCreate = async (name: string, _password?: string, presetSystem?: PresetSystem) => {
-    onCreateLocalTeam?.(name, presetSystem)
-    setDialogOpen(false)
-    setShowLocalForm(false)
-  }
 
   return (
-    <Dialog open={dialogOpen} onOpenChange={handleOpenChange}>
-      {!hideTrigger && (
-        <DialogTrigger asChild>
-          <Button>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="mr-1.5"
-            >
-              <path d="M5 12h14"/>
-              <path d="M12 5v14"/>
-            </svg>
-            {triggerLabel}
-          </Button>
-        </DialogTrigger>
-      )}
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="mr-1.5"
+          >
+            <path d="M5 12h14"/>
+            <path d="M12 5v14"/>
+          </svg>
+          New Team
+        </Button>
+      </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         {authLoading ? (
           <div className="flex items-center justify-center py-8">
@@ -390,19 +313,10 @@ export function CreateTeamDialog({
           <CreateTeamForm
             onCreateTeam={onCreateTeam}
             isLoading={isLoading}
-            onClose={() => handleOpenChange(false)}
-          />
-        ) : showLocalForm ? (
-          <CreateTeamForm
-            onCreateTeam={handleLocalCreate}
-            isLoading={false}
-            onClose={() => handleOpenChange(false)}
-            localOnly
+            onClose={() => setOpen(false)}
           />
         ) : (
-          <SignInPrompt
-            onContinueWithoutAccount={() => setShowLocalForm(true)}
-          />
+          <SignInPrompt onClose={() => setOpen(false)} />
         )}
       </DialogContent>
     </Dialog>
