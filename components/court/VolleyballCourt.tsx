@@ -1,17 +1,14 @@
 'use client'
 
 import { useRef, useState, useCallback, useEffect, useMemo } from 'react'
+import { CourtGrid } from './CourtGrid'
 import { PlayerToken } from './PlayerToken'
+import { MovementArrow } from './MovementArrow'
 import { markArrowDeleted } from './ArrowHandle'
 // ArrowTip removed - now using MovementArrow for preview
 import { DropZoneOverlay } from './DropZoneOverlay'
 import { DragTooltip } from './DragTooltip'
 import { LongPressTooltip } from './LongPressTooltip'
-import { ArrowPreviewOverlay } from './ArrowPreviewOverlay'
-import { CourtBaseLayer } from './CourtBaseLayer'
-import { MovementArrowLayer, CurveHandleLayer } from './ArrowLayers'
-import { LegalityViolationLayer } from './LegalityViolationLayer'
-import { SimulationBallLayer, AttackBallLayer } from './CourtBallLayers'
 import { useHintStore } from '@/store/useHintStore'
 import {
   Role,
@@ -24,6 +21,7 @@ import {
   ArrowPositions,
   ROLE_INFO,
   ROLE_PRIORITY,
+  COURT_ZONES,
   PlayerStatus,
   ArrowCurveConfig,
   TokenTag,
@@ -33,36 +31,27 @@ import { useIsMobile } from '@/hooks/useIsMobile'
 import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { PlayerPicker } from './PlayerPicker'
 import { TagPicker } from './TagPicker'
-import { MotionDebugPanel } from './MotionDebugPanel'
 import {
   computeSteering,
   clampPosition,
 } from '@/lib/animation'
-import { validateRotationLegality } from '@/lib/model/legality'
-import {
-  DEFAULT_WHITEBOARD_MOTION_TUNING,
-  createWhiteboardPlayEngine,
-  computeDefaultControlPoint,
-  sanitizeMotionTuning,
-  type LockedPathDefinition,
-  type WhiteboardMotionTuning,
-  type WhiteboardPlayEngine,
-  type WhiteboardPlaySnapshot,
-} from '@/lib/whiteboard-motion'
 import {
   animate,
+  animateBezierPath,
   SPRING,
   stopAnimation,
   type AnimationPlaybackControls,
 } from '@/lib/motion-utils'
-import { DEFAULT_BASE_ORDER, normalizeBaseOrder, getBackRowMiddle, getActiveRoles } from '@/lib/rotations'
+import { DEFAULT_BASE_ORDER, normalizeBaseOrder, isInBackRow, getRoleZone, getBackRowMiddle, getActiveRoles } from '@/lib/rotations'
+import { HoverCard, HoverCardTrigger, HoverCardContent } from '@/components/ui/hover-card'
+import { Badge } from '@/components/ui/badge'
+import { getTextColorForOklch, darkenOklch } from '@/lib/utils'
+import type { LegalityViolation } from '@/lib/model/types'
 import { PlayerContextUI } from '@/components/player-context'
 
 interface VolleyballCourtProps {
   positions: PositionCoordinates
   awayPositions?: PositionCoordinates
-  hideAwayTeam?: boolean
-  awayTeamHidePercent?: number
   highlightedRole?: Role | null
   /** The role with context UI open, or null if closed */
   contextPlayer?: Role | null
@@ -94,7 +83,6 @@ interface VolleyballCourtProps {
   baseOrder?: Role[]
   showPosition?: boolean
   showPlayer?: boolean
-  showNumber?: boolean
   circleTokens?: boolean
   tokenScaleDesktop?: number
   tokenScaleMobile?: number
@@ -130,8 +118,6 @@ interface VolleyballCourtProps {
   onManageRoster?: () => void
   // Debug mode: show hit boxes with neon green highlight
   debugHitboxes?: boolean
-  // Debug overlay (developer HUD)
-  debugOverlay?: boolean
   // Animation trigger - incrementing counter to trigger bezier path animation
   animationTrigger?: number
   // Whether we're in preview mode (showing players at arrow endpoints after animation)
@@ -144,38 +130,9 @@ interface VolleyballCourtProps {
   onPlayerAssign?: (role: Role, playerId: string) => void
 }
 
-type PlayAnimState = {
-  role: Role
-  length: number
-  distance: number
-  currentSpeed: number
-  targetSpeed: number
-  lateralOffset: number
-  done: boolean
-}
-
-type LockedPath = {
-  start: Position
-  end: Position
-  control: Position | null
-}
-
-type WhiteboardCollisionTuning = {
-  collisionRadius: number
-  separationStrength: number
-  maxSeparation: number
-}
-
-type ClientPoint = {
-  x: number
-  y: number
-}
-
 export function VolleyballCourt({
   positions,
   awayPositions,
-  hideAwayTeam = false,
-  awayTeamHidePercent = 0,
   highlightedRole = null,
   contextPlayer = null,
   onContextPlayerChange,
@@ -186,7 +143,7 @@ export function VolleyballCourt({
   onPositionChange,
   onAwayPositionChange,
   onRoleClick,
-  onHighlightChange: _onHighlightChange,
+  onHighlightChange,
   editable = true,
   animationMode = 'css',
   animationConfig,
@@ -197,7 +154,6 @@ export function VolleyballCourt({
   baseOrder = DEFAULT_BASE_ORDER,
   showPosition = true,
   showPlayer = true,
-  showNumber = true,
   circleTokens = false,
   tokenScaleDesktop = 1.5,
   tokenScaleMobile = 1.5,
@@ -205,7 +161,7 @@ export function VolleyballCourt({
   ballPosition,
   ballHeight = 0,
   ballContactFlash = false,
-  fsmPhase: _fsmPhase,
+  fsmPhase,
   legalityViolations = [],
   showLibero = false,
   attackBallPosition = null,
@@ -220,7 +176,6 @@ export function VolleyballCourt({
   hasTeam,
   onManageRoster,
   debugHitboxes = false,
-  debugOverlay = false,
   animationTrigger = 0,
   isPreviewingMovement = false,
   tagFlags = {},
@@ -234,23 +189,17 @@ export function VolleyballCourt({
   // Hint store for teaching UI
   const incrementDragCount = useHintStore((state) => state.incrementDragCount)
   const shouldShowDeleteHint = useHintStore((state) => state.shouldShowDeleteHint)
-  const incrementNextStepHintHoverCount = useHintStore((state) => state.incrementNextStepHintHoverCount)
-  const shouldShowNextStepHint = useHintStore((state) => state.shouldShowNextStepHint)
-  const markNextStepDragLearned = useHintStore((state) => state.markNextStepDragLearned)
-  const markFirstDragCompleted = useHintStore((state) => state.markFirstDragCompleted)
 
   const svgRef = useRef<SVGSVGElement>(null)
   const [draggingRole, setDraggingRole] = useState<Role | null>(null)
   const [dragPosition, setDragPosition] = useState<Position | null>(null) // Local visual position during drag
-  const draggingRoleRef = useRef<Role | null>(null)
-  const dragPositionRef = useRef<Position | null>(null)
   const dragOffsetRef = useRef({ x: 0, y: 0 })
   const didDragRef = useRef(false) // Track if actual drag movement occurred (to suppress click)
+  const arrowDragOffsetRef = useRef({ x: 0, y: 0 })
   const rafRef = useRef<number | null>(null)
   const arrowRafRef = useRef<number | null>(null)
-  const curveRafRef = useRef<number | null>(null)
-  const arrowDragPositionRef = useRef<Position | null>(null)
-  const curveControlRef = useRef<Position | null>(null)
+  const arrowLastUpdateRef = useRef<number>(0)
+  const lastUpdateRef = useRef<number>(0)
   const positionAnimationRef = useRef<AnimationPlaybackControls | null>(null)
   const onPositionChangeRef = useRef(onPositionChange)
   const onAwayPositionChangeRef = useRef(onAwayPositionChange)
@@ -258,17 +207,15 @@ export function VolleyballCourt({
   // Away player dragging state (separate from home team)
   const [draggingAwayRole, setDraggingAwayRole] = useState<Role | null>(null)
   const [dragAwayPosition, setDragAwayPosition] = useState<Position | null>(null)
-  const draggingAwayRoleRef = useRef<Role | null>(null)
-  const dragAwayPositionRef = useRef<Position | null>(null)
   const awayDragOffsetRef = useRef({ x: 0, y: 0 })
   const awayRafRef = useRef<number | null>(null)
+  const awayLastUpdateRef = useRef<number>(0)
 
   // Attack ball dragging state (for whiteboard defense phase)
   const [draggingAttackBall, setDraggingAttackBall] = useState(false)
   const [attackBallDragPosition, setAttackBallDragPosition] = useState<Position | null>(null)
-  const draggingAttackBallRef = useRef(false)
-  const attackBallDragPositionRef = useRef<Position | null>(null)
   const attackBallRafRef = useRef<number | null>(null)
+  const attackBallLastUpdateRef = useRef<number>(0)
   const onAttackBallChangeRef = useRef(onAttackBallChange)
 
   // Keep refs in sync
@@ -277,22 +224,16 @@ export function VolleyballCourt({
   }, [onAttackBallChange])
 
   // Normalize base order once for consistent use throughout the component
-  const resolvedBaseOrder = useMemo(() => normalizeBaseOrder(baseOrder), [baseOrder])
+  const resolvedBaseOrder = normalizeBaseOrder(baseOrder)
 
   // Determine which MB is being replaced by libero (if enabled)
-  const replacedMB = useMemo(
-    () => (showLibero && rotation ? getBackRowMiddle(rotation, resolvedBaseOrder) : null),
-    [showLibero, rotation, resolvedBaseOrder]
-  )
+  const replacedMB = showLibero && rotation ? getBackRowMiddle(rotation, resolvedBaseOrder) : null
 
   // Get the active roles (excludes libero when disabled, excludes replaced MB when libero is enabled)
-  const activeRoles = useMemo(
-    () => getActiveRoles(showLibero, rotation, resolvedBaseOrder),
-    [showLibero, rotation, resolvedBaseOrder]
-  )
+  const activeRoles = getActiveRoles(showLibero, rotation, resolvedBaseOrder)
 
   // Ensure all roles have positions (except in simulation mode where missing = inactive)
-  const ensureCompletePositions = useCallback((pos: PositionCoordinates): PositionCoordinates => {
+  const ensureCompletePositions = (pos: PositionCoordinates): PositionCoordinates => {
     const complete: PositionCoordinates = {} as PositionCoordinates
     for (const role of activeRoles) {
       // In simulation mode, don't fill in defaults - missing means inactive/substituted
@@ -314,26 +255,18 @@ export function VolleyballCourt({
       }
     }
     return complete
-  }, [activeRoles, mode, replacedMB])
+  }
 
   // Initialize with positions to match SSR, will update after mount if needed
   const [animatedPositions, setAnimatedPositions] = useState<PositionCoordinates>(() => ensureCompletePositions(positions))
-  const [isBezierAnimating, setIsBezierAnimating] = useState(false)
   const currentPositionsRef = useRef<PositionCoordinates>(ensureCompletePositions(positions))
-  const animatedPositionsRef = useRef<PositionCoordinates>(ensureCompletePositions(positions))
 
   // Sync animatedPositions with positions prop when positions change
   useEffect(() => {
-    // During play/preview, animated positions are driven by the play engine.
-    // Avoid syncing from baseline props here, or tokens will flash back and forth.
-    if (isPreviewingMovement || isBezierAnimating) {
-      return
-    }
-
     const complete = ensureCompletePositions(positions)
     // Only update if positions actually changed to avoid unnecessary re-renders
     const hasChanged = activeRoles.some(role => {
-      const current = currentPositionsRef.current[role]
+      const current = animatedPositions[role]
       const newPos = complete[role]
       // Handle undefined positions (inactive players in simulation mode)
       if (!newPos && !current) return false // Both undefined, no change
@@ -343,56 +276,31 @@ export function VolleyballCourt({
     if (hasChanged) {
       setAnimatedPositions(complete)
       currentPositionsRef.current = complete
-      animatedPositionsRef.current = complete
     }
-  }, [positions, showLibero, activeRoles, ensureCompletePositions, isPreviewingMovement, isBezierAnimating]) // Update when base positions or active role set changes
-
-  useEffect(() => {
-    animatedPositionsRef.current = animatedPositions
-  }, [animatedPositions])
+  }, [positions, showLibero, activeRoles]) // Update when positions, showLibero, or activeRoles change
   const [draggingArrowRole, setDraggingArrowRole] = useState<Role | null>(null)
   const [arrowDragPosition, setArrowDragPosition] = useState<Position | null>(null)
   const [isDraggingOffCourt, setIsDraggingOffCourt] = useState<Record<Role, boolean>>({} as Record<Role, boolean>)
   const isDraggingOffCourtRef = useRef<Record<Role, boolean>>({} as Record<Role, boolean>)
   // Curve dragging state
   const [draggingCurveRole, setDraggingCurveRole] = useState<Role | null>(null)
-  const [_curveDragPosition, _setCurveDragPosition] = useState<Position | null>(null) // Current drag position in normalized coords
+  const [curveDragPosition, setCurveDragPosition] = useState<Position | null>(null) // Current drag position in normalized coords
   const [hoveredRole, setHoveredRole] = useState<Role | null>(null) // Hovered player token (for arrow tip)
-  const [nextStepTooltipRole, setNextStepTooltipRole] = useState<Role | null>(null)
   const [hoveredArrowRole, setHoveredArrowRole] = useState<Role | null>(null) // Hovered arrow (for curve handle)
   const [tappedRole, setTappedRole] = useState<Role | null>(null) // For mobile tap-to-reveal arrow tip
-  // Arrow preview hover state (boolean to avoid per-frame rerenders)
-  const [previewVisible, setPreviewVisible] = useState<Partial<Record<Role, boolean>>>({})
+  // Arrow preview animation state
+  const [previewProgress, setPreviewProgress] = useState<Partial<Record<Role, number>>>({})
+  const previewAnimationRef = useRef<Partial<Record<Role, AnimationPlaybackControls>>>({})
   const hoverDelayRef = useRef<Partial<Record<Role, NodeJS.Timeout>>>({})
-  const hoveredZonesRef = useRef<Partial<Record<Role, Set<string>>>>({})
   const [showArrows, setShowArrows] = useState<boolean>(true)
   const arrowTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const suppressNextArrowFadeRef = useRef<boolean>(false)
-  const suppressArrowFadeTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-
-  const POSITION_EPSILON = 0.00075
-  const hasMeaningfulPositionDelta = (previous: Position | null, next: Position) => {
-    if (!previous) return true
-    return Math.abs(next.x - previous.x) > POSITION_EPSILON ||
-      Math.abs(next.y - previous.y) > POSITION_EPSILON
-  }
-
-  const hasMeaningfulCurveDelta = (
-    previous: ArrowCurveConfig | null,
-    next: ArrowCurveConfig
-  ) => {
-    if (!previous) return true
-    return Math.abs(next.x - previous.x) > POSITION_EPSILON ||
-      Math.abs(next.y - previous.y) > POSITION_EPSILON
-  }
 
   // Long-press state for mobile arrow drawing
   const [longPressRole, setLongPressRole] = useState<Role | null>(null)
   const [longPressSvgPos, setLongPressSvgPos] = useState<{ x: number; y: number } | null>(null)
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null)
   const longPressTouchStartRef = useRef<{ x: number; y: number; role: Role } | null>(null)
-  const ignoreNextPrimedTapRef = useRef(false)
-  const _lastTapTimeRef = useRef<Partial<Record<Role, number>>>({})
+  const lastTapTimeRef = useRef<Partial<Record<Role, number>>>({})
 
   // Primed state for hold-to-prime arrow creation (mobile)
   const [primedRole, setPrimedRole] = useState<Role | null>(null)
@@ -423,92 +331,14 @@ export function VolleyballCourt({
   // Detect reduced motion preference
   const prefersReducedMotion = useReducedMotion()
 
-  const defaultWhiteboardCollisionTuning = useMemo<WhiteboardCollisionTuning>(
-    () => ({
-      collisionRadius: animationConfig?.collisionRadius ?? 0.12, // Normalized (was 12 in percentage)
-      separationStrength: animationConfig?.separationStrength ?? 6,
-      maxSeparation: animationConfig?.maxSeparation ?? 3,
-    }),
-    [animationConfig?.collisionRadius, animationConfig?.separationStrength, animationConfig?.maxSeparation]
-  )
-
-  const [whiteboardCollisionTuning, setWhiteboardCollisionTuning] =
-    useState<WhiteboardCollisionTuning>(defaultWhiteboardCollisionTuning)
-
-  const updateWhiteboardCollisionTuning = useCallback(
-    <K extends keyof WhiteboardCollisionTuning>(key: K, value: number) => {
-      setWhiteboardCollisionTuning((prev) => ({ ...prev, [key]: value }))
-    },
-    []
-  )
-
-  const resetWhiteboardCollisionTuning = useCallback(() => {
-    setWhiteboardCollisionTuning(defaultWhiteboardCollisionTuning)
-  }, [defaultWhiteboardCollisionTuning])
-
-  const cfg = useMemo(
-    () => ({
-      durationMs: prefersReducedMotion ? 0 : (animationConfig?.durationMs ?? 500),
-      easingCss: animationConfig?.easingCss ?? 'cubic-bezier(0.4, 0, 0.2, 1)',
-      easingFn: animationConfig?.easingFn ?? 'cubic',
-      collisionRadius: whiteboardCollisionTuning.collisionRadius,
-      separationStrength: whiteboardCollisionTuning.separationStrength,
-      maxSeparation: whiteboardCollisionTuning.maxSeparation,
-    }),
-    [
-      prefersReducedMotion,
-      animationConfig?.durationMs,
-      animationConfig?.easingCss,
-      animationConfig?.easingFn,
-      whiteboardCollisionTuning.collisionRadius,
-      whiteboardCollisionTuning.separationStrength,
-      whiteboardCollisionTuning.maxSeparation,
-    ]
-  )
-
-  const [playTuning, setPlayTuning] = useState<WhiteboardMotionTuning>(() =>
-    sanitizeMotionTuning(DEFAULT_WHITEBOARD_MOTION_TUNING)
-  )
-
-  const updatePlayTuning = useCallback(
-    <K extends keyof WhiteboardMotionTuning>(key: K, value: number) => {
-      setPlayTuning((prev) => sanitizeMotionTuning({ ...prev, [key]: value }))
-    },
-    []
-  )
-
-  const resetPreviewTuning = useCallback(() => {
-    setPlayTuning((prev) =>
-      sanitizeMotionTuning({
-        ...prev,
-        cruiseSpeed: DEFAULT_WHITEBOARD_MOTION_TUNING.cruiseSpeed,
-        acceleration: DEFAULT_WHITEBOARD_MOTION_TUNING.acceleration,
-        braking: DEFAULT_WHITEBOARD_MOTION_TUNING.braking,
-        lookAheadTime: DEFAULT_WHITEBOARD_MOTION_TUNING.lookAheadTime,
-        maxLateralAccel: DEFAULT_WHITEBOARD_MOTION_TUNING.maxLateralAccel,
-        tokenRadius: DEFAULT_WHITEBOARD_MOTION_TUNING.tokenRadius,
-        minSpacingRadii: DEFAULT_WHITEBOARD_MOTION_TUNING.minSpacingRadii,
-        avoidanceBlend: DEFAULT_WHITEBOARD_MOTION_TUNING.avoidanceBlend,
-        deflectionStrength: DEFAULT_WHITEBOARD_MOTION_TUNING.deflectionStrength,
-        maxLateralOffsetRadii: DEFAULT_WHITEBOARD_MOTION_TUNING.maxLateralOffsetRadii,
-      })
-    )
-  }, [])
-
-  const resetSharedTuning = useCallback(() => {
-    setPlayTuning((prev) =>
-      sanitizeMotionTuning({
-        ...prev,
-        curveStrength: DEFAULT_WHITEBOARD_MOTION_TUNING.curveStrength,
-      })
-    )
-  }, [])
-
-  const playTuningRef = useRef(playTuning)
-
-  useEffect(() => {
-    playTuningRef.current = playTuning
-  }, [playTuning])
+  const cfg = {
+    durationMs: prefersReducedMotion ? 0 : (animationConfig?.durationMs ?? 500),
+    easingCss: animationConfig?.easingCss ?? 'cubic-bezier(0.4, 0, 0.2, 1)',
+    easingFn: animationConfig?.easingFn ?? 'cubic',
+    collisionRadius: animationConfig?.collisionRadius ?? 0.12, // Normalized (was 12 in percentage)
+    separationStrength: animationConfig?.separationStrength ?? 6,
+    maxSeparation: animationConfig?.maxSeparation ?? 3,
+  }
 
   // Keep refs updated
   useEffect(() => {
@@ -524,105 +354,68 @@ export function VolleyballCourt({
     currentPositionsRef.current = animatedPositions
   }, [animatedPositions])
 
-  // Arrow preview show/hide with zone-aware hover tracking.
-  // The arrow stays extended as long as the cursor is on ANY zone (token or arrow).
-  // It only retracts once the cursor has left ALL zones.
-  const handlePreviewHover = useCallback((role: Role, zone: 'token' | 'arrow', isEntering: boolean) => {
-    // Update zone tracking
-    if (!hoveredZonesRef.current[role]) {
-      hoveredZonesRef.current[role] = new Set()
-    }
-    if (isEntering) {
-      hoveredZonesRef.current[role]!.add(zone)
-    } else {
-      hoveredZonesRef.current[role]!.delete(zone)
-    }
-
-    const anyZoneHovered = hoveredZonesRef.current[role]!.size > 0
-
-    // Always cancel pending timers — a new event supersedes them
+  // Arrow preview extend/retract animation
+  // Handles delayed hover (prevents flicker) and smooth animation
+  const handlePreviewHover = useCallback((role: Role, isEntering: boolean) => {
+    // Clear any pending delay for this role
     if (hoverDelayRef.current[role]) {
       clearTimeout(hoverDelayRef.current[role])
       delete hoverDelayRef.current[role]
     }
 
-    if (anyZoneHovered && isEntering) {
-      if (zone === 'arrow') {
-        // Arrow zone: show immediately to keep drag/start interactions responsive.
-        setHoveredRole(role)
-        setPreviewVisible(prev => (prev[role] ? prev : { ...prev, [role]: true }))
-      } else {
-        // Token zone: short delay to avoid flicker from quick cursor passes.
-        hoverDelayRef.current[role] = setTimeout(() => {
-          delete hoverDelayRef.current[role]
-          if ((hoveredZonesRef.current[role]?.size ?? 0) === 0) return
-          setHoveredRole(role)
-          setPreviewVisible(prev => (prev[role] ? prev : { ...prev, [role]: true }))
-          if (shouldShowNextStepHint()) {
-            setNextStepTooltipRole(role)
-            incrementNextStepHintHoverCount()
-          } else {
-            setNextStepTooltipRole(null)
+    // Stop any existing animation for this role
+    if (previewAnimationRef.current[role]) {
+      stopAnimation(previewAnimationRef.current[role])
+      delete previewAnimationRef.current[role]
+    }
+
+    const startAnimation = () => {
+      const currentProgress = previewProgress[role] ?? 0
+      const targetProgress = isEntering ? 1 : 0
+
+      // Different durations: extend is slower (200ms), retract is quicker (120ms)
+      const duration = isEntering ? 0.2 : 0.12
+
+      previewAnimationRef.current[role] = animate(currentProgress, targetProgress, {
+        duration,
+        ease: isEntering ? [0.0, 0.0, 0.2, 1] : [0.4, 0.0, 1, 1], // ease-out for extend, ease-in for retract
+        onUpdate: (value) => {
+          setPreviewProgress(prev => ({ ...prev, [role]: value }))
+        },
+        onComplete: () => {
+          delete previewAnimationRef.current[role]
+          // Clean up zero progress to keep state clean
+          if (targetProgress === 0) {
+            setPreviewProgress(prev => {
+              const next = { ...prev }
+              delete next[role]
+              return next
+            })
           }
-        }, 60)
-      }
-    } else if (!anyZoneHovered) {
-      // All zones left — retract after a short grace period
-      // (covers the gap when cursor moves between token and arrow)
+        }
+      })
+    }
+
+    if (isEntering) {
+      // Delay before extending (prevents flicker on quick mouse movements)
       hoverDelayRef.current[role] = setTimeout(() => {
         delete hoverDelayRef.current[role]
-        if ((hoveredZonesRef.current[role]?.size ?? 0) > 0) return
-        setHoveredRole(current => (current === role ? null : current))
-        setNextStepTooltipRole(current => (current === role ? null : current))
-        setPreviewVisible(prev => {
-          if (!prev[role]) return prev
-          const next = { ...prev }
-          delete next[role]
-          return next
-        })
-      }, 90)
+        setHoveredRole(role)
+        startAnimation()
+      }, 80) // 80ms delay before showing
+    } else {
+      setHoveredRole(null)
+      startAnimation()
     }
-    // else: leaving one zone while another is still hovered → do nothing, arrow stays
-  }, [incrementNextStepHintHoverCount, shouldShowNextStepHint])
-
-  const clearPreviewStateForRole = useCallback((role: Role) => {
-    const pendingTimeout = hoverDelayRef.current[role]
-    if (pendingTimeout) {
-      clearTimeout(pendingTimeout)
-      delete hoverDelayRef.current[role]
-    }
-
-    if (hoveredZonesRef.current[role]) {
-      hoveredZonesRef.current[role]!.clear()
-      delete hoveredZonesRef.current[role]
-    }
-
-    setHoveredRole(current => (current === role ? null : current))
-    setNextStepTooltipRole(current => (current === role ? null : current))
-    setPreviewVisible(prev => {
-      if (!prev[role]) return prev
-      const next = { ...prev }
-      delete next[role]
-      return next
-    })
-  }, [])
-
-  const clearAllPreviewState = useCallback(() => {
-    Object.values(hoverDelayRef.current).forEach((timeout) => {
-      if (timeout) clearTimeout(timeout)
-    })
-    hoverDelayRef.current = {}
-    hoveredZonesRef.current = {}
-    setHoveredRole(null)
-    setNextStepTooltipRole(null)
-    setPreviewVisible({})
-  }, [])
+  }, [previewProgress])
 
   // Cleanup animation refs on unmount
   useEffect(() => {
-    const hoverTimeouts = hoverDelayRef.current
     return () => {
-      Object.values(hoverTimeouts).forEach(timeout => {
+      Object.values(previewAnimationRef.current).forEach(anim => {
+        if (anim) stopAnimation(anim)
+      })
+      Object.values(hoverDelayRef.current).forEach(timeout => {
         if (timeout) clearTimeout(timeout)
       })
     }
@@ -693,7 +486,7 @@ export function VolleyballCourt({
       result[role] = newPos
     })
     return result
-  }, [cfg.collisionRadius, draggingRole, activeRoles])
+  }, [cfg.collisionRadius, draggingRole])
 
   const resolveCollisions = useCallback((targets: PositionCoordinates): PositionCoordinates => {
     let current = targets
@@ -708,119 +501,37 @@ export function VolleyballCourt({
   const collisionFreePositions = useMemo(() => {
     // Ensure all roles have positions before collision resolution
     return resolveCollisions(ensureCompletePositions(positions))
-  }, [positions, resolveCollisions, ensureCompletePositions])
+  }, [positions, resolveCollisions])
 
-  // Track whether speed-based play animation has completed
-  const [playedPositions, setPlayedPositions] = useState<PositionCoordinates | null>(null)
-  const playLockedPathsRef = useRef<Partial<Record<Role, LockedPath>>>({})
-  const playAnimRef = useRef<Partial<Record<Role, PlayAnimState>>>({})
-  const playEngineRef = useRef<WhiteboardPlayEngine | null>(null)
-  const playPrevSnapshotRef = useRef<WhiteboardPlaySnapshot | null>(null)
-  const playCurrentSnapshotRef = useRef<WhiteboardPlaySnapshot | null>(null)
-  const playAccumulatorRef = useRef(0)
-  const playLastFrameRef = useRef<number | null>(null)
-  const debugOverlayHostRef = useRef<HTMLDivElement>(null)
+  // Track whether bezier animation is currently running
+  const [isBezierAnimating, setIsBezierAnimating] = useState(false)
 
-  useEffect(() => {
-    if (!isPreviewingMovement) {
-      const baseline = ensureCompletePositions(collisionFreePositions)
-      setAnimatedPositions(baseline)
-      currentPositionsRef.current = baseline
-      animatedPositionsRef.current = baseline
-      setPlayedPositions(null)
-      playLockedPathsRef.current = {}
-      playEngineRef.current = null
-      playPrevSnapshotRef.current = null
-      playCurrentSnapshotRef.current = null
-      playAccumulatorRef.current = 0
-      if (bezierRafRef.current) {
-        cancelAnimationFrame(bezierRafRef.current)
-        bezierRafRef.current = null
+  // Compute preview positions (at arrow endpoints) for when preview mode is active
+  const previewPositions = useMemo(() => {
+    const preview = { ...collisionFreePositions }
+    for (const role of activeRoles) {
+      const arrowEnd = arrows[role]
+      if (arrowEnd) {
+        preview[role] = arrowEnd
       }
-      playLastFrameRef.current = null
-      setIsBezierAnimating(false)
     }
-  }, [isPreviewingMovement, collisionFreePositions, ensureCompletePositions])
+    return resolveCollisions(preview)
+  }, [collisionFreePositions, arrows, activeRoles, resolveCollisions])
 
   // Display positions: during animation use animatedPositions,
-  // in preview mode use played positions, otherwise use collisionFreePositions
+  // in preview mode use previewPositions, otherwise use collisionFreePositions
   const displayPositions = useMemo(() => {
     if (isBezierAnimating) {
       return animatedPositions
     }
     if (isPreviewingMovement) {
-      return playedPositions ?? animatedPositions
+      return previewPositions
     }
     if (animationMode === 'raf') {
       return animatedPositions
     }
     return collisionFreePositions
-  }, [isBezierAnimating, isPreviewingMovement, animationMode, animatedPositions, collisionFreePositions, playedPositions])
-
-  const showDebugOverlay = debugOverlay
-  const displaySource = isBezierAnimating
-    ? 'bezier'
-    : (isPreviewingMovement ? (playedPositions ? 'played' : 'animated') : (animationMode === 'raf' ? 'animated' : 'collision'))
-  const legalityDisplayPositions = useMemo(() => {
-    if (!draggingRole || !dragPosition) return displayPositions
-    return {
-      ...displayPositions,
-      [draggingRole]: dragPosition,
-    } as PositionCoordinates
-  }, [displayPositions, draggingRole, dragPosition])
-
-  const effectiveLegalityViolations = useMemo(() => {
-    if (isPreviewingMovement) {
-      return []
-    }
-
-    const canComputeLive =
-      mode === 'whiteboard' &&
-      Boolean(rotation) &&
-      (currentPhase === 'PRE_SERVE' || currentPhase === 'SERVE_RECEIVE')
-
-    if (!canComputeLive) {
-      return legalityViolations
-    }
-
-    const validPositions: Record<Role, Position> = {} as Record<Role, Position>
-    for (const role of ROLES) {
-      if (role === 'L' && !showLibero) {
-        validPositions[role] = { x: 0.5, y: 0.5 }
-      } else if (showLibero && role === replacedMB) {
-        validPositions[role] = legalityDisplayPositions.L || legalityDisplayPositions[replacedMB] || { x: 0.5, y: 0.5 }
-      } else {
-        validPositions[role] = legalityDisplayPositions[role] || { x: 0.5, y: 0.5 }
-      }
-    }
-
-    return validateRotationLegality(
-      rotation as 1 | 2 | 3 | 4 | 5 | 6,
-      validPositions,
-      undefined,
-      resolvedBaseOrder
-    )
-  }, [
-    isPreviewingMovement,
-    mode,
-    rotation,
-    currentPhase,
-    legalityViolations,
-    showLibero,
-    replacedMB,
-    legalityDisplayPositions,
-    resolvedBaseOrder,
-  ])
-
-  const rolesInViolation = useMemo(() => {
-    const set = new Set<Role>()
-    effectiveLegalityViolations.forEach((violation) => {
-      if (!violation.roles) return
-      set.add(violation.roles[0])
-      set.add(violation.roles[1])
-    })
-    return set
-  }, [effectiveLegalityViolations])
+  }, [isBezierAnimating, isPreviewingMovement, animationMode, animatedPositions, previewPositions, collisionFreePositions])
 
   // Calculate screen position for a player token based on their displayed (collision-resolved) position
   // Uses hardcoded court dimensions (400x800, padding 40) since they're constants
@@ -947,227 +658,88 @@ export function VolleyballCourt({
     }
   }, [collisionFreePositions, animationMode, cfg.collisionRadius, cfg.separationStrength, cfg.maxSeparation, activeRoles, mode])
 
-  // Tracks the last trigger consumed while preview mode was active.
-  const consumedAnimationTriggerRef = useRef<number>(animationTrigger)
-  const wasPreviewingRef = useRef<boolean>(isPreviewingMovement)
+  // Track previous animation trigger for detecting when Play is pressed
+  const prevAnimationTriggerRef = useRef<number>(animationTrigger)
 
-  // Ref for RAF animation
-  const bezierRafRef = useRef<number | null>(null)
+  // Ref to track active bezier path animations
+  const bezierAnimationsRef = useRef<AnimationPlaybackControls[]>([])
 
-  const applyPlaySnapshot = useCallback(
-    (snapshot: WhiteboardPlaySnapshot) => {
-      const nextPositions = snapshot.positions as PositionCoordinates
-      setAnimatedPositions(nextPositions)
-      animatedPositionsRef.current = nextPositions
-
-      const nextAnim: Partial<Record<Role, PlayAnimState>> = {}
-      activeRoles.forEach((role) => {
-        const agent = snapshot.agents[role]
-        if (!agent) return
-        nextAnim[role] = {
-          role,
-          length: agent.length,
-          distance: agent.distance,
-          currentSpeed: agent.currentSpeed,
-          targetSpeed: agent.targetSpeed,
-          lateralOffset: agent.lateralOffset,
-          done: agent.done,
-        }
-      })
-      playAnimRef.current = nextAnim
-    },
-    [activeRoles]
-  )
-
-  // Speed-based movement along locked paths (Play button)
+  // Bezier path animation - runs when Play button is pressed (animationTrigger changes)
+  // Uses motion library's animateBezierPath for smooth path-following animation
   useEffect(() => {
-    const FIXED_STEP_SECONDS = 1 / 120
-    const MAX_SUB_STEPS_PER_FRAME = 6
-    const REDUCED_MOTION_MAX_STEPS = 15_000
-    const previewJustEnabled = isPreviewingMovement && !wasPreviewingRef.current
-    wasPreviewingRef.current = isPreviewingMovement
-
-    if (!isPreviewingMovement || animationTrigger === 0) {
+    // Only run when trigger changes and is > 0
+    if (animationTrigger === prevAnimationTriggerRef.current || animationTrigger === 0) {
+      prevAnimationTriggerRef.current = animationTrigger
       return
     }
+    prevAnimationTriggerRef.current = animationTrigger
 
-    const triggerChanged = animationTrigger !== consumedAnimationTriggerRef.current
-    if (!triggerChanged && !previewJustEnabled) {
-      return
-    }
-    consumedAnimationTriggerRef.current = animationTrigger
+    // Stop any existing animations
+    bezierAnimationsRef.current.forEach(anim => anim.stop())
+    bezierAnimationsRef.current = []
 
-    if (bezierRafRef.current) {
-      cancelAnimationFrame(bezierRafRef.current)
-      bezierRafRef.current = null
-    }
+    // Get start positions (current collision-free positions)
+    const startPositions = { ...collisionFreePositions }
 
-    playLastFrameRef.current = null
-    playAccumulatorRef.current = 0
-    playEngineRef.current = null
-    playPrevSnapshotRef.current = null
-    playCurrentSnapshotRef.current = null
-    playAnimRef.current = {}
-    playLockedPathsRef.current = {}
-    setPlayedPositions(null)
-    const tuning = playTuningRef.current
-
-    const startPositions = { ...collisionFreePositions } as PositionCoordinates
-    const locked: Partial<Record<Role, LockedPath>> = {}
-    const lockedDefinitions: LockedPathDefinition[] = []
+    // Find players that have arrows to animate
+    const playersWithArrows: { role: Role; start: Position; end: Position; control: Position | null }[] = []
 
     activeRoles.forEach(role => {
       const arrowEnd = arrows[role]
-      if (!arrowEnd) return
-
-      const start = startPositions[role] || { x: 0.5, y: 0.5 }
-      const controlFromCurve = arrowCurves[role]
-      const control = controlFromCurve
-        ? { x: controlFromCurve.x, y: controlFromCurve.y }
-        : computeDefaultControlPoint(start, arrowEnd, tuning.curveStrength)
-
-      locked[role] = { start, end: arrowEnd, control }
-      lockedDefinitions.push({ role, start, end: arrowEnd, control })
-    })
-
-    if (lockedDefinitions.length === 0) {
-      return
-    }
-
-    playLockedPathsRef.current = locked
-    setAnimatedPositions(startPositions)
-    animatedPositionsRef.current = startPositions
-
-    const engine = createWhiteboardPlayEngine({
-      activeRoles,
-      initialPositions: startPositions,
-      lockedPaths: lockedDefinitions,
-      tuning,
-    })
-    playEngineRef.current = engine
-    const initialSnapshot = engine.getSnapshot()
-    playPrevSnapshotRef.current = initialSnapshot
-    playCurrentSnapshotRef.current = initialSnapshot
-
-    const runToCompletion = () => {
-      let snapshot = engine.getSnapshot()
-      let steps = 0
-      while (!snapshot.done && steps < REDUCED_MOTION_MAX_STEPS) {
-        snapshot = engine.step(FIXED_STEP_SECONDS)
-        steps += 1
+      if (arrowEnd) {
+        const start = startPositions[role] || { x: 0.5, y: 0.5 }
+        const control = arrowCurves[role] || null
+        playersWithArrows.push({ role, start, end: arrowEnd, control })
       }
-      applyPlaySnapshot(snapshot)
-      const finalPositions = snapshot.positions as PositionCoordinates
-      setPlayedPositions(finalPositions)
-      setIsBezierAnimating(false)
-      playLastFrameRef.current = null
-      playAccumulatorRef.current = 0
-      playEngineRef.current = null
-    }
+    })
 
-    if (prefersReducedMotion) {
-      runToCompletion()
+    // If no arrows, nothing to animate
+    if (playersWithArrows.length === 0) {
       return
     }
 
+    // Mark animation as running
     setIsBezierAnimating(true)
 
-    const tick = (now: number) => {
-      const activeEngine = playEngineRef.current
-      if (!activeEngine) {
-        bezierRafRef.current = null
-        return
-      }
+    // Initialize animated positions with all current positions
+    const currentAnimatedPositions = { ...collisionFreePositions }
+    setAnimatedPositions(currentAnimatedPositions)
 
-      if (playLastFrameRef.current === null) {
-        playLastFrameRef.current = now
-      }
-      const dt = Math.min((now - playLastFrameRef.current) / 1000, 0.1)
-      playLastFrameRef.current = now
+    // Track how many animations have completed
+    let completedCount = 0
+    const totalAnimations = playersWithArrows.length
 
-      playAccumulatorRef.current += dt
-      let prevSnapshot = playPrevSnapshotRef.current ?? activeEngine.getSnapshot()
-      let currentSnapshot = playCurrentSnapshotRef.current ?? prevSnapshot
-      let subSteps = 0
-      while (playAccumulatorRef.current >= FIXED_STEP_SECONDS && subSteps < MAX_SUB_STEPS_PER_FRAME) {
-        prevSnapshot = currentSnapshot
-        currentSnapshot = activeEngine.step(FIXED_STEP_SECONDS)
-        playAccumulatorRef.current -= FIXED_STEP_SECONDS
-        subSteps += 1
-      }
-      playPrevSnapshotRef.current = prevSnapshot
-      playCurrentSnapshotRef.current = currentSnapshot
-
-      const interpolationAlpha = Math.max(0, Math.min(1, playAccumulatorRef.current / FIXED_STEP_SECONDS))
-      let renderedSnapshot: WhiteboardPlaySnapshot = currentSnapshot
-      if (!currentSnapshot.done && interpolationAlpha > 0 && prevSnapshot !== currentSnapshot) {
-        const interpolatedPositions: Partial<Record<Role, Position>> = {}
-        activeRoles.forEach((role) => {
-          const from = prevSnapshot.positions[role]
-          const to = currentSnapshot.positions[role]
-          if (from && to) {
-            interpolatedPositions[role] = {
-              x: from.x + (to.x - from.x) * interpolationAlpha,
-              y: from.y + (to.y - from.y) * interpolationAlpha,
-            }
-          } else if (to) {
-            interpolatedPositions[role] = to
-          } else if (from) {
-            interpolatedPositions[role] = from
+    // Create an animation for each player with an arrow
+    playersWithArrows.forEach(({ role, start, end, control }) => {
+      const animation = animateBezierPath({
+        start,
+        end,
+        control,
+        duration: cfg.durationMs,
+        onUpdate: (pos) => {
+          // Update this player's position in the animated positions
+          currentAnimatedPositions[role] = { x: pos.x, y: pos.y }
+          // Trigger React state update
+          setAnimatedPositions({ ...currentAnimatedPositions })
+        },
+        onComplete: () => {
+          completedCount++
+          // When all animations complete, end the animation state
+          if (completedCount >= totalAnimations) {
+            setIsBezierAnimating(false)
           }
-        })
-        renderedSnapshot = {
-          ...currentSnapshot,
-          positions: {
-            ...currentSnapshot.positions,
-            ...interpolatedPositions,
-          },
         }
-      }
-
-      applyPlaySnapshot(renderedSnapshot)
-
-      if (currentSnapshot.done) {
-        const finalPositions = currentSnapshot.positions as PositionCoordinates
-        setIsBezierAnimating(false)
-        setPlayedPositions(finalPositions)
-        setAnimatedPositions(finalPositions)
-        animatedPositionsRef.current = finalPositions
-        playLastFrameRef.current = null
-        playAccumulatorRef.current = 0
-        playEngineRef.current = null
-        playPrevSnapshotRef.current = null
-        playCurrentSnapshotRef.current = null
-        bezierRafRef.current = null
-        return
-      }
-
-      bezierRafRef.current = requestAnimationFrame(tick)
-    }
-
-    bezierRafRef.current = requestAnimationFrame(tick)
+      })
+      bezierAnimationsRef.current.push(animation)
+    })
 
     return () => {
-      if (bezierRafRef.current) {
-        cancelAnimationFrame(bezierRafRef.current)
-        bezierRafRef.current = null
-      }
-      playEngineRef.current = null
-      playPrevSnapshotRef.current = null
-      playCurrentSnapshotRef.current = null
-      playAccumulatorRef.current = 0
+      // Cleanup: stop all animations
+      bezierAnimationsRef.current.forEach(anim => anim.stop())
+      bezierAnimationsRef.current = []
       setIsBezierAnimating(false)
     }
-  }, [
-    animationTrigger,
-    isPreviewingMovement,
-    collisionFreePositions,
-    arrows,
-    arrowCurves,
-    activeRoles,
-    applyPlaySnapshot,
-    prefersReducedMotion,
-  ])
+  }, [animationTrigger, collisionFreePositions, arrows, arrowCurves, activeRoles, cfg.durationMs])
 
   // Track previous positions for detecting phase changes
   const prevPositionsRef = useRef<PositionCoordinates>(positions)
@@ -1185,17 +757,6 @@ export function VolleyballCourt({
     const currentPositionsStr = JSON.stringify(positions)
     const prevPositionsStr = JSON.stringify(prevPositionsRef.current)
     const positionsChanged = currentPositionsStr !== prevPositionsStr
-
-    // Manual drag commits should not be treated like phase-transition animations.
-    if (positionsChanged && suppressNextArrowFadeRef.current) {
-      suppressNextArrowFadeRef.current = false
-      if (suppressArrowFadeTimeoutRef.current) {
-        clearTimeout(suppressArrowFadeTimeoutRef.current)
-        suppressArrowFadeTimeoutRef.current = null
-      }
-      prevPositionsRef.current = positions
-      return
-    }
 
     if (positionsChanged) {
       // Clear any existing timeout
@@ -1237,10 +798,6 @@ export function VolleyballCourt({
         clearTimeout(recentTouchTimeoutRef.current)
         recentTouchTimeoutRef.current = null
       }
-      if (suppressArrowFadeTimeoutRef.current) {
-        clearTimeout(suppressArrowFadeTimeoutRef.current)
-        suppressArrowFadeTimeoutRef.current = null
-      }
     }
   }, [])
 
@@ -1249,57 +806,61 @@ export function VolleyballCourt({
   const courtHeight = 800
   const padding = 40
 
-  // Calculate viewBox dimensions - optionally crop when away team is hidden
+  // Calculate viewBox dimensions - always show full court
   const viewBoxWidth = courtWidth + padding * 2
   const viewBoxHeight = courtHeight + padding * 2
-  const hideFraction = hideAwayTeam ? Math.min(Math.max(awayTeamHidePercent / 100, 0), 0.5) : 0
-  // Hide percentage should apply to the full rendered view (court + padding),
-  // so the "hide opponent" crop removes more of the opponent side above the net.
-  const hideAmount = viewBoxHeight * hideFraction
-  const vbY = hideAmount
-  const vbH = viewBoxHeight - hideAmount
+  const vbY = 0
+  const vbH = viewBoxHeight
+
+  // Throttle state updates to parent (every 50ms during drag)
+  const THROTTLE_MS = 50
 
   // Get player info from roster/assignments
-  const playerLookup = useMemo(() => {
-    const map = new Map<string, RosterPlayer>()
-    roster.forEach((player) => map.set(player.id, player))
-    return map
-  }, [roster])
+  const getPlayerInfo = (role: Role) => {
+    const playerId = assignments[role]
+    if (!playerId) return { name: undefined, number: undefined }
+    const player = roster.find(p => p.id === playerId)
+    return { name: player?.name, number: player?.number }
+  }
 
-  const playerInfoByRole = useMemo(() => {
-    const info: Partial<Record<Role, { name?: string; number?: number }>> = {}
-    activeRoles.forEach((role) => {
-      const playerId = assignments[role]
-      if (!playerId) {
-        info[role] = { name: undefined, number: undefined }
-        return
-      }
-      const player = playerLookup.get(playerId)
-      info[role] = { name: player?.name, number: player?.number }
-    })
-    return info
-  }, [activeRoles, assignments, playerLookup])
+  // Get role for a zone in current rotation (inverse of getRoleZone)
+  const getRoleForZone = useCallback((zone: string, rotation: Rotation | undefined, baseOrder: Role[]) => {
+    if (!rotation) return null
+    const zoneNum = parseInt(zone.slice(1)) as 1 | 2 | 3 | 4 | 5 | 6
+    const zoneOrder = [1, 6, 5, 4, 3, 2] as const
 
-  const getPlayerInfo = useCallback((role: Role) => {
-    return playerInfoByRole[role] ?? { name: undefined, number: undefined }
-  }, [playerInfoByRole])
+    // Find which position in zoneOrder this zone is at for the current rotation
+    const currentZoneIndex = zoneOrder.indexOf(zoneNum)
+    if (currentZoneIndex === -1) return null
+
+    // Rotate backwards to find the base zone index
+    const baseZoneIndex = (currentZoneIndex - (rotation - 1) + zoneOrder.length) % zoneOrder.length
+    const baseZone = zoneOrder[baseZoneIndex]
+
+    // Map baseZone (1-6) to the role index in baseOrder
+    const roleIndex = baseZone - 1
+
+    if (roleIndex < 0 || roleIndex >= baseOrder.length) return null
+
+    return baseOrder[roleIndex] || null
+  }, [])
 
   // Convert normalized position (0-1) to SVG coordinates
-  const toSvgCoords = useCallback((pos: Position): { x: number; y: number } => ({
+  const toSvgCoords = (pos: Position): { x: number; y: number } => ({
     x: padding + pos.x * courtWidth,
     y: padding + pos.y * courtHeight
-  }), [padding, courtWidth, courtHeight])
+  })
 
   // Convert SVG coordinates to normalized position
   // Allows positions slightly outside the court bounds (for off-court positioning)
-  const toNormalizedCoords = useCallback((svgX: number, svgY: number): Position => {
+  const toNormalizedCoords = (svgX: number, svgY: number): Position => {
     // Allow some margin outside the court (e.g., for serving positions)
     const margin = 0.15 // 15% margin outside court bounds
     return {
       x: Math.max(-margin, Math.min(1 + margin, (svgX - padding) / courtWidth)),
       y: Math.max(-margin, Math.min(1 + margin, (svgY - padding) / courtHeight))
     }
-  }, [padding, courtWidth, courtHeight])
+  }
 
   // Constrain position for home team: can go anywhere EXCEPT opponent's in-bounds area
   // Home team must stay on their side (y >= 0.5) when within the court bounds
@@ -1333,40 +894,33 @@ export function VolleyballCourt({
     return pos
   }
 
-  const getClientPoint = useCallback((e: MouseEvent | TouchEvent): ClientPoint | null => {
-    if ('touches' in e) {
-      // `touchend` events have an empty `touches` list; use `changedTouches`.
-      const touchPoint = e.touches[0] ?? e.changedTouches[0]
-      if (!touchPoint) return null
-      return { x: touchPoint.clientX, y: touchPoint.clientY }
-    }
-    return { x: e.clientX, y: e.clientY }
-  }, [])
-
-  const clientToSvgCoords = useCallback((client: ClientPoint): ClientPoint => {
+  // Get mouse/touch position in SVG coordinates
+  // Uses getScreenCTM() to correctly handle preserveAspectRatio scaling
+  const getEventPosition = useCallback((e: MouseEvent | TouchEvent) => {
     if (!svgRef.current) return { x: 0, y: 0 }
 
     const svg = svgRef.current
 
+    let clientX: number, clientY: number
+    if ('touches' in e) {
+      clientX = e.touches[0].clientX
+      clientY = e.touches[0].clientY
+    } else {
+      clientX = e.clientX
+      clientY = e.clientY
+    }
+
     // Use SVG's coordinate transformation for accurate conversion
     // This properly handles preserveAspectRatio centering/letterboxing
     const point = svg.createSVGPoint()
-    point.x = client.x
-    point.y = client.y
+    point.x = clientX
+    point.y = clientY
     const ctm = svg.getScreenCTM()
     if (!ctm) return { x: 0, y: 0 }
     const svgPoint = point.matrixTransform(ctm.inverse())
 
     return { x: svgPoint.x, y: svgPoint.y }
   }, [])
-
-  // Get mouse/touch position in SVG coordinates
-  // Uses getScreenCTM() to correctly handle preserveAspectRatio scaling
-  const getEventPosition = useCallback((e: MouseEvent | TouchEvent) => {
-    const clientPoint = getClientPoint(e)
-    if (!clientPoint) return { x: 0, y: 0 }
-    return clientToSvgCoords(clientPoint)
-  }, [getClientPoint, clientToSvgCoords])
 
   // Clear long-press state and timer
   const clearLongPress = useCallback(() => {
@@ -1386,20 +940,15 @@ export function VolleyballCourt({
       primeTimerRef.current = null
     }
     setPrimedRole(null)
-    clearLongPress()
-  }, [clearLongPress])
+  }, [])
 
   // Handle court tap when primed - creates arrow to tap location
   const handlePrimedCourtTap = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     if (!primedRole || !onArrowChange) return
-    if (ignoreNextPrimedTapRef.current) {
-      ignoreNextPrimedTapRef.current = false
-      return
-    }
 
     // Get event coordinates
     const pos = getEventPosition(e.nativeEvent as MouseEvent | TouchEvent)
-    const normalizedPos = constrainHomePosition(toNormalizedCoords(pos.x, pos.y))
+    const normalizedPos = toNormalizedCoords(pos.x, pos.y)
 
     // Get the primed player's position
     const primedPlayerPos = displayPositions[primedRole]
@@ -1431,7 +980,7 @@ export function VolleyballCourt({
 
     // Clear prime state
     clearPrime()
-  }, [primedRole, onArrowChange, getEventPosition, clearPrime, displayPositions, toNormalizedCoords])
+  }, [primedRole, onArrowChange, getEventPosition, clearPrime, displayPositions])
 
   // Handle long-press activation (after ~1s hold without movement)
   const activateLongPress = useCallback((role: Role, svgPos: { x: number; y: number }) => {
@@ -1450,26 +999,14 @@ export function VolleyballCourt({
       rafRef.current = null
     }
 
-    const role = draggingRoleRef.current
-    const finalPos = dragPositionRef.current
-    if (role && finalPos && onPositionChangeRef.current) {
-      suppressNextArrowFadeRef.current = true
-      if (suppressArrowFadeTimeoutRef.current) {
-        clearTimeout(suppressArrowFadeTimeoutRef.current)
-      }
-      suppressArrowFadeTimeoutRef.current = setTimeout(() => {
-        suppressNextArrowFadeRef.current = false
-        suppressArrowFadeTimeoutRef.current = null
-      }, 350)
-      onPositionChangeRef.current(role, finalPos)
-      markFirstDragCompleted()
+    // Final update on drag end
+    if (draggingRole && dragPosition && onPositionChangeRef.current) {
+      onPositionChangeRef.current(draggingRole, dragPosition)
     }
 
-    draggingRoleRef.current = null
-    dragPositionRef.current = null
     setDraggingRole(null)
     setDragPosition(null)
-  }, [markFirstDragCompleted])
+  }, [draggingRole, dragPosition])
 
   // Handle drag start
   const handleDragStart = useCallback((role: Role, e: React.MouseEvent | React.TouchEvent) => {
@@ -1485,40 +1022,35 @@ export function VolleyballCourt({
     const pos = getEventPosition(e.nativeEvent as MouseEvent | TouchEvent)
     const currentPos = toSvgCoords(positions[role] || { x: 0.5, y: 0.5 })
 
-    draggingRoleRef.current = role
     setDraggingRole(role)
 
     // Immediately hide any arrow preview when drag starts
-    clearAllPreviewState()
+    setHoveredRole(null)
+    setPreviewProgress({})
 
     dragOffsetRef.current = {
       x: currentPos.x - pos.x,
       y: currentPos.y - pos.y
     }
-    dragPositionRef.current = null
     setDragPosition(null) // Reset drag position
     didDragRef.current = false // Reset drag tracking
+    lastUpdateRef.current = Date.now()
 
     // Prevent page scroll during drag
     document.body.style.overflow = 'hidden'
     document.body.style.touchAction = 'none'
 
-    let latestClientPoint: ClientPoint | null = null
-
-    // Smooth drag handler using requestAnimationFrame with event coalescing
+    // Smooth drag handler using requestAnimationFrame
     const handleMove = (e: MouseEvent | TouchEvent) => {
       e.preventDefault() // Prevent scrolling on mobile
+      didDragRef.current = true // Mark that actual drag movement occurred
 
-      const clientPoint = getClientPoint(e)
-      if (!clientPoint) return
-      latestClientPoint = clientPoint
-
-      if (rafRef.current !== null) return
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current)
+      }
 
       rafRef.current = requestAnimationFrame(() => {
-        rafRef.current = null
-        if (!latestClientPoint) return
-        const pos = clientToSvgCoords(latestClientPoint)
+        const pos = getEventPosition(e)
         const newX = pos.x + dragOffsetRef.current.x
         const newY = pos.y + dragOffsetRef.current.y
 
@@ -1526,12 +1058,16 @@ export function VolleyballCourt({
         const normalizedPos = constrainHomePosition(toNormalizedCoords(newX, newY))
 
         // Update visual position immediately (smooth)
-        if (!hasMeaningfulPositionDelta(dragPositionRef.current, normalizedPos)) {
-          return
-        }
-        didDragRef.current = true // Mark that actual drag movement occurred
-        dragPositionRef.current = normalizedPos
         setDragPosition(normalizedPos)
+
+        // Throttle state updates to parent
+        const now = Date.now()
+        if (now - lastUpdateRef.current >= THROTTLE_MS) {
+          if (onPositionChangeRef.current) {
+            onPositionChangeRef.current(role, normalizedPos)
+          }
+          lastUpdateRef.current = now
+        }
       })
     }
 
@@ -1540,7 +1076,6 @@ export function VolleyballCourt({
       document.body.style.overflow = ''
       document.body.style.touchAction = ''
 
-      latestClientPoint = null
       handleDragEnd()
       document.removeEventListener('mousemove', handleMove)
       document.removeEventListener('mouseup', handleEnd)
@@ -1552,7 +1087,7 @@ export function VolleyballCourt({
     document.addEventListener('mouseup', handleEnd)
       document.addEventListener('touchmove', handleMove, { passive: false })
       document.addEventListener('touchend', handleEnd)
-    }, [isEditable, isPreviewingMovement, positions, getEventPosition, getClientPoint, clientToSvgCoords, handleDragEnd, toSvgCoords, toNormalizedCoords, clearAllPreviewState])
+    }, [isEditable, positions, getEventPosition, handleDragEnd])
 
   // Handle arrow drag (create, reposition, or delete movement arrows)
   const handleArrowDragStart = useCallback((
@@ -1570,17 +1105,9 @@ export function VolleyballCourt({
     }
     e.stopPropagation()
     setDraggingArrowRole(role)
-    clearPreviewStateForRole(role)
 
     // Track drag count for hint dismissal
     incrementDragCount()
-    markNextStepDragLearned()
-    setNextStepTooltipRole(null)
-
-    const isCreatingNewArrow = !arrows[role]
-    const previewCurveHeight = 25
-    const homeBasePos = displayPositions[role] || positions[role] || { x: 0.5, y: 0.75 }
-    const dragStartSvg = toSvgCoords(homeBasePos)
 
     // Prevent page scroll during drag
     document.body.style.overflow = 'hidden'
@@ -1588,76 +1115,44 @@ export function VolleyballCourt({
 
     // Initialize with preview position for seamless transition (no visual jump)
     if (initialEndSvg) {
-      const normalizedEnd = constrainHomePosition(toNormalizedCoords(initialEndSvg.x, initialEndSvg.y))
-      arrowDragPositionRef.current = normalizedEnd
-      curveControlRef.current = arrowCurves[role] ?? null
+      const normalizedEnd = toNormalizedCoords(initialEndSvg.x, initialEndSvg.y)
       setArrowDragPosition(normalizedEnd)
-    } else if (arrows[role]) {
-      const currentArrow = arrows[role]
-      arrowDragPositionRef.current = currentArrow
-      curveControlRef.current = arrowCurves[role] ?? null
-      setArrowDragPosition(currentArrow)
-    } else {
-      arrowDragPositionRef.current = null
-      curveControlRef.current = null
-      setArrowDragPosition(null)
+      onArrowChange(role, normalizedEnd)
     }
 
     // Initialize curve to match preview
     if (initialControlSvg && onArrowCurveChange) {
       const normalizedControl = toNormalizedCoords(initialControlSvg.x, initialControlSvg.y)
-      curveControlRef.current = normalizedControl
       onArrowCurveChange(role, normalizedControl)
     }
-
-    let latestClientPoint: ClientPoint | null = null
 
     const handleMove = (event: MouseEvent | TouchEvent) => {
       event.preventDefault() // Prevent scrolling on mobile
 
-      const clientPoint = getClientPoint(event)
-      if (!clientPoint) return
-      latestClientPoint = clientPoint
-
-      if (arrowRafRef.current !== null) return
-
+      if (arrowRafRef.current) {
+        cancelAnimationFrame(arrowRafRef.current)
+      }
       arrowRafRef.current = requestAnimationFrame(() => {
-        arrowRafRef.current = null
-        if (!latestClientPoint) return
-        const pos = clientToSvgCoords(latestClientPoint)
+        const pos = getEventPosition(event)
 
         // Check if position is off court (outside padding bounds) using raw SVG coordinates
         const isOffCourt = pos.x < padding || pos.x > padding + courtWidth ||
                           pos.y < padding || pos.y > padding + courtHeight
 
-        // Only update React state when the flag actually flips.
-        const wasOffCourt = isDraggingOffCourtRef.current[role] ?? false
-        if (wasOffCourt !== isOffCourt) {
-          setIsDraggingOffCourt(prev => ({ ...prev, [role]: isOffCourt }))
-          isDraggingOffCourtRef.current[role] = isOffCourt
-        }
+        // Update both state and ref (ref is needed for handleEnd closure)
+        setIsDraggingOffCourt(prev => ({ ...prev, [role]: isOffCourt }))
+        isDraggingOffCourtRef.current[role] = isOffCourt
 
-        const normalizedPos = constrainHomePosition(toNormalizedCoords(pos.x, pos.y))
+        const normalizedPos = toNormalizedCoords(pos.x, pos.y)
 
         // Always update visual position immediately for smooth feedback
-        if (!hasMeaningfulPositionDelta(arrowDragPositionRef.current, normalizedPos)) {
-          return
-        }
-        arrowDragPositionRef.current = normalizedPos
         setArrowDragPosition(normalizedPos)
 
-        // Keep the persisted curve synced with the live helper arrow while creating
-        // a brand new arrow from the preview affordance.
-        if (isCreatingNewArrow && onArrowCurveChange) {
-          const controlSvg = {
-            x: (dragStartSvg.x + pos.x) / 2,
-            y: Math.min(dragStartSvg.y, pos.y) - (previewCurveHeight * 0.65),
-          }
-          const nextControl = toNormalizedCoords(controlSvg.x, controlSvg.y)
-          if (hasMeaningfulCurveDelta(curveControlRef.current, nextControl)) {
-            curveControlRef.current = nextControl
-            onArrowCurveChange(role, nextControl)
-          }
+        // Throttle state updates to parent (matches player drag throttle rate)
+        const now = Date.now()
+        if (!isOffCourt && now - arrowLastUpdateRef.current >= THROTTLE_MS) {
+          onArrowChange(role, normalizedPos)
+          arrowLastUpdateRef.current = now
         }
       })
     }
@@ -1666,7 +1161,6 @@ export function VolleyballCourt({
       // Re-enable page scroll
       document.body.style.overflow = ''
       document.body.style.touchAction = ''
-      latestClientPoint = null
 
       // Use ref instead of state to get current value (avoids stale closure)
       const wasOffCourt = isDraggingOffCourtRef.current[role]
@@ -1675,11 +1169,6 @@ export function VolleyballCourt({
       if (wasOffCourt && onArrowChange) {
         onArrowChange(role, null)
         markArrowDeleted() // Dismiss the delete hint permanently
-      } else {
-        const finalArrowPos = arrowDragPositionRef.current
-        if (finalArrowPos) {
-          onArrowChange(role, finalArrowPos)
-        }
       }
 
       // On mobile, show the curve handle after dragging an arrow (unless deleted)
@@ -1687,10 +1176,9 @@ export function VolleyballCourt({
         setTappedRole(role)
       }
 
-      clearPreviewStateForRole(role)
+      // Reset throttle timer for next drag
+      arrowLastUpdateRef.current = 0
 
-      arrowDragPositionRef.current = null
-      curveControlRef.current = null
       setDraggingArrowRole(null)
       setArrowDragPosition(null)
       setIsDraggingOffCourt(prev => ({ ...prev, [role]: false }))
@@ -1706,7 +1194,7 @@ export function VolleyballCourt({
     document.addEventListener('mouseup', handleEnd)
       document.addEventListener('touchmove', handleMove, { passive: false })
       document.addEventListener('touchend', handleEnd)
-  }, [onArrowChange, onArrowCurveChange, getClientPoint, clientToSvgCoords, toNormalizedCoords, incrementDragCount, markNextStepDragLearned, isMobile, arrows, arrowCurves, isPreviewingMovement, displayPositions, positions, toSvgCoords, clearPreviewStateForRole])
+  }, [onArrowChange, onArrowCurveChange, getEventPosition, toNormalizedCoords, isDraggingOffCourt, incrementDragCount, isMobile])
 
   // Handle curve drag - dragging the curve handle adjusts direction and intensity
   const handleCurveDragStart = useCallback((role: Role, e: React.MouseEvent | React.TouchEvent) => {
@@ -1723,52 +1211,28 @@ export function VolleyballCourt({
     if (!startPos || !endPos) return
 
     setDraggingCurveRole(role)
-    curveControlRef.current = arrowCurves[role] ?? null
-
-    let latestClientPoint: ClientPoint | null = null
 
     const handleMove = (moveEvent: MouseEvent | TouchEvent) => {
       moveEvent.preventDefault()
 
-      const clientPoint = getClientPoint(moveEvent)
-      if (!clientPoint) return
-      latestClientPoint = clientPoint
+      // Use shared coordinate conversion (screen → SVG → normalized)
+      const svgPos = getEventPosition(moveEvent)
+      const desiredMidpoint = toNormalizedCoords(svgPos.x, svgPos.y)
 
-      if (curveRafRef.current !== null) return
+      // For a quadratic bezier, midpoint at t=0.5 is: 0.25*start + 0.5*control + 0.25*end
+      // To make the midpoint appear at the mouse position, we need to solve for control:
+      // control = 2*midpoint - 0.5*start - 0.5*end
+      const controlX = 2 * desiredMidpoint.x - 0.5 * startPos.x - 0.5 * endPos.x
+      const controlY = 2 * desiredMidpoint.y - 0.5 * startPos.y - 0.5 * endPos.y
 
-      curveRafRef.current = requestAnimationFrame(() => {
-        curveRafRef.current = null
-        if (!latestClientPoint) return
+      // Clamp control point to court bounds (with some margin)
+      const clampedControlX = Math.max(-0.5, Math.min(1.5, controlX))
+      const clampedControlY = Math.max(-0.2, Math.min(1.2, controlY))
 
-        // Use shared coordinate conversion (screen → SVG → normalized)
-        const svgPos = clientToSvgCoords(latestClientPoint)
-        const desiredMidpoint = toNormalizedCoords(svgPos.x, svgPos.y)
-
-        // For a quadratic bezier, midpoint at t=0.5 is: 0.25*start + 0.5*control + 0.25*end
-        // To make the midpoint appear at the mouse position, solve for control:
-        // control = 2*midpoint - 0.5*start - 0.5*end
-        const controlX = 2 * desiredMidpoint.x - 0.5 * startPos.x - 0.5 * endPos.x
-        const controlY = 2 * desiredMidpoint.y - 0.5 * startPos.y - 0.5 * endPos.y
-
-        // Clamp control point to court bounds (with some margin)
-        const clampedControlX = Math.max(-0.5, Math.min(1.5, controlX))
-        const clampedControlY = Math.max(-0.2, Math.min(1.2, controlY))
-        const nextControl = { x: clampedControlX, y: clampedControlY }
-        if (!hasMeaningfulPositionDelta(curveControlRef.current, nextControl)) {
-          return
-        }
-        curveControlRef.current = nextControl
-        onArrowCurveChange(role, nextControl)
-      })
+      onArrowCurveChange(role, { x: clampedControlX, y: clampedControlY })
     }
 
     const handleEnd = () => {
-      if (curveRafRef.current) {
-        cancelAnimationFrame(curveRafRef.current)
-        curveRafRef.current = null
-      }
-      latestClientPoint = null
-      curveControlRef.current = null
       setDraggingCurveRole(null)
       document.removeEventListener('mousemove', handleMove)
       document.removeEventListener('mouseup', handleEnd)
@@ -1780,7 +1244,7 @@ export function VolleyballCourt({
     document.addEventListener('mouseup', handleEnd)
     document.addEventListener('touchmove', handleMove, { passive: false })
     document.addEventListener('touchend', handleEnd)
-  }, [onArrowCurveChange, positions, arrows, arrowCurves, getClientPoint, clientToSvgCoords, toNormalizedCoords, isPreviewingMovement])
+  }, [onArrowCurveChange, positions, arrows, getEventPosition])
 
   // Handle mobile touch - drag to move, tap to open context menu
   const handleMobileTouchStart = useCallback((role: Role, e: React.TouchEvent) => {
@@ -1805,31 +1269,7 @@ export function VolleyballCourt({
     longPressTouchStartRef.current = { x: startX, y: startY, role }
 
     const MOVE_THRESHOLD = 10
-    const HOLD_TO_PRIME_MS = 250
     let hasStartedDrag = false
-    let holdActivated = false
-
-    // Hold-to-prime arrow drawing on mobile.
-    // After 250ms hold (without movement), next court tap places arrow endpoint.
-    if (primeTimerRef.current) {
-      clearTimeout(primeTimerRef.current)
-    }
-    primeTimerRef.current = setTimeout(() => {
-      if (hasStartedDrag) return
-      holdActivated = true
-      ignoreNextPrimedTapRef.current = true
-
-      const tokenPos = displayPositions[role]
-      if (tokenPos) {
-        activateLongPress(role, toSvgCoords(tokenPos))
-      }
-      setPrimedRole(role)
-      setTappedRole(null)
-      if (onContextPlayerChange) {
-        onContextPlayerChange(null)
-        setContextAnchorPosition(null)
-      }
-    }, HOLD_TO_PRIME_MS)
 
     const handleMove = (ev: TouchEvent) => {
       const currentTouch = ev.touches[0]
@@ -1838,13 +1278,8 @@ export function VolleyballCourt({
       const distance = Math.sqrt(dx * dx + dy * dy)
 
       // If finger moved past threshold, start player drag
-      if (distance > MOVE_THRESHOLD && !hasStartedDrag && !holdActivated) {
+      if (distance > MOVE_THRESHOLD && !hasStartedDrag) {
         hasStartedDrag = true
-        if (primeTimerRef.current) {
-          clearTimeout(primeTimerRef.current)
-          primeTimerRef.current = null
-        }
-        clearLongPress()
 
         // Start normal player drag
         handleDragStart(role, { nativeEvent: ev, preventDefault: () => {}, stopPropagation: () => {} } as unknown as React.TouchEvent)
@@ -1858,18 +1293,8 @@ export function VolleyballCourt({
     const handleEnd = () => {
       document.removeEventListener('touchmove', handleMove)
       document.removeEventListener('touchend', handleEnd)
-      if (primeTimerRef.current) {
-        clearTimeout(primeTimerRef.current)
-        primeTimerRef.current = null
-      }
 
-      // Hold activated: keep primed state for the next tap-to-place.
-      if (holdActivated) {
-        clearLongPress()
-        return
-      }
-
-      // If we didn't start a drag or hold-prime, open the context menu (bottom sheet)
+      // If we didn't start a drag, open the context menu (bottom sheet)
       if (!hasStartedDrag) {
         if (navigator.vibrate) {
           navigator.vibrate(30)
@@ -1887,10 +1312,6 @@ export function VolleyballCourt({
     handleDragStart,
     onContextPlayerChange,
     handleContextPlayerToggle,
-    displayPositions,
-    activateLongPress,
-    toSvgCoords,
-    clearLongPress,
   ])
 
   // Handle away player drag end
@@ -1900,17 +1321,14 @@ export function VolleyballCourt({
       awayRafRef.current = null
     }
 
-    const role = draggingAwayRoleRef.current
-    const finalPos = dragAwayPositionRef.current
-    if (role && finalPos && onAwayPositionChangeRef.current) {
-      onAwayPositionChangeRef.current(role, finalPos)
+    // Final update on drag end
+    if (draggingAwayRole && dragAwayPosition && onAwayPositionChangeRef.current) {
+      onAwayPositionChangeRef.current(draggingAwayRole, dragAwayPosition)
     }
 
-    draggingAwayRoleRef.current = null
-    dragAwayPositionRef.current = null
     setDraggingAwayRole(null)
     setDragAwayPosition(null)
-  }, [])
+  }, [draggingAwayRole, dragAwayPosition])
 
   // Handle away player drag start
   const handleAwayDragStart = useCallback((role: Role, e: React.MouseEvent | React.TouchEvent) => {
@@ -1925,35 +1343,28 @@ export function VolleyballCourt({
     const pos = getEventPosition(e.nativeEvent as MouseEvent | TouchEvent)
     const currentPos = toSvgCoords(awayPositions[role] || { x: 0.5, y: 0.25 })
 
-    draggingAwayRoleRef.current = role
     setDraggingAwayRole(role)
     awayDragOffsetRef.current = {
       x: currentPos.x - pos.x,
       y: currentPos.y - pos.y
     }
-    dragAwayPositionRef.current = null
     setDragAwayPosition(null)
+    awayLastUpdateRef.current = Date.now()
 
     // Prevent page scroll during drag
     document.body.style.overflow = 'hidden'
     document.body.style.touchAction = 'none'
 
-    let latestClientPoint: ClientPoint | null = null
-
-    // Smooth drag handler using requestAnimationFrame with event coalescing
+    // Smooth drag handler using requestAnimationFrame
     const handleMove = (e: MouseEvent | TouchEvent) => {
       e.preventDefault()
 
-      const clientPoint = getClientPoint(e)
-      if (!clientPoint) return
-      latestClientPoint = clientPoint
-
-      if (awayRafRef.current !== null) return
+      if (awayRafRef.current) {
+        cancelAnimationFrame(awayRafRef.current)
+      }
 
       awayRafRef.current = requestAnimationFrame(() => {
-        awayRafRef.current = null
-        if (!latestClientPoint) return
-        const pos = clientToSvgCoords(latestClientPoint)
+        const pos = getEventPosition(e)
         const newX = pos.x + awayDragOffsetRef.current.x
         const newY = pos.y + awayDragOffsetRef.current.y
 
@@ -1961,11 +1372,16 @@ export function VolleyballCourt({
         const normalizedPos = constrainAwayPosition(toNormalizedCoords(newX, newY))
 
         // Update visual position immediately (smooth)
-        if (!hasMeaningfulPositionDelta(dragAwayPositionRef.current, normalizedPos)) {
-          return
-        }
-        dragAwayPositionRef.current = normalizedPos
         setDragAwayPosition(normalizedPos)
+
+        // Throttle state updates to parent
+        const now = Date.now()
+        if (now - awayLastUpdateRef.current >= THROTTLE_MS) {
+          if (onAwayPositionChangeRef.current) {
+            onAwayPositionChangeRef.current(role, normalizedPos)
+          }
+          awayLastUpdateRef.current = now
+        }
       })
     }
 
@@ -1973,7 +1389,6 @@ export function VolleyballCourt({
       document.body.style.overflow = ''
       document.body.style.touchAction = ''
 
-      latestClientPoint = null
       handleAwayDragEnd()
       document.removeEventListener('mousemove', handleMove)
       document.removeEventListener('mouseup', handleEnd)
@@ -1985,7 +1400,7 @@ export function VolleyballCourt({
     document.addEventListener('mouseup', handleEnd)
     document.addEventListener('touchmove', handleMove, { passive: false })
     document.addEventListener('touchend', handleEnd)
-  }, [isEditable, awayPositions, getEventPosition, getClientPoint, clientToSvgCoords, handleAwayDragEnd, toSvgCoords, toNormalizedCoords])
+  }, [isEditable, awayPositions, getEventPosition, handleAwayDragEnd])
 
   // Constrain attack ball position: must stay on opponent side (y < 0.5) and near net
   const constrainAttackBallPosition = useCallback((pos: Position): Position => {
@@ -1998,22 +1413,20 @@ export function VolleyballCourt({
   }, [])
 
   // Default attack ball position when first created
-  const DEFAULT_ATTACK_BALL_POSITION: Position = useMemo(() => ({ x: 0.5, y: 0.35 }), [])
+  const DEFAULT_ATTACK_BALL_POSITION: Position = { x: 0.5, y: 0.35 }
 
   // Handle attack ball drag end
   const handleAttackBallDragEnd = useCallback(() => {
-    if (!draggingAttackBallRef.current) return
+    if (!draggingAttackBall) return
 
-    const finalPosition = attackBallDragPositionRef.current
+    const finalPosition = attackBallDragPosition
     if (finalPosition && onAttackBallChangeRef.current) {
       onAttackBallChangeRef.current(finalPosition)
     }
 
-    draggingAttackBallRef.current = false
-    attackBallDragPositionRef.current = null
     setDraggingAttackBall(false)
     setAttackBallDragPosition(null)
-  }, [])
+  }, [draggingAttackBall, attackBallDragPosition])
 
   // Handle attack ball drag start
   const handleAttackBallDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
@@ -2026,12 +1439,11 @@ export function VolleyballCourt({
     }
     e.stopPropagation()
 
-    draggingAttackBallRef.current = true
     setDraggingAttackBall(true)
+    attackBallLastUpdateRef.current = Date.now()
 
     // If no attack ball position, create one at default location
     const currentBallPos = attackBallPosition || DEFAULT_ATTACK_BALL_POSITION
-    attackBallDragPositionRef.current = currentBallPos
     setAttackBallDragPosition(currentBallPos)
 
     // If first time creating, notify parent
@@ -2043,30 +1455,29 @@ export function VolleyballCourt({
     document.body.style.overflow = 'hidden'
     document.body.style.touchAction = 'none'
 
-    let latestClientPoint: ClientPoint | null = null
-
-    // Smooth drag handler using requestAnimationFrame with event coalescing
+    // Smooth drag handler using requestAnimationFrame
     const handleMove = (e: MouseEvent | TouchEvent) => {
       e.preventDefault()
 
-      const clientPoint = getClientPoint(e)
-      if (!clientPoint) return
-      latestClientPoint = clientPoint
-
-      if (attackBallRafRef.current !== null) return
+      if (attackBallRafRef.current) {
+        cancelAnimationFrame(attackBallRafRef.current)
+      }
 
       attackBallRafRef.current = requestAnimationFrame(() => {
-        attackBallRafRef.current = null
-        if (!latestClientPoint) return
-        const pos = clientToSvgCoords(latestClientPoint)
+        const pos = getEventPosition(e)
         const normalizedPos = constrainAttackBallPosition(toNormalizedCoords(pos.x, pos.y))
 
         // Update visual position immediately
-        if (!hasMeaningfulPositionDelta(attackBallDragPositionRef.current, normalizedPos)) {
-          return
-        }
-        attackBallDragPositionRef.current = normalizedPos
         setAttackBallDragPosition(normalizedPos)
+
+        // Throttle state updates to parent
+        const now = Date.now()
+        if (now - attackBallLastUpdateRef.current >= THROTTLE_MS) {
+          if (onAttackBallChangeRef.current) {
+            onAttackBallChangeRef.current(normalizedPos)
+          }
+          attackBallLastUpdateRef.current = now
+        }
       })
     }
 
@@ -2074,7 +1485,6 @@ export function VolleyballCourt({
       document.body.style.overflow = ''
       document.body.style.touchAction = ''
 
-      latestClientPoint = null
       handleAttackBallDragEnd()
       document.removeEventListener('mousemove', handleMove)
       document.removeEventListener('mouseup', handleEnd)
@@ -2086,7 +1496,7 @@ export function VolleyballCourt({
     document.addEventListener('mouseup', handleEnd)
     document.addEventListener('touchmove', handleMove, { passive: false })
     document.addEventListener('touchend', handleEnd)
-  }, [mode, currentPhase, attackBallPosition, getClientPoint, clientToSvgCoords, constrainAttackBallPosition, toNormalizedCoords, handleAttackBallDragEnd, DEFAULT_ATTACK_BALL_POSITION])
+  }, [mode, currentPhase, attackBallPosition, getEventPosition, constrainAttackBallPosition, toNormalizedCoords, handleAttackBallDragEnd])
 
   // Cleanup on unmount
   useEffect(() => {
@@ -2096,9 +1506,6 @@ export function VolleyballCourt({
       }
       if (arrowRafRef.current) {
         cancelAnimationFrame(arrowRafRef.current)
-      }
-      if (curveRafRef.current) {
-        cancelAnimationFrame(curveRafRef.current)
       }
       if (awayRafRef.current) {
         cancelAnimationFrame(awayRafRef.current)
@@ -2111,7 +1518,6 @@ export function VolleyballCourt({
 
   return (
     <div
-      ref={debugOverlayHostRef}
       className="relative w-full h-full flex items-center justify-center"
       style={{
         touchAction: 'none',
@@ -2119,48 +1525,11 @@ export function VolleyballCourt({
         WebkitUserSelect: 'none'
       }}
     >
-      {showDebugOverlay && (
-        <MotionDebugPanel
-          mode={mode}
-          animationMode={animationMode}
-          displaySource={displaySource}
-          isBezierAnimating={isBezierAnimating}
-          isPreviewingMovement={isPreviewingMovement}
-          hasPlayedPositions={Boolean(playedPositions)}
-          animationTrigger={animationTrigger}
-          isRafActive={Boolean(bezierRafRef.current)}
-          lastFrameMs={playLastFrameRef.current ?? undefined}
-          draggingRole={draggingRole}
-          draggingArrowRole={draggingArrowRole}
-          draggingCurveRole={draggingCurveRole}
-          whiteboardTuning={whiteboardCollisionTuning}
-          onWhiteboardTuningChange={updateWhiteboardCollisionTuning}
-          onResetWhiteboardTuning={resetWhiteboardCollisionTuning}
-          tuning={playTuning}
-          onTuningChange={updatePlayTuning}
-          onResetPreviewTuning={resetPreviewTuning}
-          onResetSharedTuning={resetSharedTuning}
-          roles={activeRoles.map((role) => {
-            const anim = playAnimRef.current[role]
-            const locked = Boolean(playLockedPathsRef.current[role])
-            const progress = anim && anim.length > 0 ? anim.distance / anim.length : 0
-            return {
-              role,
-              hasLockedPath: locked,
-              done: Boolean(anim?.done),
-              progress,
-              currentSpeed: anim?.currentSpeed ?? 0,
-              targetSpeed: anim?.targetSpeed ?? 0,
-              lateralOffset: anim?.lateralOffset ?? 0,
-            }
-          })}
-        />
-      )}
       <svg
         ref={svgRef}
         data-court-svg
         viewBox={`0 ${vbY} ${viewBoxWidth} ${vbH}`}
-        className="select-none w-full h-full max-h-full max-w-full"
+        className="select-none w-full h-auto sm:w-full sm:h-full"
         style={{
           touchAction: 'none',
           display: 'block',
@@ -2207,6 +1576,17 @@ export function VolleyballCourt({
           }
         }}
       >
+        {/* Padding area background - covers entire viewBox area */}
+        <rect
+          x={0}
+          y={vbY}
+          width={viewBoxWidth}
+          height={vbH}
+          fill="currentColor"
+          opacity="0.05"
+          className="text-foreground"
+        />
+
         {/* Drop zone overlay - shows during arrow drag to teach delete gesture */}
         <DropZoneOverlay
           visible={draggingArrowRole !== null}
@@ -2216,75 +1596,251 @@ export function VolleyballCourt({
           padding={padding}
         />
 
-        <CourtBaseLayer
-          padding={padding}
-          courtWidth={courtWidth}
-          courtHeight={courtHeight}
-          showZones={showZones}
-          rotation={rotation}
-          baseOrder={resolvedBaseOrder}
-          activeRoles={activeRoles}
-          replacedMB={replacedMB}
-          isBezierAnimating={isBezierAnimating}
-          arrows={arrows}
-          displayPositions={legalityDisplayPositions}
-          lineColor={lineColor}
-        />
+        {/* Court background and lines */}
+        <g transform={`translate(${padding}, ${padding})`}>
+          <CourtGrid
+            width={courtWidth}
+            height={courtHeight}
+            showZones={showZones}
+            rotation={rotation}
+            baseOrder={resolvedBaseOrder}
+            fullCourt={true}
+          />
 
-        <LegalityViolationLayer
-          mode={mode}
-          isBezierAnimating={isBezierAnimating}
-          legalityViolations={effectiveLegalityViolations}
-          displayPositions={legalityDisplayPositions}
-          toSvgCoords={toSvgCoords}
-        />
+          {/* Lines connecting players to their home zone tags - rendered after background but before zone labels */}
+          {/* Hide when: animating, or any arrows exist (movement planned makes zone lines confusing) */}
+          {showZones && rotation && !isBezierAnimating && !Object.values(arrows).some(Boolean) && (
+            <g>
+              {activeRoles.map(role => {
+                // Libero inherits the zone from the MB they're replacing
+                const zoneRole = (role === 'L' && replacedMB) ? replacedMB : role
+                const zone = getRoleZone(rotation, zoneRole, resolvedBaseOrder)
+                const playerPos = displayPositions[role]
 
-        <MovementArrowLayer
-          activeRoles={activeRoles}
-          displayPositions={displayPositions}
-          mode={mode}
-          isBezierAnimating={isBezierAnimating}
-          isPreviewingMovement={isPreviewingMovement}
-          playLockedPaths={playLockedPathsRef.current}
-          draggingRole={draggingRole}
-          dragPosition={dragPosition}
-          draggingArrowRole={draggingArrowRole}
-          arrowDragPosition={arrowDragPosition}
-          arrows={arrows}
-          arrowCurves={arrowCurves}
-          curveStrength={playTuning.curveStrength}
-          showArrows={showArrows}
-          durationMs={cfg.durationMs}
-          easingCss={cfg.easingCss}
-          debugHitboxes={debugHitboxes}
-          toSvgCoords={toSvgCoords}
-          onArrowDragStart={handleArrowDragStart}
-          onArrowHoverChange={setHoveredArrowRole}
-          getRoleColor={(role) => ROLE_INFO[role].color}
-        />
+                // Skip if position is not available
+                if (!playerPos) return null
 
-        <ArrowPreviewOverlay
-          activeRoles={activeRoles}
-          displayPositions={displayPositions}
-          draggingRole={draggingRole}
-          dragPosition={dragPosition}
-          draggingArrowRole={draggingArrowRole}
-          arrowDragPosition={arrowDragPosition}
-          arrows={arrows}
-          previewVisible={previewVisible}
-          tappedRole={tappedRole}
-          isMobile={isMobile}
-          showPosition={showPosition}
-          showPlayer={showPlayer}
-          showNumber={showNumber}
-          tokenScale={tokenScale}
-          debugHitboxes={debugHitboxes}
-          toSvgCoords={toSvgCoords}
-          getPlayerInfo={getPlayerInfo}
-          onArrowChange={onArrowChange}
-          onArrowDragStart={handleArrowDragStart}
-          onPreviewHover={handlePreviewHover}
-        />
+                // Player center position (convert from normalized to court coordinates, no padding since we're inside transform)
+                const playerCenterX = playerPos.x * courtWidth
+                const playerCenterY = playerPos.y * courtHeight
+
+                // Zone label positions (synchronized with CourtGrid.tsx)
+                const zoneLabelPositions: Record<number, { x: number; y: number }> = {
+                  1: { x: courtWidth * 0.8333, y: courtHeight * 0.8333 }, // Back right
+                  2: { x: courtWidth * 0.8333, y: courtHeight * 0.5833 }, // Front right
+                  3: { x: courtWidth * 0.5000, y: courtHeight * 0.5833 }, // Front center
+                  4: { x: courtWidth * 0.1667, y: courtHeight * 0.5833 }, // Front left
+                  5: { x: courtWidth * 0.1667, y: courtHeight * 0.8333 }, // Back left
+                  6: { x: courtWidth * 0.5000, y: courtHeight * 0.8333 }, // Back center
+                }
+
+                const zonePos = zoneLabelPositions[zone]
+                if (!zonePos) return null
+
+                return (
+                  <line
+                    key={role}
+                    x1={playerCenterX}
+                    y1={playerCenterY}
+                    x2={zonePos.x}
+                    y2={zonePos.y}
+                    stroke={lineColor}
+                    strokeWidth={1.5}
+                    strokeDasharray="4,4"
+                    opacity={0.3}
+                    style={{ pointerEvents: 'none' }}
+                  />
+                )
+              })}
+            </g>
+          )}
+        </g>
+
+        {/* Legality violation indicators - outside transform group to match player token coordinates */}
+        {/* Hide during animation since positions are changing */}
+        {legalityViolations.length > 0 && mode === 'whiteboard' && !isBezierAnimating && (
+          <>
+            {/* Draw violation lines */}
+            {legalityViolations.map((violation, idx) => {
+              if (!violation.roles) return null
+              const [role1, role2] = violation.roles
+              const pos1 = displayPositions[role1]
+              const pos2 = displayPositions[role2]
+              if (!pos1 || !pos2) return null
+
+              const svgPos1 = toSvgCoords(pos1)
+              const svgPos2 = toSvgCoords(pos2)
+
+              return (
+                <line
+                  key={`line-${idx}`}
+                  x1={svgPos1.x}
+                  y1={svgPos1.y}
+                  x2={svgPos2.x}
+                  y2={svgPos2.y}
+                  stroke="#ef4444"
+                  strokeWidth={2}
+                  strokeDasharray="4,4"
+                  opacity={0.6}
+                />
+              )
+            })}
+
+          </>
+        )}
+
+        {/* Next-step arrows - rendered FIRST so they appear below players */}
+        {activeRoles.map(role => {
+          const hasHomePosition = displayPositions[role] !== undefined
+          if (mode === 'simulation' && !hasHomePosition) return null
+
+          const homeBasePos = displayPositions[role] || { x: 0.5, y: 0.75 }
+          const homeSvgPos = toSvgCoords(draggingRole === role && dragPosition ? dragPosition : homeBasePos)
+
+          // Arrows only for home team in whiteboard mode
+          const activeArrowTarget = draggingArrowRole === role && arrowDragPosition ? arrowDragPosition : arrows[role]
+          const defaultHandleSvg = { x: homeSvgPos.x, y: Math.max(12, homeSvgPos.y - 28) }
+          const arrowEndSvg = activeArrowTarget ? toSvgCoords(activeArrowTarget) : defaultHandleSvg
+
+          // Get the control point for the arrow curve
+          // If user has set a control point, use it directly
+          // Otherwise, auto-calculate the best curve
+          const curveConfig = arrowCurves[role]
+          const pickBestControl = () => {
+            if (!activeArrowTarget) return null
+
+            // If user has manually set a control point, use it directly
+            if (curveConfig) {
+              return { x: curveConfig.x, y: curveConfig.y }
+            }
+
+            const startPct = draggingRole === role && dragPosition ? dragPosition : homeBasePos
+            const endPct = activeArrowTarget
+            const dx = endPct.x - startPct.x
+            const dy = endPct.y - startPct.y
+            const dist = Math.sqrt(dx * dx + dy * dy)
+            if (dist < 0.0001) return null
+
+            const dirX = dx / dist
+            const dirY = dy / dist
+            const perp = { x: -dirY, y: dirX }
+            const mid = { x: (startPct.x + endPct.x) / 2, y: (startPct.y + endPct.y) / 2 }
+
+            // Auto-calculate: choose best curve based on avoiding other players
+            const bend = Math.min(0.2, dist * 0.35) // Default bend
+            const candidates: ({ control: { x: number; y: number } | null; side: 'left' | 'right' | 'straight' })[] = [
+              { control: null, side: 'straight' },
+              { control: { x: mid.x + perp.x * bend, y: mid.y + perp.y * bend }, side: 'left' },
+              { control: { x: mid.x - perp.x * bend, y: mid.y - perp.y * bend }, side: 'right' },
+            ]
+
+            const others = ROLES
+              .filter(r => r !== role)
+              .map(r => displayPositions[r])
+              .filter((pos): pos is { x: number; y: number } => pos !== undefined)
+
+            const center = { x: 0.5, y: 0.75 } // Center of home half
+            const vecToCenter = { x: center.x - startPct.x, y: center.y - startPct.y }
+            const centerSide = Math.sign(dirX * vecToCenter.y - dirY * vecToCenter.x) || 0
+
+            const samplePoint = (t: number, control: { x: number; y: number } | null) => {
+              if (!control) {
+                return {
+                  x: startPct.x + (endPct.x - startPct.x) * t,
+                  y: startPct.y + (endPct.y - startPct.y) * t,
+                }
+              }
+              const oneMinusT = 1 - t
+              return {
+                x: oneMinusT * oneMinusT * startPct.x + 2 * oneMinusT * t * control.x + t * t * endPct.x,
+                y: oneMinusT * oneMinusT * startPct.y + 2 * oneMinusT * t * control.y + t * t * endPct.y,
+              }
+            }
+
+            const scoreCandidate = (candidate: (typeof candidates)[number]) => {
+              let minDist = Number.POSITIVE_INFINITY
+              for (let i = 0; i <= 10; i++) {
+                const t = i / 10
+                const p = samplePoint(t, candidate.control)
+                for (const other of others) {
+                  const d = Math.hypot(p.x - other.x, p.y - other.y)
+                  if (d < minDist) minDist = d
+                }
+              }
+
+              // Bonus if concave side faces court center
+              const candidateSide = candidate.control
+                ? Math.sign(dirX * (candidate.control.y - startPct.y) - dirY * (candidate.control.x - startPct.x)) || 0
+                : 0
+              const concaveBonus = centerSide !== 0 && candidateSide === centerSide ? 5 : 0
+
+              // Slight preference for straight if very short
+              const straightBonus = !candidate.control && dist < 0.08 ? 2 : 0
+
+              return minDist + concaveBonus + straightBonus
+            }
+
+            let best = candidates[0]
+            let bestScore = scoreCandidate(best)
+            for (let i = 1; i < candidates.length; i++) {
+              const s = scoreCandidate(candidates[i])
+              if (s > bestScore) {
+                best = candidates[i]
+                bestScore = s
+              }
+            }
+
+            return best.control
+          }
+
+          const chosenControl = pickBestControl()
+
+          // Guard against NaN values in control point
+          const validControl = chosenControl &&
+            !isNaN(chosenControl.x) && !isNaN(chosenControl.y)
+            ? chosenControl : null
+
+          // Show curve handle when arrow is hovered/selected (PC: arrow hover, Mobile: tap)
+          const showCurveHandleForRole = !!(activeArrowTarget && (
+            (isMobile && tappedRole === role) ||
+            (!isMobile && hoveredArrowRole === role) ||
+            draggingCurveRole === role
+          ))
+
+          // Guard against NaN values in positions
+          const hasValidPositions = activeArrowTarget &&
+            !isNaN(homeSvgPos.x) && !isNaN(homeSvgPos.y) &&
+            !isNaN(arrowEndSvg.x) && !isNaN(arrowEndSvg.y)
+
+          const arrowPath = hasValidPositions ? (
+            <g key={`arrow-${role}`} style={{
+              transition: showArrows ? `opacity ${cfg.durationMs}ms ${cfg.easingCss}` : 'none',
+              opacity: showArrows ? 1 : 0
+            }}>
+              <MovementArrow
+                start={{ x: homeSvgPos.x, y: homeSvgPos.y }}
+                end={arrowEndSvg}
+                control={validControl ? toSvgCoords(validControl) : null}
+                color={ROLE_INFO[role].color}
+                strokeWidth={3}
+                opacity={0.85}
+                isDraggable={true}
+                onDragStart={(e) => handleArrowDragStart(role, e)}
+                showCurveHandle={false}
+                onCurveDragStart={onArrowCurveChange ? (e) => handleCurveDragStart(role, e) : undefined}
+                onMouseEnter={() => setHoveredArrowRole(role)}
+                onMouseLeave={() => setHoveredArrowRole(null)}
+                debugHitboxes={debugHitboxes}
+              />
+            </g>
+          ) : null
+
+          return (
+            <g key={`arrows-${role}`}>
+              {arrowPath}
+            </g>
+          )
+        })}
 
         {/* Players and arrow handles - rendered SECOND so they appear on top */}
         {activeRoles.map(role => {
@@ -2306,25 +1862,89 @@ export function VolleyballCourt({
           const isDragging = draggingRole === role
 
           // Arrow handle positioning (for next-step mode)
+          const activeArrowTarget = draggingArrowRole === role && arrowDragPosition ? arrowDragPosition : arrows[role]
+          const defaultHandleSvg = { x: homeSvgPos.x, y: Math.max(12, homeSvgPos.y - 28) }
+          const arrowEndSvg = activeArrowTarget ? toSvgCoords(activeArrowTarget) : defaultHandleSvg
+
+          // Arrow preview (hover-revealed for new arrows) - uses same MovementArrow as final arrows
+          // Direction: peeks toward court center (left if player on right, right if player on left)
+          const isLeftSide = homeBasePos.x > 0.5
+
+          // Calculate token radius for arrow positioning
+          const hasAssignedPlayer = playerInfo.name !== undefined || playerInfo.number !== undefined
+          const isPositionOnlyMode = showPosition && (!showPlayer || !hasAssignedPlayer)
+          const baseTokenSize = isPositionOnlyMode ? 56 : 48
+          const actualTokenRadius = Math.max(baseTokenSize * tokenScale, 48) / 2
+
+          // Animation progress for this role's preview (0 = retracted, 1 = fully extended)
+          const rolePreviewProgress = previewProgress[role] ?? 0
+          // Show preview when: animating OR (actively dragging from preview) OR (mobile tapped)
+          // Also need no existing arrow (unless we're dragging from it)
+          // HIDE preview when any player token is being dragged
+          const canShowPreview = (!arrows[role] || draggingArrowRole === role) && onArrowChange && !draggingRole
+          const shouldRenderPreview = canShowPreview && (
+            rolePreviewProgress > 0 ||
+            draggingArrowRole === role ||
+            (isMobile && tappedRole === role)
+          )
+          // Hide preview visually once arrow exists (but keep in DOM for touch continuity)
+          const hidePreviewDuringDrag = draggingArrowRole === role && arrows[role]
+
+          // Preview geometry - slight upward curve peeking past token edge
+          // Interpolate peek distance based on animation progress
+          const maxPeekDistance = 28  // How far past token edge at full extension
+          const maxCurveHeight = 25   // How much the curve bows upward at full extension
+          const animatedPeekDistance = maxPeekDistance * rolePreviewProgress
+          const animatedCurveHeight = maxCurveHeight * rolePreviewProgress
+
+          // Preview endpoint (past edge, angled slightly up)
+          const previewEndSvg = {
+            x: homeSvgPos.x + (isLeftSide ? -(actualTokenRadius + animatedPeekDistance) : (actualTokenRadius + animatedPeekDistance)),
+            y: homeSvgPos.y - (10 * rolePreviewProgress)  // Slightly up, animated
+          }
+
+          // Control point for upward curve (midpoint pulled up)
+          const previewControlSvg = {
+            x: (homeSvgPos.x + previewEndSvg.x) / 2,
+            y: homeSvgPos.y - animatedCurveHeight
+          }
+
+          const arrowPreview = shouldRenderPreview ? (
+            <g style={{ opacity: hidePreviewDuringDrag ? 0 : 1 }}>
+              <MovementArrow
+                key={`preview-${role}`}
+                start={homeSvgPos}
+                end={previewEndSvg}
+                control={previewControlSvg}
+                color={ROLE_INFO[role].color}
+                strokeWidth={3}
+                opacity={0.85}
+                isDraggable={true}
+                onDragStart={(e) => handleArrowDragStart(role, e, previewEndSvg, previewControlSvg)}
+                onMouseEnter={() => !draggingRole && !draggingArrowRole && handlePreviewHover(role, true)}
+                debugHitboxes={debugHitboxes}
+              />
+            </g>
+          ) : null
+
           // Render HOME player
           const homePlayerNode = (
             <g key={`home-${role}`}>
+              {/* Arrow preview rendered FIRST so it appears behind the player token */}
+              {arrowPreview}
               <g
                 transform={`translate(${homeSvgPos.x}, ${homeSvgPos.y})`}
                 style={{
                   cursor: isEditable ? (isDragging ? 'grabbing' : 'grab') : 'pointer',
                   willChange: 'transform',
-                  transition: animationMode === 'css' && !isDragging && !isBezierAnimating
-                    ? `transform ${cfg.durationMs}ms ${cfg.easingCss}`
-                    : undefined
+                  transition: animationMode === 'css' && !isDragging ? `transform ${cfg.durationMs}ms ${cfg.easingCss}` : undefined
                 }}
               >
                 {/* Invisible SVG hit target for touch/mouse - sized to match actual token */}
                 {(() => {
                   // Calculate hit target size based on actual token dimensions
-                  const hasVisibleName = showPlayer && Boolean(playerInfo.name)
-                  const hasVisibleNumber = showNumber && playerInfo.number !== undefined
-                  const isPositionOnlyMode = !(hasVisibleName || hasVisibleNumber)
+                  const hasAssignedPlayer = playerInfo.name !== undefined || playerInfo.number !== undefined
+                  const isPositionOnlyMode = showPosition && (!showPlayer || !hasAssignedPlayer)
                   const baseTokenSize = isPositionOnlyMode ? 56 : 48
                   const hitTargetSize = Math.max(baseTokenSize * tokenScale, 48) // Min 48px for touch targets
                   const hitRadius = hitTargetSize / 2
@@ -2343,8 +1963,8 @@ export function VolleyballCourt({
                         touchAction: 'none',
                         WebkitTapHighlightColor: 'transparent'
                       }}
-                      onMouseEnter={() => !isMobile && !draggingRole && !draggingArrowRole && handlePreviewHover(role, 'token', true)}
-                      onMouseLeave={() => handlePreviewHover(role, 'token', false)}
+                      onMouseEnter={() => !isMobile && !draggingRole && !draggingArrowRole && handlePreviewHover(role, true)}
+                      onMouseLeave={() => handlePreviewHover(role, false)}
                       onClick={(e) => {
                         // MOBILE FIX: Skip click if touch just ended (prevents dual firing)
                         if (recentTouchRef.current) {
@@ -2427,9 +2047,7 @@ export function VolleyballCourt({
                   style={{
                     pointerEvents: 'none',
                     willChange: 'transform',
-                    transition: animationMode === 'css' && !isDragging && !isBezierAnimating
-                      ? `transform ${cfg.durationMs}ms ${cfg.easingCss}`
-                      : undefined
+                    transition: animationMode === 'css' && !isDragging ? `transform ${cfg.durationMs}ms ${cfg.easingCss}` : undefined
                   }}
                 >
                   <PlayerToken
@@ -2441,12 +2059,14 @@ export function VolleyballCourt({
                     playerNumber={playerInfo.number}
                     isDragging={isDragging}
                     isHovered={hoveredRole === role}
+                    onClick={() => onRoleClick?.(role)}
                     showPosition={showPosition}
                     showPlayer={showPlayer}
-                    showNumber={showNumber}
                     isCircle={circleTokens}
                     mobileScale={tokenScale}
-                    isInViolation={rolesInViolation.has(role)}
+                    isInViolation={legalityViolations.some(v =>
+                      v.roles && (v.roles[0] === role || v.roles[1] === role)
+                    )}
                     isContextOpen={contextPlayer === role}
                     tokenSize={tokenSize}
                     widthOffset={tokenWidthOffset}
@@ -2477,9 +2097,7 @@ export function VolleyballCourt({
                 style={{
                   cursor: isAwayEditable ? (isAwayDragging ? 'grabbing' : 'grab') : 'default',
                   willChange: 'transform',
-                  transition: animationMode === 'css' && !isAwayDragging && !isBezierAnimating
-                    ? `transform ${cfg.durationMs}ms ${cfg.easingCss}`
-                    : undefined
+                  transition: animationMode === 'css' && !isAwayDragging ? `transform ${cfg.durationMs}ms ${cfg.easingCss}` : undefined
                 }}
               >
                 {/* Invisible SVG hit target for touch/mouse - scaled to match home team */}
@@ -2520,7 +2138,6 @@ export function VolleyballCourt({
                     colorOverride="#4b5563"
                     showPosition={showPosition}
                     showPlayer={false} // Don't show player info for away team by default
-                    showNumber={false}
                     isCircle={circleTokens}
                     mobileScale={tokenScale}
                     isDragging={isAwayDragging}
@@ -2541,81 +2158,523 @@ export function VolleyballCourt({
           )
         })}
 
-        <CurveHandleLayer
-          activeRoles={activeRoles}
-          displayPositions={displayPositions}
-          mode={mode}
-          isBezierAnimating={isBezierAnimating}
-          isPreviewingMovement={isPreviewingMovement}
-          isMobile={isMobile}
-          tappedRole={tappedRole}
-          hoveredArrowRole={hoveredArrowRole}
-          draggingCurveRole={draggingCurveRole}
-          canEditCurves={Boolean(onArrowCurveChange)}
-          playLockedPaths={playLockedPathsRef.current}
-          draggingArrowRole={draggingArrowRole}
-          arrowDragPosition={arrowDragPosition}
-          arrows={arrows}
-          arrowCurves={arrowCurves}
-          draggingRole={draggingRole}
-          dragPosition={dragPosition}
-          curveStrength={playTuning.curveStrength}
-          showArrows={showArrows}
-          durationMs={cfg.durationMs}
-          easingCss={cfg.easingCss}
-          debugHitboxes={debugHitboxes}
-          toSvgCoords={toSvgCoords}
-          onCurveDragStart={handleCurveDragStart}
-          onArrowHoverChange={setHoveredArrowRole}
-        />
+        {/* Curve handles - rendered THIRD so they appear on top of players */}
+        {activeRoles.map(role => {
+          const hasHomePosition = displayPositions[role] !== undefined
+          if (mode === 'simulation' && !hasHomePosition) return null
 
-        <SimulationBallLayer
-          mode={mode}
-          ballPosition={ballPosition}
-          ballHeight={ballHeight}
-          ballContactFlash={ballContactFlash}
-          padding={padding}
-          courtWidth={courtWidth}
-          courtHeight={courtHeight}
-        />
+          const homeBasePos = displayPositions[role] || { x: 0.5, y: 0.75 }
+          const homeSvgPos = toSvgCoords(draggingRole === role && dragPosition ? dragPosition : homeBasePos)
 
-        <AttackBallLayer
-          mode={mode}
-          currentPhase={currentPhase}
-          attackBallPosition={attackBallPosition}
-          attackBallDragPosition={attackBallDragPosition}
-          draggingAttackBall={draggingAttackBall}
-          defaultPosition={DEFAULT_ATTACK_BALL_POSITION}
-          padding={padding}
-          courtWidth={courtWidth}
-          courtHeight={courtHeight}
-          debugHitboxes={debugHitboxes}
-          onAttackBallDragStart={handleAttackBallDragStart}
-        />
+          const activeArrowTarget = draggingArrowRole === role && arrowDragPosition ? arrowDragPosition : arrows[role]
+          if (!activeArrowTarget) return null
 
-        {/* First-time tip: teaches how to reveal the next-step arrow */}
-        {nextStepTooltipRole && !draggingArrowRole && (() => {
-          const rolePos = displayPositions[nextStepTooltipRole]
-          if (!rolePos) return null
+          const arrowEndSvg = toSvgCoords(activeArrowTarget)
 
-          const tooltipPlayer = getPlayerInfo(nextStepTooltipRole)
-          const hasVisibleName = showPlayer && Boolean(tooltipPlayer.name)
-          const hasVisibleNumber = showNumber && tooltipPlayer.number !== undefined
-          const isPositionOnlyMode = !(hasVisibleName || hasVisibleNumber)
-          const baseTokenSize = isPositionOnlyMode ? 56 : 48
-          const tokenRadius = Math.max(baseTokenSize * tokenScale, 48) / 2
+          // Get the control point for curve calculation
+          const curveConfig = arrowCurves[role]
+          const getControlPoint = () => {
+            if (curveConfig) {
+              return toSvgCoords({ x: curveConfig.x, y: curveConfig.y })
+            }
 
-          const tooltipPos = toSvgCoords(rolePos)
+            // Auto-calculate control point (simplified version)
+            const startPct = draggingRole === role && dragPosition ? dragPosition : homeBasePos
+            const endPct = activeArrowTarget
+            const dx = endPct.x - startPct.x
+            const dy = endPct.y - startPct.y
+            const dist = Math.sqrt(dx * dx + dy * dy)
+            if (dist < 0.0001) return null
+
+            const dirX = dx / dist
+            const dirY = dy / dist
+            const perp = { x: -dirY, y: dirX }
+            const mid = { x: (startPct.x + endPct.x) / 2, y: (startPct.y + endPct.y) / 2 }
+
+            const bend = Math.min(0.2, dist * 0.35)
+            const others = ROLES
+              .filter(r => r !== role)
+              .map(r => displayPositions[r])
+              .filter((pos): pos is { x: number; y: number } => pos !== undefined)
+
+            const center = { x: 0.5, y: 0.75 }
+            const vecToCenter = { x: center.x - startPct.x, y: center.y - startPct.y }
+            const centerSide = Math.sign(dirX * vecToCenter.y - dirY * vecToCenter.x) || 0
+
+            const candidates: ({ control: { x: number; y: number } | null; side: 'left' | 'right' | 'straight' })[] = [
+              { control: null, side: 'straight' },
+              { control: { x: mid.x + perp.x * bend, y: mid.y + perp.y * bend }, side: 'left' },
+              { control: { x: mid.x - perp.x * bend, y: mid.y - perp.y * bend }, side: 'right' },
+            ]
+
+            const samplePoint = (t: number, control: { x: number; y: number } | null) => {
+              if (!control) {
+                return { x: startPct.x + (endPct.x - startPct.x) * t, y: startPct.y + (endPct.y - startPct.y) * t }
+              }
+              const oneMinusT = 1 - t
+              return {
+                x: oneMinusT * oneMinusT * startPct.x + 2 * oneMinusT * t * control.x + t * t * endPct.x,
+                y: oneMinusT * oneMinusT * startPct.y + 2 * oneMinusT * t * control.y + t * t * endPct.y,
+              }
+            }
+
+            const scoreCandidate = (candidate: (typeof candidates)[number]) => {
+              let minDist = Number.POSITIVE_INFINITY
+              for (let i = 0; i <= 10; i++) {
+                const t = i / 10
+                const p = samplePoint(t, candidate.control)
+                for (const other of others) {
+                  const d = Math.hypot(p.x - other.x, p.y - other.y)
+                  if (d < minDist) minDist = d
+                }
+              }
+              const candidateSide = candidate.control
+                ? Math.sign(dirX * (candidate.control.y - startPct.y) - dirY * (candidate.control.x - startPct.x)) || 0
+                : 0
+              const concaveBonus = centerSide !== 0 && candidateSide === centerSide ? 5 : 0
+              const straightBonus = !candidate.control && dist < 0.08 ? 2 : 0
+              return minDist + concaveBonus + straightBonus
+            }
+
+            let best = candidates[0]
+            let bestScore = scoreCandidate(best)
+            for (let i = 1; i < candidates.length; i++) {
+              const s = scoreCandidate(candidates[i])
+              if (s > bestScore) { best = candidates[i]; bestScore = s }
+            }
+
+            return best.control ? toSvgCoords(best.control) : null
+          }
+
+          const controlSvg = getControlPoint()
+
+          // Guard against NaN values
+          if (isNaN(homeSvgPos.x) || isNaN(homeSvgPos.y) ||
+              isNaN(arrowEndSvg.x) || isNaN(arrowEndSvg.y)) {
+            return null
+          }
+
+          // Calculate curve midpoint (quadratic bezier at t=0.5)
+          const validControlSvg = controlSvg &&
+            !isNaN(controlSvg.x) && !isNaN(controlSvg.y)
+            ? controlSvg : null
+
+          const curveMidpoint = validControlSvg
+            ? {
+                x: 0.25 * homeSvgPos.x + 0.5 * validControlSvg.x + 0.25 * arrowEndSvg.x,
+                y: 0.25 * homeSvgPos.y + 0.5 * validControlSvg.y + 0.25 * arrowEndSvg.y
+              }
+            : {
+                x: (homeSvgPos.x + arrowEndSvg.x) / 2,
+                y: (homeSvgPos.y + arrowEndSvg.y) / 2
+              }
+
+          // Show curve handle when arrow is hovered/selected (PC: arrow hover, Mobile: tap)
+          const showCurveHandleForRole = !!(
+            (isMobile && tappedRole === role) ||
+            (!isMobile && hoveredArrowRole === role) ||
+            draggingCurveRole === role
+          )
+
+          if (!showCurveHandleForRole || !onArrowCurveChange) return null
+
           return (
-            <DragTooltip
-              visible={true}
-              x={tooltipPos.x}
-              y={tooltipPos.y}
-              anchorRadius={tokenRadius}
-              message="Drag me to show next step"
-            />
+            <g key={`curve-handle-${role}`} style={{
+              transition: showArrows ? `opacity ${cfg.durationMs}ms ${cfg.easingCss}` : 'none',
+              opacity: showArrows ? 1 : 0
+            }}>
+              {/* Visual handle */}
+              <circle
+                cx={curveMidpoint.x}
+                cy={curveMidpoint.y}
+                r={6}
+                fill="rgba(0,0,0,0.5)"
+                stroke="white"
+                strokeWidth={1.5}
+                style={{ pointerEvents: 'none' }}
+              />
+              {/* Inner dot */}
+              <circle
+                cx={curveMidpoint.x}
+                cy={curveMidpoint.y}
+                r={2.5}
+                fill="white"
+                style={{ pointerEvents: 'none' }}
+              />
+              {/* Invisible hit target for dragging (larger for touch) */}
+              <circle
+                cx={curveMidpoint.x}
+                cy={curveMidpoint.y}
+                r={18}
+                fill={debugHitboxes ? "rgba(57, 255, 20, 0.3)" : "transparent"}
+                stroke={debugHitboxes ? "rgba(57, 255, 20, 0.8)" : "none"}
+                strokeWidth={debugHitboxes ? 2 : 0}
+                style={{
+                  cursor: 'grab',
+                  pointerEvents: 'auto',
+                  touchAction: 'none'
+                }}
+                onMouseEnter={() => setHoveredArrowRole(role)}
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  handleCurveDragStart(role, e)
+                }}
+                onTouchStart={(e) => {
+                  e.stopPropagation()
+                  handleCurveDragStart(role, e)
+                }}
+              />
+            </g>
+          )
+        })}
+
+        {/* Ball marker for simulation mode - rendered AFTER player tokens to always be on top */}
+        {mode === 'simulation' && ballPosition && (() => {
+          // Add padding offset since ball is rendered outside the transform group
+          const ballX = padding + ballPosition.x * courtWidth
+          const groundY = padding + ballPosition.y * courtHeight // Shadow stays at ground position
+          // Calculate ball float and shadow based on height
+          const normalizedHeight = Math.min(1, Math.max(0, ballHeight * 5)) // Scale for visibility
+          const shadowRadius = 8 + normalizedHeight * 12 // Shadow grows with height
+          const shadowOpacity = 0.15 + normalizedHeight * 0.1 // Darker when higher
+          const ballFloatOffset = normalizedHeight * 15 // Ball floats UP when high
+          const visualBallY = groundY - ballFloatOffset // Ball position above shadow
+          // Ball size pulses on contact
+          const contactScale = ballContactFlash ? 1.3 : 1
+          const ballRadius = 10 * contactScale
+
+          return (
+            <g className="pointer-events-none">
+              {/* Shadow on court (stays at ground, grows when ball is high) */}
+              <ellipse
+                cx={ballX}
+                cy={groundY}
+                rx={shadowRadius}
+                ry={shadowRadius * 0.5}
+                fill={`rgba(0, 0, 0, ${shadowOpacity})`}
+                style={{
+                  transition: 'all 50ms ease-out',
+                }}
+              />
+
+              {/* Contact flash effect */}
+              {ballContactFlash && (
+                <circle
+                  cx={ballX}
+                  cy={visualBallY}
+                  r={25}
+                  fill="none"
+                  stroke="rgba(255, 255, 255, 0.8)"
+                  strokeWidth={3}
+                  style={{
+                    animation: 'ping 0.3s ease-out forwards',
+                  }}
+                />
+              )}
+
+              {/* Outer glow for visibility */}
+              <circle
+                cx={ballX}
+                cy={visualBallY}
+                r={ballRadius + 4}
+                fill={ballContactFlash ? 'rgba(255, 255, 200, 0.5)' : 'rgba(255, 220, 100, 0.3)'}
+                style={{
+                  transition: 'all 100ms ease-out',
+                }}
+              />
+
+              {/* Main ball */}
+              <circle
+                cx={ballX}
+                cy={visualBallY}
+                r={ballRadius}
+                fill={ballContactFlash ? '#FFEB3B' : '#FFD700'}
+                stroke="#fff"
+                strokeWidth={2}
+                style={{
+                  filter: `drop-shadow(0 ${2 + normalizedHeight * 4}px ${4 + normalizedHeight * 6}px rgba(0,0,0,0.4))`,
+                  transition: 'all 100ms ease-out',
+                }}
+              />
+
+              {/* Ball highlight */}
+              <circle
+                cx={ballX - 2 * contactScale}
+                cy={visualBallY - 2 * contactScale}
+                r={3 * contactScale}
+                fill="rgba(255, 255, 255, 0.6)"
+              />
+
+              {/* Secondary highlight for depth */}
+              <circle
+                cx={ballX + 1 * contactScale}
+                cy={visualBallY + 2 * contactScale}
+                r={2 * contactScale}
+                fill="rgba(200, 150, 0, 0.4)"
+              />
+            </g>
           )
         })()}
+
+        {/* Attack ball for whiteboard defense phase - rendered AFTER player tokens to appear on top */}
+        {mode === 'whiteboard' && currentPhase === 'DEFENSE_PHASE' && (() => {
+          const displayPos = attackBallDragPosition || attackBallPosition || DEFAULT_ATTACK_BALL_POSITION
+          const ballX = padding + displayPos.x * courtWidth
+          const ballY = padding + displayPos.y * courtHeight
+
+          // Determine highlight color based on which side of court (red for enemy side y < 0.5, gold for home side)
+          const isEnemySide = displayPos.y < 0.5
+          const highlightColor = isEnemySide ? 'rgba(239, 68, 68, 0.6)' : 'rgba(255, 215, 0, 0.6)'
+          const ballRadius = 12
+
+          return (
+            <g>
+              {/* Render ball if position exists or is being dragged */}
+              {(attackBallPosition || draggingAttackBall) ? (
+                <>
+                  {/* Invisible hit target for dragging (larger area for easier grabbing) */}
+                  <circle
+                    cx={ballX}
+                    cy={ballY}
+                    r={24}
+                    fill={debugHitboxes ? "rgba(57, 255, 20, 0.3)" : "transparent"}
+                    stroke={debugHitboxes ? "rgba(57, 255, 20, 0.8)" : "none"}
+                    strokeWidth={debugHitboxes ? 2 : 0}
+                    style={{
+                      cursor: draggingAttackBall ? 'grabbing' : 'grab',
+                      pointerEvents: 'auto'
+                    }}
+                    onMouseDown={handleAttackBallDragStart}
+                    onTouchStart={handleAttackBallDragStart}
+                  />
+
+                  {/* Colored ring highlight (red for enemy, gold for home) */}
+                  <circle
+                    cx={ballX}
+                    cy={ballY}
+                    r={ballRadius + 6}
+                    fill="none"
+                    stroke={highlightColor}
+                    strokeWidth={3}
+                    className="pointer-events-none"
+                    style={{
+                      filter: `drop-shadow(0 0 8px ${highlightColor})`
+                    }}
+                  />
+
+                  {/* Outer glow for visibility (gold like simulation ball) */}
+                  <circle
+                    cx={ballX}
+                    cy={ballY}
+                    r={ballRadius + 4}
+                    fill="rgba(255, 220, 100, 0.3)"
+                    className="pointer-events-none"
+                  />
+
+                  {/* Main ball (gold like simulation ball) */}
+                  <circle
+                    cx={ballX}
+                    cy={ballY}
+                    r={ballRadius}
+                    fill="#FFD700"
+                    stroke="#fff"
+                    strokeWidth={2}
+                    className="pointer-events-none"
+                    style={{
+                      filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.4))'
+                    }}
+                  />
+
+                  {/* Ball highlight */}
+                  <circle
+                    cx={ballX - 3}
+                    cy={ballY - 3}
+                    r={4}
+                    fill="rgba(255, 255, 255, 0.6)"
+                    className="pointer-events-none"
+                  />
+
+                  {/* Secondary highlight for depth */}
+                  <circle
+                    cx={ballX + 2}
+                    cy={ballY + 2}
+                    r={2}
+                    fill="rgba(200, 150, 0, 0.4)"
+                    className="pointer-events-none"
+                  />
+
+                  {/* Longer, more prominent directional arrow */}
+                  <g className="pointer-events-none">
+                    {/* Arrow shaft */}
+                    <line
+                      x1={ballX}
+                      y1={ballY + ballRadius + 2}
+                      x2={ballX}
+                      y2={ballY + ballRadius + 26}
+                      stroke="#fff"
+                      strokeWidth={3}
+                      strokeLinecap="round"
+                    />
+                    {/* Arrow head - larger and more prominent */}
+                    <path
+                      d={`M ${ballX - 6} ${ballY + ballRadius + 20} L ${ballX} ${ballY + ballRadius + 28} L ${ballX + 6} ${ballY + ballRadius + 20}`}
+                      stroke="#fff"
+                      strokeWidth={3}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      fill="none"
+                    />
+                  </g>
+                </>
+              ) : (
+                /* Ghost ball indicator when no ball exists - shows where ball will appear */
+                <g>
+                  <circle
+                    cx={ballX}
+                    cy={ballY}
+                    r={ballRadius + 4}
+                    fill="rgba(255, 215, 0, 0.15)"
+                    stroke="rgba(255, 215, 0, 0.4)"
+                    strokeWidth={2}
+                    strokeDasharray="4,4"
+                    style={{ cursor: 'pointer', pointerEvents: 'auto' }}
+                    onMouseDown={handleAttackBallDragStart}
+                    onTouchStart={handleAttackBallDragStart}
+                  />
+                  {/* Plus icon */}
+                  <text
+                    x={ballX}
+                    y={ballY}
+                    fill="rgba(255, 215, 0, 0.6)"
+                    fontSize={16}
+                    fontWeight="bold"
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    style={{ pointerEvents: 'none' }}
+                  >
+                    +
+                  </text>
+                </g>
+              )}
+            </g>
+          )
+        })()}
+
+        {/* Legality violation triangles - rendered AFTER player tokens to occlude them */}
+        {legalityViolations.length > 0 && mode === 'whiteboard' && (
+          <>
+            {legalityViolations.map((violation, idx) => {
+              if (!violation.roles) return null
+              const [role1, role2] = violation.roles
+              const pos1 = displayPositions[role1]
+              const pos2 = displayPositions[role2]
+              if (!pos1 || !pos2) return null
+
+              const svgPos1 = toSvgCoords(pos1)
+              const svgPos2 = toSvgCoords(pos2)
+
+              // Calculate midpoint of the line
+              const midX = (svgPos1.x + svgPos2.x) / 2
+              const midY = (svgPos1.y + svgPos2.y) / 2
+
+              const emojiSize = 20
+              const padding = 4
+
+              return (
+                <foreignObject
+                  key={`violation-emoji-${idx}`}
+                  x={midX - emojiSize / 2 - padding}
+                  y={midY - emojiSize / 2 - padding}
+                  width={emojiSize + padding * 2}
+                  height={emojiSize + padding * 2}
+                  style={{ pointerEvents: 'auto', overflow: 'visible' }}
+                >
+                  <HoverCard openDelay={0} closeDelay={0}>
+                    <HoverCardTrigger asChild>
+                      <div
+                        className="cursor-pointer flex items-center justify-center"
+                        style={{
+                          width: emojiSize + padding * 2,
+                          height: emojiSize + padding * 2,
+                          fontSize: emojiSize,
+                          lineHeight: 1,
+                          filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'
+                        }}
+                      >
+                        ⚠️
+                      </div>
+                    </HoverCardTrigger>
+                    <HoverCardContent side="top" className="w-auto">
+                      <div className="flex flex-col gap-3">
+                        <div className="text-sm font-medium">Formation Violation</div>
+                        {(() => {
+                          const [zone1, zone2] = violation.zones
+                          const zone1Role = getRoleForZone(zone1, rotation, resolvedBaseOrder)
+                          const zone2Role = getRoleForZone(zone2, rotation, resolvedBaseOrder)
+                          const zone1Color = zone1Role ? ROLE_INFO[zone1Role].color : '#9ca3af'
+                          const zone2Color = zone2Role ? ROLE_INFO[zone2Role].color : '#9ca3af'
+                          const zone1Num = zone1.slice(1)
+                          const zone2Num = zone2.slice(1)
+
+                          return (
+                            <div className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap">
+                              {violation.type === 'horizontal_overlap' ? (
+                                <>
+                                  <Badge
+                                    style={{
+                                      backgroundColor: zone1Color,
+                                      color: zone1Role ? getTextColorForOklch(zone1Color) : undefined,
+                                      border: 'none',
+                                    }}
+                                  >
+                                    Zone {zone1Num}
+                                  </Badge>
+                                  <span>must be to the left of</span>
+                                  <Badge
+                                    style={{
+                                      backgroundColor: zone2Color,
+                                      color: zone2Role ? getTextColorForOklch(zone2Color) : undefined,
+                                      border: 'none',
+                                    }}
+                                  >
+                                    Zone {zone2Num}
+                                  </Badge>
+                                </>
+                              ) : (
+                                <>
+                                  <Badge
+                                    style={{
+                                      backgroundColor: zone1Color,
+                                      color: zone1Role ? getTextColorForOklch(zone1Color) : undefined,
+                                      border: 'none',
+                                    }}
+                                  >
+                                    Zone {zone1Num}
+                                  </Badge>
+                                  <span>must be in front of</span>
+                                  <Badge
+                                    style={{
+                                      backgroundColor: zone2Color,
+                                      color: zone2Role ? getTextColorForOklch(zone2Color) : undefined,
+                                      border: 'none',
+                                    }}
+                                  >
+                                    Zone {zone2Num}
+                                  </Badge>
+                                </>
+                              )}
+                            </div>
+                          )
+                        })()}
+                      </div>
+                    </HoverCardContent>
+                  </HoverCard>
+                </foreignObject>
+              )
+            })}
+          </>
+        )}
 
         {/* Floating tooltip for new users - teaches drag-off-court to delete */}
         {shouldShowDeleteHint() && draggingArrowRole && arrowDragPosition && (
@@ -2659,26 +2718,32 @@ export function VolleyballCourt({
             }
           } : undefined}
           hasArrow={contextPlayer ? !!arrows[contextPlayer] : false}
-          canStartArrow={Boolean(contextPlayer && onArrowChange)}
-          onStartArrow={contextPlayer && onArrowChange ? () => {
-            clearPrime()
-            setPrimedRole(contextPlayer)
-            setTappedRole(null)
-            onContextPlayerChange(null)
-            if (navigator.vibrate) {
-              navigator.vibrate(20)
+          onFlipArrow={contextPlayer && onArrowCurveChange ? () => {
+            const currentCurve = arrowCurves[contextPlayer]
+            const arrowTarget = arrows[contextPlayer]
+            const playerPos = displayPositions[contextPlayer]
+            if (currentCurve && arrowTarget && playerPos) {
+              // Mirror the control point across the arrow's centerline
+              const midX = (playerPos.x + arrowTarget.x) / 2
+              const midY = (playerPos.y + arrowTarget.y) / 2
+              // Reflect control point across the midpoint
+              const flippedX = 2 * midX - currentCurve.x
+              const flippedY = 2 * midY - currentCurve.y
+              onArrowCurveChange(contextPlayer, { x: flippedX, y: flippedY })
+            } else if (arrowTarget && playerPos) {
+              // No curve set yet - create one by offsetting from midpoint
+              const midX = (playerPos.x + arrowTarget.x) / 2
+              const midY = (playerPos.y + arrowTarget.y) / 2
+              const dx = arrowTarget.x - playerPos.x
+              const dy = arrowTarget.y - playerPos.y
+              const dist = Math.sqrt(dx * dx + dy * dy)
+              const perpX = -dy / dist * 0.1
+              const perpY = dx / dist * 0.1
+              onArrowCurveChange(contextPlayer, { x: midX + perpX, y: midY + perpY })
             }
           } : undefined}
           hasTeam={hasTeam}
           onManageRoster={onManageRoster}
-          onPlayerAssign={onPlayerAssign ? (role, playerId) => {
-            if (playerId) {
-              onPlayerAssign(role, playerId)
-            } else {
-              // Unassign - pass empty string to clear
-              onPlayerAssign(role, '')
-            }
-          } : undefined}
         />
       )}
 
