@@ -19,7 +19,7 @@ export default function GameTimeLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="min-h-[100dvh] bg-zinc-950 text-white">
+    <div data-mode="gametime" className="min-h-[100dvh] bg-background text-foreground">
       {children}
     </div>
   )

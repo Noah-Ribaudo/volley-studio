@@ -109,7 +109,7 @@ export function SetupScreen() {
           <h1 className="text-2xl font-bold text-center">GameTime</h1>
           <button
             onClick={() => router.push('/')}
-            className="w-10 h-10 flex items-center justify-center text-zinc-400 hover:text-white transition-colors"
+            className="w-10 h-10 flex items-center justify-center text-muted-foreground hover:text-white transition-colors"
           >
             <X className="w-6 h-6" />
           </button>
@@ -117,7 +117,7 @@ export function SetupScreen() {
 
         {/* Quick Start */}
         <div className="mb-6">
-          <h2 className="text-sm font-medium text-zinc-400 uppercase tracking-wide mb-3">
+          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-3">
             Quick Start
           </h2>
           <div className="flex gap-2">
@@ -126,11 +126,11 @@ export function SetupScreen() {
               placeholder="Team name (optional)"
               value={quickStartName}
               onChange={(e) => setQuickStartName(e.target.value)}
-              className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 bg-card border border-border rounded-lg px-4 py-3 text-white placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
             />
             <button
               onClick={handleQuickStart}
-              className="bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg flex items-center gap-2 transition-colors"
+              className="bg-primary hover:bg-primary/90 active:bg-primary/80 text-white font-semibold px-6 py-3 rounded-lg flex items-center gap-2 transition-colors"
             >
               <Zap className="w-5 h-5" />
               Go
@@ -140,14 +140,14 @@ export function SetupScreen() {
 
         {/* Saved Teams */}
         <div className="flex-1">
-          <h2 className="text-sm font-medium text-zinc-400 uppercase tracking-wide mb-3">
+          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-3">
             Saved Teams
           </h2>
 
           {loading ? (
-            <div className="text-zinc-500 text-center py-8">Loading teams...</div>
+            <div className="text-muted-foreground text-center py-8">Loading teams...</div>
           ) : teams.length === 0 ? (
-            <div className="text-zinc-500 text-center py-8">
+            <div className="text-muted-foreground text-center py-8">
               No saved teams yet
             </div>
           ) : (
@@ -156,15 +156,15 @@ export function SetupScreen() {
                 <button
                   key={t.id}
                   onClick={() => handleSelectTeam(t)}
-                  className="w-full bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 border border-zinc-700 rounded-lg px-4 py-4 text-left transition-colors flex items-center justify-between"
+                  className="w-full bg-card hover:bg-accent active:bg-accent/80 border border-border rounded-lg px-4 py-4 text-left transition-colors flex items-center justify-between"
                 >
                   <div>
                     <div className="font-medium">{t.name}</div>
-                    <div className="text-sm text-zinc-400">
+                    <div className="text-sm text-muted-foreground">
                       {t.roster.length} players
                     </div>
                   </div>
-                  <ChevronRight className="w-5 h-5 text-zinc-500" />
+                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
                 </button>
               ))}
             </div>
@@ -179,10 +179,10 @@ export function SetupScreen() {
     return (
       <div className="flex flex-col min-h-[100dvh]">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-zinc-800">
+        <div className="flex items-center justify-between p-4 border-b border-border">
           <button
             onClick={() => setStep('team')}
-            className="flex items-center gap-1 text-zinc-400 hover:text-white transition-colors"
+            className="flex items-center gap-1 text-muted-foreground hover:text-white transition-colors"
           >
             <ChevronLeft className="w-5 h-5" />
             Back
@@ -193,14 +193,14 @@ export function SetupScreen() {
 
         {/* Court Lineup View */}
         <div className="flex-1 p-4">
-          <h2 className="text-sm font-medium text-zinc-400 uppercase tracking-wide mb-4 text-center">
+          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-4 text-center">
             Tap a position, then tap a player
           </h2>
 
           {/* Court Grid */}
-          <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-4 mb-4">
+          <div className="bg-card/50 border border-border rounded-xl p-4 mb-4">
             {/* Net indicator */}
-            <div className="h-1 bg-zinc-600 rounded mb-4" />
+            <div className="h-1 bg-border rounded mb-4" />
 
             {/* Front Row - dynamically sorted by zone (4, 3, 2 left to right) */}
             <div className="grid grid-cols-3 gap-3 mb-4">
@@ -273,14 +273,14 @@ export function SetupScreen() {
         </div>
 
         {/* Continue Button */}
-        <div className="p-4 border-t border-zinc-800">
+        <div className="p-4 border-t border-border">
           <button
             onClick={() => setStep('settings')}
             disabled={!canStartGame && !isQuickStart}
             className={`w-full py-4 rounded-xl font-semibold text-lg transition-colors ${
               canStartGame || isQuickStart
-                ? 'bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white'
-                : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
+                ? 'bg-primary hover:bg-primary/90 active:bg-primary/80 text-white'
+                : 'bg-card text-muted-foreground cursor-not-allowed'
             }`}
           >
             {canStartGame || isQuickStart ? 'Continue' : 'Assign All Positions'}
@@ -294,10 +294,10 @@ export function SetupScreen() {
   return (
     <div className="flex flex-col min-h-[100dvh]">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-zinc-800">
+      <div className="flex items-center justify-between p-4 border-b border-border">
         <button
           onClick={() => setStep('lineup')}
-          className="flex items-center gap-1 text-zinc-400 hover:text-white transition-colors"
+          className="flex items-center gap-1 text-muted-foreground hover:text-white transition-colors"
         >
           <ChevronLeft className="w-5 h-5" />
           Back
@@ -309,7 +309,7 @@ export function SetupScreen() {
       <div className="flex-1 p-4 space-y-6">
         {/* Starting Rotation */}
         <div>
-          <h2 className="text-sm font-medium text-zinc-400 uppercase tracking-wide mb-3">
+          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-3">
             Starting Rotation
           </h2>
           <div className="grid grid-cols-6 gap-2">
@@ -319,8 +319,8 @@ export function SetupScreen() {
                 onClick={() => setStartingRotation(r)}
                 className={`py-4 rounded-lg font-bold text-lg transition-colors ${
                   rotation === r
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                    ? 'bg-primary text-white'
+                    : 'bg-card text-foreground hover:bg-accent'
                 }`}
               >
                 {r}
@@ -331,7 +331,7 @@ export function SetupScreen() {
 
         {/* Who Serves First */}
         <div>
-          <h2 className="text-sm font-medium text-zinc-400 uppercase tracking-wide mb-3">
+          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-3">
             Who Serves First?
           </h2>
           <div className="grid grid-cols-2 gap-3">
@@ -340,7 +340,7 @@ export function SetupScreen() {
               className={`py-4 rounded-lg font-semibold text-lg transition-colors ${
                 serving === 'us'
                   ? 'bg-green-600 text-white'
-                  : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                  : 'bg-card text-foreground hover:bg-accent'
               }`}
             >
               We Do
@@ -350,7 +350,7 @@ export function SetupScreen() {
               className={`py-4 rounded-lg font-semibold text-lg transition-colors ${
                 serving === 'them'
                   ? 'bg-red-600 text-white'
-                  : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                  : 'bg-card text-foreground hover:bg-accent'
               }`}
             >
               They Do
@@ -360,7 +360,7 @@ export function SetupScreen() {
       </div>
 
       {/* Start Game Button */}
-      <div className="p-4 border-t border-zinc-800">
+      <div className="p-4 border-t border-border">
         <button
           onClick={startGame}
           className="w-full bg-green-600 hover:bg-green-500 active:bg-green-700 text-white py-5 rounded-xl font-bold text-xl transition-colors flex items-center justify-center gap-2"
@@ -399,27 +399,27 @@ function QuickStartPlayerEntry({
   }
 
   return (
-    <div className="bg-zinc-900 border border-zinc-700 rounded-lg p-4">
-      <h3 className="text-sm font-medium text-zinc-400 mb-3">Add Player</h3>
+    <div className="bg-card/50 border border-border rounded-lg p-4">
+      <h3 className="text-sm font-medium text-muted-foreground mb-3">Add Player</h3>
       <div className="flex gap-2">
         <input
           type="number"
           placeholder="#"
           value={number}
           onChange={(e) => setNumber(e.target.value)}
-          className="w-16 bg-zinc-800 border border-zinc-600 rounded-lg px-3 py-2 text-white text-center"
+          className="w-16 bg-card border border-border rounded-lg px-3 py-2 text-white text-center"
         />
         <input
           type="text"
           placeholder="Name (optional)"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="flex-1 bg-zinc-800 border border-zinc-600 rounded-lg px-3 py-2 text-white"
+          className="flex-1 bg-card border border-border rounded-lg px-3 py-2 text-white"
         />
         <button
           onClick={handleAdd}
           disabled={!number}
-          className="bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-700 disabled:text-zinc-500 text-white font-semibold px-4 py-2 rounded-lg transition-colors"
+          className="bg-primary hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground text-white font-semibold px-4 py-2 rounded-lg transition-colors"
         >
           Add
         </button>
