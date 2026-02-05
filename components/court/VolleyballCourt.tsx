@@ -37,7 +37,6 @@ import {
 } from '@/lib/animation'
 import {
   animate,
-  animateBezierPath,
   SPRING,
   stopAnimation,
   type AnimationPlaybackControls,
@@ -660,12 +659,16 @@ export function VolleyballCourt({
 
   // Track previous animation trigger for detecting when Play is pressed
   const prevAnimationTriggerRef = useRef<number>(animationTrigger)
+  const bezierRafRef = useRef<number | null>(null)
 
-  // Ref to track active bezier path animations
-  const bezierAnimationsRef = useRef<AnimationPlaybackControls[]>([])
+  // Easing function for bezier animation
+  const easeInOutCubic = (t: number) => (t < 0.5
+    ? 4 * t * t * t
+    : 1 - Math.pow(-2 * t + 2, 3) / 2)
 
   // Bezier path animation - runs when Play button is pressed (animationTrigger changes)
-  // Uses motion library's animateBezierPath for smooth path-following animation
+  // Animates players along their arrow paths (bezier curves) with collision avoidance
+  // Uses RAF for precise timing control
   useEffect(() => {
     // Only run when trigger changes and is > 0
     if (animationTrigger === prevAnimationTriggerRef.current || animationTrigger === 0) {
@@ -674,72 +677,147 @@ export function VolleyballCourt({
     }
     prevAnimationTriggerRef.current = animationTrigger
 
-    // Stop any existing animations
-    bezierAnimationsRef.current.forEach(anim => anim.stop())
-    bezierAnimationsRef.current = []
+    // Cancel any existing bezier animation
+    if (bezierRafRef.current) {
+      cancelAnimationFrame(bezierRafRef.current)
+      bezierRafRef.current = null
+    }
 
     // Get start positions (current collision-free positions)
     const startPositions = { ...collisionFreePositions }
 
-    // Find players that have arrows to animate
-    const playersWithArrows: { role: Role; start: Position; end: Position; control: Position | null }[] = []
+    // Build targets: for players with arrows, target is arrow endpoint; others stay in place
+    const targets: PositionCoordinates = {} as PositionCoordinates
+    const hasArrow: Set<Role> = new Set()
 
     activeRoles.forEach(role => {
       const arrowEnd = arrows[role]
       if (arrowEnd) {
-        const start = startPositions[role] || { x: 0.5, y: 0.5 }
-        const control = arrowCurves[role] || null
-        playersWithArrows.push({ role, start, end: arrowEnd, control })
+        targets[role] = arrowEnd
+        hasArrow.add(role)
+      } else {
+        targets[role] = startPositions[role] || { x: 0.5, y: 0.5 }
       }
     })
 
     // If no arrows, nothing to animate
-    if (playersWithArrows.length === 0) {
+    if (hasArrow.size === 0) {
       return
     }
 
     // Mark animation as running
     setIsBezierAnimating(true)
 
-    // Initialize animated positions with all current positions
-    const currentAnimatedPositions = { ...collisionFreePositions }
-    setAnimatedPositions(currentAnimatedPositions)
+    const duration = cfg.durationMs
+    const startTime = performance.now()
 
-    // Track how many animations have completed
-    let completedCount = 0
-    const totalAnimations = playersWithArrows.length
+    // Bezier interpolation: B(t) = (1-t)²P0 + 2(1-t)tP1 + t²P2
+    // P0 = start, P1 = control point, P2 = end
+    const interpolateBezier = (
+      start: Position,
+      end: Position,
+      control: Position | null,
+      t: number
+    ): Position => {
+      if (!control) {
+        // Straight line interpolation
+        return {
+          x: start.x + (end.x - start.x) * t,
+          y: start.y + (end.y - start.y) * t,
+        }
+      }
+      const oneMinusT = 1 - t
+      return {
+        x: oneMinusT * oneMinusT * start.x + 2 * oneMinusT * t * control.x + t * t * end.x,
+        y: oneMinusT * oneMinusT * start.y + 2 * oneMinusT * t * control.y + t * t * end.y,
+      }
+    }
 
-    // Create an animation for each player with an arrow
-    playersWithArrows.forEach(({ role, start, end, control }) => {
-      const animation = animateBezierPath({
-        start,
-        end,
-        control,
-        duration: cfg.durationMs,
-        onUpdate: (pos) => {
-          // Update this player's position in the animated positions
-          currentAnimatedPositions[role] = { x: pos.x, y: pos.y }
-          // Trigger React state update
-          setAnimatedPositions({ ...currentAnimatedPositions })
-        },
-        onComplete: () => {
-          completedCount++
-          // When all animations complete, end the animation state
-          if (completedCount >= totalAnimations) {
-            setIsBezierAnimating(false)
-          }
+    const step = (now: number) => {
+      const elapsed = now - startTime
+      const rawT = Math.min(1, elapsed / duration)
+      const t = easeInOutCubic(rawT)
+
+      const next: PositionCoordinates = {} as PositionCoordinates
+
+      // Build agents for collision avoidance
+      const agents = activeRoles.map(role => {
+        const start = startPositions[role] || { x: 0.5, y: 0.5 }
+        const end = targets[role] || { x: 0.5, y: 0.5 }
+        const curve = arrowCurves[role]
+
+        // Get control point in normalized coordinates (if curve exists)
+        let control: Position | null = null
+        if (curve && arrows[role]) {
+          control = { x: curve.x, y: curve.y }
+        }
+
+        // Interpolate along bezier path
+        const interpolated = interpolateBezier(start, end, control, t)
+
+        return {
+          role,
+          position: interpolated,
+          target: end,
+          speed: 0.8 // default cruising speed for look-ahead calculation
         }
       })
-      bezierAnimationsRef.current.push(animation)
-    })
+
+      // Improvement #3: Sequential Priority Processing
+      // Sort agents by priority (lower number = higher priority = processed first)
+      const sortedRoles = [...activeRoles].sort((a, b) =>
+        (ROLE_PRIORITY[a] ?? 99) - (ROLE_PRIORITY[b] ?? 99)
+      )
+
+      // Process sequentially - each agent sees updated positions of higher-priority agents
+      sortedRoles.forEach(role => {
+        const agent = agents.find(a => a.role === role)!
+
+        // Update agent's position to reflect any already-processed higher-priority agents
+        const updatedAgents = agents.map(a => {
+          const updatedPos = next[a.role]
+          return updatedPos ? { ...a, position: updatedPos } : a
+        })
+
+        const steering = computeSteering(agent, updatedAgents, {
+          collisionRadius: cfg.collisionRadius,
+          separationStrength: cfg.separationStrength,
+          maxSeparation: cfg.maxSeparation,
+          lookAheadTime: 0.4 // Look ahead 0.4 seconds for smoother anticipatory movement
+        })
+
+        // Apply steering offset (smaller for smoother curves)
+        const steered = clampPosition({
+          x: agent.position.x + steering.x * (cfg.collisionRadius * 0.15),
+          y: agent.position.y + steering.y * (cfg.collisionRadius * 0.15)
+        })
+
+        // Immediately store this agent's final position for next agents to see
+        next[role] = steered
+      })
+
+      setAnimatedPositions(next)
+      currentPositionsRef.current = next
+
+      if (rawT < 1) {
+        bezierRafRef.current = requestAnimationFrame(step)
+      } else {
+        // Animation complete
+        bezierRafRef.current = null
+        setIsBezierAnimating(false)
+      }
+    }
+
+    bezierRafRef.current = requestAnimationFrame(step)
 
     return () => {
-      // Cleanup: stop all animations
-      bezierAnimationsRef.current.forEach(anim => anim.stop())
-      bezierAnimationsRef.current = []
-      setIsBezierAnimating(false)
+      if (bezierRafRef.current) {
+        cancelAnimationFrame(bezierRafRef.current)
+        bezierRafRef.current = null
+        setIsBezierAnimating(false)
+      }
     }
-  }, [animationTrigger, collisionFreePositions, arrows, arrowCurves, activeRoles, cfg.durationMs])
+  }, [animationTrigger, collisionFreePositions, arrows, arrowCurves, activeRoles, cfg])
 
   // Track previous positions for detecting phase changes
   const prevPositionsRef = useRef<PositionCoordinates>(positions)
@@ -1010,7 +1088,7 @@ export function VolleyballCourt({
 
   // Handle drag start
   const handleDragStart = useCallback((role: Role, e: React.MouseEvent | React.TouchEvent) => {
-    if (!isEditable || isPreviewingMovement || !onPositionChangeRef.current) return
+    if (!isEditable || !onPositionChangeRef.current) return
 
     // Note: Don't call preventDefault on touch events here - it causes passive event listener warnings
     // The touchmove handler already uses { passive: false } to prevent scrolling during drag
@@ -1023,11 +1101,6 @@ export function VolleyballCourt({
     const currentPos = toSvgCoords(positions[role] || { x: 0.5, y: 0.5 })
 
     setDraggingRole(role)
-
-    // Immediately hide any arrow preview when drag starts
-    setHoveredRole(null)
-    setPreviewProgress({})
-
     dragOffsetRef.current = {
       x: currentPos.x - pos.x,
       y: currentPos.y - pos.y
@@ -1096,7 +1169,7 @@ export function VolleyballCourt({
     initialEndSvg?: { x: number; y: number },
     initialControlSvg?: { x: number; y: number }
   ) => {
-    if (!onArrowChange || isPreviewingMovement) return
+    if (!onArrowChange) return
 
     // Note: Don't call preventDefault on touch events here - it causes passive event listener warnings
     // The touchmove handler already uses { passive: false } to prevent scrolling during drag
@@ -1198,7 +1271,7 @@ export function VolleyballCourt({
 
   // Handle curve drag - dragging the curve handle adjusts direction and intensity
   const handleCurveDragStart = useCallback((role: Role, e: React.MouseEvent | React.TouchEvent) => {
-    if (!onArrowCurveChange || isPreviewingMovement) return
+    if (!onArrowCurveChange) return
 
     if (e.type === 'mousedown') {
       e.preventDefault()
@@ -1880,8 +1953,7 @@ export function VolleyballCourt({
           const rolePreviewProgress = previewProgress[role] ?? 0
           // Show preview when: animating OR (actively dragging from preview) OR (mobile tapped)
           // Also need no existing arrow (unless we're dragging from it)
-          // HIDE preview when any player token is being dragged
-          const canShowPreview = (!arrows[role] || draggingArrowRole === role) && onArrowChange && !draggingRole
+          const canShowPreview = (!arrows[role] || draggingArrowRole === role) && onArrowChange
           const shouldRenderPreview = canShowPreview && (
             rolePreviewProgress > 0 ||
             draggingArrowRole === role ||
@@ -1921,7 +1993,7 @@ export function VolleyballCourt({
                 opacity={0.85}
                 isDraggable={true}
                 onDragStart={(e) => handleArrowDragStart(role, e, previewEndSvg, previewControlSvg)}
-                onMouseEnter={() => !draggingRole && !draggingArrowRole && handlePreviewHover(role, true)}
+                onMouseEnter={() => handlePreviewHover(role, true)}
                 debugHitboxes={debugHitboxes}
               />
             </g>
@@ -1963,7 +2035,7 @@ export function VolleyballCourt({
                         touchAction: 'none',
                         WebkitTapHighlightColor: 'transparent'
                       }}
-                      onMouseEnter={() => !isMobile && !draggingRole && !draggingArrowRole && handlePreviewHover(role, true)}
+                      onMouseEnter={() => !isMobile && !draggingArrowRole && handlePreviewHover(role, true)}
                       onMouseLeave={() => handlePreviewHover(role, false)}
                       onClick={(e) => {
                         // MOBILE FIX: Skip click if touch just ended (prevents dual firing)
