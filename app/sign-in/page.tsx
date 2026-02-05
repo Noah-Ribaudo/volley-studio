@@ -21,14 +21,15 @@ export default function SignInPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4 relative overflow-hidden">
       {/* Grain gradient background */}
-      <div className="absolute inset-0 opacity-60">
+      <div className="absolute inset-0 opacity-70">
         <GrainGradient
-          color1="#1a1a1a"
-          color2="#2d1f0f"
-          color3="#0a0a0a"
-          color4="#1f1510"
-          speed={0.3}
-          noiseScale={0.4}
+          colorBack="#0a0a0a"
+          colors={["#1a1a1a", "#2d1f0f", "#1f1510", "#0f0f0f"]}
+          softness={0.8}
+          intensity={0.4}
+          noise={0.3}
+          shape="blob"
+          speed={0.2}
           style={{ width: "100%", height: "100%" }}
         />
       </div>
