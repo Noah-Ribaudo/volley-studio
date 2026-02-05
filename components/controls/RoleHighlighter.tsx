@@ -27,12 +27,12 @@ export function RoleHighlighter({ highlightedRole, onRoleSelect }: RoleHighlight
           </Button>
         )}
       </div>
-      
+
       <div className="flex flex-wrap gap-1.5 justify-center">
         {ROLES.map(role => {
           const info = ROLE_INFO[role]
           const isSelected = highlightedRole === role
-          
+
           return (
             <Button
               key={role}
@@ -43,14 +43,19 @@ export function RoleHighlighter({ highlightedRole, onRoleSelect }: RoleHighlight
               aria-pressed={isSelected}
               className={cn(
                 "h-9 px-3 transition-all border-2 font-bold",
-                isSelected 
-                  ? "shadow-lg scale-105 border-primary/60 ring-2 ring-primary/40 ring-offset-2 ring-offset-background" 
-                  : "border-transparent opacity-80 hover:opacity-100 hover:border-border"
+                isSelected
+                  ? "shadow-lg scale-105 ring-2 ring-offset-2 ring-offset-background"
+                  : "role-chip border-transparent opacity-80 hover:opacity-100 hover:border-border"
               )}
               style={{
                 backgroundColor: isSelected ? info.color : undefined,
                 color: isSelected ? getTextColorForOklch(info.color) : info.color,
                 borderColor: isSelected ? info.color : undefined,
+                // Use role color for ring on selected state
+                ...(isSelected && {
+                  '--tw-ring-color': info.color,
+                  boxShadow: `0 4px 6px -1px ${info.color}30, 0 2px 4px -2px ${info.color}20`,
+                } as React.CSSProperties),
               }}
             >
               <span className="mr-1.5">{role}</span>
@@ -61,7 +66,7 @@ export function RoleHighlighter({ highlightedRole, onRoleSelect }: RoleHighlight
           )
         })}
       </div>
-      
+
       {highlightedRole && (
         <div className="text-center text-sm mt-1">
           <span className="font-medium" style={{ color: ROLE_INFO[highlightedRole].color }}>

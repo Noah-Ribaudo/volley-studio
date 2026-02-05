@@ -18,17 +18,17 @@ export function RotationInfoCard({ rotation, baseOrder = DEFAULT_BASE_ORDER }: R
     isFront: isInFrontRow(rotation, role as Role, normalizedBaseOrder),
     ...info
   }))
-  
+
   const frontRow = roleZones.filter(r => r.isFront)
   const backRow = roleZones.filter(r => !r.isFront)
-  
+
   return (
     <Card className="bg-card/50 backdrop-blur">
       <CardContent className="py-3 px-4">
         <div className="text-xs font-medium text-muted-foreground mb-2">
           Rotation {rotation} Lineup
         </div>
-        
+
         <div className="space-y-2">
           {/* Front Row */}
           <div>
@@ -39,10 +39,10 @@ export function RotationInfoCard({ rotation, baseOrder = DEFAULT_BASE_ORDER }: R
               {frontRow.map(({ role, zone, color }) => (
                 <div
                   key={role}
-                  className="flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium"
-                  style={{ 
+                  className="role-chip flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium"
+                  style={{
                     backgroundColor: `${color}20`,
-                    color: color 
+                    color: color
                   }}
                 >
                   <span className="font-bold">{role}</span>
@@ -51,7 +51,7 @@ export function RotationInfoCard({ rotation, baseOrder = DEFAULT_BASE_ORDER }: R
               ))}
             </div>
           </div>
-          
+
           {/* Back Row */}
           <div>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
@@ -61,10 +61,10 @@ export function RotationInfoCard({ rotation, baseOrder = DEFAULT_BASE_ORDER }: R
               {backRow.map(({ role, zone, color }) => (
                 <div
                   key={role}
-                  className="flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium"
-                  style={{ 
+                  className="role-chip flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium"
+                  style={{
                     backgroundColor: `${color}20`,
-                    color: color 
+                    color: color
                   }}
                 >
                   <span className="font-bold">{role}</span>

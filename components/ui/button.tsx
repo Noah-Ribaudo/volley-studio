@@ -5,12 +5,12 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background aria-invalid:ring-destructive/20 aria-invalid:border-destructive active:scale-[0.98]",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:shadow-[0_0_0_4px_oklch(70%_0.18_55_/_0.15)] aria-invalid:ring-destructive/20 aria-invalid:border-destructive active:scale-[0.98]",
   {
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground border border-primary hover:bg-primary/90 active:bg-primary/80 shadow-sm hover:shadow data-[active=true]:bg-primary data-[active=true]:text-primary-foreground data-[active=true]:shadow-md",
+          "bg-primary text-primary-foreground border border-primary/80 hover:bg-primary/90 active:bg-primary/80 shadow-sm shadow-primary/20 hover:shadow-md hover:shadow-primary/25 data-[active=true]:bg-primary data-[active=true]:text-primary-foreground data-[active=true]:shadow-md data-[active=true]:shadow-primary/30",
         destructive:
           "bg-destructive text-white border border-destructive hover:bg-destructive/90 active:bg-destructive/80 shadow-sm hover:shadow data-[active=true]:bg-destructive data-[active=true]:text-white data-[active=true]:shadow-md",
         outline:

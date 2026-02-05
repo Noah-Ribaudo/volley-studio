@@ -31,7 +31,7 @@ export function ControlRail({
 }: ControlRailProps) {
   // Show visible RallyPhases if current phase is a RallyPhase, otherwise show legacy phases
   const isRallyPhase = checkIsRallyPhase(currentPhase)
-  const phasesToShow = isRallyPhase 
+  const phasesToShow = isRallyPhase
     ? (visiblePhases ? RALLY_PHASES.filter(p => visiblePhases.has(p)) : RALLY_PHASES)
     : PHASES
 
@@ -73,8 +73,8 @@ export function ControlRail({
                   "h-10 sm:h-9 flex items-center justify-center gap-1 rounded-lg transition-all flex-shrink-0",
                   // Mobile: icon only, 44px width for touch | Desktop: icon + text, auto width
                   "w-11 px-0 sm:w-auto sm:px-2",
-                  selected 
-                    ? 'shadow-md ring-1 ring-primary/40 ring-offset-1 ring-offset-background' 
+                  selected
+                    ? 'shadow-md ring-1 ring-primary/40 ring-offset-1 ring-offset-background'
                     : 'opacity-80 hover:opacity-100',
                   !isVisible && 'opacity-40'
                 )}
@@ -116,8 +116,8 @@ export function ControlRail({
                 aria-pressed={isActive}
                 className={cn(
                   "h-9 w-9 sm:w-auto sm:px-3 p-0 rounded-full font-semibold transition-all text-xs",
-                  isActive 
-                    ? 'shadow-md ring-1 ring-primary/40 ring-offset-1 ring-offset-background' 
+                  isActive
+                    ? 'shadow-md ring-1 ring-primary/40 ring-offset-1 ring-offset-background'
                     : 'opacity-80 hover:opacity-100'
                 )}
               >
@@ -135,7 +135,7 @@ export function ControlRail({
             {ROLES.map(role => {
               const info = ROLE_INFO[role]
               const isSelected = highlightedRole === role
-              
+
               return (
                 <Button
                   key={role}
@@ -146,14 +146,19 @@ export function ControlRail({
                   aria-pressed={isSelected}
                   className={cn(
                     "h-9 px-3 sm:px-3 transition-all border-2 font-bold whitespace-nowrap text-xs flex-shrink-0",
-                    isSelected 
-                      ? "shadow-lg scale-105 border-primary/60 ring-2 ring-primary/40 ring-offset-2 ring-offset-background" 
-                      : "border-transparent opacity-80 hover:opacity-100 hover:border-border"
+                    isSelected
+                      ? "shadow-lg scale-105 ring-2 ring-offset-2 ring-offset-background"
+                      : "role-chip border-transparent opacity-80 hover:opacity-100 hover:border-border"
                   )}
                   style={{
                     backgroundColor: isSelected ? info.color : undefined,
                     color: isSelected ? getTextColorForOklch(info.color) : info.color,
                     borderColor: isSelected ? info.color : undefined,
+                    // Use role color for ring on selected state
+                    ...(isSelected && {
+                      '--tw-ring-color': info.color,
+                      boxShadow: `0 4px 6px -1px ${info.color}30, 0 2px 4px -2px ${info.color}20`,
+                    } as React.CSSProperties),
                   }}
                 >
                   {role}
