@@ -287,6 +287,10 @@ export function VolleyballCourt({
   const [hoveredRole, setHoveredRole] = useState<Role | null>(null) // Hovered player token (for arrow tip)
   const [hoveredArrowRole, setHoveredArrowRole] = useState<Role | null>(null) // Hovered arrow (for curve handle)
   const [tappedRole, setTappedRole] = useState<Role | null>(null) // For mobile tap-to-reveal arrow tip
+  // Arrow preview animation state
+  const [previewProgress, setPreviewProgress] = useState<Partial<Record<Role, number>>>({})
+  const previewAnimationRef = useRef<Partial<Record<Role, AnimationPlaybackControls>>>({})
+  const hoverDelayRef = useRef<Partial<Record<Role, NodeJS.Timeout>>>({})
   const [showArrows, setShowArrows] = useState<boolean>(true)
   const arrowTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -348,6 +352,73 @@ export function VolleyballCourt({
   useEffect(() => {
     currentPositionsRef.current = animatedPositions
   }, [animatedPositions])
+
+  // Arrow preview extend/retract animation
+  // Handles delayed hover (prevents flicker) and smooth animation
+  const handlePreviewHover = useCallback((role: Role, isEntering: boolean) => {
+    // Clear any pending delay for this role
+    if (hoverDelayRef.current[role]) {
+      clearTimeout(hoverDelayRef.current[role])
+      delete hoverDelayRef.current[role]
+    }
+
+    // Stop any existing animation for this role
+    if (previewAnimationRef.current[role]) {
+      stopAnimation(previewAnimationRef.current[role])
+      delete previewAnimationRef.current[role]
+    }
+
+    const startAnimation = () => {
+      const currentProgress = previewProgress[role] ?? 0
+      const targetProgress = isEntering ? 1 : 0
+
+      // Different durations: extend is slower (200ms), retract is quicker (120ms)
+      const duration = isEntering ? 0.2 : 0.12
+
+      previewAnimationRef.current[role] = animate(currentProgress, targetProgress, {
+        duration,
+        ease: isEntering ? [0.0, 0.0, 0.2, 1] : [0.4, 0.0, 1, 1], // ease-out for extend, ease-in for retract
+        onUpdate: (value) => {
+          setPreviewProgress(prev => ({ ...prev, [role]: value }))
+        },
+        onComplete: () => {
+          delete previewAnimationRef.current[role]
+          // Clean up zero progress to keep state clean
+          if (targetProgress === 0) {
+            setPreviewProgress(prev => {
+              const next = { ...prev }
+              delete next[role]
+              return next
+            })
+          }
+        }
+      })
+    }
+
+    if (isEntering) {
+      // Delay before extending (prevents flicker on quick mouse movements)
+      hoverDelayRef.current[role] = setTimeout(() => {
+        delete hoverDelayRef.current[role]
+        setHoveredRole(role)
+        startAnimation()
+      }, 80) // 80ms delay before showing
+    } else {
+      setHoveredRole(null)
+      startAnimation()
+    }
+  }, [previewProgress])
+
+  // Cleanup animation refs on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(previewAnimationRef.current).forEach(anim => {
+        if (anim) stopAnimation(anim)
+      })
+      Object.values(hoverDelayRef.current).forEach(timeout => {
+        if (timeout) clearTimeout(timeout)
+      })
+    }
+  }, [])
 
   // Priority order for collision avoidance (stable)
   const resolveCollisionOnce = useCallback((current: PositionCoordinates, original: PositionCoordinates): PositionCoordinates => {
@@ -1869,12 +1940,6 @@ export function VolleyballCourt({
           // Arrow preview (hover-revealed for new arrows) - uses same MovementArrow as final arrows
           // Direction: peeks toward court center (left if player on right, right if player on left)
           const isLeftSide = homeBasePos.x > 0.5
-          // Show preview when: (no existing arrow OR actively dragging from preview) AND player is hovered/tapped
-          // We keep the preview in DOM during drag to prevent iOS from breaking touch sequence when element unmounts
-          const shouldShowPreview = (!arrows[role] || draggingArrowRole === role) &&
-            ((isMobile && tappedRole === role) || (!isMobile && hoveredRole === role))
-          // Hide preview visually once arrow exists (but keep in DOM for touch continuity)
-          const hidePreviewDuringDrag = draggingArrowRole === role && arrows[role]
 
           // Calculate token radius for arrow positioning
           const hasAssignedPlayer = playerInfo.name !== undefined || playerInfo.number !== undefined
@@ -1882,23 +1947,39 @@ export function VolleyballCourt({
           const baseTokenSize = isPositionOnlyMode ? 56 : 48
           const actualTokenRadius = Math.max(baseTokenSize * tokenScale, 48) / 2
 
+          // Animation progress for this role's preview (0 = retracted, 1 = fully extended)
+          const rolePreviewProgress = previewProgress[role] ?? 0
+          // Show preview when: animating OR (actively dragging from preview) OR (mobile tapped)
+          // Also need no existing arrow (unless we're dragging from it)
+          const canShowPreview = (!arrows[role] || draggingArrowRole === role) && onArrowChange
+          const shouldRenderPreview = canShowPreview && (
+            rolePreviewProgress > 0 ||
+            draggingArrowRole === role ||
+            (isMobile && tappedRole === role)
+          )
+          // Hide preview visually once arrow exists (but keep in DOM for touch continuity)
+          const hidePreviewDuringDrag = draggingArrowRole === role && arrows[role]
+
           // Preview geometry - slight upward curve peeking past token edge
-          const peekDistance = 28  // How far past token edge
-          const curveHeight = 25   // How much the curve bows upward
+          // Interpolate peek distance based on animation progress
+          const maxPeekDistance = 28  // How far past token edge at full extension
+          const maxCurveHeight = 25   // How much the curve bows upward at full extension
+          const animatedPeekDistance = maxPeekDistance * rolePreviewProgress
+          const animatedCurveHeight = maxCurveHeight * rolePreviewProgress
 
           // Preview endpoint (past edge, angled slightly up)
           const previewEndSvg = {
-            x: homeSvgPos.x + (isLeftSide ? -(actualTokenRadius + peekDistance) : (actualTokenRadius + peekDistance)),
-            y: homeSvgPos.y - 10  // Slightly up
+            x: homeSvgPos.x + (isLeftSide ? -(actualTokenRadius + animatedPeekDistance) : (actualTokenRadius + animatedPeekDistance)),
+            y: homeSvgPos.y - (10 * rolePreviewProgress)  // Slightly up, animated
           }
 
           // Control point for upward curve (midpoint pulled up)
           const previewControlSvg = {
             x: (homeSvgPos.x + previewEndSvg.x) / 2,
-            y: homeSvgPos.y - curveHeight
+            y: homeSvgPos.y - animatedCurveHeight
           }
 
-          const arrowPreview = shouldShowPreview && onArrowChange ? (
+          const arrowPreview = shouldRenderPreview ? (
             <g style={{ opacity: hidePreviewDuringDrag ? 0 : 1 }}>
               <MovementArrow
                 key={`preview-${role}`}
@@ -1910,8 +1991,7 @@ export function VolleyballCourt({
                 opacity={0.85}
                 isDraggable={true}
                 onDragStart={(e) => handleArrowDragStart(role, e, previewEndSvg, previewControlSvg)}
-                onMouseEnter={() => setHoveredRole(role)}
-                animateIn={true}
+                onMouseEnter={() => handlePreviewHover(role, true)}
                 debugHitboxes={debugHitboxes}
               />
             </g>
@@ -1953,8 +2033,8 @@ export function VolleyballCourt({
                         touchAction: 'none',
                         WebkitTapHighlightColor: 'transparent'
                       }}
-                      onMouseEnter={() => !isMobile && !draggingArrowRole && setHoveredRole(role)}
-                      onMouseLeave={() => setHoveredRole(null)}
+                      onMouseEnter={() => !isMobile && !draggingArrowRole && handlePreviewHover(role, true)}
+                      onMouseLeave={() => handlePreviewHover(role, false)}
                       onClick={(e) => {
                         // MOBILE FIX: Skip click if touch just ended (prevents dual firing)
                         if (recentTouchRef.current) {
