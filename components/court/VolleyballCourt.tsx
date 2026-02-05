@@ -5,7 +5,7 @@ import { CourtGrid } from './CourtGrid'
 import { PlayerToken } from './PlayerToken'
 import { MovementArrow } from './MovementArrow'
 import { markArrowDeleted } from './ArrowHandle'
-import { ArrowTip } from './ArrowTip'
+// ArrowTip removed - now using MovementArrow for preview
 import { DropZoneOverlay } from './DropZoneOverlay'
 import { DragTooltip } from './DragTooltip'
 import { LongPressTooltip } from './LongPressTooltip'
@@ -1092,7 +1092,12 @@ export function VolleyballCourt({
     }, [isEditable, positions, getEventPosition, handleDragEnd])
 
   // Handle arrow drag (create, reposition, or delete movement arrows)
-  const handleArrowDragStart = useCallback((role: Role, e: React.MouseEvent | React.TouchEvent) => {
+  const handleArrowDragStart = useCallback((
+    role: Role,
+    e: React.MouseEvent | React.TouchEvent,
+    initialEndSvg?: { x: number; y: number },
+    initialControlSvg?: { x: number; y: number }
+  ) => {
     if (!onArrowChange) return
 
     // Note: Don't call preventDefault on touch events here - it causes passive event listener warnings
@@ -1109,6 +1114,19 @@ export function VolleyballCourt({
     // Prevent page scroll during drag
     document.body.style.overflow = 'hidden'
     document.body.style.touchAction = 'none'
+
+    // Initialize with preview position for seamless transition (no visual jump)
+    if (initialEndSvg) {
+      const normalizedEnd = toNormalizedCoords(initialEndSvg.x, initialEndSvg.y)
+      setArrowDragPosition(normalizedEnd)
+      onArrowChange(role, normalizedEnd)
+    }
+
+    // Initialize curve to match preview
+    if (initialControlSvg && onArrowCurveChange) {
+      const normalizedControl = toNormalizedCoords(initialControlSvg.x, initialControlSvg.y)
+      onArrowCurveChange(role, normalizedControl)
+    }
 
     const handleMove = (event: MouseEvent | TouchEvent) => {
       event.preventDefault() // Prevent scrolling on mobile
@@ -1178,7 +1196,7 @@ export function VolleyballCourt({
     document.addEventListener('mouseup', handleEnd)
       document.addEventListener('touchmove', handleMove, { passive: false })
       document.addEventListener('touchend', handleEnd)
-  }, [onArrowChange, getEventPosition, isDraggingOffCourt, incrementDragCount, isMobile])
+  }, [onArrowChange, onArrowCurveChange, getEventPosition, toNormalizedCoords, isDraggingOffCourt, incrementDragCount, isMobile])
 
   // Handle curve drag - dragging the curve handle adjusts direction and intensity
   const handleCurveDragStart = useCallback((role: Role, e: React.MouseEvent | React.TouchEvent) => {
@@ -1848,15 +1866,15 @@ export function VolleyballCourt({
           const defaultHandleSvg = { x: homeSvgPos.x, y: Math.max(12, homeSvgPos.y - 28) }
           const arrowEndSvg = activeArrowTarget ? toSvgCoords(activeArrowTarget) : defaultHandleSvg
 
-          // Arrow tip (hover-revealed for new arrows)
+          // Arrow preview (hover-revealed for new arrows) - uses same MovementArrow as final arrows
           // Direction: peeks toward court center (left if player on right, right if player on left)
-          const arrowDirection = homeBasePos.x > 0.5 ? 'left' : 'right'
-          // Show tip when: (no existing arrow OR actively dragging from tip) AND player is hovered/tapped
-          // We keep the tip in DOM during drag to prevent iOS from breaking touch sequence when element unmounts
-          const shouldShowTip = (!arrows[role] || draggingArrowRole === role) &&
+          const isLeftSide = homeBasePos.x > 0.5
+          // Show preview when: (no existing arrow OR actively dragging from preview) AND player is hovered/tapped
+          // We keep the preview in DOM during drag to prevent iOS from breaking touch sequence when element unmounts
+          const shouldShowPreview = (!arrows[role] || draggingArrowRole === role) &&
             ((isMobile && tappedRole === role) || (!isMobile && hoveredRole === role))
-          // Hide tip visually once arrow exists (but keep in DOM for touch continuity)
-          const hideTipDuringDrag = draggingArrowRole === role && arrows[role]
+          // Hide preview visually once arrow exists (but keep in DOM for touch continuity)
+          const hidePreviewDuringDrag = draggingArrowRole === role && arrows[role]
 
           // Calculate token radius for arrow positioning
           const hasAssignedPlayer = playerInfo.name !== undefined || playerInfo.number !== undefined
@@ -1864,17 +1882,36 @@ export function VolleyballCourt({
           const baseTokenSize = isPositionOnlyMode ? 56 : 48
           const actualTokenRadius = Math.max(baseTokenSize * tokenScale, 48) / 2
 
-          const arrowTip = shouldShowTip && onArrowChange ? (
-            <g style={{ opacity: hideTipDuringDrag ? 0 : 1 }}>
-              <ArrowTip
-                key={`tip-${role}`}
-                role={role}
-                playerX={homeSvgPos.x}
-                playerY={homeSvgPos.y}
-                tokenRadius={actualTokenRadius}
-                onDragStart={(e) => handleArrowDragStart(role, e)}
-                direction={arrowDirection}
-                onMouseEnter={() => setHoveredRole(role)} // Maintain hover when mouse moves to arrow
+          // Preview geometry - slight upward curve peeking past token edge
+          const peekDistance = 28  // How far past token edge
+          const curveHeight = 25   // How much the curve bows upward
+
+          // Preview endpoint (past edge, angled slightly up)
+          const previewEndSvg = {
+            x: homeSvgPos.x + (isLeftSide ? -(actualTokenRadius + peekDistance) : (actualTokenRadius + peekDistance)),
+            y: homeSvgPos.y - 10  // Slightly up
+          }
+
+          // Control point for upward curve (midpoint pulled up)
+          const previewControlSvg = {
+            x: (homeSvgPos.x + previewEndSvg.x) / 2,
+            y: homeSvgPos.y - curveHeight
+          }
+
+          const arrowPreview = shouldShowPreview && onArrowChange ? (
+            <g style={{ opacity: hidePreviewDuringDrag ? 0 : 1 }}>
+              <MovementArrow
+                key={`preview-${role}`}
+                start={homeSvgPos}
+                end={previewEndSvg}
+                control={previewControlSvg}
+                color={ROLE_INFO[role].color}
+                strokeWidth={3}
+                opacity={0.85}
+                isDraggable={true}
+                onDragStart={(e) => handleArrowDragStart(role, e, previewEndSvg, previewControlSvg)}
+                onMouseEnter={() => setHoveredRole(role)}
+                animateIn={true}
                 debugHitboxes={debugHitboxes}
               />
             </g>
@@ -1883,8 +1920,8 @@ export function VolleyballCourt({
           // Render HOME player
           const homePlayerNode = (
             <g key={`home-${role}`}>
-              {/* Arrow tip rendered FIRST so it appears behind the player token */}
-              {arrowTip}
+              {/* Arrow preview rendered FIRST so it appears behind the player token */}
+              {arrowPreview}
               <g
                 transform={`translate(${homeSvgPos.x}, ${homeSvgPos.y})`}
                 style={{
