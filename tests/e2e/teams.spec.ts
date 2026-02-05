@@ -1,7 +1,5 @@
 import { test, expect } from '@playwright/test'
 
-test.describe.configure({ timeout: 60_000 })
-
 test.describe('Teams Page', () => {
   test('loads the teams page', async ({ page }) => {
     await page.goto('/teams')
@@ -9,16 +7,17 @@ test.describe('Teams Page', () => {
     // Should see the page header
     await expect(page.getByRole('heading', { name: /teams/i })).toBeVisible()
 
-    // Should see create and import actions
-    await expect(page.getByRole('button', { name: /new team/i })).toBeVisible()
-    await expect(page.getByRole('button', { name: /^import$/i })).toBeVisible()
+    // Should see create and import options
+    await expect(page.getByText(/create new team/i)).toBeVisible()
+    await expect(page.getByText(/import team/i)).toBeVisible()
   })
 
-  test('hides search bar until enough teams exist', async ({ page }) => {
+  test('shows search bar', async ({ page }) => {
     await page.goto('/teams')
 
-    // Search should not be shown in a fresh/short team list state
-    await expect(page.getByPlaceholder(/search teams/i)).toHaveCount(0)
+    // Should have a search input
+    const searchInput = page.getByPlaceholder(/search/i)
+    await expect(searchInput).toBeVisible()
   })
 
   test('create team button opens dialog', async ({ page }) => {
@@ -29,7 +28,7 @@ test.describe('Teams Page', () => {
     await newTeamButton.click()
 
     // Should see dialog content (either auth prompt or create form)
-    await expect(page.getByRole('dialog')).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByRole('dialog')).toBeVisible()
   })
 
   test('unauthenticated user sees sign-in prompt when creating team', async ({ page }) => {
@@ -49,8 +48,8 @@ test.describe('Teams Page', () => {
     // Should see email/password option
     await expect(page.getByPlaceholder(/email/i)).toBeVisible()
 
-    // Should see the local-only escape option
-    await expect(page.getByRole('button', { name: /continue without an account/i })).toBeVisible()
+    // Should see the "never mind" escape option
+    await expect(page.getByRole('button', { name: /whiteboard/i })).toBeVisible()
 
     // Should see privacy policy link
     await expect(page.getByText(/privacy policy/i)).toBeVisible()
@@ -60,11 +59,11 @@ test.describe('Teams Page', () => {
     await page.goto('/teams')
 
     // Click the import button
-    const importButton = page.getByRole('button', { name: /^import$/i }).first()
+    const importButton = page.getByRole('button', { name: /import/i })
     await importButton.click()
 
     // Should see dialog
-    await expect(page.getByRole('dialog')).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByRole('dialog')).toBeVisible()
   })
 
   test('unauthenticated user sees sign-in prompt when importing team', async ({ page }) => {
@@ -88,16 +87,22 @@ test.describe('Teams Page', () => {
     // Dialog should be visible
     await expect(page.getByRole('dialog')).toBeVisible()
 
-    // Click the local-only button
-    const dismissButton = page.getByRole('button', { name: /continue without an account/i })
+    // Click the "never mind" button
+    const dismissButton = page.getByRole('button', { name: /whiteboard/i })
     await dismissButton.click()
 
-    // Dialog should stay open and switch to local create form
-    await expect(page.getByRole('heading', { name: /create new team/i })).toBeVisible()
+    // Dialog should be closed
+    await expect(page.getByRole('dialog')).not.toBeVisible()
   })
 
-  test('does not show an in-page back button', async ({ page }) => {
+  test('back button returns to home', async ({ page }) => {
     await page.goto('/teams')
-    await expect(page.locator('main a[href="/"]', { hasText: 'Back' })).toHaveCount(0)
+
+    // Click back button
+    const backButton = page.getByRole('button', { name: /back/i })
+    await backButton.click()
+
+    // Should be back on main page
+    await expect(page).toHaveURL('/')
   })
 })

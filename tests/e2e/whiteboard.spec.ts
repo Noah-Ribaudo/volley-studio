@@ -4,12 +4,11 @@ test.describe('Whiteboard', () => {
   test('loads the main whiteboard page', async ({ page }) => {
     await page.goto('/')
 
+    // Should see the volleyball court
+    await expect(page.locator('svg').first()).toBeVisible()
+
     // Page should have loaded without errors
     await expect(page).toHaveTitle(/Volley Studio/i)
-
-    // Should have SVG elements on the page (court and/or icons)
-    const svgCount = await page.locator('svg').count()
-    expect(svgCount).toBeGreaterThan(0)
   })
 
   test('can navigate to teams page', async ({ page }) => {
@@ -53,12 +52,9 @@ test.describe('Whiteboard', () => {
     // Wait for the page to load
     await page.waitForLoadState('networkidle')
 
-    // The page should have court elements (SVGs containing the court/players)
-    // Find a visible SVG that's large enough to be the court
-    const svgElements = page.locator('svg')
-    const count = await svgElements.count()
-
-    // Should have multiple SVG elements on the page
-    expect(count).toBeGreaterThan(0)
+    // Should see player position indicators (circles/markers on the court)
+    // These are typically rendered as circles or divs with player info
+    const court = page.locator('[data-testid="volleyball-court"], .court, svg').first()
+    await expect(court).toBeVisible({ timeout: 10000 })
   })
 })
