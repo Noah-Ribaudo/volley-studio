@@ -62,7 +62,7 @@ export function SimulationBall({ x, y, height, contactFlash = false }: Simulatio
         cx={x}
         cy={visualBallY}
         r={ballRadius + 4}
-        fill={contactFlash ? 'rgba(255, 255, 200, 0.5)' : 'rgba(255, 220, 100, 0.3)'}
+        fill={contactFlash ? 'rgba(255, 200, 150, 0.5)' : 'rgba(249, 115, 22, 0.3)'}
         style={{
           transition: 'all 100ms ease-out',
         }}
@@ -73,7 +73,7 @@ export function SimulationBall({ x, y, height, contactFlash = false }: Simulatio
         cx={x}
         cy={visualBallY}
         r={ballRadius}
-        fill={contactFlash ? '#FFEB3B' : '#FFD700'}
+        fill={contactFlash ? '#fb923c' : '#f97316'}
         stroke="#fff"
         strokeWidth={2}
         style={{
@@ -95,7 +95,7 @@ export function SimulationBall({ x, y, height, contactFlash = false }: Simulatio
         cx={x + 1 * contactScale}
         cy={visualBallY + 2 * contactScale}
         r={2 * contactScale}
-        fill="rgba(200, 150, 0, 0.4)"
+        fill="rgba(194, 65, 12, 0.4)"
       />
     </g>
   )
@@ -128,7 +128,7 @@ export function AttackBall({
   onDragStart
 }: AttackBallProps) {
   const ballRadius = 12
-  const highlightColor = isEnemySide ? 'rgba(239, 68, 68, 0.6)' : 'rgba(255, 215, 0, 0.6)'
+  const highlightColor = isEnemySide ? 'rgba(239, 68, 68, 0.6)' : 'rgba(249, 115, 22, 0.6)'
 
   if (!exists && !isDragging) {
     // Ghost ball indicator when no ball exists
@@ -138,8 +138,8 @@ export function AttackBall({
           cx={x}
           cy={y}
           r={ballRadius + 4}
-          fill="rgba(255, 215, 0, 0.15)"
-          stroke="rgba(255, 215, 0, 0.4)"
+          fill="rgba(249, 115, 22, 0.15)"
+          stroke="rgba(249, 115, 22, 0.4)"
           strokeWidth={2}
           strokeDasharray="4,4"
           style={{ cursor: 'pointer', pointerEvents: 'auto' }}
@@ -150,7 +150,7 @@ export function AttackBall({
         <text
           x={x}
           y={y}
-          fill="rgba(255, 215, 0, 0.6)"
+          fill="rgba(249, 115, 22, 0.6)"
           fontSize={16}
           fontWeight="bold"
           textAnchor="middle"
@@ -193,21 +193,21 @@ export function AttackBall({
         }}
       />
 
-      {/* Outer glow for visibility (gold like simulation ball) */}
+      {/* Outer glow for visibility (orange like logo) */}
       <circle
         cx={x}
         cy={y}
         r={ballRadius + 4}
-        fill="rgba(255, 220, 100, 0.3)"
+        fill="rgba(249, 115, 22, 0.3)"
         className="pointer-events-none"
       />
 
-      {/* Main ball (gold like simulation ball) */}
+      {/* Main ball (orange like logo) */}
       <circle
         cx={x}
         cy={y}
         r={ballRadius}
-        fill="#FFD700"
+        fill="#f97316"
         stroke="#fff"
         strokeWidth={2}
         className="pointer-events-none"
@@ -230,7 +230,7 @@ export function AttackBall({
         cx={x + 2}
         cy={y + 2}
         r={2}
-        fill="rgba(200, 150, 0, 0.4)"
+        fill="rgba(194, 65, 12, 0.4)"
         className="pointer-events-none"
       />
 
