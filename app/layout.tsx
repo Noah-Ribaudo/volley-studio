@@ -49,7 +49,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" data-texture="low" data-theme="blue" suppressHydrationWarning>
+    <html lang="en" data-texture="low" data-theme="dark" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
@@ -59,9 +59,9 @@ export default function RootLayout({
         <ConvexClientProvider>
           <ThemeInitializer />
           <TextureModeLoader />
-          <Toaster 
-            richColors 
-            position="top-center" 
+          <Toaster
+            richColors
+            position="top-center"
             toastOptions={{
               style: {
                 marginTop: 'env(safe-area-inset-top, 0px)',

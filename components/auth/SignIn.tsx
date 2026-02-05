@@ -21,7 +21,7 @@ export function SignInWithGoogle() {
     <button
       onClick={handleSignIn}
       disabled={isLoading}
-      className="flex items-center justify-center gap-3 w-full px-4 py-3 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      className="flex items-center justify-center gap-3 w-full px-4 py-3 bg-secondary border border-border rounded-lg hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
     >
       <svg className="w-5 h-5" viewBox="0 0 24 24">
         <path
@@ -41,7 +41,7 @@ export function SignInWithGoogle() {
           d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
         />
       </svg>
-      <span className="text-gray-700 font-medium">
+      <span className="text-foreground font-medium">
         {isLoading ? "Signing in..." : "Continue with Google"}
       </span>
     </button>
@@ -84,7 +84,7 @@ export function SignInWithPassword() {
           name="email"
           placeholder="Email"
           required
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+          className="w-full px-4 py-3 bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
         />
       </div>
       <div>
@@ -94,16 +94,16 @@ export function SignInWithPassword() {
           placeholder="Password"
           required
           minLength={8}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+          className="w-full px-4 py-3 bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
         />
       </div>
       {error && (
-        <p className="text-sm text-red-600">{error}</p>
+        <p className="text-sm text-destructive">{error}</p>
       )}
       <button
         type="submit"
         disabled={isLoading}
-        className="w-full px-4 py-3 bg-orange-500 text-white font-medium rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full px-4 py-3 bg-primary text-primary-foreground font-medium rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {isLoading
           ? mode === "signIn"
@@ -119,7 +119,7 @@ export function SignInWithPassword() {
           setMode(mode === "signIn" ? "signUp" : "signIn");
           setError(null);
         }}
-        className="w-full text-sm text-gray-500 hover:text-gray-700"
+        className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
         {mode === "signIn"
           ? "Don't have an account? Sign up"
@@ -135,7 +135,7 @@ export function SignOut() {
   return (
     <button
       onClick={() => signOut()}
-      className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+      className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-colors"
     >
       Sign out
     </button>

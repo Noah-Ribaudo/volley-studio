@@ -44,7 +44,8 @@
   --card-foreground: var(--c-fg);
   --popover: var(--c-surface);
   --popover-foreground: var(--c-fg);
-  --primary: var(--c-setter);           /* Using setter purple as primary */
+  --c-accent: oklch(70% 0.18 55);       /* Orange accent */
+  --primary: var(--c-accent);            /* Using orange as primary */
   --primary-foreground: oklch(98% 0 0);
   --secondary: oklch(93% 0 0);
   --secondary-foreground: var(--c-fg);
@@ -55,17 +56,17 @@
   --destructive: var(--c-destructive);
   --border: var(--c-border);
   --input: var(--c-border);
-  --ring: var(--c-setter);
+  --ring: var(--c-accent);
 
   /* Sidebar */
   --sidebar: var(--c-surface);
   --sidebar-foreground: var(--c-fg);
-  --sidebar-primary: var(--c-setter);
+  --sidebar-primary: var(--c-accent);
   --sidebar-primary-foreground: oklch(98% 0 0);
   --sidebar-accent: oklch(93% 0 0);
   --sidebar-accent-foreground: var(--c-fg);
   --sidebar-border: var(--c-border);
-  --sidebar-ring: var(--c-setter);
+  --sidebar-ring: var(--c-accent);
 
   /* Radius */
   --radius: 0.5rem;
