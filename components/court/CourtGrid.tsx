@@ -69,15 +69,27 @@ export function CourtGrid({ width, height, showZones = true, rotation, baseOrder
     6: { x: width * 0.5000, y: height * 0.8333 }, // Back center
   }
 
+  // Generate unique IDs for gradients to avoid conflicts when multiple courts are rendered
+  const gradientId = `court-vignette-${Math.random().toString(36).slice(2, 9)}`
+
   return (
     <g className="court-grid">
-      {/* Court background */}
+      {/* Radial gradient definition for vignette effect */}
+      <defs>
+        <radialGradient id={gradientId} cx="50%" cy="50%" r="70%" fx="50%" fy="50%">
+          <stop offset="0%" stopColor={courtBackgroundColor} stopOpacity="1" />
+          <stop offset="60%" stopColor={courtBackgroundColor} stopOpacity="1" />
+          <stop offset="100%" stopColor={isLightTheme ? '#d1d5db' : '#111827'} stopOpacity="1" />
+        </radialGradient>
+      </defs>
+
+      {/* Court background with radial vignette for depth */}
       <rect
         x={0}
         y={0}
         width={width}
         height={height}
-        fill={courtBackgroundColor}
+        fill={`url(#${gradientId})`}
         rx={4}
       />
 
