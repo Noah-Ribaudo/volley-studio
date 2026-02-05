@@ -517,20 +517,19 @@ export function VolleyballCourt({
     return resolveCollisions(preview)
   }, [collisionFreePositions, arrows, activeRoles, resolveCollisions])
 
-  // Display positions: during animation use animatedPositions,
-  // in preview mode use previewPositions, otherwise use collisionFreePositions
+  // Display positions: during animation AND preview use animatedPositions,
+  // otherwise use collisionFreePositions
+  // Note: We use animatedPositions for preview because they contain the collision-resolved
+  // final positions from the bezier animation, which is more accurate than previewPositions
   const displayPositions = useMemo(() => {
-    if (isBezierAnimating) {
+    if (isBezierAnimating || isPreviewingMovement) {
       return animatedPositions
-    }
-    if (isPreviewingMovement) {
-      return previewPositions
     }
     if (animationMode === 'raf') {
       return animatedPositions
     }
     return collisionFreePositions
-  }, [isBezierAnimating, isPreviewingMovement, animationMode, animatedPositions, previewPositions, collisionFreePositions])
+  }, [isBezierAnimating, isPreviewingMovement, animationMode, animatedPositions, collisionFreePositions])
 
   // Calculate screen position for a player token based on their displayed (collision-resolved) position
   // Uses hardcoded court dimensions (400x800, padding 40) since they're constants
@@ -733,6 +732,81 @@ export function VolleyballCourt({
       }
     }
 
+    // Helper to pick the best control point for an arrow (same logic as visual rendering)
+    // Returns normalized coordinates or null for straight line
+    const pickBestControlForAnimation = (role: Role, startPct: Position, endPct: Position): Position | null => {
+      // If user has manually set a control point, use it directly
+      const userCurve = arrowCurves[role]
+      if (userCurve) {
+        return { x: userCurve.x, y: userCurve.y }
+      }
+
+      // Auto-calculate: choose best curve based on avoiding other players
+      const dx = endPct.x - startPct.x
+      const dy = endPct.y - startPct.y
+      const dist = Math.sqrt(dx * dx + dy * dy)
+      if (dist < 0.0001) return null
+
+      const dirX = dx / dist
+      const dirY = dy / dist
+      const perp = { x: -dirY, y: dirX }
+      const mid = { x: (startPct.x + endPct.x) / 2, y: (startPct.y + endPct.y) / 2 }
+
+      const bend = Math.min(0.2, dist * 0.35)
+      const candidates: ({ control: Position | null; side: 'left' | 'right' | 'straight' })[] = [
+        { control: null, side: 'straight' },
+        { control: { x: mid.x + perp.x * bend, y: mid.y + perp.y * bend }, side: 'left' },
+        { control: { x: mid.x - perp.x * bend, y: mid.y - perp.y * bend }, side: 'right' },
+      ]
+
+      const others = activeRoles
+        .filter(r => r !== role)
+        .map(r => startPositions[r])
+        .filter((pos): pos is Position => pos !== undefined)
+
+      const center = { x: 0.5, y: 0.75 }
+      const vecToCenter = { x: center.x - startPct.x, y: center.y - startPct.y }
+      const centerSide = Math.sign(dirX * vecToCenter.y - dirY * vecToCenter.x) || 0
+
+      const samplePoint = (t: number, control: Position | null) => {
+        if (!control) {
+          return { x: startPct.x + (endPct.x - startPct.x) * t, y: startPct.y + (endPct.y - startPct.y) * t }
+        }
+        const oneMinusT = 1 - t
+        return {
+          x: oneMinusT * oneMinusT * startPct.x + 2 * oneMinusT * t * control.x + t * t * endPct.x,
+          y: oneMinusT * oneMinusT * startPct.y + 2 * oneMinusT * t * control.y + t * t * endPct.y,
+        }
+      }
+
+      const scoreCandidate = (candidate: (typeof candidates)[number]) => {
+        let minDist = Number.POSITIVE_INFINITY
+        for (let i = 0; i <= 10; i++) {
+          const t = i / 10
+          const p = samplePoint(t, candidate.control)
+          for (const other of others) {
+            const d = Math.hypot(p.x - other.x, p.y - other.y)
+            if (d < minDist) minDist = d
+          }
+        }
+        const candidateSide = candidate.control
+          ? Math.sign(dirX * (candidate.control.y - startPct.y) - dirY * (candidate.control.x - startPct.x)) || 0
+          : 0
+        const concaveBonus = centerSide !== 0 && candidateSide === centerSide ? 5 : 0
+        const straightBonus = !candidate.control && dist < 0.08 ? 2 : 0
+        return minDist + concaveBonus + straightBonus
+      }
+
+      let best = candidates[0]
+      let bestScore = scoreCandidate(best)
+      for (let i = 1; i < candidates.length; i++) {
+        const s = scoreCandidate(candidates[i])
+        if (s > bestScore) { best = candidates[i]; bestScore = s }
+      }
+
+      return best.control
+    }
+
     const step = (now: number) => {
       const elapsed = now - startTime
       const rawT = Math.min(1, elapsed / duration)
@@ -744,13 +818,9 @@ export function VolleyballCourt({
       const agents = activeRoles.map(role => {
         const start = startPositions[role] || { x: 0.5, y: 0.5 }
         const end = targets[role] || { x: 0.5, y: 0.5 }
-        const curve = arrowCurves[role]
 
-        // Get control point in normalized coordinates (if curve exists)
-        let control: Position | null = null
-        if (curve && arrows[role]) {
-          control = { x: curve.x, y: curve.y }
-        }
+        // Get control point - use explicit curve if set, otherwise auto-calculate
+        const control = arrows[role] ? pickBestControlForAnimation(role, start, end) : null
 
         // Interpolate along bezier path
         const interpolated = interpolateBezier(start, end, control, t)
@@ -1088,7 +1158,7 @@ export function VolleyballCourt({
 
   // Handle drag start
   const handleDragStart = useCallback((role: Role, e: React.MouseEvent | React.TouchEvent) => {
-    if (!isEditable || !onPositionChangeRef.current) return
+    if (!isEditable || !onPositionChangeRef.current || isPreviewingMovement) return
 
     // Note: Don't call preventDefault on touch events here - it causes passive event listener warnings
     // The touchmove handler already uses { passive: false } to prevent scrolling during drag
@@ -1160,7 +1230,7 @@ export function VolleyballCourt({
     document.addEventListener('mouseup', handleEnd)
       document.addEventListener('touchmove', handleMove, { passive: false })
       document.addEventListener('touchend', handleEnd)
-    }, [isEditable, positions, getEventPosition, handleDragEnd])
+    }, [isEditable, isPreviewingMovement, positions, getEventPosition, handleDragEnd])
 
   // Handle arrow drag (create, reposition, or delete movement arrows)
   const handleArrowDragStart = useCallback((
@@ -1169,7 +1239,7 @@ export function VolleyballCourt({
     initialEndSvg?: { x: number; y: number },
     initialControlSvg?: { x: number; y: number }
   ) => {
-    if (!onArrowChange) return
+    if (!onArrowChange || isPreviewingMovement) return
 
     // Note: Don't call preventDefault on touch events here - it causes passive event listener warnings
     // The touchmove handler already uses { passive: false } to prevent scrolling during drag
@@ -1267,11 +1337,11 @@ export function VolleyballCourt({
     document.addEventListener('mouseup', handleEnd)
       document.addEventListener('touchmove', handleMove, { passive: false })
       document.addEventListener('touchend', handleEnd)
-  }, [onArrowChange, onArrowCurveChange, getEventPosition, toNormalizedCoords, isDraggingOffCourt, incrementDragCount, isMobile])
+  }, [onArrowChange, onArrowCurveChange, getEventPosition, toNormalizedCoords, isDraggingOffCourt, incrementDragCount, isMobile, isPreviewingMovement])
 
   // Handle curve drag - dragging the curve handle adjusts direction and intensity
   const handleCurveDragStart = useCallback((role: Role, e: React.MouseEvent | React.TouchEvent) => {
-    if (!onArrowCurveChange) return
+    if (!onArrowCurveChange || isPreviewingMovement) return
 
     if (e.type === 'mousedown') {
       e.preventDefault()
@@ -1317,7 +1387,7 @@ export function VolleyballCourt({
     document.addEventListener('mouseup', handleEnd)
     document.addEventListener('touchmove', handleMove, { passive: false })
     document.addEventListener('touchend', handleEnd)
-  }, [onArrowCurveChange, positions, arrows, getEventPosition])
+  }, [onArrowCurveChange, positions, arrows, getEventPosition, isPreviewingMovement])
 
   // Handle mobile touch - drag to move, tap to open context menu
   const handleMobileTouchStart = useCallback((role: Role, e: React.TouchEvent) => {
@@ -1405,7 +1475,7 @@ export function VolleyballCourt({
 
   // Handle away player drag start
   const handleAwayDragStart = useCallback((role: Role, e: React.MouseEvent | React.TouchEvent) => {
-    if (!isEditable || !onAwayPositionChangeRef.current || !awayPositions) return
+    if (!isEditable || !onAwayPositionChangeRef.current || !awayPositions || isPreviewingMovement) return
 
     // Note: Don't call preventDefault on touch events here - it causes passive event listener warnings
     if (e.type === 'mousedown') {
@@ -1473,7 +1543,7 @@ export function VolleyballCourt({
     document.addEventListener('mouseup', handleEnd)
     document.addEventListener('touchmove', handleMove, { passive: false })
     document.addEventListener('touchend', handleEnd)
-  }, [isEditable, awayPositions, getEventPosition, handleAwayDragEnd])
+  }, [isEditable, isPreviewingMovement, awayPositions, getEventPosition, handleAwayDragEnd])
 
   // Constrain attack ball position: must stay on opponent side (y < 0.5) and near net
   const constrainAttackBallPosition = useCallback((pos: Position): Position => {
@@ -2035,7 +2105,7 @@ export function VolleyballCourt({
                         touchAction: 'none',
                         WebkitTapHighlightColor: 'transparent'
                       }}
-                      onMouseEnter={() => !isMobile && !draggingArrowRole && handlePreviewHover(role, true)}
+                      onMouseEnter={() => !isMobile && !draggingArrowRole && !draggingRole && handlePreviewHover(role, true)}
                       onMouseLeave={() => handlePreviewHover(role, false)}
                       onClick={(e) => {
                         // MOBILE FIX: Skip click if touch just ended (prevents dual firing)
