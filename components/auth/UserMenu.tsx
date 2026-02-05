@@ -3,8 +3,9 @@
 import { useConvexAuth, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { SignOut } from "./SignIn";
-import { User, LogIn } from "lucide-react";
+import { LogIn } from "lucide-react";
 import Link from "next/link";
+import { Facehash } from "facehash";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,7 +23,7 @@ export function UserMenu() {
 
   if (isLoading) {
     return (
-      <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse" />
+      <div className="w-8 h-8 rounded-full bg-secondary animate-pulse" />
     );
   }
 
@@ -30,7 +31,7 @@ export function UserMenu() {
     return (
       <Link
         href="/sign-in"
-        className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+        className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-colors"
       >
         <LogIn className="w-4 h-4" />
         <span>Sign in</span>
@@ -41,7 +42,7 @@ export function UserMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="flex items-center gap-2 p-1 rounded-full hover:bg-gray-100 transition-colors">
+        <button className="flex items-center gap-2 p-1 rounded-full hover:bg-accent transition-colors">
           {user?.image ? (
             <img
               src={user.image}
@@ -49,9 +50,7 @@ export function UserMenu() {
               className="w-8 h-8 rounded-full"
             />
           ) : (
-            <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center">
-              <User className="w-4 h-4 text-orange-600" />
-            </div>
+            <Facehash name={user?.email || user?.name || "user"} size={32} />
           )}
         </button>
       </DropdownMenuTrigger>
@@ -59,7 +58,7 @@ export function UserMenu() {
         <div className="px-2 py-1.5">
           <p className="text-sm font-medium">{user?.name || "User"}</p>
           {user?.email && (
-            <p className="text-xs text-gray-500">{user.email}</p>
+            <p className="text-xs text-muted-foreground">{user.email}</p>
           )}
         </div>
         <DropdownMenuSeparator />
