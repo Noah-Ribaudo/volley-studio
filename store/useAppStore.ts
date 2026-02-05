@@ -429,7 +429,7 @@ export const useAppStore = create<AppState>()(
       showPlayer: false, // Default to hiding player names
       circleTokens: true, // Default to circular tokens
       tokenSize: 'big' as const, // Default to big tokens
-      hideAwayTeam: true, // Default to hiding away team
+      hideAwayTeam: false, // Default to showing away team
       fullStatusLabels: true, // Default to showing full words on status badges
       showLearnTab: false, // Default to hiding Learn tab in mobile nav
       debugHitboxes: false, // Default to hiding hitbox debug overlay

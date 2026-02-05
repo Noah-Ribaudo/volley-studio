@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Layout, Users, Timer, Settings, ChevronLeft, ChevronRight, ChevronDown, Play, RotateCcw, Printer } from 'lucide-react'
+import { Layout, Users, Timer, Settings, ChevronLeft, ChevronRight, ChevronDown, Play, RotateCcw, Printer, Eye, EyeOff } from 'lucide-react'
 import { UserMenu } from '@/components/auth'
 import { Button } from '@/components/ui/button'
 import {
@@ -63,6 +63,8 @@ export function DesktopHeaderNav() {
   const baseOrder = useAppStore((state) => state.baseOrder)
   const localPositions = useAppStore((state) => state.localPositions)
   const customLayouts = useAppStore((state) => state.customLayouts)
+  const hideAwayTeam = useAppStore((state) => state.hideAwayTeam)
+  const setHideAwayTeam = useAppStore((state) => state.setHideAwayTeam)
 
   // Get visible phases
   const phasesToShow = visiblePhases
@@ -212,6 +214,21 @@ export function DesktopHeaderNav() {
               <span>Play</span>
             </Button>
           )}
+
+          {/* Divider */}
+          <div className="w-px h-6 bg-border" />
+
+          {/* Hide/Show Opponent toggle */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 gap-1.5"
+            onClick={() => setHideAwayTeam(!hideAwayTeam)}
+            title={hideAwayTeam ? "Show opponent" : "Hide opponent"}
+          >
+            {hideAwayTeam ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            <span>Opponent</span>
+          </Button>
 
           {/* Divider */}
           <div className="w-px h-6 bg-border" />
