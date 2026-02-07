@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 import { getPhaseInfo, getCompactPhaseIcon, isRallyPhase as checkIsRallyPhase } from '@/lib/phaseIcons'
 import { ArrowLeft01Icon, ArrowRight01Icon, ArrowDown01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
+import { useAppStore } from '@/store/useAppStore'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,6 +45,10 @@ export function MobileContextBar({
   onPrev,
   visiblePhases,
 }: MobileContextBarProps) {
+  const isPreviewingMovement = useAppStore((state) => state.isPreviewingMovement)
+  const setPreviewingMovement = useAppStore((state) => state.setPreviewingMovement)
+  const triggerPlayAnimation = useAppStore((state) => state.triggerPlayAnimation)
+
   // Determine which phases to show
   const isRallyPhase = checkIsRallyPhase(currentPhase)
   const phasesToShow = isRallyPhase
@@ -112,6 +117,25 @@ export function MobileContextBar({
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {/* Play/reset - explicit mobile affordance */}
+        <Button
+          variant="ghost"
+          className="h-10 px-2 shrink-0"
+          onClick={() => {
+            if (isPreviewingMovement) {
+              setPreviewingMovement(false)
+              return
+            }
+            triggerPlayAnimation()
+            setPreviewingMovement(true)
+          }}
+          aria-label={isPreviewingMovement ? 'Reset movement preview' : 'Play movement preview'}
+        >
+          <span className="text-xs font-semibold">
+            {isPreviewingMovement ? 'Reset' : 'Play'}
+          </span>
+        </Button>
 
         {/* Divider */}
         <div className="w-px h-6 bg-border shrink-0" />

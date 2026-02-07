@@ -34,8 +34,8 @@ export default function PrivacyPage() {
             <h2 className="text-xl font-semibold mb-3">The short version</h2>
             <p className="text-muted-foreground">
               I don't want your data. Seriously. Volley Studio exists to help coaches and players
-              visualize rotations. The only reason accounts exist is so your teams can persist
-              between sessions.
+              visualize rotations. The only reason accounts exist is so your teams and settings
+              can persist between sessions.
             </p>
           </section>
 
@@ -47,8 +47,8 @@ export default function PrivacyPage() {
                 who owns which teams. That's it.
               </li>
               <li>
-                <strong className="text-foreground">Your team data</strong> — Roster names, jersey
-                numbers, and custom rotation layouts. This is the whole point.
+                <strong className="text-foreground">Your team/settings data</strong> — Roster names,
+                jersey numbers, custom rotation layouts, and app settings. This is the whole point.
               </li>
             </ul>
           </section>
@@ -77,7 +77,7 @@ export default function PrivacyPage() {
             <h2 className="text-xl font-semibold mb-3">No account required</h2>
             <p className="text-muted-foreground">
               You can use the whiteboard and visualization tools without creating an account at
-              all. Accounts are only needed if you want to save teams so they persist.
+              all. Accounts are only needed if you want teams/settings to persist.
             </p>
           </section>
 

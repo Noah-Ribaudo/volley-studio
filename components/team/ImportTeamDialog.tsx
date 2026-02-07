@@ -66,7 +66,7 @@ function SignInPrompt({ onClose }: { onClose: () => void }) {
         <DialogTitle>Quick sign-in to import a team</DialogTitle>
         <DialogDescription className="space-y-2 pt-2">
           <span className="block">
-            This is <strong>only</strong> so the imported team can be saved to your account.
+            This is <strong>only</strong> so imported teams and your settings can be saved to your account.
             I don't want your data for anything else — no tracking, no marketing, no selling to anyone.
           </span>
           <span className="block text-xs">

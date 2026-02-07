@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '@/convex/_generated/api'
@@ -11,6 +11,8 @@ import Link from 'next/link'
 import { useAppStore } from '@/store/useAppStore'
 import type { Team } from '@/lib/types'
 import type { PresetSystem } from '@/lib/presetTypes'
+import { toast } from 'sonner'
+import { listLocalTeams, upsertLocalTeam } from '@/lib/localTeams'
 
 // Generate a URL-friendly slug from team name
 function generateSlug(name: string): string {
@@ -27,6 +29,7 @@ function generateSlug(name: string): string {
 export default function TeamsPage() {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
+  const [localTeams, setLocalTeams] = useState<Team[]>([])
 
   // Convex queries - automatically reactive
   const teams = useQuery(api.teams.search, { query: searchQuery })
@@ -34,6 +37,17 @@ export default function TeamsPage() {
 
   const isLoading = teams === undefined
   const setCurrentTeam = useAppStore((state) => state.setCurrentTeam)
+  const currentTeam = useAppStore((state) => state.currentTeam)
+
+  useEffect(() => {
+    const storedTeams = listLocalTeams()
+    if (currentTeam?.id?.startsWith('local-') && !storedTeams.some((team) => team.id === currentTeam.id)) {
+      const next = upsertLocalTeam(currentTeam)
+      setLocalTeams(next)
+      return
+    }
+    setLocalTeams(storedTeams)
+  }, [currentTeam])
 
   // Handle team creation
   const handleCreateTeam = async (name: string, password?: string) => {
@@ -44,6 +58,7 @@ export default function TeamsPage() {
 
   // Handle local-only team creation (no account)
   const handleCreateLocalTeam = (name: string, _presetSystem?: PresetSystem) => {
+    const now = new Date().toISOString()
     const localTeam: Team = {
       id: `local-${Date.now()}`,
       name,
@@ -53,14 +68,29 @@ export default function TeamsPage() {
         id: 'default',
         name: 'Default',
         position_assignments: {},
-        created_at: new Date().toISOString(),
+        created_at: now,
       }],
       active_lineup_id: 'default',
       position_assignments: {},
-      created_at: new Date().toISOString(),
+      created_at: now,
+      updated_at: now,
     }
+    const nextLocalTeams = upsertLocalTeam(localTeam)
+    setLocalTeams(nextLocalTeams)
     setCurrentTeam(localTeam)
+    setSearchQuery('')
+    toast.success(`Created local team: ${name}`)
+    router.push(`/teams/${localTeam.id}`)
+  }
+
+  const openLocalTeamWhiteboard = (team: Team) => {
+    setCurrentTeam(team)
     router.push('/')
+  }
+
+  const openLocalTeamEditor = (team: Team) => {
+    setCurrentTeam(team)
+    router.push(`/teams/${team.id}`)
   }
 
   return (
@@ -95,6 +125,42 @@ export default function TeamsPage() {
           </Card>
         )}
 
+        {/* Local Teams */}
+        {!searchQuery && localTeams.length > 0 && (
+          <Card className="border-primary/40 bg-primary/5">
+            <CardContent className="pt-4">
+              <div className="space-y-3">
+                <div>
+                  <h3 className="font-semibold text-lg">Local Teams</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Saved on this device only
+                  </p>
+                </div>
+                {localTeams.map((team) => (
+                  <div key={team.id} className="rounded-md border bg-background/60 p-3">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0">
+                        <h4 className="font-medium leading-tight break-words">{team.name}</h4>
+                        <p className="text-xs text-muted-foreground">
+                          {team.roster.length} player{team.roster.length !== 1 ? 's' : ''}
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+                        <Button size="sm" variant="outline" className="w-full sm:w-auto" onClick={() => openLocalTeamWhiteboard(team)}>
+                          Whiteboard
+                        </Button>
+                        <Button size="sm" className="w-full sm:w-auto" onClick={() => openLocalTeamEditor(team)}>
+                          Edit
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Loading */}
         {isLoading && (
           <div className="text-center py-8">
@@ -120,12 +186,12 @@ export default function TeamsPage() {
                     name: p.name,
                     number: p.number ?? 0,
                   })),
-                  lineups: team.lineups.map(l => ({
+                  lineups: (team.lineups || []).map(l => ({
                     ...l,
                     position_source: l.position_source as 'custom' | 'full-5-1' | '5-1-libero' | '6-2' | undefined,
                   })),
                   active_lineup_id: team.activeLineupId ?? null,
-                  position_assignments: team.positionAssignments,
+                  position_assignments: team.positionAssignments || {},
                   created_at: new Date(team._creationTime).toISOString(),
                   updated_at: new Date(team._creationTime).toISOString(),
                 }}

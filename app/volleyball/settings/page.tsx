@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useAppStore } from '@/store/useAppStore'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
@@ -14,7 +15,6 @@ import {
 } from '@/components/ui/select'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ROLES, ROLE_INFO, RALLY_PHASE_INFO, RallyPhase } from '@/lib/types'
-import type { LearningPanelPosition } from '@/lib/learning/types'
 import { cn, getTextColorForOklch } from '@/lib/utils'
 import ThemePicker from '@/components/ThemePicker'
 import { SHADER_OPTIONS, type ShaderId } from '@/lib/shaders'
@@ -63,8 +63,6 @@ export default function SettingsPage() {
     setHideAwayTeam,
     fullStatusLabels,
     setFullStatusLabels,
-    showLearnTab,
-    setShowLearnTab,
     // Role highlight
     highlightedRole,
     setHighlightedRole,
@@ -75,9 +73,6 @@ export default function SettingsPage() {
     setPhaseOrder,
     // Team (for conditional UI)
     currentTeam,
-    // Learning
-    learningPanelPosition,
-    setLearningPanelPosition,
     // Court view
     awayTeamHidePercent,
     setAwayTeamHidePercent,
@@ -114,6 +109,7 @@ export default function SettingsPage() {
   }
 
   const hasTeam = Boolean(currentTeam)
+  const [whiteboardPhasesOpen, setWhiteboardPhasesOpen] = useState(false)
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
@@ -269,13 +265,6 @@ export default function SettingsPage() {
               </div>
             )}
             <SettingsToggle
-              id="show-learn-tab"
-              label="Show Learn Tab"
-              description="Show the Learn tab in the bottom navigation"
-              checked={showLearnTab}
-              onCheckedChange={setShowLearnTab}
-            />
-            <SettingsToggle
               id="debug-hitboxes"
               label="Show Touch Targets"
               description="Display green overlay on interactive touch areas"
@@ -288,35 +277,49 @@ export default function SettingsPage() {
         {/* Whiteboard Phases */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Whiteboard Phases</CardTitle>
-            <CardDescription>Drag to reorder, toggle to show/hide in the whiteboard cycle</CardDescription>
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-1">
+                <CardTitle className="text-base">Whiteboard Phases</CardTitle>
+                <CardDescription>Drag to reorder, toggle to show/hide in the whiteboard cycle</CardDescription>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setWhiteboardPhasesOpen((prev) => !prev)}
+              >
+                {whiteboardPhasesOpen ? 'Hide' : 'Show'}
+              </Button>
+            </div>
           </CardHeader>
-          <CardContent>
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
-            >
-              <SortableContext items={phaseOrder} strategy={verticalListSortingStrategy}>
-                <div className="space-y-2">
-                  {phaseOrder.map(phase => {
-                    const info = RALLY_PHASE_INFO[phase]
-                    const isVisible = visiblePhases.has(phase)
-                    return (
-                      <SortablePhaseItem
-                        key={phase}
-                        phase={phase}
-                        label={info.name}
-                        description={info.description}
-                        checked={isVisible}
-                        onCheckedChange={() => togglePhaseVisibility(phase)}
-                      />
-                    )
-                  })}
-                </div>
-              </SortableContext>
-            </DndContext>
-          </CardContent>
+          {whiteboardPhasesOpen && (
+            <CardContent>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext items={phaseOrder} strategy={verticalListSortingStrategy}>
+                  <div className="space-y-2">
+                    {phaseOrder.map(phase => {
+                      const info = RALLY_PHASE_INFO[phase]
+                      const isVisible = visiblePhases.has(phase)
+                      return (
+                        <SortablePhaseItem
+                          key={phase}
+                          phase={phase}
+                          label={info.name}
+                          description={info.description}
+                          checked={isVisible}
+                          onCheckedChange={() => togglePhaseVisibility(phase)}
+                        />
+                      )
+                    })}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            </CardContent>
+          )}
         </Card>
 
         {/* Role Highlights */}
@@ -363,38 +366,6 @@ export default function SettingsPage() {
                 Clear highlight
               </Button>
             )}
-          </CardContent>
-        </Card>
-
-        {/* Learning */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Learning Mode</CardTitle>
-            <CardDescription>Configure how lessons are displayed</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="panel-position" className="text-sm font-medium">
-                Panel Position
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                Choose where the learning content appears relative to the court
-              </p>
-              <Select
-                value={learningPanelPosition}
-                onValueChange={(val) => setLearningPanelPosition(val as LearningPanelPosition)}
-              >
-                <SelectTrigger id="panel-position" className="mt-2">
-                  <SelectValue placeholder="Select position" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="floating">Floating Card (top-left)</SelectItem>
-                  <SelectItem value="bottom">Bottom Drawer</SelectItem>
-                  <SelectItem value="side">Side Panel (left)</SelectItem>
-                  <SelectItem value="inline">Inline (bottom bar)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </CardContent>
         </Card>
 
