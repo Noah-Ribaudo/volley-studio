@@ -98,7 +98,7 @@ export default function TeamsPage() {
         {!searchQuery && (
           <div className="grid gap-4 sm:grid-cols-2">
             {/* Create Team Card */}
-            <Card className="bg-accent/30 border-accent/50">
+            <Card className="bg-accent/50 border-accent/50">
               <CardContent className="pt-4">
                 <h3 className="font-semibold text-lg">Create New Team</h3>
                 <p className="text-sm text-muted-foreground mb-3">

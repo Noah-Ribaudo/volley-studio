@@ -162,7 +162,7 @@ export function RosterManagementCard() {
     <>
       {/* Team conflict resolution modal for auto-save conflicts */}
       <TeamConflictResolutionModal />
-      <Card className="bg-card/60 backdrop-blur">
+      <Card className="bg-card/80 backdrop-blur">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between gap-2">
             {/* Mode indicator */}

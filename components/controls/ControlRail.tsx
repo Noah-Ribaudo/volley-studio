@@ -36,7 +36,7 @@ export function ControlRail({
     : PHASES
 
   return (
-    <div className="rounded-lg border border-border bg-card/50 backdrop-blur-sm shadow-sm p-1.5 sm:p-2.5 space-y-1.5 sm:space-y-2.5 w-full max-w-full overflow-hidden">
+    <div className="rounded-lg border border-border bg-card/70 backdrop-blur-sm shadow-sm p-1.5 sm:p-2.5 space-y-1.5 sm:space-y-2.5 w-full max-w-full overflow-hidden">
       {/* First row: [<] [Phases, wrapping] [>] */}
       <div className="flex items-stretch gap-0.5 sm:gap-1 w-full max-w-full overflow-hidden" aria-label="Select phase">
         {/* Left arrow - 44px touch target on mobile */}

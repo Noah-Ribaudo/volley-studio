@@ -36,7 +36,7 @@ export default function SignInPage() {
           </p>
         </div>
 
-        <div className="bg-transparent backdrop-blur-sm rounded-xl border border-border/60 p-6 space-y-4">
+        <div className="bg-card/90 backdrop-blur-sm rounded-xl border border-border/60 p-6 space-y-4">
           <SignInWithGoogle />
 
           <div className="relative">
@@ -44,7 +44,7 @@ export default function SignInPage() {
               <span className="w-full border-t border-border" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card/80 px-2 text-muted-foreground">or</span>
+              <span className="bg-card px-2 text-muted-foreground">or</span>
             </div>
           </div>
 
