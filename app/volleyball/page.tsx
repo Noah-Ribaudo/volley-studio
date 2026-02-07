@@ -90,10 +90,8 @@ function HomePageContent() {
     assignPlayerToRole,
     // Preview mode
     isPreviewingMovement,
-    setPreviewingMovement,
     // Animation trigger
     playAnimationTrigger,
-    triggerPlayAnimation,
   } = useAppStore()
 
   // Mobile detection
@@ -350,28 +348,6 @@ function HomePageContent() {
       <div className="flex-1 min-h-0 h-full overflow-hidden">
         {/* Court Container - scales to fit available space */}
         <div className="w-full h-auto sm:h-full sm:max-w-3xl mx-auto px-0 sm:px-2 relative">
-          <div className="absolute right-3 top-3 z-30 flex items-center gap-2">
-            {isPreviewingMovement ? (
-              <button
-                className="h-8 rounded-md border border-border bg-background/90 px-3 text-sm shadow-sm backdrop-blur"
-                onClick={() => setPreviewingMovement(false)}
-                type="button"
-              >
-                Reset
-              </button>
-            ) : (
-              <button
-                className="h-8 rounded-md border border-border bg-background/90 px-3 text-sm shadow-sm backdrop-blur"
-                onClick={() => {
-                  triggerPlayAnimation()
-                  setPreviewingMovement(true)
-                }}
-                type="button"
-              >
-                Play
-              </button>
-            )}
-          </div>
           {/* Preset mode indicator - shown when viewing preset positions */}
           {isUsingPreset && (
             <div className="absolute top-16 left-1/2 -translate-x-1/2 z-30">

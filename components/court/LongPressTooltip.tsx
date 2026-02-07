@@ -8,7 +8,7 @@ interface LongPressTooltipProps {
 }
 
 // Tooltip shown above a player token after long-press on mobile
-// Prompts user to drag to draw movement arrows
+// Prompts user to tap where the arrow should end.
 export function LongPressTooltip({ visible, x, y, tokenRadius }: LongPressTooltipProps) {
   if (!visible) return null
 
@@ -50,7 +50,7 @@ export function LongPressTooltip({ visible, x, y, tokenRadius }: LongPressToolti
             textAlign: 'center'
           }}
         >
-          Drag to draw next steps
+          Tap where arrow should go
         </div>
       </foreignObject>
     </g>

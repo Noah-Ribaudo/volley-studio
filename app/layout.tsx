@@ -15,6 +15,7 @@ import ThemeInitializer from "@/components/ThemeInitializer";
 import { ConvexClientProvider } from "@/components/ConvexClientProvider";
 import { UserSettingsSync } from "@/components/settings/UserSettingsSync";
 import { Toaster } from "sonner";
+import { Agentation } from "agentation";
 
 const barlow = Barlow({
   subsets: ["latin"],
@@ -95,6 +96,7 @@ export default function RootLayout({
             }}
           />
           {children}
+          {process.env.NODE_ENV === "development" && <Agentation />}
         </ConvexClientProvider>
       </body>
     </html>

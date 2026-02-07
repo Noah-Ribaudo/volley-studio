@@ -11,6 +11,7 @@ import { useGameTimeStore } from '@/store/useGameTimeStore'
 import { Button } from '@/components/ui/button'
 import { PrinterIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
+import { Eye, EyeOff } from 'lucide-react'
 import { PrintDialog } from '@/components/print'
 import { getActiveAssignments } from '@/lib/lineups'
 import type { Rotation, Phase, PositionCoordinates, RallyPhase } from '@/lib/types'
@@ -37,6 +38,8 @@ export default function VolleyballLayout({
   const nextPhase = useAppStore((state) => state.nextPhase)
   const prevPhase = useAppStore((state) => state.prevPhase)
   const backgroundOpacity = useAppStore((state) => state.backgroundOpacity)
+  const hideAwayTeam = useAppStore((state) => state.hideAwayTeam)
+  const setHideAwayTeam = useAppStore((state) => state.setHideAwayTeam)
 
   // Data for print dialog
   const currentTeam = useAppStore((state) => state.currentTeam)
@@ -110,15 +113,27 @@ export default function VolleyballLayout({
             Volley Studio
           </span>
           {isWhiteboardPage && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => setPrintDialogOpen(true)}
-              aria-label="Print rotations"
-            >
-              <HugeiconsIcon icon={PrinterIcon} className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setHideAwayTeam(!hideAwayTeam)}
+                aria-label={hideAwayTeam ? 'Show opponent' : 'Hide opponent'}
+                title={hideAwayTeam ? 'Show opponent' : 'Hide opponent'}
+              >
+                {hideAwayTeam ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setPrintDialogOpen(true)}
+                aria-label="Print rotations"
+              >
+                <HugeiconsIcon icon={PrinterIcon} className="h-4 w-4" />
+              </Button>
+            </div>
           )}
         </header>
 

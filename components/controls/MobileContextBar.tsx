@@ -118,25 +118,6 @@ export function MobileContextBar({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Play/reset - explicit mobile affordance */}
-        <Button
-          variant="ghost"
-          className="h-10 px-2 shrink-0"
-          onClick={() => {
-            if (isPreviewingMovement) {
-              setPreviewingMovement(false)
-              return
-            }
-            triggerPlayAnimation()
-            setPreviewingMovement(true)
-          }}
-          aria-label={isPreviewingMovement ? 'Reset movement preview' : 'Play movement preview'}
-        >
-          <span className="text-xs font-semibold">
-            {isPreviewingMovement ? 'Reset' : 'Play'}
-          </span>
-        </Button>
-
         {/* Divider */}
         <div className="w-px h-6 bg-border shrink-0" />
 
@@ -181,7 +162,7 @@ export function MobileContextBar({
                 <Button
                   key={`${phase}-${offset}`}
                   data-offset={offset}
-                  variant={isHighlighted ? 'default' : 'ghost'}
+                  variant="ghost"
                   size="sm"
                   onClick={() => onPhaseChange(phase)}
                   aria-pressed={isCurrent}
@@ -190,7 +171,7 @@ export function MobileContextBar({
                   className={cn(
                     "h-7 flex items-center justify-center gap-1 flex-shrink-0 px-2 min-w-[3rem]",
                     isHighlighted
-                      ? 'shadow-sm bg-primary text-primary-foreground'
+                      ? 'shadow-sm bg-muted text-foreground'
                       : 'hover:opacity-80 hover:bg-muted',
                     !isHighlighted && 'opacity-50',
                     isDimmed && isCurrent && 'opacity-50',
@@ -222,6 +203,28 @@ export function MobileContextBar({
           aria-label="Next phase"
         >
           <HugeiconsIcon icon={ArrowRight01Icon} className="h-4 w-4" />
+        </Button>
+
+        {/* Divider */}
+        <div className="w-px h-6 bg-border shrink-0" />
+
+        {/* Play/reset - explicit mobile affordance */}
+        <Button
+          variant="default"
+          className="h-10 w-[4.75rem] shrink-0 justify-center px-0 bg-primary text-primary-foreground hover:bg-primary/90"
+          onClick={() => {
+            if (isPreviewingMovement) {
+              setPreviewingMovement(false)
+              return
+            }
+            triggerPlayAnimation()
+            setPreviewingMovement(true)
+          }}
+          aria-label={isPreviewingMovement ? 'Reset movement preview' : 'Play movement preview'}
+        >
+          <span className="text-xs font-semibold">
+            {isPreviewingMovement ? 'Reset' : 'Play'}
+          </span>
         </Button>
       </div>
     </div>

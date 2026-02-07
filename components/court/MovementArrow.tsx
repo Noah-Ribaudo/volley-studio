@@ -36,6 +36,14 @@ interface MovementArrowProps {
   peekAnimated?: boolean
   /** Whether the peek path should currently be fully revealed */
   peekActive?: boolean
+  /** Dashed path pattern to apply while traversing */
+  dashPattern?: string
+  /** Dash offset for animating dashed traversal */
+  dashOffset?: number
+  /** Additional opacity multiplier for the start dot */
+  startDotOpacityScale?: number
+  /** Additional opacity multiplier for the arrowhead */
+  arrowheadOpacityScale?: number
 }
 
 function MovementArrowImpl({
@@ -59,6 +67,10 @@ function MovementArrowImpl({
   startDotRadius,
   peekAnimated = false,
   peekActive = true,
+  dashPattern,
+  dashOffset = 0,
+  startDotOpacityScale = 1,
+  arrowheadOpacityScale = 1,
 }: MovementArrowProps) {
   const pathRef = useRef<SVGPathElement>(null)
   const arrowheadRef = useRef<SVGPathElement>(null)
@@ -321,6 +333,8 @@ function MovementArrowImpl({
           stroke={color}
           strokeWidth={strokeWidth}
           opacity={opacity}
+          strokeDasharray={dashPattern}
+          strokeDashoffset={dashPattern ? dashOffset : undefined}
           strokeLinecap="round"
           strokeLinejoin="round"
           vectorEffect="non-scaling-stroke"
@@ -332,7 +346,7 @@ function MovementArrowImpl({
             cy={start.y}
             r={resolvedStartDotRadius}
             fill={color}
-            opacity={Math.min(1, opacity * 0.92)}
+            opacity={Math.min(1, opacity * 0.92 * startDotOpacityScale)}
             style={{ pointerEvents: 'none' }}
           />
         )}
@@ -343,7 +357,7 @@ function MovementArrowImpl({
           fill="none"
           stroke={color}
           strokeWidth={strokeWidth}
-          opacity={opacity}
+          opacity={opacity * arrowheadOpacityScale}
           strokeLinecap="round"
           strokeLinejoin="round"
           vectorEffect="non-scaling-stroke"
@@ -461,6 +475,10 @@ const areMovementArrowPropsEqual = (prev: MovementArrowProps, next: MovementArro
     prev.startDotRadius === next.startDotRadius &&
     prev.peekAnimated === next.peekAnimated &&
     prev.peekActive === next.peekActive &&
+    prev.dashPattern === next.dashPattern &&
+    prev.dashOffset === next.dashOffset &&
+    prev.startDotOpacityScale === next.startDotOpacityScale &&
+    prev.arrowheadOpacityScale === next.arrowheadOpacityScale &&
     Boolean(prev.onDragStart) === Boolean(next.onDragStart) &&
     Boolean(prev.onCurveDragStart) === Boolean(next.onCurveDragStart) &&
     Boolean(prev.onMouseEnter) === Boolean(next.onMouseEnter) &&

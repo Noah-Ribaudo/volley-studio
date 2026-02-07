@@ -78,13 +78,13 @@ export function ArrowPreviewOverlay({
         const actualTokenRadius = Math.max(baseTokenSize * tokenScale, 48) / 2
 
         const rolePreviewVisible = previewVisible[role] === true
-        const canShowPreview = (!arrows[role] || draggingArrowRole === role)
+        const hasArrow = Boolean(arrows[role])
+        const canShowPreview = !hasArrow
         const isPreviewActive = canShowPreview && (
           rolePreviewVisible ||
           draggingArrowRole === role ||
           (isMobile && tappedRole === role)
         )
-        const hidePreviewDuringDrag = draggingArrowRole === role && arrows[role]
 
         const previewPeekDistance = 28
         const previewCurveHeight = 25
@@ -126,7 +126,7 @@ export function ArrowPreviewOverlay({
             dragHitArea="both"
             dragHandleRadius={32}
             peekAnimated={true}
-            peekActive={!hidePreviewDuringDrag && isPreviewActive}
+            peekActive={isPreviewActive}
             debugHitboxes={debugHitboxes}
           />
         )

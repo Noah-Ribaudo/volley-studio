@@ -67,6 +67,7 @@ function MovementArrowLayerImpl({
         if (draggingArrowRole === role && !arrows[role]) return null
 
         const lockedPath = (isBezierAnimating || isPreviewingMovement) ? playLockedPaths[role] : null
+        const isTraversingPath = Boolean(lockedPath && isBezierAnimating)
         const basePosForArrow = lockedPath?.start || displayPositions[role] || { x: 0.5, y: 0.75 }
         const homeSvgPos = toSvgCoords(draggingRole === role && dragPosition ? dragPosition : basePosForArrow)
 
@@ -114,7 +115,10 @@ function MovementArrowLayerImpl({
               control={validControl ? toSvgCoords(validControl) : null}
               color={getRoleColor(role)}
               strokeWidth={3}
-              opacity={0.85}
+              opacity={isTraversingPath ? 0.45 : 0.85}
+              dashPattern={isTraversingPath ? '8 6' : undefined}
+              startDotOpacityScale={isTraversingPath ? 0.75 : 1}
+              arrowheadOpacityScale={isTraversingPath ? 0.85 : 1}
               isDraggable={true}
               onDragStart={(e) => onArrowDragStart(role, e)}
               showCurveHandle={false}

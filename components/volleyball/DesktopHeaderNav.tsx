@@ -47,6 +47,7 @@ interface DesktopHeaderNavProps {
 export function DesktopHeaderNav({ onOpenPrintDialog }: DesktopHeaderNavProps) {
   const pathname = usePathname()
   const isWhiteboardPage = pathname === '/'
+  const showMotionDebugToggle = process.env.NODE_ENV === 'development'
   const gamePhase = useGameTimeStore((s) => s.phase)
   const hasActiveGame = gamePhase === 'playing'
 
@@ -212,23 +213,29 @@ export function DesktopHeaderNav({ onOpenPrintDialog }: DesktopHeaderNavProps) {
             </Button>
           )}
 
-          {/* Divider */}
-          <div className="w-px h-6 bg-border" />
+          {showMotionDebugToggle ? (
+            <>
+              {/* Divider */}
+              <div className="w-px h-6 bg-border" />
 
-          {/* Motion debug panel toggle */}
-          <Button
-            variant={showMotionDebugPanel ? "default" : "outline"}
-            size="sm"
-            className="h-8 gap-1.5"
-            onClick={() => setShowMotionDebugPanel(!showMotionDebugPanel)}
-            title="Toggle motion debug panel"
-          >
-            <SlidersHorizontal className="h-4 w-4" />
-            <span>Debug</span>
-          </Button>
+              {/* Motion debug panel toggle */}
+              <Button
+                variant={showMotionDebugPanel ? "default" : "outline"}
+                size="sm"
+                className="h-8 gap-1.5"
+                onClick={() => setShowMotionDebugPanel(!showMotionDebugPanel)}
+                title="Toggle motion debug panel"
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+                <span>Debug</span>
+              </Button>
 
-          {/* Divider */}
-          <div className="w-px h-6 bg-border" />
+              {/* Divider */}
+              <div className="w-px h-6 bg-border" />
+            </>
+          ) : (
+            <div className="w-px h-6 bg-border" />
+          )}
 
           {/* Hide/Show Opponent toggle */}
           <Button

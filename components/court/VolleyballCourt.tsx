@@ -39,6 +39,7 @@ import {
   computeSteering,
   clampPosition,
 } from '@/lib/animation'
+import { validateRotationLegality } from '@/lib/model/legality'
 import {
   DEFAULT_WHITEBOARD_MOTION_TUNING,
   createWhiteboardPlayEngine,
@@ -356,6 +357,7 @@ export function VolleyballCourt({
   const [longPressSvgPos, setLongPressSvgPos] = useState<{ x: number; y: number } | null>(null)
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null)
   const longPressTouchStartRef = useRef<{ x: number; y: number; role: Role } | null>(null)
+  const ignoreNextPrimedTapRef = useRef(false)
   const lastTapTimeRef = useRef<Partial<Record<Role, number>>>({})
 
   // Primed state for hold-to-prime arrow creation (mobile)
@@ -619,6 +621,51 @@ export function VolleyballCourt({
   const displaySource = isBezierAnimating
     ? 'bezier'
     : (isPreviewingMovement ? (playedPositions ? 'played' : 'animated') : (animationMode === 'raf' ? 'animated' : 'collision'))
+  const legalityDisplayPositions = useMemo(() => {
+    if (!draggingRole || !dragPosition) return displayPositions
+    return {
+      ...displayPositions,
+      [draggingRole]: dragPosition,
+    } as PositionCoordinates
+  }, [displayPositions, draggingRole, dragPosition])
+
+  const effectiveLegalityViolations = useMemo(() => {
+    const canComputeLive =
+      mode === 'whiteboard' &&
+      Boolean(rotation) &&
+      (currentPhase === 'PRE_SERVE' || currentPhase === 'SERVE_RECEIVE')
+
+    if (!canComputeLive) {
+      return legalityViolations
+    }
+
+    const validPositions: Record<Role, Position> = {} as Record<Role, Position>
+    for (const role of ROLES) {
+      if (role === 'L' && !showLibero) {
+        validPositions[role] = { x: 0.5, y: 0.5 }
+      } else if (showLibero && role === replacedMB) {
+        validPositions[role] = legalityDisplayPositions.L || legalityDisplayPositions[replacedMB] || { x: 0.5, y: 0.5 }
+      } else {
+        validPositions[role] = legalityDisplayPositions[role] || { x: 0.5, y: 0.5 }
+      }
+    }
+
+    return validateRotationLegality(
+      rotation as 1 | 2 | 3 | 4 | 5 | 6,
+      validPositions,
+      undefined,
+      resolvedBaseOrder
+    )
+  }, [
+    mode,
+    rotation,
+    currentPhase,
+    legalityViolations,
+    showLibero,
+    replacedMB,
+    legalityDisplayPositions,
+    resolvedBaseOrder,
+  ])
 
   // Calculate screen position for a player token based on their displayed (collision-resolved) position
   // Uses hardcoded court dimensions (400x800, padding 40) since they're constants
@@ -745,9 +792,8 @@ export function VolleyballCourt({
     }
   }, [collisionFreePositions, animationMode, cfg.collisionRadius, cfg.separationStrength, cfg.maxSeparation, activeRoles, mode])
 
-  // Track previous animation trigger for detecting when Play is pressed
-  const prevAnimationTriggerRef = useRef<number>(animationTrigger)
-  const prevPreviewRef = useRef<boolean>(isPreviewingMovement)
+  // Tracks the last trigger consumed while preview mode was active.
+  const consumedAnimationTriggerRef = useRef<number>(animationTrigger)
 
   // Ref for RAF animation
   const bezierRafRef = useRef<number | null>(null)
@@ -783,15 +829,14 @@ export function VolleyballCourt({
     const MAX_SUB_STEPS_PER_FRAME = 6
     const REDUCED_MOTION_MAX_STEPS = 15_000
 
-    const previewJustEnabled = isPreviewingMovement && !prevPreviewRef.current
-    prevPreviewRef.current = isPreviewingMovement
-
-    const triggerChanged = animationTrigger !== prevAnimationTriggerRef.current && animationTrigger !== 0
-    if (!triggerChanged && !previewJustEnabled) {
-      prevAnimationTriggerRef.current = animationTrigger
+    if (!isPreviewingMovement || animationTrigger === 0) {
       return
     }
-    prevAnimationTriggerRef.current = animationTrigger
+
+    if (animationTrigger === consumedAnimationTriggerRef.current) {
+      return
+    }
+    consumedAnimationTriggerRef.current = animationTrigger
 
     if (bezierRafRef.current) {
       cancelAnimationFrame(bezierRafRef.current)
@@ -1049,7 +1094,9 @@ export function VolleyballCourt({
   const viewBoxWidth = courtWidth + padding * 2
   const viewBoxHeight = courtHeight + padding * 2
   const hideFraction = hideAwayTeam ? Math.min(Math.max(awayTeamHidePercent / 100, 0), 0.5) : 0
-  const hideAmount = courtHeight * hideFraction
+  // Hide percentage should apply to the full rendered view (court + padding),
+  // so the "hide opponent" crop removes more of the opponent side above the net.
+  const hideAmount = viewBoxHeight * hideFraction
   const vbY = hideAmount
   const vbH = viewBoxHeight - hideAmount
 
@@ -1141,8 +1188,11 @@ export function VolleyballCourt({
 
     let clientX: number, clientY: number
     if ('touches' in e) {
-      clientX = e.touches[0].clientX
-      clientY = e.touches[0].clientY
+      // `touchend` events have an empty `touches` list; use `changedTouches`.
+      const touchPoint = e.touches[0] ?? e.changedTouches[0]
+      if (!touchPoint) return { x: 0, y: 0 }
+      clientX = touchPoint.clientX
+      clientY = touchPoint.clientY
     } else {
       clientX = e.clientX
       clientY = e.clientY
@@ -1178,11 +1228,16 @@ export function VolleyballCourt({
       primeTimerRef.current = null
     }
     setPrimedRole(null)
-  }, [])
+    clearLongPress()
+  }, [clearLongPress])
 
   // Handle court tap when primed - creates arrow to tap location
   const handlePrimedCourtTap = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     if (!primedRole || !onArrowChange) return
+    if (ignoreNextPrimedTapRef.current) {
+      ignoreNextPrimedTapRef.current = false
+      return
+    }
 
     // Get event coordinates
     const pos = getEventPosition(e.nativeEvent as MouseEvent | TouchEvent)
@@ -1544,7 +1599,31 @@ export function VolleyballCourt({
     longPressTouchStartRef.current = { x: startX, y: startY, role }
 
     const MOVE_THRESHOLD = 10
+    const HOLD_TO_PRIME_MS = 250
     let hasStartedDrag = false
+    let holdActivated = false
+
+    // Hold-to-prime arrow drawing on mobile.
+    // After 250ms hold (without movement), next court tap places arrow endpoint.
+    if (primeTimerRef.current) {
+      clearTimeout(primeTimerRef.current)
+    }
+    primeTimerRef.current = setTimeout(() => {
+      if (hasStartedDrag) return
+      holdActivated = true
+      ignoreNextPrimedTapRef.current = true
+
+      const tokenPos = displayPositions[role]
+      if (tokenPos) {
+        activateLongPress(role, toSvgCoords(tokenPos))
+      }
+      setPrimedRole(role)
+      setTappedRole(null)
+      if (onContextPlayerChange) {
+        onContextPlayerChange(null)
+        setContextAnchorPosition(null)
+      }
+    }, HOLD_TO_PRIME_MS)
 
     const handleMove = (ev: TouchEvent) => {
       const currentTouch = ev.touches[0]
@@ -1553,8 +1632,13 @@ export function VolleyballCourt({
       const distance = Math.sqrt(dx * dx + dy * dy)
 
       // If finger moved past threshold, start player drag
-      if (distance > MOVE_THRESHOLD && !hasStartedDrag) {
+      if (distance > MOVE_THRESHOLD && !hasStartedDrag && !holdActivated) {
         hasStartedDrag = true
+        if (primeTimerRef.current) {
+          clearTimeout(primeTimerRef.current)
+          primeTimerRef.current = null
+        }
+        clearLongPress()
 
         // Start normal player drag
         handleDragStart(role, { nativeEvent: ev, preventDefault: () => {}, stopPropagation: () => {} } as unknown as React.TouchEvent)
@@ -1568,8 +1652,18 @@ export function VolleyballCourt({
     const handleEnd = () => {
       document.removeEventListener('touchmove', handleMove)
       document.removeEventListener('touchend', handleEnd)
+      if (primeTimerRef.current) {
+        clearTimeout(primeTimerRef.current)
+        primeTimerRef.current = null
+      }
 
-      // If we didn't start a drag, open the context menu (bottom sheet)
+      // Hold activated: keep primed state for the next tap-to-place.
+      if (holdActivated) {
+        clearLongPress()
+        return
+      }
+
+      // If we didn't start a drag or hold-prime, open the context menu (bottom sheet)
       if (!hasStartedDrag) {
         if (navigator.vibrate) {
           navigator.vibrate(30)
@@ -1587,6 +1681,10 @@ export function VolleyballCourt({
     handleDragStart,
     onContextPlayerChange,
     handleContextPlayerToggle,
+    displayPositions,
+    activateLongPress,
+    toSvgCoords,
+    clearLongPress,
   ])
 
   // Handle away player drag end
@@ -1911,8 +2009,8 @@ export function VolleyballCourt({
         <LegalityViolationLayer
           mode={mode}
           isBezierAnimating={isBezierAnimating}
-          legalityViolations={legalityViolations}
-          displayPositions={displayPositions}
+          legalityViolations={effectiveLegalityViolations}
+          displayPositions={legalityDisplayPositions}
           toSvgCoords={toSvgCoords}
           resolveZoneRole={(zone) => getRoleForZone(zone, rotation, resolvedBaseOrder)}
           getRoleColor={(role) => ROLE_INFO[role].color}
@@ -2127,7 +2225,7 @@ export function VolleyballCourt({
                     showPlayer={showPlayer}
                     isCircle={circleTokens}
                     mobileScale={tokenScale}
-                    isInViolation={legalityViolations.some(v =>
+                    isInViolation={effectiveLegalityViolations.some(v =>
                       v.roles && (v.roles[0] === role || v.roles[1] === role)
                     )}
                     isContextOpen={contextPlayer === role}

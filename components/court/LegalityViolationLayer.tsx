@@ -1,7 +1,7 @@
 'use client'
 
 import { memo } from 'react'
-import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Badge } from '@/components/ui/badge'
 import { getTextColorForOklch } from '@/lib/utils'
 import type { Position, PositionCoordinates, Role } from '@/lib/types'
@@ -91,24 +91,32 @@ function LegalityViolationLayerImpl({
             height={emojiSize + markerPadding * 2}
             style={{ pointerEvents: 'auto', overflow: 'visible' }}
           >
-            <HoverCard openDelay={0} closeDelay={0}>
-              <HoverCardTrigger asChild>
-                <div
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
                   className="cursor-pointer flex items-center justify-center"
+                  aria-label="Show formation violation details"
+                  title="Show formation violation details"
                   style={{
                     width: emojiSize + markerPadding * 2,
                     height: emojiSize + markerPadding * 2,
                     fontSize: emojiSize,
                     lineHeight: 1,
                     filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))',
+                    background: 'transparent',
+                    border: 'none',
+                    padding: 0,
                   }}
                 >
                   ⚠️
-                </div>
-              </HoverCardTrigger>
-              <HoverCardContent side="top" className="w-auto">
+                </button>
+              </PopoverTrigger>
+              <PopoverContent side="top" className="w-auto">
                 <div className="flex flex-col gap-3">
-                  <div className="text-sm font-medium">Formation Violation</div>
+                  <div className="text-sm font-medium">
+                    {violation.type === 'horizontal_overlap' ? 'Horizontal Position Mismatch' : 'Vertical Position Mismatch'}
+                  </div>
                   <div className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap">
                     {violation.type === 'horizontal_overlap' ? (
                       <>
@@ -157,8 +165,8 @@ function LegalityViolationLayerImpl({
                     )}
                   </div>
                 </div>
-              </HoverCardContent>
-            </HoverCard>
+              </PopoverContent>
+            </Popover>
           </foreignObject>
         )
       })}
@@ -167,4 +175,3 @@ function LegalityViolationLayerImpl({
 }
 
 export const LegalityViolationLayer = memo(LegalityViolationLayerImpl)
-
