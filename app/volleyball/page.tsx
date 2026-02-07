@@ -73,6 +73,7 @@ function HomePageContent() {
     circleTokens,
     fullStatusLabels,
     debugHitboxes,
+    showMotionDebugPanel,
     attackBallPositions,
     setAttackBallPosition,
     clearAttackBallPosition,
@@ -480,7 +481,7 @@ function HomePageContent() {
                 hasTeam={Boolean(currentTeam)}
                 onManageRoster={() => setRosterSheetOpen(true)}
                 debugHitboxes={debugHitboxes}
-                debugOverlay={true}
+                debugOverlay={showMotionDebugPanel}
                 animationTrigger={playAnimationTrigger}
                 isPreviewingMovement={isPreviewingMovement}
                 tagFlags={currentTagFlags}

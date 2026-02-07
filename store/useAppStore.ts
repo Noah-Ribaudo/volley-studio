@@ -131,6 +131,7 @@ interface AppState {
   fullStatusLabels: boolean // Show full words on status badges instead of first letter (default: true)
   showLearnTab: boolean // Show the Learn tab in mobile navigation (default: false)
   debugHitboxes: boolean // Show touch target hitboxes with green highlight (default: false)
+  showMotionDebugPanel: boolean // Show motion tuning/debug panel on whiteboard (default: false)
   navMode: 'sidebar' | 'header' // Desktop navigation mode (default: 'header')
   backgroundShader: ShaderId // Background shader choice (default: grain-gradient)
   backgroundOpacity: number // Background content opacity 0-100 (default: 95)
@@ -217,6 +218,7 @@ interface AppState {
   setFullStatusLabels: (full: boolean) => void
   setShowLearnTab: (show: boolean) => void
   setDebugHitboxes: (show: boolean) => void
+  setShowMotionDebugPanel: (show: boolean) => void
   setNavMode: (mode: 'sidebar' | 'header') => void
   setBackgroundShader: (shader: ShaderId) => void
   setBackgroundOpacity: (opacity: number) => void
@@ -440,6 +442,7 @@ export const useAppStore = create<AppState>()(
       fullStatusLabels: true, // Default to showing full words on status badges
       showLearnTab: false, // Default to hiding Learn tab in mobile nav
       debugHitboxes: false, // Default to hiding hitbox debug overlay
+      showMotionDebugPanel: false, // Default to hidden motion debug panel
       navMode: 'header' as const, // Default to header nav (no sidebar)
       backgroundShader: 'grain-gradient' as ShaderId, // Default background shader
       backgroundOpacity: 95, // Default background content opacity
@@ -919,6 +922,7 @@ export const useAppStore = create<AppState>()(
       setShowLearnTab: (show) => set({ showLearnTab: show }),
 
       setDebugHitboxes: (show) => set({ debugHitboxes: show }),
+      setShowMotionDebugPanel: (show) => set({ showMotionDebugPanel: show }),
 
       setNavMode: (mode) => set({ navMode: mode }),
 
@@ -1094,6 +1098,7 @@ export const useAppStore = create<AppState>()(
           tokenSize: state.tokenSize,
           hideAwayTeam: state.hideAwayTeam,
           showLearnTab: state.showLearnTab,
+          showMotionDebugPanel: state.showMotionDebugPanel,
           navMode: state.navMode,
           backgroundShader: state.backgroundShader,
           backgroundOpacity: state.backgroundOpacity,
@@ -1160,6 +1165,10 @@ export const useAppStore = create<AppState>()(
         // Set default for hideAwayTeam if missing
         if (state && state.hideAwayTeam === undefined) {
           state.hideAwayTeam = true
+        }
+        // Set default for motion debug panel toggle if missing
+        if (state && state.showMotionDebugPanel === undefined) {
+          state.showMotionDebugPanel = false
         }
         // Set default for attackBallPositions if missing
         if (state && state.attackBallPositions === undefined) {
