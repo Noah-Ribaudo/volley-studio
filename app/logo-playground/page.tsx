@@ -96,7 +96,7 @@ const isCanvasEffect = (e: EffectType) =>
   ["liquid-metal", "heatmap", "metallic-paint"].includes(e);
 
 // ─── SVG Filter definitions ─────────────────────────────────────────────────
-function SVGFilters() {
+function SVGFilters({ chromeIntensity, chromeSurface, chromeFocus }: { chromeIntensity: number; chromeSurface: number; chromeFocus: number }) {
   return (
     <svg width="0" height="0" style={{ position: "absolute" }}>
       <defs>
@@ -110,11 +110,11 @@ function SVGFilters() {
         </filter>
         <filter id="chrome">
           <feGaussianBlur in="SourceGraphic" stdDeviation="1" result="blur" />
-          <feSpecularLighting in="blur" surfaceScale="5" specularConstant="1" specularExponent="20" lightingColor="#ffffff" result="specular">
+          <feSpecularLighting in="blur" surfaceScale={chromeSurface} specularConstant="1" specularExponent={chromeFocus} lightingColor="#ffffff" result="specular">
             <fePointLight x="50" y="-100" z="200" />
           </feSpecularLighting>
           <feComposite in="specular" in2="SourceGraphic" operator="in" result="specular-in" />
-          <feComposite in="SourceGraphic" in2="specular-in" operator="arithmetic" k1="0" k2="1" k3="1" k4="0" />
+          <feComposite in="SourceGraphic" in2="specular-in" operator="arithmetic" k1="0" k2="1" k3={chromeIntensity} k4="0" />
         </filter>
         <filter id="holographic">
           <feOffset in="SourceGraphic" dx="2" dy="0" result="red" />
@@ -150,6 +150,11 @@ export default function LogoPlayground() {
   // Paper shader tunables
   const [metalSpeed, setMetalSpeed] = useState(1);
   const [metalDistortion, setMetalDistortion] = useState(0.07);
+
+  // Chrome filter tunables
+  const [chromeIntensity, setChromeIntensity] = useState(0.4);
+  const [chromeSurface, setChromeSurface] = useState(3);
+  const [chromeFocus, setChromeFocus] = useState(25);
 
   const bgColor =
     bgMode === "light" ? "#f5f5f5" : bgMode === "dark" ? "#1a1a1a" : bgMode === "custom" ? bgCustom : "transparent";
@@ -198,7 +203,7 @@ export default function LogoPlayground() {
 
   return (
     <div className="min-h-screen font-sans" style={{ backgroundColor: "#0d0d0d", color: "#e5e5e5" }}>
-      <SVGFilters />
+      <SVGFilters chromeIntensity={chromeIntensity} chromeSurface={chromeSurface} chromeFocus={chromeFocus} />
 
       {/* Gradient def */}
       <svg width="0" height="0" style={{ position: "absolute" }}>
@@ -391,6 +396,26 @@ export default function LogoPlayground() {
               </div>
             </div>
           </Section>
+
+          {effect === "chrome" && (
+            <Section title="Chrome Controls">
+              <MiniLabel>Highlight Intensity</MiniLabel>
+              <div className="flex items-center gap-3">
+                <input type="range" min="0" max="1" step="0.05" value={chromeIntensity} onChange={(e) => setChromeIntensity(parseFloat(e.target.value))} className="flex-1 accent-orange-500" />
+                <span className="text-sm tabular-nums w-10 text-right" style={{ color: "#888" }}>{chromeIntensity.toFixed(2)}</span>
+              </div>
+              <MiniLabel>Surface Depth</MiniLabel>
+              <div className="flex items-center gap-3">
+                <input type="range" min="0.5" max="15" step="0.5" value={chromeSurface} onChange={(e) => setChromeSurface(parseFloat(e.target.value))} className="flex-1 accent-orange-500" />
+                <span className="text-sm tabular-nums w-10 text-right" style={{ color: "#888" }}>{chromeSurface.toFixed(1)}</span>
+              </div>
+              <MiniLabel>Highlight Focus</MiniLabel>
+              <div className="flex items-center gap-3">
+                <input type="range" min="1" max="80" step="1" value={chromeFocus} onChange={(e) => setChromeFocus(parseFloat(e.target.value))} className="flex-1 accent-orange-500" />
+                <span className="text-sm tabular-nums w-10 text-right" style={{ color: "#888" }}>{chromeFocus}</span>
+              </div>
+            </Section>
+          )}
 
           {showCanvas && (
             <Section title="Shader Controls">
