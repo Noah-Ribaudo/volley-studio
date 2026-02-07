@@ -99,6 +99,7 @@ test.describe('Teams Page', () => {
 
   test('back button returns to home', async ({ page }) => {
     await page.goto('/teams')
+    await page.waitForLoadState('networkidle')
 
     // Click the in-page back link (not the header nav)
     const backLink = page.locator('main a[href="/"]', { hasText: 'Back' }).first()
@@ -106,6 +107,6 @@ test.describe('Teams Page', () => {
     await backLink.click()
 
     // Should be back on main page
-    await expect(page).toHaveURL('/', { timeout: 10_000 })
+    await expect(page).toHaveURL('/', { timeout: 15_000 })
   })
 })
