@@ -90,7 +90,7 @@ export default function VolleyballLayout({
         {/* Mobile top header - minimal, just for context */}
         <header className="md:hidden flex items-center justify-between h-12 px-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
           <span className="font-medium text-sm flex items-center gap-1.5">
-            <VolleyBall size={18} fillColor="currentColor" />
+            <VolleyBall size={18} fillColor="#f97316" />
             Volley Studio
           </span>
           {isWhiteboardPage && (
