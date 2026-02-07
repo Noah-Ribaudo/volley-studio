@@ -193,6 +193,8 @@ export function MotionDebugPanel({
 
   const handlePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return
+    const target = e.target as HTMLElement | null
+    if (target?.closest('[data-no-drag="true"]')) return
 
     e.preventDefault()
     e.stopPropagation()
@@ -298,6 +300,8 @@ export function MotionDebugPanel({
             variant="outline"
             size="sm"
             className="h-7 px-2"
+            data-no-drag="true"
+            onPointerDown={(e) => e.stopPropagation()}
             onClick={handleCopyValues}
           >
             <Copy className="h-3.5 w-3.5" />

@@ -67,11 +67,11 @@ function SignInPrompt({ onClose, onContinueWithoutAccount }: { onClose: () => vo
   return (
     <div className="space-y-4">
       <DialogHeader>
-        <DialogTitle>Quick sign-in to save your team</DialogTitle>
+        <DialogTitle>Quick sign-in to save your team and settings</DialogTitle>
         <DialogDescription className="space-y-2 pt-2">
           <span className="block">
-            This is <strong>only</strong> so your team data persists. I don't want your data
-            for anything else — no tracking, no marketing, no selling to anyone.
+            This is <strong>only</strong> so your teams and settings persist across devices.
+            I don't want your data for anything else — no tracking, no marketing, no selling to anyone.
           </span>
           <span className="block text-xs">
             Don't want to sign in? That's fine — you can still use the whiteboard and all
@@ -181,7 +181,7 @@ function SignInPrompt({ onClose, onContinueWithoutAccount }: { onClose: () => vo
           Continue without an account
         </Button>
         <p className="text-xs text-center text-muted-foreground">
-          Your team will only be saved on this device
+          Without sign-in, teams and settings stay on this device only
         </p>
         <Link href="/privacy" className="text-xs text-center text-muted-foreground hover:text-foreground">
           Privacy policy (it's short, I promise)
@@ -205,6 +205,12 @@ function CreateTeamForm({
   const [name, setName] = useState('')
   const [presetSystem, setPresetSystem] = useState<PresetSystem | 'scratch'>('scratch')
   const [error, setError] = useState('')
+  const handlePresetOptionKeyDown = (nextValue: PresetSystem | 'scratch') => (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      setPresetSystem(nextValue)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -243,6 +249,11 @@ function CreateTeamForm({
             id="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.currentTarget.form?.requestSubmit()
+              }
+            }}
             placeholder="e.g., Varsity Squad"
             autoFocus
           />
@@ -254,7 +265,13 @@ function CreateTeamForm({
             onValueChange={(value: string) => setPresetSystem(value as PresetSystem | 'scratch')}
             className="grid gap-2"
           >
-            <div className="flex items-start space-x-3 rounded-md border p-3">
+            <div
+              className="flex items-start space-x-3 rounded-md border p-3 cursor-pointer"
+              tabIndex={0}
+              onClick={() => setPresetSystem('scratch')}
+              onKeyDown={handlePresetOptionKeyDown('scratch')}
+              aria-label="Start Fresh"
+            >
               <RadioGroupItem value="scratch" id="preset-scratch" className="mt-0.5" />
               <div className="grid gap-0.5">
                 <Label htmlFor="preset-scratch" className="font-medium cursor-pointer">
@@ -266,7 +283,14 @@ function CreateTeamForm({
               </div>
             </div>
             {PRESET_SYSTEMS.map((system) => (
-              <div key={system} className="flex items-start space-x-3 rounded-md border p-3">
+              <div
+                key={system}
+                className="flex items-start space-x-3 rounded-md border p-3 cursor-pointer"
+                tabIndex={0}
+                onClick={() => setPresetSystem(system)}
+                onKeyDown={handlePresetOptionKeyDown(system)}
+                aria-label={PRESET_SYSTEM_INFO[system].name}
+              >
                 <RadioGroupItem value={system} id={`preset-${system}`} className="mt-0.5" />
                 <div className="grid gap-0.5">
                   <Label htmlFor={`preset-${system}`} className="font-medium cursor-pointer">

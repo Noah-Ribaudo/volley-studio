@@ -13,6 +13,7 @@ import "./globals.css";
 import TextureModeLoader from "@/components/TextureModeLoader";
 import ThemeInitializer from "@/components/ThemeInitializer";
 import { ConvexClientProvider } from "@/components/ConvexClientProvider";
+import { UserSettingsSync } from "@/components/settings/UserSettingsSync";
 import { Toaster } from "sonner";
 
 const barlow = Barlow({
@@ -83,6 +84,7 @@ export default function RootLayout({
         <ConvexClientProvider>
           <ThemeInitializer />
           <TextureModeLoader />
+          <UserSettingsSync />
           <Toaster
             richColors
             position="top-center"

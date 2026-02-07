@@ -29,6 +29,10 @@ interface PlayerContextContentProps {
   onFlipArrow?: () => void
   /** Whether we're on mobile (hides flip curve option) */
   isMobile?: boolean
+  /** Whether arrow placement can be started */
+  canStartArrow?: boolean
+  /** Callback to start arrow placement mode */
+  onStartArrow?: () => void
   /** Whether a team is currently selected */
   hasTeam?: boolean
   /** Callback to open roster management (for assigning players) */
@@ -47,6 +51,8 @@ export function PlayerContextContent({
   hasArrow,
   onFlipArrow,
   isMobile,
+  canStartArrow,
+  onStartArrow,
   hasTeam,
   onManageRoster,
 }: PlayerContextContentProps) {
@@ -179,6 +185,21 @@ export function PlayerContextContent({
           >
             Flip Arrow Curve
           </button>
+        </div>
+      )}
+
+      {/* Mobile arrow placement */}
+      {mode === 'whiteboard' && isMobile && canStartArrow && onStartArrow && (
+        <div className={cn("border-t border-border mt-1", isMobile ? "pt-4" : "pt-3")}>
+          <Button
+            onClick={onStartArrow}
+            className="w-full"
+            size={isMobile ? 'default' : 'sm'}
+            variant="outline"
+            type="button"
+          >
+            Draw Arrow
+          </Button>
         </div>
       )}
 

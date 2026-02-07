@@ -24,20 +24,20 @@ export function TeamCard({ team }: TeamCardProps) {
   return (
     <Card className="group hover:shadow-md transition-shadow">
       <CardContent className="pt-4">
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-lg truncate">{team.name}</h3>
+            <h3 className="font-semibold text-lg leading-tight break-words">{team.name}</h3>
             <p className="text-sm text-muted-foreground">
               {rosterCount} player{rosterCount !== 1 ? 's' : ''}{updatedDate && <> • Updated {updatedDate}</>}
             </p>
           </div>
 
-          <div className="flex gap-2">
+          <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:justify-end">
             <Button
               size="sm"
               variant="ghost"
               onClick={handleCopyCode}
-              className="text-muted-foreground"
+              className="text-muted-foreground min-w-0"
             >
               {copied ? (
                 <>
@@ -79,12 +79,12 @@ export function TeamCard({ team }: TeamCardProps) {
               )}
             </Button>
             <Link href={`/?team=${team.id}`}>
-              <Button size="sm" variant="default">
+              <Button size="sm" variant="default" className="w-full sm:w-auto">
                 Whiteboard
               </Button>
             </Link>
             <Link href={`/teams/${team.id}`}>
-              <Button size="sm" variant="outline">
+              <Button size="sm" variant="outline" className="w-full sm:w-auto">
                 Edit
               </Button>
             </Link>

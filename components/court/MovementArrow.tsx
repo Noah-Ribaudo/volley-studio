@@ -1,6 +1,6 @@
 'use client'
 
-import { memo, useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { animate, stopAnimation, type AnimationPlaybackControls } from '@/lib/motion-utils'
 
 interface MovementArrowProps {
@@ -24,6 +24,18 @@ interface MovementArrowProps {
   debugHitboxes?: boolean
   /** Whether to animate the path drawing when arrow first appears */
   animateIn?: boolean
+  /** Where dragging can be initiated from */
+  dragHitArea?: 'tip' | 'path' | 'both'
+  /** Radius for the draggable arrow endpoint hit target */
+  dragHandleRadius?: number
+  /** Show a subtle dot at the arrow start point */
+  showStartDot?: boolean
+  /** Radius for the start dot marker */
+  startDotRadius?: number
+  /** Animate peek/retract by drawing path progress (no React frame updates) */
+  peekAnimated?: boolean
+  /** Whether the peek path should currently be fully revealed */
+  peekActive?: boolean
 }
 
 function MovementArrowImpl({
@@ -40,12 +52,28 @@ function MovementArrowImpl({
   onMouseEnter,
   onMouseLeave,
   debugHitboxes = false,
-  animateIn = false
+  animateIn = false,
+  dragHitArea = 'tip',
+  dragHandleRadius = 24,
+  showStartDot = true,
+  startDotRadius,
+  peekAnimated = false,
+  peekActive = true,
 }: MovementArrowProps) {
   const pathRef = useRef<SVGPathElement>(null)
   const arrowheadRef = useRef<SVGPathElement>(null)
+  const peekGroupRef = useRef<SVGGElement>(null)
+  const hitPathRef = useRef<SVGPathElement>(null)
+  const tipHitRef = useRef<SVGCircleElement>(null)
   const animationRef = useRef<AnimationPlaybackControls | null>(null)
+  const peekAnimationRef = useRef<AnimationPlaybackControls | null>(null)
+  const peekProgressRef = useRef<number>(peekActive ? 1 : 0)
   const [isAnimating, setIsAnimating] = useState(animateIn)
+
+  const canDrag = isDraggable && Boolean(onDragStart)
+  const canDragFromPath = canDrag && (dragHitArea === 'path' || dragHitArea === 'both')
+  const canDragFromTip = canDrag && (dragHitArea === 'tip' || dragHitArea === 'both')
+  const shouldRenderHitPath = Boolean(onMouseEnter || onMouseLeave || canDragFromPath)
 
   // Calculate arrowhead direction
   const calculateArrowhead = () => {
@@ -93,6 +121,7 @@ function MovementArrowImpl({
 
   const { dx, dy } = calculateArrowhead()
   const curveMidpoint = calculateCurveMidpoint()
+  const resolvedStartDotRadius = startDotRadius ?? Math.max(2.25, Math.min(5, strokeWidth * 0.85))
 
   // Arrowhead size
   const arrowheadSize = Math.max(8, strokeWidth * 2.5)
@@ -113,6 +142,38 @@ function MovementArrowImpl({
     // Straight line
     pathData = `M ${start.x} ${start.y} L ${end.x} ${end.y}`
   }
+
+  // Applies peek transform directly to SVG DOM nodes for smooth hover animation
+  // without causing React re-renders of the full court on each frame.
+  const applyPeekProgress = useCallback((progress: number) => {
+    if (!peekAnimated) return
+
+    const clamped = Math.max(0, Math.min(1, progress))
+    const safeScale = Math.max(0.001, clamped)
+
+    const peekGroup = peekGroupRef.current
+    if (peekGroup) {
+      // Scale around the arrow start point so the peek grows out from the token.
+      peekGroup.setAttribute(
+        'transform',
+        `translate(${start.x} ${start.y}) scale(${safeScale}) translate(${-start.x} ${-start.y})`
+      )
+      peekGroup.style.opacity = String(clamped)
+      peekGroup.style.visibility = clamped <= 0.001 ? 'hidden' : 'visible'
+    }
+
+    const hitPath = hitPathRef.current
+    if (hitPath) {
+      const shouldEnablePath = clamped > 0.2
+      hitPath.style.pointerEvents = shouldEnablePath ? 'auto' : 'none'
+    }
+
+    const tipHit = tipHitRef.current
+    if (tipHit) {
+      const shouldEnableTip = clamped > 0.35
+      tipHit.style.pointerEvents = shouldEnableTip ? 'auto' : 'none'
+    }
+  }, [peekAnimated, start.x, start.y])
 
   // Path draw animation on mount (when animateIn is true)
   useEffect(() => {
@@ -164,73 +225,159 @@ function MovementArrowImpl({
     }
   }, [animateIn])
 
+  // Keep peek animation synced to geometry updates.
+  useEffect(() => {
+    if (!peekAnimated) return
+    applyPeekProgress(peekProgressRef.current)
+  }, [peekAnimated, pathData, start.x, start.y, applyPeekProgress])
+
+  // Animate reveal/retract imperatively with Motion.
+  useEffect(() => {
+    if (!peekAnimated) return
+
+    const target = peekActive ? 1 : 0
+    const start = peekProgressRef.current
+
+    stopAnimation(peekAnimationRef.current)
+
+    if (Math.abs(target - start) < 0.001) {
+      peekProgressRef.current = target
+      applyPeekProgress(target)
+      return
+    }
+
+    peekAnimationRef.current = animate(start, target, {
+      duration: target > start ? 0.2 : 0.14,
+      ease: target > start ? [0.0, 0.0, 0.2, 1.0] : [0.4, 0.0, 1.0, 1.0],
+      onUpdate: (value) => {
+        peekProgressRef.current = value
+        applyPeekProgress(value)
+      },
+      onComplete: () => {
+        peekProgressRef.current = target
+        applyPeekProgress(target)
+      },
+    })
+
+    return () => {
+      stopAnimation(peekAnimationRef.current)
+    }
+  }, [peekAnimated, peekActive, applyPeekProgress])
+
+  // Reset direct style mutations when peek animation is disabled.
+  useEffect(() => {
+    if (peekAnimated) return
+
+    const peekGroup = peekGroupRef.current
+    if (peekGroup) {
+      peekGroup.removeAttribute('transform')
+      peekGroup.style.opacity = ''
+      peekGroup.style.visibility = ''
+    }
+
+    const hitPath = hitPathRef.current
+    if (hitPath) {
+      hitPath.style.pointerEvents = ''
+    }
+
+    const tipHit = tipHitRef.current
+    if (tipHit) {
+      tipHit.style.pointerEvents = ''
+    }
+  }, [peekAnimated])
+
   return (
     <g>
-      {/* Invisible hit area for hover detection */}
-      {(onMouseEnter || onMouseLeave) && (
+      <g ref={peekGroupRef}>
+        {/* Invisible hit area for hover detection */}
+        {shouldRenderHitPath && (
+          <path
+            ref={hitPathRef}
+            d={pathData}
+            fill="none"
+            stroke={debugHitboxes ? "rgba(57, 255, 20, 0.5)" : "transparent"}
+            strokeWidth={Math.max(30, strokeWidth * 6)}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ pointerEvents: peekAnimated ? 'none' : 'auto', cursor: canDragFromPath ? 'grab' : 'pointer' }}
+            onMouseEnter={onMouseEnter}
+            onMouseLeave={onMouseLeave}
+            onMouseDown={canDragFromPath ? (e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              onDragStart?.(e)
+            } : undefined}
+            onTouchStart={canDragFromPath ? (e) => {
+              e.stopPropagation()
+              onDragStart?.(e)
+            } : undefined}
+          />
+        )}
+        {/* Visible arrow path */}
         <path
+          ref={pathRef}
           d={pathData}
           fill="none"
-          stroke={debugHitboxes ? "rgba(57, 255, 20, 0.5)" : "transparent"}
-          strokeWidth={Math.max(30, strokeWidth * 6)}
+          stroke={color}
+          strokeWidth={strokeWidth}
+          opacity={opacity}
           strokeLinecap="round"
           strokeLinejoin="round"
-          style={{ pointerEvents: 'auto', cursor: 'pointer' }}
-          onMouseEnter={onMouseEnter}
-          onMouseLeave={onMouseLeave}
+          vectorEffect="non-scaling-stroke"
+          style={{ pointerEvents: 'none' }}
         />
-      )}
-      {/* Visible arrow path */}
-      <path
-        ref={pathRef}
-        d={pathData}
-        fill="none"
-        stroke={color}
-        strokeWidth={strokeWidth}
-        opacity={opacity}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        style={{ pointerEvents: 'none' }}
-      />
-      {/* Arrowhead */}
-      <path
-        ref={arrowheadRef}
-        d={`M ${end.x} ${end.y} L ${arrowheadX1} ${arrowheadY1} M ${end.x} ${end.y} L ${arrowheadX2} ${arrowheadY2}`}
-        fill="none"
-        stroke={color}
-        strokeWidth={strokeWidth}
-        opacity={opacity}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        style={{ pointerEvents: 'none' }}
-      />
-      {/* Invisible hit target at arrowhead tip for dragging */}
-      {isDraggable && onDragStart && (
-        <circle
-          cx={end.x}
-          cy={end.y}
-          r={24}
-          fill={debugHitboxes ? "rgba(57, 255, 20, 0.3)" : "transparent"}
-          stroke={debugHitboxes ? "rgba(57, 255, 20, 0.8)" : "none"}
-          strokeWidth={debugHitboxes ? 2 : 0}
-          style={{
-            cursor: 'grab',
-            pointerEvents: 'auto',
-            touchAction: 'none'
-          }}
-          onMouseEnter={onMouseEnter}
-          onMouseLeave={onMouseLeave}
-          onMouseDown={(e) => {
-            e.preventDefault()
-            e.stopPropagation()
-            onDragStart(e)
-          }}
-          onTouchStart={(e) => {
-            e.stopPropagation()
-            onDragStart(e)
-          }}
+        {showStartDot && (
+          <circle
+            cx={start.x}
+            cy={start.y}
+            r={resolvedStartDotRadius}
+            fill={color}
+            opacity={Math.min(1, opacity * 0.92)}
+            style={{ pointerEvents: 'none' }}
+          />
+        )}
+        {/* Arrowhead */}
+        <path
+          ref={arrowheadRef}
+          d={`M ${end.x} ${end.y} L ${arrowheadX1} ${arrowheadY1} M ${end.x} ${end.y} L ${arrowheadX2} ${arrowheadY2}`}
+          fill="none"
+          stroke={color}
+          strokeWidth={strokeWidth}
+          opacity={opacity}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          vectorEffect="non-scaling-stroke"
+          style={{ pointerEvents: 'none' }}
         />
-      )}
+        {/* Invisible hit target at arrowhead tip for dragging */}
+        {canDragFromTip && (
+          <circle
+            ref={tipHitRef}
+            cx={end.x}
+            cy={end.y}
+            r={dragHandleRadius}
+            fill={debugHitboxes ? "rgba(57, 255, 20, 0.3)" : "transparent"}
+            stroke={debugHitboxes ? "rgba(57, 255, 20, 0.8)" : "none"}
+            strokeWidth={debugHitboxes ? 2 : 0}
+            style={{
+              cursor: 'grab',
+              pointerEvents: peekAnimated ? 'none' : 'auto',
+              touchAction: 'none'
+            }}
+            onMouseEnter={onMouseEnter}
+            onMouseLeave={onMouseLeave}
+            onMouseDown={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              onDragStart?.(e)
+            }}
+            onTouchStart={(e) => {
+              e.stopPropagation()
+              onDragStart?.(e)
+            }}
+          />
+        )}
+      </g>
       {/* Curve handle at the midpoint - for adjusting curve direction and intensity */}
       {showCurveHandle && onCurveDragStart && (
         <g>
@@ -308,6 +455,12 @@ const areMovementArrowPropsEqual = (prev: MovementArrowProps, next: MovementArro
     prev.showCurveHandle === next.showCurveHandle &&
     prev.debugHitboxes === next.debugHitboxes &&
     prev.animateIn === next.animateIn &&
+    prev.dragHitArea === next.dragHitArea &&
+    prev.dragHandleRadius === next.dragHandleRadius &&
+    prev.showStartDot === next.showStartDot &&
+    prev.startDotRadius === next.startDotRadius &&
+    prev.peekAnimated === next.peekAnimated &&
+    prev.peekActive === next.peekActive &&
     Boolean(prev.onDragStart) === Boolean(next.onDragStart) &&
     Boolean(prev.onCurveDragStart) === Boolean(next.onCurveDragStart) &&
     Boolean(prev.onMouseEnter) === Boolean(next.onMouseEnter) &&

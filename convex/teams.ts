@@ -48,6 +48,12 @@ type TeamDoc = {
   positionAssignments: Record<string, string>;
 };
 
+const SEEDED_TEAM_SLUGS = new Set(["optimized_5_1_defaults", "beach_boys"]);
+
+function isSeededTeam(team: TeamDoc): boolean {
+  return SEEDED_TEAM_SLUGS.has(team.slug);
+}
+
 // Helper to sanitize team data - removes password, adds hasPassword boolean
 function sanitizeTeam(team: TeamDoc) {
   const { password, ...rest } = team;
@@ -98,7 +104,7 @@ export const list = query({
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .filter((q) => q.eq(q.field("archived"), false))
       .collect();
-    return teams.map(sanitizeTeam);
+    return teams.filter((team) => !isSeededTeam(team)).map(sanitizeTeam);
   },
 });
 
@@ -191,7 +197,7 @@ export const search = query({
         )
         .collect();
     }
-    return teams.map(sanitizeTeam);
+    return teams.filter((team) => !isSeededTeam(team)).map(sanitizeTeam);
   },
 });
 
@@ -208,7 +214,7 @@ export const listMyTeams = query({
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .filter((q) => q.eq(q.field("archived"), false))
       .collect();
-    return teams.map(sanitizeTeam);
+    return teams.filter((team) => !isSeededTeam(team)).map(sanitizeTeam);
   },
 });
 
@@ -324,6 +330,32 @@ export const updatePositionAssignments = mutation({
   handler: async (ctx, args) => {
     await assertTeamOwner(ctx, args.id);
     await ctx.db.patch(args.id, {
+      positionAssignments: args.positionAssignments,
+    });
+  },
+});
+
+// Update lineups and active lineup in one mutation
+export const updateLineups = mutation({
+  args: {
+    id: v.id("teams"),
+    lineups: v.array(
+      v.object({
+        id: v.string(),
+        name: v.string(),
+        position_assignments: v.record(v.string(), v.string()),
+        position_source: v.optional(v.string()),
+        created_at: v.string(),
+      })
+    ),
+    activeLineupId: v.optional(v.string()),
+    positionAssignments: v.record(v.string(), v.string()),
+  },
+  handler: async (ctx, args) => {
+    await assertTeamOwner(ctx, args.id);
+    await ctx.db.patch(args.id, {
+      lineups: args.lineups,
+      activeLineupId: args.activeLineupId,
       positionAssignments: args.positionAssignments,
     });
   },

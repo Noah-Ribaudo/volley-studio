@@ -1,17 +1,17 @@
 import type { WhiteboardMotionTuning } from './types'
 
 export const DEFAULT_WHITEBOARD_MOTION_TUNING: WhiteboardMotionTuning = {
-  cruiseSpeed: 0.72,
-  acceleration: 2.4,
+  cruiseSpeed: 0.62,
+  acceleration: 0.5,
   braking: 3.2,
   lookAheadTime: 0.4,
   maxLateralAccel: 1.15,
   curveStrength: 0.35,
-  tokenRadius: 0.06,
-  minSpacingRadii: 1,
+  tokenRadius: 0.031,
+  minSpacingRadii: 0.5,
   avoidanceBlend: 0.5,
-  deflectionStrength: 1.0,
-  maxLateralOffsetRadii: 2.5,
+  deflectionStrength: 0.55,
+  maxLateralOffsetRadii: 0.7,
   deflectionSpring: 13,
   deflectionDamping: 7.5,
   clampMargin: 0.15,

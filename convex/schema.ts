@@ -63,4 +63,28 @@ export default defineSchema({
   })
     .index("by_team", ["teamId"])
     .index("by_team_rotation_phase", ["teamId", "rotation", "phase"]),
+
+  userSettings: defineTable({
+    userId: v.id("users"),
+    showPosition: v.boolean(),
+    showPlayer: v.boolean(),
+    showLibero: v.boolean(),
+    circleTokens: v.boolean(),
+    hideAwayTeam: v.boolean(),
+    fullStatusLabels: v.boolean(),
+    showLearnTab: v.boolean(),
+    debugHitboxes: v.boolean(),
+    isReceivingContext: v.boolean(),
+    tokenSize: v.union(v.literal("big"), v.literal("small")),
+    navMode: v.union(v.literal("sidebar"), v.literal("header")),
+    backgroundShader: v.string(),
+    backgroundOpacity: v.number(),
+    awayTeamHidePercent: v.number(),
+    visiblePhases: v.array(v.string()),
+    phaseOrder: v.array(v.string()),
+    highlightedRole: v.optional(v.string()),
+    learningPanelPosition: v.string(),
+    updatedAt: v.number(),
+    createdAt: v.number(),
+  }).index("by_user", ["userId"]),
 });

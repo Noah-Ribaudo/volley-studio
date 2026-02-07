@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from 'react'
 import { usePathname } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import { MobileBottomNav } from '@/components/volleyball/MobileBottomNav'
 import { DesktopHeaderNav } from '@/components/volleyball/DesktopHeaderNav'
 import { MobileContextBar } from '@/components/controls'
@@ -14,7 +15,11 @@ import { PrintDialog } from '@/components/print'
 import { getActiveAssignments } from '@/lib/lineups'
 import type { Rotation, Phase, PositionCoordinates, RallyPhase } from '@/lib/types'
 import { RALLY_PHASES, isRallyPhase as checkIsRallyPhase } from '@/lib/types'
-import { BackgroundShader } from '@/components/BackgroundShader'
+
+const BackgroundShader = dynamic(
+  () => import('@/components/BackgroundShader').then((mod) => mod.BackgroundShader),
+  { ssr: false }
+)
 
 export default function VolleyballLayout({
   children,
@@ -87,7 +92,15 @@ export default function VolleyballLayout({
         <DesktopHeaderNav onOpenPrintDialog={() => setPrintDialogOpen(true)} />
 
         {/* Mobile top header - minimal, just for context */}
-        <header className="md:hidden flex items-center justify-between h-12 px-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <header
+          className="md:hidden flex items-center justify-between h-12 px-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80"
+          style={{
+            paddingTop: 'env(safe-area-inset-top, 0px)',
+            paddingLeft: 'calc(env(safe-area-inset-left, 0px) + 0.75rem)',
+            paddingRight: 'calc(env(safe-area-inset-right, 0px) + 0.75rem)',
+            height: 'calc(3rem + env(safe-area-inset-top, 0px))',
+          }}
+        >
           <span className="font-medium text-sm">Volleyball</span>
           {isWhiteboardPage && (
             <Button
@@ -104,7 +117,7 @@ export default function VolleyballLayout({
 
         {/* Main content with bottom padding for mobile nav + context bar */}
         <main
-          className={`flex flex-col flex-1 min-h-0 overflow-auto md:pb-0 ${paddingClass}`}
+          className={`flex flex-col flex-1 min-h-0 md:pb-0 ${isWhiteboardPage ? 'overflow-hidden overscroll-none' : 'overflow-auto'} ${paddingClass}`}
         >
           <div className="mx-auto w-full max-w-[1200px] flex flex-col flex-1 min-h-0">
             {children}

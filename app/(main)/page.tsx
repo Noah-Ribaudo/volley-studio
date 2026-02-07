@@ -1,15 +1,16 @@
 'use client'
 
 import { useEffect, useState, useMemo, useRef, useCallback, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { useQuery } from 'convex/react'
+import { api } from '@/convex/_generated/api'
 import { useAppStore, getCurrentPositions, getCurrentArrows, getCurrentTags, getActiveLineupPositionSource } from '@/store/useAppStore'
 import { VolleyballCourt } from '@/components/court'
 import { RosterManagementCard } from '@/components/roster'
-import { Role, ROLES, RALLY_PHASES, Position, PositionCoordinates, ROTATIONS, POSITION_SOURCE_INFO, RallyPhase } from '@/lib/types'
+import { Role, ROLES, RALLY_PHASES, Position, PositionCoordinates, ROTATIONS, POSITION_SOURCE_INFO, RallyPhase, Team, CustomLayout } from '@/lib/types'
 import { getActiveAssignments } from '@/lib/lineups'
 import { getWhiteboardPositions } from '@/lib/whiteboard'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
-import { LearningPanel } from '@/components/learning/LearningPanel'
-import { allLessons } from '@/lib/learning/allModules'
 import { createRotationPhaseKey, getBackRowMiddle, getRoleZone } from '@/lib/rotations'
 import { validateRotationLegality } from '@/lib/model/legality'
 import { useIsMobile } from '@/hooks/useIsMobile'
@@ -80,8 +81,6 @@ function HomePageContent() {
     // Context UI
     contextPlayer,
     setContextPlayer,
-    // Learning mode
-    startLesson,
     // Away team visibility
     hideAwayTeam,
     awayTeamHidePercent,
@@ -97,14 +96,92 @@ function HomePageContent() {
     setPreviewingMovement,
     // Animation trigger
     playAnimationTrigger,
+    triggerPlayAnimation,
+    // Team loading
+    setCurrentTeam,
+    setCustomLayouts,
+    populateFromLayouts,
+    setAccessMode,
+    setTeamPasswordProvided,
   } = useAppStore()
+  const searchParams = useSearchParams()
+  const teamFromUrl = searchParams.get('team')?.trim() || ''
+  const selectedTeam = useQuery(
+    api.teams.getBySlugOrId,
+    teamFromUrl ? { identifier: teamFromUrl } : 'skip'
+  )
+  const selectedLayouts = useQuery(
+    api.layouts.getByTeam,
+    selectedTeam?._id ? { teamId: selectedTeam._id } : 'skip'
+  )
+  const loadedTeamFromUrlRef = useRef<string | null>(null)
 
   // Mobile detection
   const isMobile = useIsMobile()
 
+  // Load team and layouts when opened from /?team=<id or slug>
+  useEffect(() => {
+    if (!teamFromUrl || !selectedTeam || !selectedLayouts) return
+    if (loadedTeamFromUrlRef.current === selectedTeam._id) return
+
+    const mappedTeam: Team = {
+      id: selectedTeam._id,
+      _id: selectedTeam._id,
+      name: selectedTeam.name,
+      slug: selectedTeam.slug,
+      hasPassword: selectedTeam.hasPassword,
+      archived: selectedTeam.archived,
+      roster: selectedTeam.roster.map((player) => ({
+        id: player.id,
+        name: player.name,
+        number: player.number ?? 0,
+      })),
+      lineups: (selectedTeam.lineups || []).map((lineup) => ({
+        ...lineup,
+        position_source: lineup.position_source as 'custom' | 'full-5-1' | '5-1-libero' | '6-2' | undefined,
+      })),
+      active_lineup_id: selectedTeam.activeLineupId ?? null,
+      position_assignments: selectedTeam.positionAssignments || {},
+      created_at: new Date(selectedTeam._creationTime).toISOString(),
+      updated_at: new Date(selectedTeam._creationTime).toISOString(),
+    }
+
+    const mappedLayouts: CustomLayout[] = selectedLayouts.map((layout) => ({
+      id: layout._id,
+      _id: layout._id,
+      team_id: layout.teamId,
+      teamId: layout.teamId,
+      rotation: layout.rotation as 1 | 2 | 3 | 4 | 5 | 6,
+      phase: layout.phase as RallyPhase,
+      positions: layout.positions as unknown as PositionCoordinates,
+      flags: layout.flags ?? null,
+      created_at: new Date(layout._creationTime).toISOString(),
+      updated_at: new Date(layout._creationTime).toISOString(),
+    }))
+
+    setCurrentTeam(mappedTeam)
+    setCustomLayouts(mappedLayouts)
+    populateFromLayouts(mappedLayouts)
+    setAccessMode('full')
+    setTeamPasswordProvided(true)
+    loadedTeamFromUrlRef.current = selectedTeam._id
+  }, [
+    teamFromUrl,
+    selectedTeam,
+    selectedLayouts,
+    setCurrentTeam,
+    setCustomLayouts,
+    populateFromLayouts,
+    setAccessMode,
+    setTeamPasswordProvided,
+  ])
+
   // Lineup preset management - loads presets when active lineup uses a preset source
-  const { isUsingPreset, presetSystem, getPresetLayouts, isLoading: isLoadingPresets } = useLineupPresets()
-  const presetLayouts = presetSystem ? getPresetLayouts(presetSystem) : []
+  const { isUsingPreset, presetSystem, getPresetLayouts } = useLineupPresets()
+  const presetLayouts = useMemo(
+    () => (presetSystem ? getPresetLayouts(presetSystem) : []),
+    [presetSystem, getPresetLayouts]
+  )
 
   // Determine if editing is allowed (not when using presets)
   const isEditingAllowed = !isUsingPreset
@@ -305,11 +382,6 @@ function HomePageContent() {
     ? (legalityViolations[rotationPhaseKey] || [])
     : []
 
-  // Handler to start learning mode
-  const handleStartLearning = useCallback(() => {
-    startLesson(allLessons[0].id)
-  }, [startLesson])
-
   // Visual feedback during swipe
   const swipeOffset = swipeState.swiping ? swipeState.delta.x * 0.2 : 0
 
@@ -319,17 +391,28 @@ function HomePageContent() {
       <div className="flex-1 min-h-0 h-full overflow-hidden">
         {/* Court Container - scales to fit available space */}
         <div className="w-full h-full sm:max-w-3xl mx-auto px-0 sm:px-2 relative">
-          {/* Gradient overlay to fade out content behind the menu when away team is hidden */}
-          {hideAwayTeam && (
-            <div
-              className="absolute left-0 right-0 z-40 pointer-events-none"
-              style={{
-                top: '56px',
-                height: '120px',
-                background: 'linear-gradient(to bottom, hsl(var(--background)) 0%, hsl(var(--background) / 0.9) 30%, hsl(var(--background) / 0.5) 60%, transparent 100%)'
-              }}
-            />
-          )}
+          <div className="absolute right-3 top-3 z-30 flex items-center gap-2">
+            {isPreviewingMovement ? (
+              <button
+                className="h-8 rounded-md border border-border bg-background/90 px-3 text-sm shadow-sm backdrop-blur"
+                onClick={() => setPreviewingMovement(false)}
+                type="button"
+              >
+                Reset
+              </button>
+            ) : (
+              <button
+                className="h-8 rounded-md border border-border bg-background/90 px-3 text-sm shadow-sm backdrop-blur"
+                onClick={() => {
+                  triggerPlayAnimation()
+                  setPreviewingMovement(true)
+                }}
+                type="button"
+              >
+                Play
+              </button>
+            )}
+          </div>
 
           {/* Preset mode indicator - shown when viewing preset positions */}
           {isUsingPreset && (
@@ -457,9 +540,6 @@ function HomePageContent() {
           <RosterManagementCard />
         </SheetContent>
       </Sheet>
-
-      {/* Learning Panel */}
-      <LearningPanel />
 
       {/* Conflict Resolution Modal - shown when save conflict is detected */}
       <ConflictResolutionModal />

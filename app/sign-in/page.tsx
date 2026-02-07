@@ -4,8 +4,13 @@ import Link from "next/link";
 import { useConvexAuth } from "convex/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import dynamic from "next/dynamic";
 import { SignInWithGoogle, SignInWithPassword } from "@/components/auth/SignIn";
-import { BackgroundShader } from "@/components/BackgroundShader";
+
+const BackgroundShader = dynamic(
+  () => import("@/components/BackgroundShader").then((mod) => mod.BackgroundShader),
+  { ssr: false }
+);
 
 export default function SignInPage() {
   const { isAuthenticated, isLoading } = useConvexAuth();
@@ -47,7 +52,7 @@ export default function SignInPage() {
             Volley Studio
           </h1>
           <p className="text-muted-foreground">
-            Sign in to save your teams and rotations
+            Sign in to save your teams and settings
           </p>
         </div>
 

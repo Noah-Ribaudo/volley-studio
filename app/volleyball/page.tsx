@@ -8,8 +8,6 @@ import { Role, ROLES, RALLY_PHASES, Position, PositionCoordinates, ROTATIONS, PO
 import { getActiveAssignments } from '@/lib/lineups'
 import { getWhiteboardPositions } from '@/lib/whiteboard'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
-import { LearningPanel } from '@/components/learning/LearningPanel'
-import { allLessons } from '@/lib/learning/allModules'
 import { createRotationPhaseKey, getBackRowMiddle, getRoleZone } from '@/lib/rotations'
 import { validateRotationLegality } from '@/lib/model/legality'
 import { useIsMobile } from '@/hooks/useIsMobile'
@@ -80,8 +78,6 @@ function HomePageContent() {
     // Context UI
     contextPlayer,
     setContextPlayer,
-    // Learning mode
-    startLesson,
     // Away team visibility
     hideAwayTeam,
     awayTeamHidePercent,
@@ -105,7 +101,10 @@ function HomePageContent() {
 
   // Lineup preset management - loads presets when active lineup uses a preset source
   const { isUsingPreset, presetSystem, getPresetLayouts, isLoading: isLoadingPresets } = useLineupPresets()
-  const presetLayouts = presetSystem ? getPresetLayouts(presetSystem) : []
+  const presetLayouts = useMemo(
+    () => (presetSystem ? getPresetLayouts(presetSystem) : []),
+    [presetSystem, getPresetLayouts]
+  )
 
   // Determine if editing is allowed (not when using presets)
   const isEditingAllowed = !isUsingPreset
@@ -342,11 +341,6 @@ function HomePageContent() {
     ? (legalityViolations[rotationPhaseKey] || [])
     : []
 
-  // Handler to start learning mode
-  const handleStartLearning = useCallback(() => {
-    startLesson(allLessons[0].id)
-  }, [startLesson])
-
   // Visual feedback during swipe
   const swipeOffset = swipeState.swiping ? swipeState.delta.x * 0.2 : 0
 
@@ -378,18 +372,6 @@ function HomePageContent() {
               </button>
             )}
           </div>
-          {/* Gradient overlay to fade out content behind the menu when away team is hidden */}
-          {hideAwayTeam && (
-            <div
-              className="absolute left-0 right-0 z-40 pointer-events-none"
-              style={{
-                top: '56px',
-                height: '120px',
-                background: 'linear-gradient(to bottom, hsl(var(--background)) 0%, hsl(var(--background) / 0.9) 30%, hsl(var(--background) / 0.5) 60%, transparent 100%)'
-              }}
-            />
-          )}
-
           {/* Preset mode indicator - shown when viewing preset positions */}
           {isUsingPreset && (
             <div className="absolute top-16 left-1/2 -translate-x-1/2 z-30">
@@ -516,9 +498,6 @@ function HomePageContent() {
           <RosterManagementCard />
         </SheetContent>
       </Sheet>
-
-      {/* Learning Panel */}
-      <LearningPanel />
 
       {/* Conflict Resolution Modal - shown when save conflict is detected */}
       <ConflictResolutionModal />

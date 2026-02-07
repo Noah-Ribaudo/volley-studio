@@ -1,0 +1,151 @@
+'use client'
+
+import { MovementArrow } from './MovementArrow'
+import {
+  Role,
+  Position,
+  PositionCoordinates,
+  ArrowPositions,
+  ROLE_INFO,
+} from '@/lib/types'
+
+type PlayerInfo = {
+  name?: string
+  number?: number
+}
+
+interface ArrowPreviewOverlayProps {
+  viewBoxWidth: number
+  viewBoxY: number
+  viewBoxHeight: number
+  activeRoles: Role[]
+  displayPositions: PositionCoordinates
+  draggingRole: Role | null
+  dragPosition: Position | null
+  draggingArrowRole: Role | null
+  arrowDragPosition: Position | null
+  arrows: ArrowPositions
+  previewVisible: Partial<Record<Role, boolean>>
+  tappedRole: Role | null
+  isMobile: boolean
+  showPosition: boolean
+  showPlayer: boolean
+  tokenScale: number
+  debugHitboxes: boolean
+  toSvgCoords: (pos: Position) => { x: number; y: number }
+  getPlayerInfo: (role: Role) => PlayerInfo
+  onArrowChange?: (role: Role, position: Position | null) => void
+  onArrowDragStart: (
+    role: Role,
+    e: React.MouseEvent | React.TouchEvent,
+    initialEndSvg?: { x: number; y: number },
+    initialControlSvg?: { x: number; y: number }
+  ) => void
+  onPreviewHover: (role: Role, zone: 'token' | 'arrow', isEntering: boolean) => void
+}
+
+export function ArrowPreviewOverlay({
+  viewBoxWidth,
+  viewBoxY,
+  viewBoxHeight,
+  activeRoles,
+  displayPositions,
+  draggingRole,
+  dragPosition,
+  draggingArrowRole,
+  arrowDragPosition,
+  arrows,
+  previewVisible,
+  tappedRole,
+  isMobile,
+  showPosition,
+  showPlayer,
+  tokenScale,
+  debugHitboxes,
+  toSvgCoords,
+  getPlayerInfo,
+  onArrowChange,
+  onArrowDragStart,
+  onPreviewHover,
+}: ArrowPreviewOverlayProps) {
+  if (!onArrowChange) return null
+
+  return (
+    <svg
+      viewBox={`0 ${viewBoxY} ${viewBoxWidth} ${viewBoxHeight}`}
+      className="pointer-events-none absolute inset-0 select-none w-full h-full max-h-full max-w-full"
+      style={{
+        display: 'block',
+        aspectRatio: `${viewBoxWidth} / ${viewBoxHeight}`,
+      }}
+      preserveAspectRatio="xMidYMid meet"
+      aria-hidden="true"
+    >
+      {activeRoles.map((role) => {
+        const homeBasePos = displayPositions[role] || { x: 0.5, y: 0.75 }
+        const homeSvgPos = toSvgCoords(draggingRole === role && dragPosition ? dragPosition : homeBasePos)
+        const isLeftSide = homeBasePos.x > 0.5
+
+        const playerInfo = getPlayerInfo(role)
+        const hasAssignedPlayer = playerInfo.name !== undefined || playerInfo.number !== undefined
+        const isPositionOnlyMode = showPosition && (!showPlayer || !hasAssignedPlayer)
+        const baseTokenSize = isPositionOnlyMode ? 56 : 48
+        const actualTokenRadius = Math.max(baseTokenSize * tokenScale, 48) / 2
+
+        const rolePreviewVisible = previewVisible[role] === true
+        const canShowPreview = (!arrows[role] || draggingArrowRole === role)
+        const isPreviewActive = canShowPreview && (
+          rolePreviewVisible ||
+          draggingArrowRole === role ||
+          (isMobile && tappedRole === role)
+        )
+        const hidePreviewDuringDrag = draggingArrowRole === role && arrows[role]
+
+        const previewPeekDistance = 28
+        const previewCurveHeight = 25
+        const edgeInset = Math.max(10, actualTokenRadius - 6)
+        const direction = isLeftSide ? -1 : 1
+        const isDraggingNewPreviewArrow = draggingArrowRole === role && !arrows[role] && Boolean(arrowDragPosition)
+
+        const previewStartSvg = {
+          x: homeSvgPos.x + direction * edgeInset,
+          y: homeSvgPos.y - 2,
+        }
+        const defaultPreviewEndSvg = {
+          x: previewStartSvg.x + direction * previewPeekDistance,
+          y: homeSvgPos.y - 10,
+        }
+        const previewEndSvg = isDraggingNewPreviewArrow && arrowDragPosition
+          ? toSvgCoords(arrowDragPosition)
+          : defaultPreviewEndSvg
+        const previewControlSvg = {
+          x: (previewStartSvg.x + previewEndSvg.x) / 2,
+          y: isDraggingNewPreviewArrow
+            ? Math.min(previewStartSvg.y, previewEndSvg.y) - (previewCurveHeight * 0.65)
+            : homeSvgPos.y - previewCurveHeight,
+        }
+
+        return (
+          <MovementArrow
+            key={`preview-${role}`}
+            start={previewStartSvg}
+            end={previewEndSvg}
+            control={previewControlSvg}
+            color={ROLE_INFO[role].color}
+            strokeWidth={3}
+            opacity={0.85}
+            isDraggable={true}
+            onDragStart={(e) => onArrowDragStart(role, e, previewEndSvg, previewControlSvg)}
+            onMouseEnter={() => !draggingRole && !draggingArrowRole && onPreviewHover(role, 'arrow', true)}
+            onMouseLeave={() => onPreviewHover(role, 'arrow', false)}
+            dragHitArea="both"
+            dragHandleRadius={32}
+            peekAnimated={true}
+            peekActive={!hidePreviewDuringDrag && isPreviewActive}
+            debugHitboxes={debugHitboxes}
+          />
+        )
+      })}
+    </svg>
+  )
+}

@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -162,94 +161,90 @@ export function RosterManagementCard() {
     <>
       {/* Team conflict resolution modal for auto-save conflicts */}
       <TeamConflictResolutionModal />
-      <Card className="bg-card/60 backdrop-blur">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between gap-2">
-            {/* Mode indicator */}
-            {isPracticeMode ? (
-              <div>
-                <CardTitle className="text-base text-muted-foreground">Practice Session</CardTitle>
-                <p className="text-xs text-muted-foreground mt-0.5">Changes won't be saved</p>
-              </div>
-            ) : (
-              <div className="min-w-0 flex-1">
-                <CardTitle className="text-base truncate">{localTeamName}</CardTitle>
-                <p className="text-xs text-muted-foreground mt-0.5">Auto-saving</p>
-              </div>
-            )}
-
-            {/* Team actions */}
-            {isTeamMode && (
-              <Link href="/roster" className="shrink-0">
-                <Button variant="ghost" size="sm" className="text-xs">
-                  Manage
-                </Button>
-              </Link>
-            )}
-          </div>
-        </CardHeader>
-
-        <CardContent className="flex flex-col gap-4">
-          {/* Practice mode: show team name input and save option */}
-          {isPracticeMode && (
-            <div className="space-y-2">
-              <Label htmlFor="team-name" className="text-xs">Team Name</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  id="team-name"
-                  value={localTeamName}
-                  onChange={(e) => setLocalTeamName(e.target.value)}
-                  placeholder={defaultTeamName}
-                  className="h-9 flex-1"
-                />
-                <Button
-                  size="sm"
-                  onClick={handleCreateTeam}
-                  disabled={isSaving}
-                >
-                  {isSaving ? 'Saving...' : 'Save as Team'}
-                </Button>
-              </div>
-              {teamError && <p className="text-xs text-destructive">{teamError}</p>}
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center justify-between gap-2">
+          {/* Mode indicator */}
+          {isPracticeMode ? (
+            <div>
+              <h3 className="text-base font-semibold text-muted-foreground">Practice Session</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">Changes won't be saved</p>
+            </div>
+          ) : (
+            <div className="min-w-0 flex-1">
+              <h3 className="text-base font-semibold truncate">{localTeamName}</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">Auto-saving</p>
             </div>
           )}
 
-          {/* Tabs - just roster and positions, no settings */}
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'roster' | 'positions')}>
-            <TabsList className="grid w-full h-11 grid-cols-2">
-              <TabsTrigger value="roster" className="text-sm">Roster</TabsTrigger>
-              <TabsTrigger value="positions" className="text-sm">Positions</TabsTrigger>
-            </TabsList>
-            <TabsContent value="roster" className="mt-4">
-              <RosterEditor
-                roster={localRoster}
-                onChange={handleRosterChange}
-                isLoading={isSaving}
-              />
-            </TabsContent>
-            <TabsContent value="positions" className="mt-4">
-              <PositionAssigner
-                roster={localRoster}
-                assignments={localAssignments}
-                onChange={handleAssignmentsChange}
-                isLoading={isSaving}
-                showLibero={showLibero}
-              />
-            </TabsContent>
-          </Tabs>
-
-          {/* Team mode: link to full roster page for settings and team switching */}
+          {/* Team actions */}
           {isTeamMode && (
-            <div className="pt-2 border-t">
-              <Link href="/roster" className="w-full">
-                <Button variant="outline" size="sm" className="w-full text-xs">
-                  Settings & Team Admin
-                </Button>
-              </Link>
-            </div>
+            <Link href="/roster" className="shrink-0">
+              <Button variant="ghost" size="sm" className="text-xs">
+                Manage
+              </Button>
+            </Link>
           )}
-        </CardContent>
-      </Card>
+        </div>
+
+        {/* Practice mode: show team name input and save option */}
+        {isPracticeMode && (
+          <div className="space-y-2">
+            <Label htmlFor="team-name" className="text-xs">Team Name</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                id="team-name"
+                value={localTeamName}
+                onChange={(e) => setLocalTeamName(e.target.value)}
+                placeholder={defaultTeamName}
+                className="h-9 flex-1"
+              />
+              <Button
+                size="sm"
+                onClick={handleCreateTeam}
+                disabled={isSaving}
+              >
+                {isSaving ? 'Saving...' : 'Save as Team'}
+              </Button>
+            </div>
+            {teamError && <p className="text-xs text-destructive">{teamError}</p>}
+          </div>
+        )}
+
+        {/* Tabs - just roster and positions, no settings */}
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'roster' | 'positions')}>
+          <TabsList className="grid w-full h-11 grid-cols-2">
+            <TabsTrigger value="roster" className="text-sm">Roster</TabsTrigger>
+            <TabsTrigger value="positions" className="text-sm">Positions</TabsTrigger>
+          </TabsList>
+          <TabsContent value="roster" className="mt-4">
+            <RosterEditor
+              roster={localRoster}
+              onChange={handleRosterChange}
+              isLoading={isSaving}
+            />
+          </TabsContent>
+          <TabsContent value="positions" className="mt-4">
+            <PositionAssigner
+              roster={localRoster}
+              assignments={localAssignments}
+              onChange={handleAssignmentsChange}
+              isLoading={isSaving}
+              showLibero={showLibero}
+            />
+          </TabsContent>
+        </Tabs>
+
+        {/* Team mode: link to full roster page for settings and team switching */}
+        {isTeamMode && (
+          <div className="pt-2 border-t">
+            <Link href="/roster" className="w-full">
+              <Button variant="outline" size="sm" className="w-full text-xs">
+                Settings & Team Admin
+              </Button>
+            </Link>
+          </div>
+        )}
+      </div>
     </>
   )
 }
