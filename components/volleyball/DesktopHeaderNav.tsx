@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Layout, Users, Timer, Settings, ChevronLeft, ChevronRight, ChevronDown, Play, RotateCcw, Printer, Eye, EyeOff } from 'lucide-react'
+import { Layout, Users, Timer, Settings, ChevronLeft, ChevronRight, ChevronDown, Play, RotateCcw, Printer, Eye, EyeOff, SlidersHorizontal } from 'lucide-react'
 import { useGameTimeStore } from '@/store/useGameTimeStore'
 import { UserMenu } from '@/components/auth'
 import { Button } from '@/components/ui/button'
@@ -62,6 +62,8 @@ export function DesktopHeaderNav({ onOpenPrintDialog }: DesktopHeaderNavProps) {
   const triggerPlayAnimation = useAppStore((state) => state.triggerPlayAnimation)
   const hideAwayTeam = useAppStore((state) => state.hideAwayTeam)
   const setHideAwayTeam = useAppStore((state) => state.setHideAwayTeam)
+  const showMotionDebugPanel = useAppStore((state) => state.showMotionDebugPanel)
+  const setShowMotionDebugPanel = useAppStore((state) => state.setShowMotionDebugPanel)
 
   // Get visible phases
   const phasesToShow = visiblePhases
@@ -205,6 +207,21 @@ export function DesktopHeaderNav({ onOpenPrintDialog }: DesktopHeaderNavProps) {
               <span>Play</span>
             </Button>
           )}
+
+          {/* Divider */}
+          <div className="w-px h-6 bg-border" />
+
+          {/* Motion debug panel toggle */}
+          <Button
+            variant={showMotionDebugPanel ? "default" : "outline"}
+            size="sm"
+            className="h-8 gap-1.5"
+            onClick={() => setShowMotionDebugPanel(!showMotionDebugPanel)}
+            title="Toggle motion debug panel"
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            <span>Debug</span>
+          </Button>
 
           {/* Divider */}
           <div className="w-px h-6 bg-border" />

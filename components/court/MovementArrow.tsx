@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { animate, SPRING, stopAnimation, type AnimationPlaybackControls } from '@/lib/motion-utils'
+import { memo, useEffect, useRef, useState } from 'react'
+import { animate, stopAnimation, type AnimationPlaybackControls } from '@/lib/motion-utils'
 
 interface MovementArrowProps {
   start: { x: number; y: number }
@@ -26,7 +26,7 @@ interface MovementArrowProps {
   animateIn?: boolean
 }
 
-export function MovementArrow({
+function MovementArrowImpl({
   start,
   end,
   control,
@@ -282,3 +282,38 @@ export function MovementArrow({
     </g>
   )
 }
+
+const arePointsEqual = (a: { x: number; y: number }, b: { x: number; y: number }) => (
+  a.x === b.x && a.y === b.y
+)
+
+const areControlPointsEqual = (
+  a: { x: number; y: number } | null,
+  b: { x: number; y: number } | null
+) => {
+  if (a === b) return true
+  if (!a || !b) return false
+  return a.x === b.x && a.y === b.y
+}
+
+const areMovementArrowPropsEqual = (prev: MovementArrowProps, next: MovementArrowProps) => {
+  return (
+    arePointsEqual(prev.start, next.start) &&
+    arePointsEqual(prev.end, next.end) &&
+    areControlPointsEqual(prev.control, next.control) &&
+    prev.color === next.color &&
+    prev.strokeWidth === next.strokeWidth &&
+    prev.opacity === next.opacity &&
+    prev.isDraggable === next.isDraggable &&
+    prev.showCurveHandle === next.showCurveHandle &&
+    prev.debugHitboxes === next.debugHitboxes &&
+    prev.animateIn === next.animateIn &&
+    Boolean(prev.onDragStart) === Boolean(next.onDragStart) &&
+    Boolean(prev.onCurveDragStart) === Boolean(next.onCurveDragStart) &&
+    Boolean(prev.onMouseEnter) === Boolean(next.onMouseEnter) &&
+    Boolean(prev.onMouseLeave) === Boolean(next.onMouseLeave)
+  )
+}
+
+export const MovementArrow = memo(MovementArrowImpl, areMovementArrowPropsEqual)
+MovementArrow.displayName = 'MovementArrow'
