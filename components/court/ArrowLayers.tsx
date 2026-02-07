@@ -67,7 +67,9 @@ function MovementArrowLayerImpl({
         if (draggingArrowRole === role && !arrows[role]) return null
 
         const lockedPath = (isBezierAnimating || isPreviewingMovement) ? playLockedPaths[role] : null
-        const isTraversingPath = Boolean(lockedPath && isBezierAnimating)
+        // Keep preview paths visually distinct (dashed + dim) for the whole preview lifecycle,
+        // including after motion settles and before reset.
+        const isTraversingPath = Boolean(lockedPath && isPreviewingMovement)
         const basePosForArrow = lockedPath?.start || displayPositions[role] || { x: 0.5, y: 0.75 }
         const homeSvgPos = toSvgCoords(draggingRole === role && dragPosition ? dragPosition : basePosForArrow)
 
