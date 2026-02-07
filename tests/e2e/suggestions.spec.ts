@@ -30,33 +30,35 @@ test.describe('Suggestion Box', () => {
     await expect(submitButton).toBeEnabled()
   })
 
-  test('shows character count', async ({ page }) => {
+  test('hides character count under 500 chars, shows it at 500+', async ({ page }) => {
     await page.goto('/settings')
     await page.waitForLoadState('networkidle')
 
-    // Should show 0/500 initially
-    await expect(page.getByText('0/500')).toBeVisible()
-
-    // Type some text and verify count updates
     const textarea = page.getByPlaceholder(/I wish this app could/i)
+
+    // Short text — counter should be hidden
     await textarea.fill('Hello')
-    await expect(page.getByText('5/500')).toBeVisible()
+    await expect(page.getByText(/\/1000/)).not.toBeVisible()
+
+    // At 500 chars — counter should appear
+    await textarea.fill('a'.repeat(500))
+    await expect(page.getByText('500/1000')).toBeVisible()
   })
 
-  test('enforces character limit', async ({ page }) => {
+  test('enforces character limit at 1000', async ({ page }) => {
     await page.goto('/settings')
     await page.waitForLoadState('networkidle')
 
     const textarea = page.getByPlaceholder(/I wish this app could/i)
 
-    // Fill with exactly 500 characters
-    const maxText = 'a'.repeat(500)
+    // Fill with exactly 1000 characters
+    const maxText = 'a'.repeat(1000)
     await textarea.fill(maxText)
-    await expect(page.getByText('500/500')).toBeVisible()
+    await expect(page.getByText('1000/1000')).toBeVisible()
 
-    // Typing more should not increase count beyond 500
+    // Typing more should not increase count beyond 1000
     await textarea.press('b')
-    await expect(page.getByText('500/500')).toBeVisible()
+    await expect(page.getByText('1000/1000')).toBeVisible()
   })
 
   test('submitting shows success toast and clears textarea', async ({ page }) => {

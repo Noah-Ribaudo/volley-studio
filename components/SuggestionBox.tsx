@@ -8,7 +8,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 
-const MAX_LENGTH = 500
+const MAX_LENGTH = 1000
+const SHOW_COUNT_AT = 500
 
 export default function SuggestionBox() {
   const [text, setText] = useState('')
@@ -51,9 +52,13 @@ export default function SuggestionBox() {
           disabled={submitting}
         />
         <div className="flex items-center justify-between">
-          <span className="text-xs text-muted-foreground">
-            {text.length}/{MAX_LENGTH}
-          </span>
+          {text.length >= SHOW_COUNT_AT ? (
+            <span className="text-xs text-muted-foreground">
+              {text.length}/{MAX_LENGTH}
+            </span>
+          ) : (
+            <span />
+          )}
           <Button
             size="sm"
             onClick={handleSubmit}
