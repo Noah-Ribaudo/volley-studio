@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import { Role, ROLE_INFO, PlayerStatus, PLAYER_STATUS_INFO } from '@/lib/types'
 import { getTextColorForOklch } from '@/lib/utils'
 
@@ -65,7 +66,7 @@ interface PlayerTokenProps {
   isPrimed?: boolean
 }
 
-export function PlayerToken({
+function PlayerTokenImpl({
   role,
   x,
   y,
@@ -794,3 +795,44 @@ export function PlayerToken({
     </g>
   )
 }
+
+const areStatusesEqual = (a: PlayerStatus[] | undefined, b: PlayerStatus[] | undefined) => {
+  const left = a ?? []
+  const right = b ?? []
+  if (left === right) return true
+  if (left.length !== right.length) return false
+  for (let i = 0; i < left.length; i += 1) {
+    if (left[i] !== right[i]) return false
+  }
+  return true
+}
+
+const arePlayerTokenPropsEqual = (prev: PlayerTokenProps, next: PlayerTokenProps) => {
+  return (
+    prev.role === next.role &&
+    prev.x === next.x &&
+    prev.y === next.y &&
+    prev.highlighted === next.highlighted &&
+    prev.dimmed === next.dimmed &&
+    prev.playerName === next.playerName &&
+    prev.playerNumber === next.playerNumber &&
+    prev.isDragging === next.isDragging &&
+    prev.isHovered === next.isHovered &&
+    prev.showPosition === next.showPosition &&
+    prev.showPlayer === next.showPlayer &&
+    prev.mobileScale === next.mobileScale &&
+    prev.isInViolation === next.isInViolation &&
+    prev.colorOverride === next.colorOverride &&
+    prev.isContextOpen === next.isContextOpen &&
+    prev.tokenSize === next.tokenSize &&
+    prev.widthOffset === next.widthOffset &&
+    prev.heightOffset === next.heightOffset &&
+    prev.isCircle === next.isCircle &&
+    prev.fullStatusLabels === next.fullStatusLabels &&
+    prev.isPrimed === next.isPrimed &&
+    areStatusesEqual(prev.statuses, next.statuses)
+  )
+}
+
+export const PlayerToken = memo(PlayerTokenImpl, arePlayerTokenPropsEqual)
+PlayerToken.displayName = 'PlayerToken'
