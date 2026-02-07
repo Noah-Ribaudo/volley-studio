@@ -13,6 +13,7 @@ import type * as customLayouts from "../customLayouts.js";
 import type * as http from "../http.js";
 import type * as layouts from "../layouts.js";
 import type * as seed from "../seed.js";
+import type * as suggestions from "../suggestions.js";
 import type * as teams from "../teams.js";
 import type * as users from "../users.js";
 
@@ -28,6 +29,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   layouts: typeof layouts;
   seed: typeof seed;
+  suggestions: typeof suggestions;
   teams: typeof teams;
   users: typeof users;
 }>;

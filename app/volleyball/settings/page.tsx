@@ -23,6 +23,7 @@ import dynamic from 'next/dynamic'
 const DevThemeSection = process.env.NODE_ENV === 'development'
   ? dynamic(() => import('@/components/dev/DevThemeSection'), { ssr: false })
   : () => null
+import SuggestionBox from '@/components/SuggestionBox'
 import { DragDropVerticalIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
@@ -391,6 +392,9 @@ export default function SettingsPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Suggestion Box */}
+        <SuggestionBox />
 
       </div>
     </div>

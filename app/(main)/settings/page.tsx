@@ -16,6 +16,7 @@ import { RALLY_PHASE_INFO, RallyPhase } from '@/lib/types'
 import type { LearningPanelPosition } from '@/lib/learning/types'
 import { cn } from '@/lib/utils'
 import ThemePicker from '@/components/ThemePicker'
+import SuggestionBox from '@/components/SuggestionBox'
 import { DragDropVerticalIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import dynamic from 'next/dynamic'
@@ -283,6 +284,9 @@ export default function SettingsPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Suggestion Box */}
+        <SuggestionBox />
 
       </div>
     </div>
