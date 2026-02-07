@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { SignInWithGoogle, SignInWithPassword } from "@/components/auth/SignIn";
 import { BackgroundShader } from "@/components/BackgroundShader";
+import VolleyWordmark from "@/components/logo/VolleyWordmark";
 
 export default function SignInPage() {
   const { isAuthenticated, isLoading } = useConvexAuth();
@@ -24,28 +25,12 @@ export default function SignInPage() {
 
       {/* Content */}
       <div className="w-full max-w-sm relative z-10">
-        {/* Logo/Icon */}
+        {/* Logo */}
         <div className="flex justify-center mb-6">
-          <div className="w-16 h-16 rounded-2xl bg-primary/20 border border-primary/30 flex items-center justify-center">
-            <svg
-              viewBox="0 0 24 24"
-              className="w-8 h-8 text-primary"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-            >
-              <circle cx="12" cy="12" r="10" />
-              <path d="M12 2C12 2 14.5 5.5 14.5 12C14.5 18.5 12 22 12 22" />
-              <path d="M12 2C12 2 9.5 5.5 9.5 12C9.5 18.5 12 22 12 22" />
-              <path d="M2 12H22" />
-            </svg>
-          </div>
+          <VolleyWordmark fillColor="currentColor" height={48} className="text-foreground" />
         </div>
 
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2 uppercase tracking-wide">
-            Volley Studio
-          </h1>
           <p className="text-muted-foreground">
             Sign in to save your teams and rotations
           </p>

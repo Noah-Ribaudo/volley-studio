@@ -15,6 +15,7 @@ import { getActiveAssignments } from '@/lib/lineups'
 import type { Rotation, Phase, PositionCoordinates, RallyPhase } from '@/lib/types'
 import { RALLY_PHASES, isRallyPhase as checkIsRallyPhase } from '@/lib/types'
 import { BackgroundShader } from '@/components/BackgroundShader'
+import VolleyBall from '@/components/logo/VolleyBall'
 
 export default function VolleyballLayout({
   children,
@@ -88,7 +89,10 @@ export default function VolleyballLayout({
 
         {/* Mobile top header - minimal, just for context */}
         <header className="md:hidden flex items-center justify-between h-12 px-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-          <span className="font-medium text-sm">Volleyball</span>
+          <span className="font-medium text-sm flex items-center gap-1.5">
+            <VolleyBall size={18} fillColor="currentColor" />
+            Volley Studio
+          </span>
           {isWhiteboardPage && (
             <Button
               variant="ghost"
