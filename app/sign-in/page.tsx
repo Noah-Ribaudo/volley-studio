@@ -4,9 +4,14 @@ import Link from "next/link";
 import { useConvexAuth } from "convex/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import dynamic from "next/dynamic";
 import { SignInWithGoogle, SignInWithPassword } from "@/components/auth/SignIn";
-import { BackgroundShader } from "@/components/BackgroundShader";
 import VolleyWordmark from "@/components/logo/VolleyWordmark";
+
+const BackgroundShader = dynamic(
+  () => import("@/components/BackgroundShader").then((mod) => mod.BackgroundShader),
+  { ssr: false }
+);
 
 export default function SignInPage() {
   const { isAuthenticated, isLoading } = useConvexAuth();

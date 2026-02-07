@@ -71,6 +71,18 @@ export const DEFAULT_VISIBLE_PHASES: RallyPhase[] = [
   'ATTACK_PHASE',
   'DEFENSE_PHASE',
 ]
+// Default order shown in Settings > Whiteboard Phases
+export const DEFAULT_PHASE_ORDER: RallyPhase[] = [
+  'PRE_SERVE',
+  'SERVE_IN_AIR',
+  'TRANSITION_TO_DEFENSE',
+  'DEFENSE_PHASE',
+  'SERVE_RECEIVE',
+  'TRANSITION_TO_OFFENSE',
+  'SET_PHASE',
+  'ATTACK_PHASE',
+  'BALL_DEAD',
+]
 export const ROTATIONS = [1, 2, 3, 4, 5, 6] as const
 export type Rotation = typeof ROTATIONS[number]
 
@@ -325,4 +337,3 @@ export interface LayoutExtendedData {
   attackBallPosition?: Position | null              // Attack ball position for defense phase
   tagFlags?: Partial<Record<Role, TokenTag[]>>     // Token tags (multiple per player)
 }
-

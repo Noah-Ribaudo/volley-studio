@@ -15,6 +15,7 @@ import type * as layouts from "../layouts.js";
 import type * as seed from "../seed.js";
 import type * as suggestions from "../suggestions.js";
 import type * as teams from "../teams.js";
+import type * as userSettings from "../userSettings.js";
 import type * as users from "../users.js";
 
 import type {
@@ -31,6 +32,7 @@ declare const fullApi: ApiFromModules<{
   seed: typeof seed;
   suggestions: typeof suggestions;
   teams: typeof teams;
+  userSettings: typeof userSettings;
   users: typeof users;
 }>;
 

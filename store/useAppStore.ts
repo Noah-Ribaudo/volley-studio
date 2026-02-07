@@ -15,6 +15,7 @@ import {
   PHASES,
   RALLY_PHASES,
   DEFAULT_VISIBLE_PHASES,
+  DEFAULT_PHASE_ORDER,
   ArrowPositions,
   LegacyPhase,
   isRallyPhase,
@@ -431,14 +432,14 @@ export const useAppStore = create<AppState>()(
       showRotationRules: false,
       baseOrder: [...DEFAULT_BASE_ORDER],
       visiblePhases: new Set(DEFAULT_VISIBLE_PHASES),
-      phaseOrder: [...RALLY_PHASES.filter(p => !['RECEIVE_TO_SET', 'SET_TO_ATTACK', 'TRANSITION'].includes(p))], // Non-intermediate phases in default order
+      phaseOrder: [...DEFAULT_PHASE_ORDER],
       isReceivingContext: true, // Default to receiving team perspective
       showLibero: false, // Default to off
       showPosition: true, // Default to showing position labels
       showPlayer: false, // Default to hiding player names
       circleTokens: true, // Default to circular tokens
       tokenSize: 'big' as const, // Default to big tokens
-      hideAwayTeam: false, // Default to showing away team
+      hideAwayTeam: true, // Default to hiding away team
       fullStatusLabels: true, // Default to showing full words on status badges
       showLearnTab: false, // Default to hiding Learn tab in mobile nav
       debugHitboxes: false, // Default to hiding hitbox debug overlay
@@ -1095,6 +1096,11 @@ export const useAppStore = create<AppState>()(
           phaseOrder: state.phaseOrder,
           isReceivingContext: state.isReceivingContext,
           showLibero: state.showLibero,
+          showPosition: state.showPosition,
+          showPlayer: state.showPlayer,
+          circleTokens: state.circleTokens,
+          fullStatusLabels: state.fullStatusLabels,
+          debugHitboxes: state.debugHitboxes,
           tokenSize: state.tokenSize,
           hideAwayTeam: state.hideAwayTeam,
           showLearnTab: state.showLearnTab,
@@ -1133,7 +1139,7 @@ export const useAppStore = create<AppState>()(
         }
         // Default phaseOrder if not set
         if (state && !state.phaseOrder) {
-          state.phaseOrder = [...RALLY_PHASES.filter(p => !['RECEIVE_TO_SET', 'SET_TO_ATTACK', 'TRANSITION'].includes(p))]
+          state.phaseOrder = [...DEFAULT_PHASE_ORDER]
         }
         // Normalize legacy arrows
         if (state && state.localArrows) {
@@ -1158,6 +1164,21 @@ export const useAppStore = create<AppState>()(
         }
         if (state && state.showLibero === undefined) {
           state.showLibero = false
+        }
+        if (state && state.showPosition === undefined) {
+          state.showPosition = true
+        }
+        if (state && state.showPlayer === undefined) {
+          state.showPlayer = false
+        }
+        if (state && state.circleTokens === undefined) {
+          state.circleTokens = true
+        }
+        if (state && state.fullStatusLabels === undefined) {
+          state.fullStatusLabels = true
+        }
+        if (state && state.debugHitboxes === undefined) {
+          state.debugHitboxes = false
         }
         if (state && state.tokenSize === undefined) {
           state.tokenSize = 'big'

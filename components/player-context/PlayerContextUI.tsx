@@ -33,6 +33,10 @@ interface PlayerContextUIProps {
   hasArrow?: boolean
   /** Callback to flip the arrow curve direction */
   onFlipArrow?: () => void
+  /** Whether arrow placement can be started */
+  canStartArrow?: boolean
+  /** Callback to start arrow placement mode */
+  onStartArrow?: () => void
   /** Whether a team is currently selected */
   hasTeam?: boolean
   /** Callback to open roster management */
@@ -52,6 +56,8 @@ export function PlayerContextUI({
   onHighlightToggle,
   hasArrow,
   onFlipArrow,
+  canStartArrow,
+  onStartArrow,
   hasTeam,
   onManageRoster,
 }: PlayerContextUIProps) {
@@ -148,6 +154,11 @@ export function PlayerContextUI({
               onHighlightToggle={onHighlightToggle}
               hasArrow={hasArrow}
               onFlipArrow={onFlipArrow}
+              canStartArrow={canStartArrow}
+              onStartArrow={onStartArrow ? () => {
+                handleClose()
+                onStartArrow()
+              } : undefined}
               isMobile={true}
               hasTeam={hasTeam}
               onManageRoster={onManageRoster ? () => {
@@ -194,6 +205,8 @@ export function PlayerContextUI({
           onHighlightToggle={onHighlightToggle}
           hasArrow={hasArrow}
           onFlipArrow={onFlipArrow}
+          canStartArrow={canStartArrow}
+          onStartArrow={onStartArrow}
           isMobile={false}
           hasTeam={hasTeam}
           onManageRoster={onManageRoster ? () => {

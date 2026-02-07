@@ -1,13 +1,17 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { useGameTimeStore } from '@/store/useGameTimeStore'
+import { useAppStore } from '@/store/useAppStore'
 import { Team, Role, RosterPlayer, Rotation, ROLE_INFO } from '@/lib/types'
 import { getRoleZone, isInFrontRow } from '@/lib/rotations'
 import { ChevronLeft, ChevronRight, Zap, Check, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useIsMobile } from '@/hooks/useIsMobile'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
+import { listLocalTeams } from '@/lib/localTeams'
 
 // Roles for lineup (no libero)
 const LINEUP_ROLES: Role[] = ['S', 'OH1', 'OH2', 'MB1', 'MB2', 'OPP']
@@ -29,13 +33,16 @@ export function SetupScreen() {
   const [step, setStep] = useState<SetupStep>('team')
   const [quickStartName, setQuickStartName] = useState('')
   const [selectedRole, setSelectedRole] = useState<Role | 'L' | null>(null)
+  const [localTeams, setLocalTeams] = useState<Team[]>([])
+  const isMobile = useIsMobile()
+  const currentTeam = useAppStore((state) => state.currentTeam)
 
   // Fetch teams from Convex
   const convexTeams = useQuery(api.teams.list)
   const loading = convexTeams === undefined
 
   // Transform Convex teams to the Team format expected by the component
-  const teams: Team[] = (convexTeams ?? []).map(t => ({
+  const cloudTeams: Team[] = (convexTeams ?? []).map(t => ({
     id: t._id,
     name: t.name,
     slug: t.slug,
@@ -55,6 +62,25 @@ export function SetupScreen() {
     created_at: new Date(t._creationTime).toISOString(),
     updated_at: new Date(t._creationTime).toISOString(),
   }))
+
+  useEffect(() => {
+    const refreshLocalTeams = () => {
+      const storedTeams = listLocalTeams()
+      if (currentTeam?.id?.startsWith('local-') && !storedTeams.some((team) => team.id === currentTeam.id)) {
+        setLocalTeams([currentTeam, ...storedTeams])
+        return
+      }
+      setLocalTeams(storedTeams)
+    }
+
+    refreshLocalTeams()
+    window.addEventListener('focus', refreshLocalTeams)
+    window.addEventListener('storage', refreshLocalTeams)
+    return () => {
+      window.removeEventListener('focus', refreshLocalTeams)
+      window.removeEventListener('storage', refreshLocalTeams)
+    }
+  }, [currentTeam])
 
   const {
     team,
@@ -115,6 +141,7 @@ export function SetupScreen() {
   // Check if we can proceed
   const canStartGame = isLineupComplete()
   const [servingChosen, setServingChosen] = useState(false)
+  const isLocalTeamSelected = !isQuickStart && !!team?.id?.startsWith('local-')
 
   // Get position for a role on the court
   const getRolePosition = (role: Role | 'L') => {
@@ -132,22 +159,112 @@ export function SetupScreen() {
 
   // Compute popover placement relative to court
   const getPopoverStyle = (role: Role | 'L'): React.CSSProperties => {
+    const container = courtRef.current
     const pos = getRolePosition(role)
-    // Horizontal: if zone is on left half, open right; if right half, open left
-    const openRight = pos.x < 50
-    // Vertical: if zone is in bottom half, open above; if top half, open below
-    const openAbove = pos.y > 50
+
+    if (!container) {
+      return {
+        position: 'absolute',
+        left: `${Math.min(Math.max(pos.x, 12), 88)}%`,
+        top: `${Math.min(Math.max(pos.y + 8, 8), 88)}%`,
+      }
+    }
+
+    const rect = container.getBoundingClientRect()
+    const POPOVER_WIDTH = 220
+    const POPOVER_HEIGHT = 300
+    const EDGE_PADDING = 8
+    const OFFSET = 26
+
+    let left = (pos.x / 100) * rect.width + (pos.x < 50 ? OFFSET : -POPOVER_WIDTH - OFFSET)
+    let top = (pos.y / 100) * rect.height + (pos.y > 50 ? -POPOVER_HEIGHT - OFFSET : OFFSET)
+
+    left = Math.max(EDGE_PADDING, Math.min(left, rect.width - POPOVER_WIDTH - EDGE_PADDING))
+    top = Math.max(EDGE_PADDING, Math.min(top, rect.height - POPOVER_HEIGHT - EDGE_PADDING))
 
     return {
       position: 'absolute',
-      ...(openRight
-        ? { left: `${pos.x + 8}%` }
-        : { right: `${100 - pos.x + 8}%` }),
-      ...(openAbove
-        ? { bottom: `${100 - pos.y + 8}%` }
-        : { top: `${pos.y + 8}%` }),
+      left,
+      top,
     }
   }
+
+  const renderPlayerPicker = (role: Role | 'L') => (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between px-2 py-1">
+        <span
+          className="text-xs font-semibold"
+          style={{ color: ROLE_INFO[role === 'L' ? 'L' : role].color }}
+        >
+          {role === 'L' ? 'Libero' : ROLE_INFO[role].name}
+        </span>
+        <button
+          onClick={() => setSelectedRole(null)}
+          className="p-0.5 text-zinc-500 hover:text-zinc-300 ml-4"
+          aria-label="Close player picker"
+          type="button"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-1">
+        {[...allRosterPlayers].sort((a, b) => (a.number ?? 0) - (b.number ?? 0)).map((player) => {
+          const isAlreadyHere = role === 'L'
+            ? libero?.id === player.id
+            : lineup[role]?.id === player.id
+          const otherRole = LINEUP_ROLES.find(r => r !== role && lineup[r]?.id === player.id)
+          const isOtherLibero = role !== 'L' && libero?.id === player.id
+          const isAssignedElsewhere = !!otherRole || isOtherLibero
+
+          return (
+            <button
+              key={player.id}
+              onClick={() => {
+                if (isAlreadyHere) {
+                  setSelectedRole(null)
+                  return
+                }
+                handlePlayerTap(player)
+              }}
+              className={cn(
+                'flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition-colors text-left min-w-0',
+                isAlreadyHere
+                  ? 'bg-zinc-800'
+                  : isAssignedElsewhere
+                    ? 'opacity-40 hover:opacity-70 hover:bg-zinc-800 active:bg-zinc-700'
+                    : 'hover:bg-zinc-800 active:bg-zinc-700'
+              )}
+            >
+              <span className={cn(
+                'text-sm font-bold shrink-0',
+                isAlreadyHere ? 'text-blue-400' : 'text-white'
+              )}>
+                #{player.number}
+              </span>
+              <span className="text-sm text-zinc-300 truncate">
+                {player.name}
+              </span>
+              {isAssignedElsewhere && (
+                <span className="text-[10px] text-zinc-500 shrink-0">
+                  {otherRole || 'L'}
+                </span>
+              )}
+              {isAlreadyHere && (
+                <Check className="w-3 h-3 text-blue-400 shrink-0" />
+              )}
+            </button>
+          )
+        })}
+      </div>
+
+      {allRosterPlayers.length === 0 && (
+        <div className="text-xs text-zinc-500 text-center py-3">
+          No players available
+        </div>
+      )}
+    </div>
+  )
 
   // Render team selection step
   if (step === 'team') {
@@ -182,35 +299,69 @@ export function SetupScreen() {
 
         {/* Saved Teams */}
         <div className="flex-1">
-          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-3">
-            Saved Teams
-          </h2>
+          <div className="space-y-6">
+            {localTeams.length > 0 && (
+              <div>
+                <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-3">
+                  Local Teams
+                </h2>
+                <div className="mb-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2">
+                  <p className="text-xs text-amber-200">
+                    Reminder: local teams are device-only and can be lost. Sign in to save teams to your account.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  {localTeams.map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => handleSelectTeam(t)}
+                      className="w-full bg-card hover:bg-accent active:bg-accent/80 border border-border rounded-lg px-4 py-4 text-left transition-colors flex items-center justify-between"
+                    >
+                      <div>
+                        <div className="font-medium">{t.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {t.roster.length} players
+                        </div>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
-          {loading ? (
-            <div className="text-muted-foreground text-center py-8">Loading teams...</div>
-          ) : teams.length === 0 ? (
-            <div className="text-muted-foreground text-center py-8">
-              No saved teams yet
+            <div>
+              <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-3">
+                Saved Teams
+              </h2>
+
+              {loading ? (
+                <div className="text-muted-foreground text-center py-8">Loading teams...</div>
+              ) : cloudTeams.length === 0 ? (
+                <div className="text-muted-foreground text-center py-8">
+                  No saved teams yet
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {cloudTeams.map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => handleSelectTeam(t)}
+                      className="w-full bg-card hover:bg-accent active:bg-accent/80 border border-border rounded-lg px-4 py-4 text-left transition-colors flex items-center justify-between"
+                    >
+                      <div>
+                        <div className="font-medium">{t.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {t.roster.length} players
+                        </div>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="space-y-2">
-              {teams.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => handleSelectTeam(t)}
-                  className="w-full bg-card hover:bg-accent active:bg-accent/80 border border-border rounded-lg px-4 py-4 text-left transition-colors flex items-center justify-between"
-                >
-                  <div>
-                    <div className="font-medium">{t.name}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {t.roster.length} players
-                    </div>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                </button>
-              ))}
-            </div>
-          )}
+          </div>
         </div>
       </div>
     )
@@ -235,6 +386,13 @@ export function SetupScreen() {
 
         {/* Court Lineup View */}
         <div className="flex-1 p-4 flex flex-col">
+          {isLocalTeamSelected && (
+            <div className="mb-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2">
+              <p className="text-xs text-amber-200">
+                Reminder: this local team is not saved to your account. Sign in to keep it across devices.
+              </p>
+            </div>
+          )}
           {/* Rotation selector */}
           <div className="flex items-center justify-center gap-4 mb-3">
             <button
@@ -362,7 +520,7 @@ export function SetupScreen() {
             })()}
 
             {/* Popover player picker */}
-            {selectedRole && !isQuickStart && (
+            {selectedRole && !isQuickStart && !isMobile && (
               <>
                 {/* Backdrop */}
                 <div
@@ -375,83 +533,23 @@ export function SetupScreen() {
                   className="absolute z-30 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl p-2 max-h-[70vh] overflow-y-auto"
                   style={{ ...getPopoverStyle(selectedRole), width: 'max-content', minWidth: '10rem' }}
                 >
-                  <div className="flex items-center justify-between px-2 py-1 mb-1">
-                    <span
-                      className="text-xs font-semibold"
-                      style={{ color: ROLE_INFO[selectedRole === 'L' ? 'L' : selectedRole].color }}
-                    >
-                      {selectedRole === 'L' ? 'Libero' : ROLE_INFO[selectedRole].name}
-                    </span>
-                    <button
-                      onClick={() => setSelectedRole(null)}
-                      className="p-0.5 text-zinc-500 hover:text-zinc-300 ml-4"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-
-                  {/* Player grid — 2 columns */}
-                  <div className="grid grid-cols-2 gap-1">
-                    {[...allRosterPlayers].sort((a, b) => (a.number ?? 0) - (b.number ?? 0)).map((player) => {
-                      // Check if this player is already in the CURRENTLY selected role
-                      const isAlreadyHere = selectedRole === 'L'
-                        ? libero?.id === player.id
-                        : lineup[selectedRole]?.id === player.id
-                      // Check if assigned to a different role
-                      const otherRole = LINEUP_ROLES.find(r => r !== selectedRole && lineup[r]?.id === player.id)
-                      const isOtherLibero = selectedRole !== 'L' && libero?.id === player.id
-                      const isAssignedElsewhere = !!otherRole || isOtherLibero
-
-                      return (
-                        <button
-                          key={player.id}
-                          onClick={() => {
-                            if (isAlreadyHere) {
-                              setSelectedRole(null)
-                              return
-                            }
-                            handlePlayerTap(player)
-                          }}
-                          className={cn(
-                            'flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition-colors text-left min-w-0',
-                            isAlreadyHere
-                              ? 'bg-zinc-800'
-                              : isAssignedElsewhere
-                                ? 'opacity-40 hover:opacity-70 hover:bg-zinc-800 active:bg-zinc-700'
-                                : 'hover:bg-zinc-800 active:bg-zinc-700'
-                          )}
-                        >
-                          <span className={cn(
-                            'text-sm font-bold shrink-0',
-                            isAlreadyHere ? 'text-blue-400' : 'text-white'
-                          )}>
-                            #{player.number}
-                          </span>
-                          <span className="text-sm text-zinc-300 truncate">
-                            {player.name}
-                          </span>
-                          {isAssignedElsewhere && (
-                            <span className="text-[10px] text-zinc-500 shrink-0">
-                              {otherRole || 'L'}
-                            </span>
-                          )}
-                          {isAlreadyHere && (
-                            <Check className="w-3 h-3 text-blue-400 shrink-0" />
-                          )}
-                        </button>
-                      )
-                    })}
-                  </div>
-
-                  {allRosterPlayers.length === 0 && (
-                    <div className="text-xs text-zinc-500 text-center py-3">
-                      No players available
-                    </div>
-                  )}
+                  {renderPlayerPicker(selectedRole)}
                 </div>
               </>
             )}
           </div>
+
+          {isMobile && !isQuickStart && (
+            <Sheet open={Boolean(selectedRole)} onOpenChange={(open) => !open && setSelectedRole(null)}>
+              <SheetContent side="bottom" className="max-h-[72dvh] px-4 pt-4 pb-6">
+                <SheetHeader className="p-0 pb-2">
+                  <SheetTitle>Assign Player</SheetTitle>
+                  <SheetDescription>Select a player for this spot</SheetDescription>
+                </SheetHeader>
+                {selectedRole && renderPlayerPicker(selectedRole)}
+              </SheetContent>
+            </Sheet>
+          )}
 
           {/* Quick Start Players (if no roster) */}
           {isQuickStart && (

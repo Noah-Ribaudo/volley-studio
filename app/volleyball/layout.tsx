@@ -41,14 +41,22 @@ export default function VolleyballLayout({
       <DesktopHeaderNav />
 
       {/* Mobile top header - minimal, just for context */}
-      <header className="md:hidden flex items-center justify-between h-12 px-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+      <header
+        className="md:hidden flex items-center justify-between h-12 px-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80"
+        style={{
+          paddingTop: 'env(safe-area-inset-top, 0px)',
+          paddingLeft: 'calc(env(safe-area-inset-left, 0px) + 0.75rem)',
+          paddingRight: 'calc(env(safe-area-inset-right, 0px) + 0.75rem)',
+          height: 'calc(3rem + env(safe-area-inset-top, 0px))',
+        }}
+      >
         <span className="font-medium text-sm">Volleyball</span>
         <UserMenu />
       </header>
 
       {/* Main content with bottom padding for mobile nav + context bar */}
       <main
-        className={`flex flex-col flex-1 min-h-0 overflow-auto md:pb-0 ${paddingClass}`}
+        className={`flex flex-col flex-1 min-h-0 md:pb-0 ${isWhiteboardPage ? 'overflow-hidden overscroll-none' : 'overflow-auto'} ${paddingClass}`}
       >
         {children}
       </main>
