@@ -32,7 +32,7 @@ export default function SignInPage() {
 
         <div className="text-center mb-8">
           <p className="text-muted-foreground">
-            Sign in to save your teams and rotations
+            Sign in to save your rosters, layouts, and settings.
           </p>
         </div>
 
