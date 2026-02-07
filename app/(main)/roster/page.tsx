@@ -1,7 +1,5 @@
 'use client'
 
-import { SafeAreaHeader } from '@/components/ui/SafeAreaHeader'
-
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useMutation } from 'convex/react'
@@ -23,9 +21,8 @@ import { PositionAssignments, RosterPlayer, Team, CustomLayout, Lineup, Position
 import { createLineup, duplicateLineup, getActiveLineup, ensureAtLeastOneLineup } from '@/lib/lineups'
 import { toast } from 'sonner'
 import { getRandomTeamName } from '@/lib/teamNames'
-import { ArrowLeft01Icon, Share01Icon, Settings01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons"
+import { Share01Icon, Settings01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import Link from 'next/link'
 
 const DEFAULT_TEAM_NAME = 'New Team'
 
@@ -495,7 +492,7 @@ export default function RosterPage() {
 
   const copyShareLink = () => {
     if (!currentTeam) return
-    const url = getTeamShareUrl(currentTeam.slug)
+    const url = getTeamShareUrl(currentTeam.id)
     navigator.clipboard.writeText(url)
     toast.success('Share link copied!')
   }
@@ -562,48 +559,6 @@ export default function RosterPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
-      {/* Header */}
-      <SafeAreaHeader>
-        <div className="container mx-auto px-4 py-3">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <Link href="/">
-                <Button variant="ghost" size="icon" className="min-w-11 min-h-11" aria-label="Back to whiteboard">
-                  <HugeiconsIcon icon={ArrowLeft01Icon} className="h-5 w-5" />
-                </Button>
-              </Link>
-              <div className="flex-1 min-w-0">
-                <h1 className="text-xl font-bold text-primary truncate">
-                  {currentTeam ? localTeamName : 'Create Team'}
-                </h1>
-                <p className="text-xs text-muted-foreground">
-                  {currentTeam ? `${localRoster.length} player${localRoster.length !== 1 ? 's' : ''}` : 'Start with a new team'}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {/* Auto-save status indicator - only shown when team exists */}
-              {isTeamLoaded && (
-                <span className="text-xs text-muted-foreground">
-                  {isSaving ? 'Saving...' : 'Saved'}
-                </span>
-              )}
-
-              {/* Switch team link - deliberate action to go to Teams page */}
-              {isTeamLoaded && (
-                <Link href="/teams">
-                  <Button variant="ghost" size="sm" className="text-xs gap-1">
-                    Switch Team
-                    <HugeiconsIcon icon={ArrowRight01Icon} className="h-3 w-3" />
-                  </Button>
-                </Link>
-              )}
-            </div>
-          </div>
-        </div>
-      </SafeAreaHeader>
-
       <div className="container mx-auto px-4 py-4 pb-32 max-w-2xl space-y-4">
         {!isTeamLoaded ? (
           <>
@@ -829,7 +784,7 @@ export default function RosterPage() {
                       <Label className="text-sm">Share Link</Label>
                       <div className="flex gap-2">
                         <Input
-                          value={currentTeam ? getTeamShareUrl(currentTeam.slug) : ''}
+                          value={currentTeam ? getTeamShareUrl(currentTeam.id) : ''}
                           readOnly
                           className="text-sm"
                         />

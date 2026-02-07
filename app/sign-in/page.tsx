@@ -5,7 +5,7 @@ import { useConvexAuth } from "convex/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { SignInWithGoogle, SignInWithPassword } from "@/components/auth/SignIn";
-import { GrainGradient } from "@paper-design/shaders-react";
+import { BackgroundShader } from "@/components/BackgroundShader";
 
 export default function SignInPage() {
   const { isAuthenticated, isLoading } = useConvexAuth();
@@ -14,25 +14,13 @@ export default function SignInPage() {
   // Redirect to teams page if already signed in
   useEffect(() => {
     if (isAuthenticated && !isLoading) {
-      router.push("/volleyball/teams");
+      router.push("/teams");
     }
   }, [isAuthenticated, isLoading, router]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4 relative overflow-hidden">
-      {/* Grain gradient background */}
-      <div className="absolute inset-0 opacity-70">
-        <GrainGradient
-          colorBack="#0a0a0a"
-          colors={["#1a1a1a", "#2d1f0f", "#1f1510", "#0f0f0f"]}
-          softness={0.8}
-          intensity={0.4}
-          noise={0.3}
-          shape="blob"
-          speed={0.2}
-          style={{ width: "100%", height: "100%" }}
-        />
-      </div>
+      <BackgroundShader />
 
       {/* Content */}
       <div className="w-full max-w-sm relative z-10">
@@ -63,7 +51,7 @@ export default function SignInPage() {
           </p>
         </div>
 
-        <div className="bg-card/80 backdrop-blur-sm rounded-xl border border-border p-6 space-y-4">
+        <div className="bg-transparent backdrop-blur-sm rounded-xl border border-border/60 p-6 space-y-4">
           <SignInWithGoogle />
 
           <div className="relative">
@@ -79,7 +67,7 @@ export default function SignInPage() {
 
           <div className="pt-2">
             <Link
-              href="/volleyball"
+              href="/"
               className="block text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               Continue without signing in

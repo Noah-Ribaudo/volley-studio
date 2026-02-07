@@ -1,27 +1,31 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useRef } from 'react'
 import { useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { useGameTimeStore } from '@/store/useGameTimeStore'
 import { Team, Role, RosterPlayer, Rotation, ROLE_INFO } from '@/lib/types'
-import { getRoleZone } from '@/lib/rotations'
-import { PositionSlot, PlayerGrid } from '@/components/team'
-import { ChevronLeft, ChevronRight, Users, Zap, Check, X } from 'lucide-react'
+import { getRoleZone, isInFrontRow } from '@/lib/rotations'
+import { ChevronLeft, ChevronRight, Zap, Check, X } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 // Roles for lineup (no libero)
 const LINEUP_ROLES: Role[] = ['S', 'OH1', 'OH2', 'MB1', 'MB2', 'OPP']
 
-// Zone to grid position mapping for front row (zones 4, 3, 2 left to right)
-// and back row (zones 5, 6, 1 left to right)
-const FRONT_ROW_ZONES = [4, 3, 2]
-const BACK_ROW_ZONES = [5, 6, 1]
+// Zone positions on court (percentages)
+// Back row moved up to leave room for libero below
+const ZONE_POSITIONS: Record<number, { x: number; y: number }> = {
+  4: { x: 20, y: 25 },  // front left
+  3: { x: 50, y: 25 },  // front center
+  2: { x: 80, y: 25 },  // front right
+  5: { x: 20, y: 62 },  // back left
+  6: { x: 50, y: 62 },  // back center
+  1: { x: 80, y: 62 },  // back right
+}
 
-type SetupStep = 'team' | 'lineup' | 'settings'
+type SetupStep = 'team' | 'lineup'
 
 export function SetupScreen() {
-  const router = useRouter()
   const [step, setStep] = useState<SetupStep>('team')
   const [quickStartName, setQuickStartName] = useState('')
   const [selectedRole, setSelectedRole] = useState<Role | 'L' | null>(null)
@@ -82,7 +86,9 @@ export function SetupScreen() {
     setStep('lineup')
   }
 
-  // Handle player assignment
+  const courtRef = useRef<HTMLDivElement>(null)
+
+  // Handle player assignment from popover
   const handlePlayerTap = (player: RosterPlayer) => {
     if (!selectedRole) return
 
@@ -94,25 +100,61 @@ export function SetupScreen() {
     setSelectedRole(null)
   }
 
-  // Get players available on bench (not in lineup or libero)
-  const availablePlayers = bench
+  // All roster players (bench + assigned + libero) for popover
+  const allRosterPlayers: RosterPlayer[] = (() => {
+    const map = new Map<string, RosterPlayer>()
+    for (const p of bench) map.set(p.id, p)
+    for (const role of LINEUP_ROLES) {
+      const p = lineup[role]
+      if (p) map.set(p.id, p)
+    }
+    if (libero) map.set(libero.id, libero)
+    return [...map.values()]
+  })()
 
   // Check if we can proceed
   const canStartGame = isLineupComplete()
+  const [servingChosen, setServingChosen] = useState(false)
+
+  // Get position for a role on the court
+  const getRolePosition = (role: Role | 'L') => {
+    if (role === 'L') {
+      // Libero directly below the back-row MB
+      const mb1Zone = getRoleZone(rotation, 'MB1')
+      const mb2Zone = getRoleZone(rotation, 'MB2')
+      const backRowMBZone = !isInFrontRow(rotation, 'MB1') ? mb1Zone : mb2Zone
+      const basePos = ZONE_POSITIONS[backRowMBZone]
+      return { x: basePos.x, y: basePos.y + 18 }
+    }
+    const zone = getRoleZone(rotation, role)
+    return ZONE_POSITIONS[zone]
+  }
+
+  // Compute popover placement relative to court
+  const getPopoverStyle = (role: Role | 'L'): React.CSSProperties => {
+    const pos = getRolePosition(role)
+    // Horizontal: if zone is on left half, open right; if right half, open left
+    const openRight = pos.x < 50
+    // Vertical: if zone is in bottom half, open above; if top half, open below
+    const openAbove = pos.y > 50
+
+    return {
+      position: 'absolute',
+      ...(openRight
+        ? { left: `${pos.x + 8}%` }
+        : { right: `${100 - pos.x + 8}%` }),
+      ...(openAbove
+        ? { bottom: `${100 - pos.y + 8}%` }
+        : { top: `${pos.y + 8}%` }),
+    }
+  }
 
   // Render team selection step
   if (step === 'team') {
     return (
-      <div className="flex flex-col min-h-[100dvh] p-4">
-        <div className="flex items-center justify-between mb-6">
-          <div className="w-10" /> {/* Spacer for centering */}
+      <div className="flex flex-col flex-1 p-4">
+        <div className="mb-6">
           <h1 className="text-2xl font-bold text-center">GameTime</h1>
-          <button
-            onClick={() => router.push('/')}
-            className="w-10 h-10 flex items-center justify-center text-muted-foreground hover:text-white transition-colors"
-          >
-            <X className="w-6 h-6" />
-          </button>
         </div>
 
         {/* Quick Start */}
@@ -177,7 +219,7 @@ export function SetupScreen() {
   // Render lineup step
   if (step === 'lineup') {
     return (
-      <div className="flex flex-col min-h-[100dvh]">
+      <div className="flex flex-col flex-1">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border">
           <button
@@ -192,185 +234,281 @@ export function SetupScreen() {
         </div>
 
         {/* Court Lineup View */}
-        <div className="flex-1 p-4">
-          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-4 text-center">
-            Tap a position, then tap a player
-          </h2>
-
-          {/* Court Grid */}
-          <div className="bg-card/50 border border-border rounded-xl p-4 mb-4">
-            {/* Net indicator */}
-            <div className="h-1 bg-border rounded mb-4" />
-
-            {/* Front Row - dynamically sorted by zone (4, 3, 2 left to right) */}
-            <div className="grid grid-cols-3 gap-3 mb-4">
-              {FRONT_ROW_ZONES.map((targetZone) => {
-                // Find which role is in this zone for current rotation
-                const role = LINEUP_ROLES.find(r => getRoleZone(rotation, r) === targetZone)
-                if (!role) return <div key={targetZone} />
-                return (
-                  <PositionSlot
-                    key={role}
-                    role={role}
-                    zone={targetZone}
-                    player={lineup[role]}
-                    isSelected={selectedRole === role}
-                    onSelect={() => setSelectedRole(selectedRole === role ? null : role)}
-                  />
-                )
-              })}
-            </div>
-
-            {/* Back Row - dynamically sorted by zone (5, 6, 1 left to right) */}
-            <div className="grid grid-cols-3 gap-3 mb-4">
-              {BACK_ROW_ZONES.map((targetZone) => {
-                // Find which role is in this zone for current rotation
-                const role = LINEUP_ROLES.find(r => getRoleZone(rotation, r) === targetZone)
-                if (!role) return <div key={targetZone} />
-                return (
-                  <PositionSlot
-                    key={role}
-                    role={role}
-                    zone={targetZone}
-                    player={lineup[role]}
-                    isSelected={selectedRole === role}
-                    onSelect={() => setSelectedRole(selectedRole === role ? null : role)}
-                  />
-                )
-              })}
-            </div>
-
-            {/* Libero */}
-            <div className="flex justify-center">
-              <div className="w-1/3">
-                <PositionSlot
-                  role="L"
-                  player={libero}
-                  isSelected={selectedRole === 'L'}
-                  onSelect={() => setSelectedRole(selectedRole === 'L' ? null : 'L')}
-                  isLibero
-                />
-              </div>
-            </div>
+        <div className="flex-1 p-4 flex flex-col">
+          {/* Rotation selector */}
+          <div className="flex items-center justify-center gap-4 mb-3">
+            <button
+              onClick={() => setStartingRotation(rotation === 1 ? 6 : (rotation - 1) as Rotation)}
+              className="p-2 rounded-lg bg-card hover:bg-accent active:bg-accent/80 transition-colors"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <span className="text-base font-bold w-28 text-center">Rotation {rotation}</span>
+            <button
+              onClick={() => setStartingRotation(rotation === 6 ? 1 : (rotation + 1) as Rotation)}
+              className="p-2 rounded-lg bg-card hover:bg-accent active:bg-accent/80 transition-colors"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
           </div>
 
-          {/* Available Players */}
-          {selectedRole && (
-            <PlayerGrid
-              players={availablePlayers}
-              selectedRole={selectedRole}
-              onSelect={handlePlayerTap}
-            />
-          )}
+          {/* Visual Court */}
+          <div
+            ref={courtRef}
+            className="relative w-full aspect-[3/4] max-w-sm mx-auto"
+          >
+            {/* Court background */}
+            <div className="absolute inset-0 bg-amber-900/30 rounded-xl border-2 border-amber-700/50">
+              {/* Net */}
+              <div className="absolute top-0 left-0 right-0 h-1.5 bg-zinc-300/80 rounded-t-xl" />
+              {/* Attack line */}
+              <div className="absolute top-[33%] left-0 right-0 h-0.5 bg-white/20" />
+              {/* Center vertical */}
+              <div className="absolute top-0 bottom-0 left-1/2 w-px bg-white/10" />
+            </div>
+
+            {/* Zone circles */}
+            {LINEUP_ROLES.map((role) => {
+              const pos = getRolePosition(role)
+              const player = lineup[role]
+              const roleInfo = ROLE_INFO[role]
+              const isSelected = selectedRole === role
+
+              return (
+                <button
+                  key={role}
+                  onClick={() => setSelectedRole(isSelected ? null : role)}
+                  className={cn(
+                    'absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center rounded-full transition-all touch-manipulation z-10',
+                    'w-14 h-14 sm:w-16 sm:h-16',
+                    isSelected && 'ring-2 ring-blue-400 ring-offset-2 ring-offset-transparent scale-110',
+                    player
+                      ? 'border-2 border-solid shadow-lg'
+                      : 'border-2 border-dashed',
+                    'active:scale-95'
+                  )}
+                  style={{
+                    left: `${pos.x}%`,
+                    top: `${pos.y}%`,
+                    backgroundColor: player ? `${roleInfo.color}30` : `${roleInfo.color}15`,
+                    borderColor: roleInfo.color,
+                  }}
+                >
+                  {player ? (
+                    <>
+                      <span className="text-base sm:text-lg font-bold text-white leading-none">
+                        #{player.number}
+                      </span>
+                      <span className="text-[9px] sm:text-[10px] text-zinc-300 truncate max-w-[3rem] leading-tight">
+                        {player.name}
+                      </span>
+                    </>
+                  ) : (
+                    <span
+                      className="text-sm sm:text-base font-bold"
+                      style={{ color: roleInfo.color }}
+                    >
+                      {role}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+
+            {/* Libero circle */}
+            {(() => {
+              const pos = getRolePosition('L')
+              const roleInfo = ROLE_INFO.L
+              const isSelected = selectedRole === 'L'
+
+              return (
+                <button
+                  onClick={() => setSelectedRole(isSelected ? null : 'L')}
+                  className={cn(
+                    'absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center rounded-full transition-all touch-manipulation z-10',
+                    'w-14 h-14 sm:w-16 sm:h-16',
+                    isSelected && 'ring-2 ring-blue-400 ring-offset-2 ring-offset-transparent scale-110',
+                    libero
+                      ? 'border-2 border-solid shadow-lg'
+                      : 'border-2 border-dashed',
+                    'active:scale-95'
+                  )}
+                  style={{
+                    left: `${pos.x}%`,
+                    top: `${pos.y}%`,
+                    backgroundColor: libero ? `${roleInfo.color}30` : `${roleInfo.color}15`,
+                    borderColor: roleInfo.color,
+                  }}
+                >
+                  {libero ? (
+                    <>
+                      <span className="text-base sm:text-lg font-bold text-white leading-none">
+                        #{libero.number}
+                      </span>
+                      <span className="text-[9px] sm:text-[10px] text-zinc-300 truncate max-w-[3rem] leading-tight">
+                        {libero.name}
+                      </span>
+                    </>
+                  ) : (
+                    <span
+                      className="text-sm sm:text-base font-bold"
+                      style={{ color: roleInfo.color }}
+                    >
+                      L
+                    </span>
+                  )}
+                </button>
+              )
+            })()}
+
+            {/* Popover player picker */}
+            {selectedRole && !isQuickStart && (
+              <>
+                {/* Backdrop */}
+                <div
+                  className="fixed inset-0 z-20"
+                  onClick={() => setSelectedRole(null)}
+                />
+
+                {/* Popover */}
+                <div
+                  className="absolute z-30 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl p-2 max-h-[70vh] overflow-y-auto"
+                  style={{ ...getPopoverStyle(selectedRole), width: 'max-content', minWidth: '10rem' }}
+                >
+                  <div className="flex items-center justify-between px-2 py-1 mb-1">
+                    <span
+                      className="text-xs font-semibold"
+                      style={{ color: ROLE_INFO[selectedRole === 'L' ? 'L' : selectedRole].color }}
+                    >
+                      {selectedRole === 'L' ? 'Libero' : ROLE_INFO[selectedRole].name}
+                    </span>
+                    <button
+                      onClick={() => setSelectedRole(null)}
+                      className="p-0.5 text-zinc-500 hover:text-zinc-300 ml-4"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Player grid — 2 columns */}
+                  <div className="grid grid-cols-2 gap-1">
+                    {[...allRosterPlayers].sort((a, b) => (a.number ?? 0) - (b.number ?? 0)).map((player) => {
+                      // Check if this player is already in the CURRENTLY selected role
+                      const isAlreadyHere = selectedRole === 'L'
+                        ? libero?.id === player.id
+                        : lineup[selectedRole]?.id === player.id
+                      // Check if assigned to a different role
+                      const otherRole = LINEUP_ROLES.find(r => r !== selectedRole && lineup[r]?.id === player.id)
+                      const isOtherLibero = selectedRole !== 'L' && libero?.id === player.id
+                      const isAssignedElsewhere = !!otherRole || isOtherLibero
+
+                      return (
+                        <button
+                          key={player.id}
+                          onClick={() => {
+                            if (isAlreadyHere) {
+                              setSelectedRole(null)
+                              return
+                            }
+                            handlePlayerTap(player)
+                          }}
+                          className={cn(
+                            'flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition-colors text-left min-w-0',
+                            isAlreadyHere
+                              ? 'bg-zinc-800'
+                              : isAssignedElsewhere
+                                ? 'opacity-40 hover:opacity-70 hover:bg-zinc-800 active:bg-zinc-700'
+                                : 'hover:bg-zinc-800 active:bg-zinc-700'
+                          )}
+                        >
+                          <span className={cn(
+                            'text-sm font-bold shrink-0',
+                            isAlreadyHere ? 'text-blue-400' : 'text-white'
+                          )}>
+                            #{player.number}
+                          </span>
+                          <span className="text-sm text-zinc-300 truncate">
+                            {player.name}
+                          </span>
+                          {isAssignedElsewhere && (
+                            <span className="text-[10px] text-zinc-500 shrink-0">
+                              {otherRole || 'L'}
+                            </span>
+                          )}
+                          {isAlreadyHere && (
+                            <Check className="w-3 h-3 text-blue-400 shrink-0" />
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  {allRosterPlayers.length === 0 && (
+                    <div className="text-xs text-zinc-500 text-center py-3">
+                      No players available
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
 
           {/* Quick Start Players (if no roster) */}
           {isQuickStart && (
-            <QuickStartPlayerEntry
-              selectedRole={selectedRole}
-              onAddPlayer={handlePlayerTap}
-            />
+            <div className="mt-4 max-w-sm mx-auto w-full">
+              <QuickStartPlayerEntry
+                selectedRole={selectedRole}
+                onAddPlayer={handlePlayerTap}
+              />
+            </div>
           )}
         </div>
 
-        {/* Continue Button */}
-        <div className="p-4 border-t border-border">
-          <button
-            onClick={() => setStep('settings')}
-            disabled={!canStartGame && !isQuickStart}
-            className={`w-full py-4 rounded-xl font-semibold text-lg transition-colors ${
-              canStartGame || isQuickStart
-                ? 'bg-primary hover:bg-primary/90 active:bg-primary/80 text-white'
-                : 'bg-card text-muted-foreground cursor-not-allowed'
-            }`}
-          >
-            {canStartGame || isQuickStart ? 'Continue' : 'Assign All Positions'}
-          </button>
+        {/* Serving + Start */}
+        <div className="p-4 border-t border-border space-y-3">
+          {/* Who Serves First */}
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => { setServingFirst('us'); setServingChosen(true) }}
+              className={cn(
+                'py-3 rounded-lg font-semibold text-base transition-colors',
+                serving === 'us' && servingChosen
+                  ? 'bg-green-600 text-white'
+                  : 'bg-card text-foreground hover:bg-accent'
+              )}
+            >
+              We Serve
+            </button>
+            <button
+              onClick={() => { setServingFirst('them'); setServingChosen(true) }}
+              className={cn(
+                'py-3 rounded-lg font-semibold text-base transition-colors',
+                serving === 'them' && servingChosen
+                  ? 'bg-red-600 text-white'
+                  : 'bg-card text-foreground hover:bg-accent'
+              )}
+            >
+              They Serve
+            </button>
+          </div>
+
+          {/* Start Game — appears once serving is chosen and lineup is complete */}
+          {servingChosen && (canStartGame || isQuickStart) && (
+            <button
+              onClick={startGame}
+              className="w-full bg-green-600 hover:bg-green-500 active:bg-green-700 text-white py-4 rounded-xl font-bold text-lg transition-colors flex items-center justify-center gap-2"
+            >
+              <Check className="w-5 h-5" />
+              Start Game
+            </button>
+          )}
         </div>
       </div>
     )
   }
 
-  // Render settings step
-  return (
-    <div className="flex flex-col min-h-[100dvh]">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border">
-        <button
-          onClick={() => setStep('lineup')}
-          className="flex items-center gap-1 text-muted-foreground hover:text-white transition-colors"
-        >
-          <ChevronLeft className="w-5 h-5" />
-          Back
-        </button>
-        <h1 className="text-lg font-semibold">Game Settings</h1>
-        <div className="w-16" />
-      </div>
-
-      <div className="flex-1 p-4 space-y-6">
-        {/* Starting Rotation */}
-        <div>
-          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-3">
-            Starting Rotation
-          </h2>
-          <div className="grid grid-cols-6 gap-2">
-            {([1, 2, 3, 4, 5, 6] as Rotation[]).map((r) => (
-              <button
-                key={r}
-                onClick={() => setStartingRotation(r)}
-                className={`py-4 rounded-lg font-bold text-lg transition-colors ${
-                  rotation === r
-                    ? 'bg-primary text-white'
-                    : 'bg-card text-foreground hover:bg-accent'
-                }`}
-              >
-                {r}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Who Serves First */}
-        <div>
-          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-3">
-            Who Serves First?
-          </h2>
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              onClick={() => setServingFirst('us')}
-              className={`py-4 rounded-lg font-semibold text-lg transition-colors ${
-                serving === 'us'
-                  ? 'bg-green-600 text-white'
-                  : 'bg-card text-foreground hover:bg-accent'
-              }`}
-            >
-              We Do
-            </button>
-            <button
-              onClick={() => setServingFirst('them')}
-              className={`py-4 rounded-lg font-semibold text-lg transition-colors ${
-                serving === 'them'
-                  ? 'bg-red-600 text-white'
-                  : 'bg-card text-foreground hover:bg-accent'
-              }`}
-            >
-              They Do
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Start Game Button */}
-      <div className="p-4 border-t border-border">
-        <button
-          onClick={startGame}
-          className="w-full bg-green-600 hover:bg-green-500 active:bg-green-700 text-white py-5 rounded-xl font-bold text-xl transition-colors flex items-center justify-center gap-2"
-        >
-          <Check className="w-6 h-6" />
-          Start Game
-        </button>
-      </div>
-    </div>
-  )
+  // Lineup step is the final step — no more settings step
+  return null
 }
 
 // Quick start player entry

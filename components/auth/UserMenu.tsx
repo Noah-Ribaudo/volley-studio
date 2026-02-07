@@ -42,7 +42,10 @@ export function UserMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="flex items-center gap-2 p-1 rounded-full hover:bg-accent transition-colors">
+        <button
+          className="flex items-center gap-2 p-1 rounded-full hover:bg-accent transition-colors"
+          aria-label="Open account menu"
+        >
           {user?.image ? (
             <img
               src={user.image}

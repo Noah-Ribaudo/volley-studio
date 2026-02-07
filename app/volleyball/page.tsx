@@ -73,6 +73,7 @@ function HomePageContent() {
     circleTokens,
     fullStatusLabels,
     debugHitboxes,
+    showMotionDebugPanel,
     attackBallPositions,
     setAttackBallPosition,
     clearAttackBallPosition,
@@ -90,11 +91,13 @@ function HomePageContent() {
     // Token tags
     localTagFlags,
     setTokenTags,
+    assignPlayerToRole,
     // Preview mode
     isPreviewingMovement,
     setPreviewingMovement,
     // Animation trigger
     playAnimationTrigger,
+    triggerPlayAnimation,
   } = useAppStore()
 
   // Mobile detection
@@ -268,24 +271,9 @@ function HomePageContent() {
     isUsingPreset ? presetLayouts : undefined
   )
 
-  // When previewing movement, move players to their arrow endpoints
-  const effectivePositions = useMemo(() => {
-    if (!isPreviewingMovement) return positions
-
-    // Clone positions and replace with arrow endpoints where arrows exist
-    const previewPositions = { ...positions }
-    for (const role of ROLES) {
-      const arrowEnd = currentArrows[role]
-      if (arrowEnd && positions[role]) {
-        previewPositions[role] = arrowEnd
-      }
-    }
-    return previewPositions
-  }, [isPreviewingMovement, positions, currentArrows])
-
   // Positions are already in normalized format (0-1)
-  // Use effectivePositions which applies preview transformation when active
-  const normalizedPositions = effectivePositions
+  // Preview/playback is handled inside VolleyballCourt
+  const normalizedPositions = positions
 
   // Get arrow curve preferences for current rotation/phase
   const currentArrowCurves = arrowCurves[createRotationPhaseKey(currentRotation, currentPhase)] || {}
@@ -363,11 +351,33 @@ function HomePageContent() {
   const swipeOffset = swipeState.swiping ? swipeState.delta.x * 0.2 : 0
 
   return (
-    <div className="h-full bg-gradient-to-b from-background to-muted/30 flex flex-col overflow-hidden">
-      {/* Main Content Area - full screen */}
-      <div className="flex-1 min-h-0 overflow-hidden">
+    <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-gradient-to-b from-background to-muted/30">
+      {/* Main Content Area - fills available layout height */}
+      <div className="flex-1 min-h-0 h-full overflow-hidden">
         {/* Court Container - scales to fit available space */}
         <div className="w-full h-auto sm:h-full sm:max-w-3xl mx-auto px-0 sm:px-2 relative">
+          <div className="absolute right-3 top-3 z-30 flex items-center gap-2">
+            {isPreviewingMovement ? (
+              <button
+                className="h-8 rounded-md border border-border bg-background/90 px-3 text-sm shadow-sm backdrop-blur"
+                onClick={() => setPreviewingMovement(false)}
+                type="button"
+              >
+                Reset
+              </button>
+            ) : (
+              <button
+                className="h-8 rounded-md border border-border bg-background/90 px-3 text-sm shadow-sm backdrop-blur"
+                onClick={() => {
+                  triggerPlayAnimation()
+                  setPreviewingMovement(true)
+                }}
+                type="button"
+              >
+                Play
+              </button>
+            )}
+          </div>
           {/* Gradient overlay to fade out content behind the menu when away team is hidden */}
           {hideAwayTeam && (
             <div
@@ -471,6 +481,7 @@ function HomePageContent() {
                 hasTeam={Boolean(currentTeam)}
                 onManageRoster={() => setRosterSheetOpen(true)}
                 debugHitboxes={debugHitboxes}
+                debugOverlay={showMotionDebugPanel}
                 animationTrigger={playAnimationTrigger}
                 isPreviewingMovement={isPreviewingMovement}
                 tagFlags={currentTagFlags}
@@ -478,17 +489,7 @@ function HomePageContent() {
                   setTokenTags(currentRotation, currentPhase, role, tags)
                 } : undefined}
                 onPlayerAssign={isEditingAllowed && currentTeam ? (role, playerId) => {
-                  // Update the team's active lineup with the new assignment
-                  const activeLineup = currentTeam.lineups.find(l => l.id === currentTeam.active_lineup_id)
-                  if (activeLineup) {
-                    const updatedAssignments = {
-                      ...activeLineup.position_assignments,
-                      [role]: playerId
-                    }
-                    // This will be handled by the team sync system
-                    // For now, just update locally through the store
-                    // TODO: Wire up to proper assignment change handler
-                  }
+                  assignPlayerToRole(role, playerId)
                 } : undefined}
               />
 

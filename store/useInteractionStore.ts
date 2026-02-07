@@ -1,24 +1,14 @@
 'use client'
 
 import { create } from 'zustand'
-import { persist, createJSONStorage } from 'zustand/middleware'
+import { persist } from 'zustand/middleware'
+import { createSafeLocalStorage } from '@/store/safeStorage'
 
 export type InteractionMode = 'radial' | 'classic'
 
 interface InteractionState {
   mode: InteractionMode
   setMode: (mode: InteractionMode) => void
-}
-
-const getStorage = () => {
-  if (typeof window === 'undefined') {
-    return {
-      getItem: () => null,
-      setItem: () => {},
-      removeItem: () => {},
-    }
-  }
-  return window.localStorage
 }
 
 // Get default mode based on device type
@@ -38,7 +28,7 @@ export const useInteractionStore = create<InteractionState>()(
     }),
     {
       name: 'volleyball-interaction-mode',
-      storage: createJSONStorage(() => getStorage()),
+      storage: createSafeLocalStorage<InteractionState>(),
     }
   )
 )

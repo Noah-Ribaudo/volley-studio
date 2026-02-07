@@ -24,6 +24,10 @@ interface PendingSave {
 // Track pending saves by rotation/phase key
 const pendingSaves = new Map<string, PendingSave>()
 
+function getPendingSaveKey(teamId: string, rotationPhaseKey: string): string {
+  return `${teamId}:${rotationPhaseKey}`
+}
+
 /**
  * Hook that auto-saves whiteboard changes to Convex
  *
@@ -119,6 +123,19 @@ export function useWhiteboardSync() {
     }
   }, [saveLayout])
 
+  const flushPendingSaves = useCallback(() => {
+    const saves = Array.from(pendingSaves.values())
+    pendingSaves.clear()
+
+    for (const pending of saves) {
+      if (pending.timeoutId) {
+        clearTimeout(pending.timeoutId)
+      }
+      // beforeunload/pagehide cannot await; fire best-effort saves
+      void executeSave({ ...pending, timeoutId: null })
+    }
+  }, [executeSave])
+
   // Handle state changes and queue saves
   useEffect(() => {
     // Skip if no team selected or team doesn't have a Convex ID
@@ -149,11 +166,21 @@ export function useWhiteboardSync() {
       prev.attackBallJson !== currentValues.attackBallJson
     )
 
-    // Only queue save if there are actual changes to the current rotation/phase
-    // and we have local overrides (not just using defaults)
-    if (hasChanges && localPositions[key]) {
+    const teamId = currentTeam._id as Id<"teams">
+    const pendingSaveKey = getPendingSaveKey(teamId, key)
+    const hasLocalOverrides = Boolean(
+      localPositions[key] ||
+      localArrows[key] ||
+      arrowCurves[key] ||
+      localStatusFlags[key] ||
+      localTagFlags[key] ||
+      attackBallPositions[key]
+    )
+
+    // Only queue save if this rotation/phase changed and we have local overrides.
+    if (hasChanges && hasLocalOverrides) {
       // Cancel any existing pending save for this key
-      const existing = pendingSaves.get(key)
+      const existing = pendingSaves.get(pendingSaveKey)
       if (existing?.timeoutId) {
         clearTimeout(existing.timeoutId)
       }
@@ -194,7 +221,7 @@ export function useWhiteboardSync() {
       // Create new pending save
       // Convert PositionCoordinates to Record<string, {x, y}> for Convex
       const positionsRecord: Record<string, { x: number; y: number }> = {}
-      const posData = localPositions[key]
+      const posData = localPositions[key] || {}
       for (const [role, pos] of Object.entries(posData)) {
         if (pos) {
           positionsRecord[role] = { x: pos.x, y: pos.y }
@@ -212,11 +239,11 @@ export function useWhiteboardSync() {
 
       // Set up debounced execution
       pending.timeoutId = setTimeout(async () => {
-        pendingSaves.delete(key)
+        pendingSaves.delete(pendingSaveKey)
         await executeSave(pending)
       }, DEBOUNCE_MS)
 
-      pendingSaves.set(key, pending)
+      pendingSaves.set(pendingSaveKey, pending)
     }
 
     // Update previous values
@@ -236,28 +263,32 @@ export function useWhiteboardSync() {
     localArrows,
     arrowCurves,
     localStatusFlags,
+    localTagFlags,
     attackBallPositions,
     executeSave,
   ])
 
   // Flush pending saves before page unload
   useEffect(() => {
-    const handleBeforeUnload = () => {
-      // Clear all timeouts and save synchronously isn't possible with Convex
-      // The debounced saves will be lost, but this is acceptable for most use cases
-      for (const save of pendingSaves.values()) {
-        if (save.timeoutId) {
-          clearTimeout(save.timeoutId)
-        }
+    const handleBeforeUnload = () => flushPendingSaves()
+    const handlePageHide = () => flushPendingSaves()
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        flushPendingSaves()
       }
-      pendingSaves.clear()
     }
 
     window.addEventListener('beforeunload', handleBeforeUnload)
+    window.addEventListener('pagehide', handlePageHide)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload)
+      window.removeEventListener('pagehide', handlePageHide)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      flushPendingSaves()
     }
-  }, [])
+  }, [flushPendingSaves])
 }
 
 /**
@@ -292,6 +323,9 @@ export function useFlushWhiteboardSync() {
 
         if (pending.flags.arrows && Object.keys(pending.flags.arrows).length > 0) {
           convexFlags.arrows = pending.flags.arrows as Record<string, { x: number; y: number } | null>
+        }
+        if (pending.flags.arrowFlips && Object.keys(pending.flags.arrowFlips).length > 0) {
+          convexFlags.arrowFlips = pending.flags.arrowFlips as Record<string, boolean>
         }
         if (pending.flags.arrowCurves && Object.keys(pending.flags.arrowCurves).length > 0) {
           convexFlags.arrowCurves = pending.flags.arrowCurves as Record<string, { x: number; y: number }>

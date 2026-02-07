@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { useAppStore } from '@/store/useAppStore'
+import { useGameTimeStore } from '@/store/useGameTimeStore'
 import {
   PresentationBarChart01Icon,
   Timer01Icon,
@@ -42,6 +43,8 @@ const navItems = [
 export function MobileBottomNav() {
   const pathname = usePathname()
   const currentTeam = useAppStore((state) => state.currentTeam)
+  const gamePhase = useGameTimeStore((s) => s.phase)
+  const hasActiveGame = gamePhase === 'playing'
 
   const hasTeam = Boolean(currentTeam)
 
@@ -63,18 +66,25 @@ export function MobileBottomNav() {
             ? item.emptyIcon
             : item.icon
 
+          const showGameDot = item.url === '/gametime' && hasActiveGame && !isActive
+
           return (
             <Link
               key={item.title}
               href={item.url}
               className={cn(
-                'flex flex-col items-center justify-center flex-1 h-full gap-0.5 text-xs transition-colors',
+                'flex flex-col items-center justify-center flex-1 h-full gap-0.5 text-xs transition-colors relative',
                 isActive
                   ? 'text-primary'
                   : 'text-muted-foreground hover:text-foreground'
               )}
             >
-              <HugeiconsIcon icon={IconComponent} className="h-5 w-5" />
+              <div className="relative">
+                <HugeiconsIcon icon={IconComponent} className="h-5 w-5" />
+                {showGameDot && (
+                  <div className="absolute -top-0.5 -right-1 w-2 h-2 bg-green-500 rounded-full" />
+                )}
+              </div>
               <span className="text-xs">{item.title}</span>
             </Link>
           )

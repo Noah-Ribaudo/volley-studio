@@ -2,6 +2,7 @@
 
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { createSafeLocalStorage } from '@/store/safeStorage'
 import {
   Role,
   Phase,
@@ -59,6 +60,7 @@ import { ROLES, COURT_ZONES } from '@/lib/types'
 import { getWhiteboardPositions, getAutoArrows } from '@/lib/whiteboard'
 import { getNextPhaseInFlow, getPrevPhaseInFlow } from '@/lib/phaseFlow'
 import type { LearningProgress, LearningPanelPosition } from '@/lib/learning/types'
+import type { ShaderId } from '@/lib/shaders'
 
 // Internal storage uses normalized coordinates (0-1)
 // PositionCoordinates is now normalized, so this type alias is for clarity
@@ -129,7 +131,10 @@ interface AppState {
   fullStatusLabels: boolean // Show full words on status badges instead of first letter (default: true)
   showLearnTab: boolean // Show the Learn tab in mobile navigation (default: false)
   debugHitboxes: boolean // Show touch target hitboxes with green highlight (default: false)
+  showMotionDebugPanel: boolean // Show motion tuning/debug panel on whiteboard (default: false)
   navMode: 'sidebar' | 'header' // Desktop navigation mode (default: 'header')
+  backgroundShader: ShaderId // Background shader choice (default: grain-gradient)
+  backgroundOpacity: number // Background content opacity 0-100 (default: 95)
   isPreviewingMovement: boolean // Preview mode: show players at arrow endpoints (default: false, not persisted)
   playAnimationTrigger: number // Counter to trigger play animation (incrementing triggers RAF animation)
 
@@ -192,6 +197,7 @@ interface AppState {
   togglePlayerStatus: (rotation: Rotation, phase: Phase, role: Role, status: PlayerStatus) => void
   setTokenTags: (rotation: Rotation, phase: Phase, role: Role, tags: TokenTag[]) => void
   setCurrentTeam: (team: Team | null) => void
+  assignPlayerToRole: (role: Role, playerId: string) => void
   setCustomLayouts: (layouts: CustomLayout[]) => void
   populateFromLayouts: (layouts: CustomLayout[]) => void
   setAccessMode: (mode: 'none' | 'local' | 'full') => void
@@ -212,7 +218,10 @@ interface AppState {
   setFullStatusLabels: (full: boolean) => void
   setShowLearnTab: (show: boolean) => void
   setDebugHitboxes: (show: boolean) => void
+  setShowMotionDebugPanel: (show: boolean) => void
   setNavMode: (mode: 'sidebar' | 'header') => void
+  setBackgroundShader: (shader: ShaderId) => void
+  setBackgroundOpacity: (opacity: number) => void
   setPreviewingMovement: (preview: boolean) => void
   triggerPlayAnimation: () => void
   // Attack ball actions (for whiteboard defense phase)
@@ -433,7 +442,10 @@ export const useAppStore = create<AppState>()(
       fullStatusLabels: true, // Default to showing full words on status badges
       showLearnTab: false, // Default to hiding Learn tab in mobile nav
       debugHitboxes: false, // Default to hiding hitbox debug overlay
+      showMotionDebugPanel: false, // Default to hidden motion debug panel
       navMode: 'header' as const, // Default to header nav (no sidebar)
+      backgroundShader: 'grain-gradient' as ShaderId, // Default background shader
+      backgroundOpacity: 95, // Default background content opacity
       isPreviewingMovement: false, // Default to not previewing (not persisted)
       playAnimationTrigger: 0, // Counter to trigger play animation
       localPositions: {},
@@ -756,6 +768,37 @@ export const useAppStore = create<AppState>()(
         teamConflict: null,
       }),
 
+      assignPlayerToRole: (role, playerId) => set((state) => {
+        if (!state.currentTeam) {
+          return {}
+        }
+
+        const activeLineupId = state.currentTeam.active_lineup_id
+        const nextLineups = state.currentTeam.lineups.map((lineup) => {
+          if (lineup.id !== activeLineupId) {
+            return lineup
+          }
+          return {
+            ...lineup,
+            position_assignments: {
+              ...lineup.position_assignments,
+              [role]: playerId,
+            },
+          }
+        })
+
+        return {
+          currentTeam: {
+            ...state.currentTeam,
+            position_assignments: {
+              ...state.currentTeam.position_assignments,
+              [role]: playerId,
+            },
+            lineups: nextLineups,
+          },
+        }
+      }),
+
       setCustomLayouts: (layouts) => set({ customLayouts: layouts }),
 
       populateFromLayouts: (layouts) => set((state) => {
@@ -879,8 +922,12 @@ export const useAppStore = create<AppState>()(
       setShowLearnTab: (show) => set({ showLearnTab: show }),
 
       setDebugHitboxes: (show) => set({ debugHitboxes: show }),
+      setShowMotionDebugPanel: (show) => set({ showMotionDebugPanel: show }),
 
       setNavMode: (mode) => set({ navMode: mode }),
+
+      setBackgroundShader: (shader) => set({ backgroundShader: shader }),
+      setBackgroundOpacity: (opacity) => set({ backgroundOpacity: opacity }),
 
       setPreviewingMovement: (preview) => set({ isPreviewingMovement: preview }),
 
@@ -1030,6 +1077,7 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: 'volleyball-rotation-storage',
+      storage: createSafeLocalStorage<any>(),
       partialize: (state) => {
         // Positions are stored in normalized (0-1) format
         return {
@@ -1039,6 +1087,9 @@ export const useAppStore = create<AppState>()(
           arrowCurves: state.arrowCurves,
           localStatusFlags: state.localStatusFlags,
           localTagFlags: state.localTagFlags,
+          currentTeam: state.currentTeam,
+          accessMode: state.accessMode,
+          teamPasswordProvided: state.teamPasswordProvided,
           baseOrder: state.baseOrder,
           visiblePhases: Array.from(state.visiblePhases),
           phaseOrder: state.phaseOrder,
@@ -1047,7 +1098,10 @@ export const useAppStore = create<AppState>()(
           tokenSize: state.tokenSize,
           hideAwayTeam: state.hideAwayTeam,
           showLearnTab: state.showLearnTab,
+          showMotionDebugPanel: state.showMotionDebugPanel,
           navMode: state.navMode,
+          backgroundShader: state.backgroundShader,
+          backgroundOpacity: state.backgroundOpacity,
           attackBallPositions: state.attackBallPositions,
           // Learning mode progress
           learningLessonId: state.learningLessonId,
@@ -1112,6 +1166,10 @@ export const useAppStore = create<AppState>()(
         if (state && state.hideAwayTeam === undefined) {
           state.hideAwayTeam = true
         }
+        // Set default for motion debug panel toggle if missing
+        if (state && state.showMotionDebugPanel === undefined) {
+          state.showMotionDebugPanel = false
+        }
         // Set default for attackBallPositions if missing
         if (state && state.attackBallPositions === undefined) {
           state.attackBallPositions = {}
@@ -1147,4 +1205,3 @@ export const useAppStore = create<AppState>()(
     }
   )
 )
-

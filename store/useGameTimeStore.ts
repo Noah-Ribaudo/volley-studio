@@ -4,6 +4,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { Role, Rotation, RosterPlayer, Team, ROLES } from '@/lib/types'
 import { getBackRowMiddle } from '@/lib/rotations'
+import { createSafeLocalStorage } from '@/store/safeStorage'
 import {
   GamePhase,
   ServingTeam,
@@ -42,6 +43,9 @@ interface GameTimeState {
   theirScore: number
   serving: ServingTeam
 
+  // Fullscreen (not persisted)
+  isFullscreen: boolean
+
   // Tracking
   timeouts: Timeouts
   liberoOnCourt: boolean
@@ -77,6 +81,7 @@ interface GameTimeState {
   clearReminders: () => void
 
   // Actions - Navigation
+  setFullscreen: (fullscreen: boolean) => void
   resetGame: () => void
   endGame: () => void
 
@@ -134,6 +139,7 @@ export const useGameTimeStore = create<GameTimeState>()(
       ourScore: 0,
       theirScore: 0,
       serving: 'us',
+      isFullscreen: false,
       timeouts: { us: DEFAULT_TIMEOUTS, them: DEFAULT_TIMEOUTS },
       liberoOnCourt: false,
       liberoReplacedRole: null,
@@ -173,15 +179,24 @@ export const useGameTimeStore = create<GameTimeState>()(
 
         // If someone was already in this role, put them back on bench
         const previousPlayer = state.lineup[role]
-        if (previousPlayer) {
+        if (previousPlayer && previousPlayer.id !== player.id) {
           newBench.push(previousPlayer)
         }
+
+        // Clear player from any other lineup role they were in
+        const newLineup = { ...state.lineup }
+        for (const r of LINEUP_ROLES) {
+          if (r !== role && newLineup[r]?.id === player.id) {
+            delete newLineup[r]
+          }
+        }
+        newLineup[role] = player
 
         // If player was libero, clear libero
         const newLibero = state.libero?.id === player.id ? null : state.libero
 
         set({
-          lineup: { ...state.lineup, [role]: player },
+          lineup: newLineup,
           bench: newBench,
           libero: newLibero,
         })
@@ -252,6 +267,7 @@ export const useGameTimeStore = create<GameTimeState>()(
 
         set({
           phase: 'playing',
+          isFullscreen: true,
           ourScore: 0,
           theirScore: 0,
           timeouts: { us: DEFAULT_TIMEOUTS, them: DEFAULT_TIMEOUTS },
@@ -449,6 +465,10 @@ export const useGameTimeStore = create<GameTimeState>()(
       },
 
       // Navigation
+      setFullscreen: (fullscreen: boolean) => {
+        set({ isFullscreen: fullscreen })
+      },
+
       resetGame: () => {
         set({
           phase: 'setup',
@@ -462,6 +482,7 @@ export const useGameTimeStore = create<GameTimeState>()(
           ourScore: 0,
           theirScore: 0,
           serving: 'us',
+          isFullscreen: false,
           timeouts: { us: DEFAULT_TIMEOUTS, them: DEFAULT_TIMEOUTS },
           liberoOnCourt: false,
           liberoReplacedRole: null,
@@ -491,8 +512,10 @@ export const useGameTimeStore = create<GameTimeState>()(
     }),
     {
       name: 'gametime-storage',
+      storage: createSafeLocalStorage<any>(),
       partialize: (state) => ({
         // Only persist game state, not team data
+        // Don't persist: isFullscreen, reminders, undoStack
         phase: state.phase,
         teamName: state.teamName,
         isQuickStart: state.isQuickStart,
@@ -507,7 +530,6 @@ export const useGameTimeStore = create<GameTimeState>()(
         liberoOnCourt: state.liberoOnCourt,
         liberoReplacedRole: state.liberoReplacedRole,
         rallyHistory: state.rallyHistory,
-        // Don't persist reminders or undo stack
       }),
     }
   )

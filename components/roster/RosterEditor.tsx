@@ -17,46 +17,51 @@ export function RosterEditor({ roster, onChange, isLoading }: RosterEditorProps)
   const [newName, setNewName] = useState('')
   const [newNumber, setNewNumber] = useState('')
   const [error, setError] = useState('')
-  
+
   useEffect(() => {
     setPlayers(roster)
   }, [roster])
-  
+
   // Add a new player
   const handleAddPlayer = () => {
     setError('')
-    
-    if (!newName.trim()) {
-      setError('Please enter a player name')
+
+    const hasName = newName.trim().length > 0
+    const hasNumber = newNumber.trim().length > 0
+
+    if (!hasName && !hasNumber) {
+      setError('Please enter a name or jersey number')
       return
     }
-    
-    const number = parseInt(newNumber)
-    if (isNaN(number) || number < 0 || number > 99) {
-      setError('Please enter a valid jersey number (0-99)')
-      return
+
+    let number: number | undefined
+    if (hasNumber) {
+      number = parseInt(newNumber)
+      if (isNaN(number) || number < 0 || number > 99) {
+        setError('Please enter a valid jersey number (0-99)')
+        return
+      }
+      // Check for duplicate number
+      if (players.some(p => p.number === number)) {
+        setError('This jersey number is already taken')
+        return
+      }
     }
-    
-    // Check for duplicate number
-    if (players.some(p => p.number === number)) {
-      setError('This jersey number is already taken')
-      return
-    }
-    
+
     const newPlayer: RosterPlayer = {
       id: `player-${Date.now()}`,
-      name: newName.trim(),
+      name: hasName ? newName.trim() : undefined,
       number
     }
-    
+
     const updatedRoster = [...players, newPlayer]
     setPlayers(updatedRoster)
     setNewName('')
     setNewNumber('')
-    
+
     onChange(updatedRoster)
   }
-  
+
   // Handle Enter key press in input fields
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -64,14 +69,14 @@ export function RosterEditor({ roster, onChange, isLoading }: RosterEditorProps)
       handleAddPlayer()
     }
   }
-  
+
   // Remove a player
   const handleRemovePlayer = (id: string) => {
     const updatedRoster = players.filter(p => p.id !== id)
     setPlayers(updatedRoster)
     onChange(updatedRoster)
   }
-  
+
   // Update a player
   const handleUpdatePlayer = (id: string, updates: Partial<RosterPlayer>) => {
     // Validate jersey number uniqueness and range when updating number
@@ -87,20 +92,20 @@ export function RosterEditor({ roster, onChange, isLoading }: RosterEditorProps)
       }
     }
 
-    const updatedRoster = players.map(p => 
+    const updatedRoster = players.map(p =>
       p.id === id ? { ...p, ...updates } : p
     )
     setPlayers(updatedRoster)
     onChange(updatedRoster)
   }
-  
+
   return (
     <div className="space-y-4">
       {/* Player list */}
       {players.length > 0 && (
         <div className="space-y-2">
           {players
-            .sort((a, b) => a.number - b.number)
+            .sort((a, b) => (a.number ?? 999) - (b.number ?? 999))
             .map(player => (
               <div
                 key={player.id}
@@ -110,14 +115,16 @@ export function RosterEditor({ roster, onChange, isLoading }: RosterEditorProps)
                   type="number"
                   min={0}
                   max={99}
-                  value={player.number}
-                  onChange={(e) => handleUpdatePlayer(player.id, { number: Number(e.target.value) })}
+                  value={player.number ?? ''}
+                  onChange={(e) => handleUpdatePlayer(player.id, { number: e.target.value ? Number(e.target.value) : undefined })}
+                  placeholder="#"
                   className="w-20 h-9 text-sm"
                 />
                 <div className="flex-1 min-w-0">
                   <Input
-                    value={player.name}
-                    onChange={(e) => handleUpdatePlayer(player.id, { name: e.target.value })}
+                    value={player.name ?? ''}
+                    onChange={(e) => handleUpdatePlayer(player.id, { name: e.target.value || undefined })}
+                    placeholder="Name"
                     className="h-8 text-sm"
                   />
                 </div>
@@ -146,7 +153,7 @@ export function RosterEditor({ roster, onChange, isLoading }: RosterEditorProps)
             ))}
         </div>
       )}
-      
+
       {/* Add player form */}
       <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
         <div className="grid grid-cols-3 gap-2">
@@ -177,8 +184,8 @@ export function RosterEditor({ roster, onChange, isLoading }: RosterEditorProps)
           </div>
         </div>
         {error && <p className="text-xs text-destructive">{error}</p>}
-        <Button 
-          onClick={handleAddPlayer} 
+        <Button
+          onClick={handleAddPlayer}
           disabled={isLoading}
           size="sm"
           className="w-full"
@@ -201,7 +208,7 @@ export function RosterEditor({ roster, onChange, isLoading }: RosterEditorProps)
           Add Player
         </Button>
       </div>
-      
+
       {players.length > 0 && (
         <p className="text-xs text-muted-foreground text-center">
           {players.length} player{players.length !== 1 ? 's' : ''} on roster

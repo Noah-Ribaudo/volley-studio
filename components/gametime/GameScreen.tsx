@@ -1,23 +1,20 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
 import { useGameTimeStore } from '@/store/useGameTimeStore'
-import { Role, ROLE_INFO, Rotation } from '@/lib/types'
+import { Role, ROLE_INFO, Rotation, RosterPlayer } from '@/lib/types'
 import { getRoleZone, isInFrontRow, getBackRowMiddle } from '@/lib/rotations'
 import {
   Undo2,
   Timer,
   Users,
-  Menu,
   X,
   RotateCcw,
   History,
-  ChevronDown,
-  LogOut,
   BarChart3,
   Map,
-  ClipboardCheck,
+  Minimize2,
+  Maximize2,
 } from 'lucide-react'
 import { RotationOverlay } from './RotationOverlay'
 import { StatsPanel } from './StatsPanel'
@@ -27,8 +24,6 @@ import { TimeoutChecklist } from './TimeoutChecklist'
 const LINEUP_ROLES: Role[] = ['S', 'OH1', 'OH2', 'MB1', 'MB2', 'OPP']
 
 export function GameScreen() {
-  const router = useRouter()
-  const [showMenu, setShowMenu] = useState(false)
   const [showSubs, setShowSubs] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
   const [showRotation, setShowRotation] = useState(false)
@@ -50,42 +45,63 @@ export function GameScreen() {
     rallyHistory,
     reminders,
     undoStack,
+    isFullscreen,
     weScored,
     theyScored,
     undoLastPoint,
     callTimeout,
     substitutePlayer,
     dismissReminder,
+    setFullscreen,
     resetGame,
     phase,
   } = useGameTimeStore()
 
+  // Prevent zoom on mobile when fullscreen (restore when leaving)
+  useEffect(() => {
+    if (!isFullscreen) return
+
+    const meta = document.querySelector('meta[name="viewport"]')
+    const original = meta?.getAttribute('content') || ''
+    meta?.setAttribute(
+      'content',
+      'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover'
+    )
+    return () => {
+      meta?.setAttribute('content', original)
+    }
+  }, [isFullscreen])
+
   // Get active reminders (not dismissed)
   const activeReminders = reminders.filter((r) => !r.dismissed)
 
-  // Handle menu actions
+  // Handle restart
   const handleNewGame = () => {
-    if (window.confirm('Start a new game? Current progress will be lost.')) {
-      resetGame()
-    }
-  }
-
-  const handleExit = () => {
     if (ourScore === 0 && theirScore === 0) {
-      // No points scored yet, just exit
       resetGame()
-      router.push('/')
-    } else if (window.confirm('Exit GameTime? Current game progress will be lost.')) {
+    } else if (window.confirm('Start a new game? Current progress will be lost.')) {
       resetGame()
-      router.push('/')
     }
   }
 
   return (
-    <div className="flex flex-col h-[100dvh] overflow-hidden">
+    <div className={`flex flex-col overflow-hidden ${isFullscreen ? 'h-[100dvh]' : 'flex-1'}`}>
       {/* Top Status Bar */}
       <div className="flex items-center justify-between px-4 py-2 bg-zinc-900 border-b border-zinc-800 shrink-0">
         <div className="flex items-center gap-3">
+          {/* Fullscreen toggle */}
+          <button
+            onClick={() => setFullscreen(!isFullscreen)}
+            className="bg-zinc-800 hover:bg-zinc-700 p-2 rounded-lg transition-colors"
+            aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+          >
+            {isFullscreen ? (
+              <Minimize2 className="w-4 h-4" />
+            ) : (
+              <Maximize2 className="w-4 h-4" />
+            )}
+          </button>
+
           {/* Rotation Badge - clickable to view positions */}
           <button
             onClick={() => setShowRotation(true)}
@@ -117,12 +133,13 @@ export function GameScreen() {
             {timeouts.us}
           </button>
 
-          {/* Menu */}
+          {/* Restart */}
           <button
-            onClick={() => setShowMenu(true)}
+            onClick={handleNewGame}
             className="bg-zinc-800 hover:bg-zinc-700 p-2 rounded-lg transition-colors"
+            aria-label="New game"
           >
-            <Menu className="w-5 h-5" />
+            <RotateCcw className="w-5 h-5" />
           </button>
         </div>
       </div>
@@ -237,11 +254,6 @@ export function GameScreen() {
         </button>
       </div>
 
-      {/* Menu Overlay */}
-      {showMenu && (
-        <MenuOverlay onClose={() => setShowMenu(false)} onNewGame={handleNewGame} onExit={handleExit} />
-      )}
-
       {/* Subs Panel */}
       {showSubs && (
         <SubsPanel
@@ -301,8 +313,8 @@ function CourtDiagram({
   liberoReplacedRole,
 }: {
   rotation: number
-  lineup: Partial<Record<Role, { id: string; name: string; number: number }>>
-  libero: { id: string; name: string; number: number } | null
+  lineup: Partial<Record<Role, RosterPlayer>>
+  libero: RosterPlayer | null
   liberoOnCourt: boolean
   liberoReplacedRole: Role | null
 }) {
@@ -381,7 +393,7 @@ function PlayerCircle({
 }: {
   role: Role
   zone: number
-  player?: { id: string; name: string; number: number } | null
+  player?: RosterPlayer | null
   isLibero: boolean
 }) {
   const roleInfo = isLibero ? ROLE_INFO.L : ROLE_INFO[role]
@@ -396,70 +408,21 @@ function PlayerCircle({
     >
       {player ? (
         <>
-          <div className="text-xl font-bold">#{player.number}</div>
-          <div className="text-[10px] text-zinc-400 truncate max-w-full px-1">
-            {player.name}
-          </div>
+          <div className="text-xl font-bold">{player.number != null ? `#${player.number}` : player.name}</div>
+          {player.number != null && player.name && (
+            <div className="text-[10px] text-zinc-400 truncate max-w-full px-1">
+              {player.name}
+            </div>
+          )}
         </>
       ) : (
         <>
           <div className="text-base font-bold" style={{ color: roleInfo.color }}>
             {role}
           </div>
-          <div className="text-[10px] text-zinc-500">Z{zone}</div>
+          <div className="text-[10px] text-zinc-500">Zone {zone}</div>
         </>
       )}
-    </div>
-  )
-}
-
-// Menu overlay
-function MenuOverlay({
-  onClose,
-  onNewGame,
-  onExit,
-}: {
-  onClose: () => void
-  onNewGame: () => void
-  onExit: () => void
-}) {
-  return (
-    <div className="fixed inset-0 bg-black/80 z-50 flex items-end">
-      <div className="w-full bg-zinc-900 rounded-t-2xl">
-        <div className="flex items-center justify-between p-4 border-b border-zinc-800">
-          <h2 className="text-lg font-semibold">Menu</h2>
-          <button onClick={onClose} className="p-2">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        <div className="p-4 space-y-2">
-          <button
-            onClick={() => {
-              onNewGame()
-              onClose()
-            }}
-            className="w-full flex items-center gap-3 px-4 py-4 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors"
-          >
-            <RotateCcw className="w-5 h-5" />
-            New Game
-          </button>
-          <button
-            onClick={onExit}
-            className="w-full flex items-center gap-3 px-4 py-4 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors text-red-400"
-          >
-            <LogOut className="w-5 h-5" />
-            Exit GameTime
-          </button>
-        </div>
-        <div className="p-4 pt-0">
-          <button
-            onClick={onClose}
-            className="w-full py-4 bg-zinc-800 hover:bg-zinc-700 rounded-lg font-medium transition-colors"
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
     </div>
   )
 }
@@ -471,14 +434,14 @@ function SubsPanel({
   onSub,
   onClose,
 }: {
-  lineup: Partial<Record<Role, { id: string; name: string; number: number }>>
-  bench: { id: string; name: string; number: number }[]
-  onSub: (role: Role, player: { id: string; name: string; number: number }) => void
+  lineup: Partial<Record<Role, RosterPlayer>>
+  bench: RosterPlayer[]
+  onSub: (role: Role, player: RosterPlayer) => void
   onClose: () => void
 }) {
   const [selectedRole, setSelectedRole] = useState<Role | null>(null)
 
-  const handleSub = (player: { id: string; name: string; number: number }) => {
+  const handleSub = (player: RosterPlayer) => {
     if (!selectedRole) return
     onSub(selectedRole, player)
     setSelectedRole(null)
@@ -512,10 +475,12 @@ function SubsPanel({
                   >
                     {player ? (
                       <>
-                        <div className="text-lg font-bold">#{player.number}</div>
-                        <div className="text-xs text-zinc-400 truncate">
-                          {player.name}
-                        </div>
+                        <div className="text-lg font-bold">{player.number != null ? `#${player.number}` : player.name}</div>
+                        {player.number != null && player.name && (
+                          <div className="text-xs text-zinc-400 truncate">
+                            {player.name}
+                          </div>
+                        )}
                       </>
                     ) : (
                       <div className="text-zinc-500">{role}</div>
@@ -544,10 +509,12 @@ function SubsPanel({
                       onClick={() => handleSub(player)}
                       className="bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 rounded-lg p-3 text-center transition-colors"
                     >
-                      <div className="text-lg font-bold">#{player.number}</div>
-                      <div className="text-xs text-zinc-400 truncate">
-                        {player.name}
-                      </div>
+                      <div className="text-lg font-bold">{player.number != null ? `#${player.number}` : player.name}</div>
+                      {player.number != null && player.name && (
+                        <div className="text-xs text-zinc-400 truncate">
+                          {player.name}
+                        </div>
+                      )}
                     </button>
                   ))}
                 </div>

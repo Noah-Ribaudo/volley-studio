@@ -78,12 +78,12 @@ export function TeamCard({ team }: TeamCardProps) {
                 </>
               )}
             </Button>
-            <Link href={`/?team=${team.slug}`}>
+            <Link href={`/?team=${team.id}`}>
               <Button size="sm" variant="default">
                 Whiteboard
               </Button>
             </Link>
-            <Link href={`/teams/${team.slug}`}>
+            <Link href={`/teams/${team.id}`}>
               <Button size="sm" variant="outline">
                 Edit
               </Button>
@@ -99,7 +99,7 @@ export function TeamCard({ team }: TeamCardProps) {
                 key={player.id}
                 className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-secondary"
               >
-                #{player.number} {player.name}
+                {[player.number != null ? `#${player.number}` : null, player.name].filter(Boolean).join(' ')}
               </span>
             ))}
             {rosterCount > 6 && (

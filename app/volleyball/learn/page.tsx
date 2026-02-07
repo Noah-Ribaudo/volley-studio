@@ -1,7 +1,5 @@
 'use client'
 
-import { SafeAreaHeader } from '@/components/ui/SafeAreaHeader'
-
 import { useRouter } from 'next/navigation'
 import { useAppStore } from '@/store/useAppStore'
 import { allLessons, getLessonById } from '@/lib/learning/allModules'
@@ -10,9 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { cn } from '@/lib/utils'
-import Link from 'next/link'
 import {
-  ArrowLeft01Icon,
   PlayIcon,
   Tick01Icon,
   Clock01Icon,
@@ -68,25 +64,6 @@ export default function LearnPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
-      {/* Header */}
-      <SafeAreaHeader>
-        <div className="container mx-auto px-4 py-3">
-          <div className="flex items-center gap-3">
-            <Link href="/volleyball">
-              <Button variant="ghost" size="icon" className="min-w-11 min-h-11" aria-label="Back to whiteboard">
-                <HugeiconsIcon icon={ArrowLeft01Icon} className="h-5 w-5" />
-              </Button>
-            </Link>
-            <div className="flex-1">
-              <h1 className="text-xl font-bold text-primary">Learn 5-1</h1>
-              <p className="text-xs text-muted-foreground">
-                {completedCount} of {allLessons.length} lessons completed
-              </p>
-            </div>
-          </div>
-        </div>
-      </SafeAreaHeader>
-
       <div className="container mx-auto px-4 py-4 pb-32 max-w-2xl space-y-6">
         {/* Overall Progress */}
         <Card>

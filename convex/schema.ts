@@ -13,7 +13,7 @@ export default defineSchema({
     roster: v.array(
       v.object({
         id: v.string(),
-        name: v.string(),
+        name: v.optional(v.string()),
         number: v.optional(v.number()),
       })
     ),
@@ -54,6 +54,7 @@ export default defineSchema({
           v.record(v.string(), v.object({ x: v.number(), y: v.number() }))
         ),
         statusFlags: v.optional(v.record(v.string(), v.array(v.string()))),
+        tagFlags: v.optional(v.record(v.string(), v.array(v.string()))),
         attackBallPosition: v.optional(
           v.union(v.object({ x: v.number(), y: v.number() }), v.null())
         ),

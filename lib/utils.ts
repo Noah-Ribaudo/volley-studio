@@ -6,18 +6,33 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * Resolves a color string that might be a CSS variable reference.
+ * If the string is "var(--foo)", reads the computed value from :root.
+ * Otherwise returns the string as-is.
+ */
+function resolveColor(color: string): string {
+  if (typeof window === 'undefined') return color
+  const varMatch = color.match(/^var\((--[^)]+)\)$/)
+  if (!varMatch) return color
+  return getComputedStyle(document.documentElement).getPropertyValue(varMatch[1]).trim()
+}
+
+/**
  * Extracts lightness value from an oklch color string
- * @param oklchColor - Color in oklch format (e.g., "oklch(0.7 0.18 70)")
+ * Handles both direct oklch values and CSS variable references
  * @returns Lightness value (0-1) or null if parsing fails
  */
 export function getOklchLightness(oklchColor: string): number | null {
-  const match = oklchColor.match(/oklch\(([\d.]+)/)
-  return match ? parseFloat(match[1]) : null
+  const resolved = resolveColor(oklchColor)
+  // Handle both "oklch(0.7 0.18 70)" and "oklch(70% 0.18 70)" formats
+  const match = resolved.match(/oklch\(([\d.]+)(%?)/)
+  if (!match) return null
+  const value = parseFloat(match[1])
+  return match[2] === '%' ? value / 100 : value
 }
 
 /**
  * Determines appropriate text color (black or white) for an oklch background color
- * @param oklchColor - Color in oklch format
  * @returns "#000" for light colors, "#fff" for dark colors
  */
 export function getTextColorForOklch(oklchColor: string): string {
@@ -28,13 +43,12 @@ export function getTextColorForOklch(oklchColor: string): string {
 
 /**
  * Adds opacity to an oklch color
- * @param oklchColor - Color in oklch format (e.g., "oklch(0.7 0.18 70)")
- * @param opacity - Opacity value between 0 and 1 (e.g., 0.2 for 20% opacity)
- * @returns oklch color with alpha channel (e.g., "oklch(0.7 0.18 70 / 0.2)")
+ * Resolves CSS variable references before manipulation
  */
 export function addOklchOpacity(oklchColor: string, opacity: number): string {
+  const resolved = resolveColor(oklchColor)
   // Remove existing alpha if present
-  const withoutAlpha = oklchColor.replace(/\s*\/\s*[\d.]+\)$/, ')')
+  const withoutAlpha = resolved.replace(/\s*\/\s*[\d.]+\)$/, ')')
   // Add new alpha
   return withoutAlpha.replace(')', ` / ${opacity})`)
 }
@@ -46,11 +60,12 @@ export function addOklchOpacity(oklchColor: string, opacity: number): string {
  * @returns Darkened oklch color string
  */
 export function darkenOklch(oklchColor: string, factor: number = 0.7): string {
-  const lightness = getOklchLightness(oklchColor)
-  if (lightness === null) return oklchColor
+  const resolved = resolveColor(oklchColor)
+  const lightness = getOklchLightness(resolved)
+  if (lightness === null) return resolved
 
   const newLightness = Math.max(0, lightness * factor)
-  return oklchColor.replace(/oklch\([\d.]+/, `oklch(${newLightness.toFixed(3)}`)
+  return resolved.replace(/oklch\([\d.]+%?/, `oklch(${newLightness.toFixed(3)}`)
 }
 
 /**

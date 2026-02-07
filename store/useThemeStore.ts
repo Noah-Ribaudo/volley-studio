@@ -1,24 +1,14 @@
 'use client'
 
 import { create } from 'zustand'
-import { persist, createJSONStorage } from 'zustand/middleware'
+import { persist } from 'zustand/middleware'
 
 import { DEFAULT_THEME, THEME_STORAGE_KEY, ThemeId } from '@/lib/themes'
+import { createSafeLocalStorage } from '@/store/safeStorage'
 
 interface ThemeState {
   theme: ThemeId
   setTheme: (theme: ThemeId) => void
-}
-
-const getStorage = () => {
-  if (typeof window === 'undefined') {
-    return {
-      getItem: () => null,
-      setItem: () => {},
-      removeItem: () => {},
-    }
-  }
-  return window.localStorage
 }
 
 // Migrate old theme values to new ones
@@ -43,7 +33,7 @@ export const useThemeStore = create<ThemeState>()(
     }),
     {
       name: THEME_STORAGE_KEY,
-      storage: createJSONStorage(() => getStorage()),
+      storage: createSafeLocalStorage<ThemeState>(),
       // Migrate stored state when hydrating
       onRehydrateStorage: () => (state) => {
         if (state?.theme) {

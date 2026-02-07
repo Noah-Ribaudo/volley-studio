@@ -88,13 +88,13 @@ export const ROLE_PRIORITY: Record<Role, number> = {
 // Colorblind-friendly oklch color palette optimized for maximum visual distinction
 // Colors chosen to be distinguishable for protanopia, deuteranopia, and tritanopia
 export const ROLE_INFO: Record<Role, { name: string; color: string; bgColor: string }> = {
-  S: { name: 'Setter', color: 'oklch(0.55 0.22 300)', bgColor: 'bg-purple-600' },           // Medium Purple
-  OH1: { name: 'Outside Hitter 1', color: 'oklch(0.55 0.22 250)', bgColor: 'bg-blue-600' }, // Medium Blue
-  OH2: { name: 'Outside Hitter 2', color: 'oklch(0.65 0.18 90)', bgColor: 'bg-amber-500' }, // Medium Yellow
-  MB1: { name: 'Middle Blocker 1', color: 'oklch(0.7 0.18 70)', bgColor: 'bg-orange-600' }, // Bright Orange
-  MB2: { name: 'Middle Blocker 2', color: 'oklch(0.6 0.18 200)', bgColor: 'bg-teal-600' }, // Medium Teal
-  OPP: { name: 'Opposite', color: 'oklch(0.7 0.18 350)', bgColor: 'bg-pink-600' },         // Bright Pink
-  L: { name: 'Libero', color: 'oklch(0.5 0.2 150)', bgColor: 'bg-green-600' },            // Medium Green
+  S: { name: 'Setter', color: 'var(--c-setter)', bgColor: 'bg-[var(--c-setter)]' },
+  OH1: { name: 'Outside Hitter 1', color: 'var(--c-oh1)', bgColor: 'bg-[var(--c-oh1)]' },
+  OH2: { name: 'Outside Hitter 2', color: 'var(--c-oh2)', bgColor: 'bg-[var(--c-oh2)]' },
+  MB1: { name: 'Middle Blocker 1', color: 'var(--c-mb1)', bgColor: 'bg-[var(--c-mb1)]' },
+  MB2: { name: 'Middle Blocker 2', color: 'var(--c-mb2)', bgColor: 'bg-[var(--c-mb2)]' },
+  OPP: { name: 'Opposite', color: 'var(--c-opp)', bgColor: 'bg-[var(--c-opp)]' },
+  L: { name: 'Libero', color: 'var(--c-libero)', bgColor: 'bg-[var(--c-libero)]' },
 }
 
 /**
@@ -181,8 +181,8 @@ export type ArrowPositions = Partial<Record<Role, Position | null>>
 // Roster player
 export interface RosterPlayer {
   id: string
-  name: string
-  number: number
+  name?: string
+  number?: number
 }
 
 // Position assignments (which player plays which role)

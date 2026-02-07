@@ -1,12 +1,10 @@
 'use client'
 
 import { useAppStore } from '@/store/useAppStore'
-import { SafeAreaHeader } from '@/components/ui/SafeAreaHeader'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
-import Link from 'next/link'
 import {
   Select,
   SelectContent,
@@ -19,7 +17,14 @@ import { ROLES, ROLE_INFO, RALLY_PHASE_INFO, RallyPhase } from '@/lib/types'
 import type { LearningPanelPosition } from '@/lib/learning/types'
 import { cn, getTextColorForOklch } from '@/lib/utils'
 import ThemePicker from '@/components/ThemePicker'
-import { ArrowLeft01Icon, DragDropVerticalIcon } from "@hugeicons/core-free-icons"
+import { SHADER_OPTIONS, type ShaderId } from '@/lib/shaders'
+import dynamic from 'next/dynamic'
+
+const DevThemeSection = process.env.NODE_ENV === 'development'
+  ? dynamic(() => import('@/components/dev/DevThemeSection'), { ssr: false })
+  : () => null
+import SuggestionBox from '@/components/SuggestionBox'
+import { DragDropVerticalIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   DndContext,
@@ -75,9 +80,11 @@ export default function SettingsPage() {
     // Debug
     debugHitboxes,
     setDebugHitboxes,
-    // Navigation
-    navMode,
-    setNavMode,
+    // Background shader
+    backgroundShader,
+    setBackgroundShader,
+    backgroundOpacity,
+    setBackgroundOpacity,
   } = useAppStore()
 
   // DnD sensors for phase reordering
@@ -106,24 +113,9 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
-      {/* Header */}
-      <SafeAreaHeader>
-        <div className="container mx-auto px-4 py-3">
-          <div className="flex items-center gap-3">
-            <Link href="/volleyball">
-              <Button variant="ghost" size="icon" className="min-w-11 min-h-11" aria-label="Back to whiteboard">
-                <HugeiconsIcon icon={ArrowLeft01Icon} className="h-5 w-5" />
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-xl font-bold text-primary">Settings</h1>
-              <p className="text-xs text-muted-foreground">Configure display and behavior</p>
-            </div>
-          </div>
-        </div>
-      </SafeAreaHeader>
-
       <div className="container mx-auto px-4 py-6 pb-32 max-w-2xl space-y-6">
+        {process.env.NODE_ENV === 'development' && <DevThemeSection />}
+
         {/* Appearance */}
         <Card>
           <CardHeader>
@@ -138,23 +130,57 @@ export default function SettingsPage() {
               </div>
               <ThemePicker />
             </div>
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label className="text-sm font-medium">Desktop Navigation</Label>
-                <p className="text-xs text-muted-foreground">Header bar or sidebar</p>
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="shader-select" className="text-sm font-medium">
+                Background Shader
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Pick the ambient background effect used on wide screens
+              </p>
               <Select
-                value={navMode}
-                onValueChange={(val) => setNavMode(val as 'sidebar' | 'header')}
+                value={backgroundShader}
+                onValueChange={(value) => setBackgroundShader(value as ShaderId)}
               >
-                <SelectTrigger className="w-32">
-                  <SelectValue />
+                <SelectTrigger id="shader-select" className="mt-2">
+                  <SelectValue placeholder="Select shader" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="header">Header</SelectItem>
-                  <SelectItem value="sidebar">Sidebar</SelectItem>
+                  {SHADER_OPTIONS.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      <span className="flex items-center justify-between w-full gap-3">
+                        <span>{option.label}</span>
+                        {option.cost > 0 && (
+                          <span className={cn(
+                            'text-[10px] tabular-nums shrink-0',
+                            option.cost <= 3 ? 'text-muted-foreground' :
+                            option.cost <= 5 ? 'text-yellow-500' :
+                            'text-orange-500'
+                          )}>
+                            {option.cost}/10
+                          </span>
+                        )}
+                      </span>
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">Shader Visibility</Label>
+                <span className="text-xs text-muted-foreground tabular-nums">{100 - backgroundOpacity}%</span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                How much the shader shows through the content area
+              </p>
+              <Slider
+                value={[100 - backgroundOpacity]}
+                onValueChange={([v]) => setBackgroundOpacity(100 - v)}
+                min={0}
+                max={50}
+                step={1}
+                className="mt-2"
+              />
             </div>
           </CardContent>
         </Card>
@@ -366,6 +392,9 @@ export default function SettingsPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Suggestion Box */}
+        <SuggestionBox />
 
       </div>
     </div>

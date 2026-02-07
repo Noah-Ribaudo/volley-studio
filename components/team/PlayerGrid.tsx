@@ -26,8 +26,13 @@ export function PlayerGrid({
       : ROLE_INFO[selectedRole]
     : null
 
-  // Sort players by number
-  const sortedPlayers = [...players].sort((a, b) => a.number - b.number)
+  // Sort players by jersey number (fallback to name when number is missing)
+  const sortedPlayers = [...players].sort((a, b) => {
+    const aNum = a.number ?? Number.MAX_SAFE_INTEGER
+    const bNum = b.number ?? Number.MAX_SAFE_INTEGER
+    if (aNum !== bNum) return aNum - bNum
+    return (a.name ?? '').localeCompare(b.name ?? '')
+  })
 
   if (sortedPlayers.length === 0) {
     return (
@@ -75,14 +80,16 @@ export function PlayerGrid({
                 'text-xl font-bold',
                 isAssigned && 'text-zinc-500'
               )}>
-                #{player.number}
+                {player.number != null ? `#${player.number}` : player.name}
               </div>
-              <div className={cn(
-                'text-xs truncate',
-                isAssigned ? 'text-zinc-600' : 'text-zinc-400'
-              )}>
-                {player.name}
-              </div>
+              {player.number != null && player.name && (
+                <div className={cn(
+                  'text-xs truncate',
+                  isAssigned ? 'text-zinc-600' : 'text-zinc-400'
+                )}>
+                  {player.name}
+                </div>
+              )}
             </button>
           )
         })}
