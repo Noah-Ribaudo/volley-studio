@@ -15,9 +15,6 @@ type PlayerInfo = {
 }
 
 interface ArrowPreviewOverlayProps {
-  viewBoxWidth: number
-  viewBoxY: number
-  viewBoxHeight: number
   activeRoles: Role[]
   displayPositions: PositionCoordinates
   draggingRole: Role | null
@@ -45,9 +42,6 @@ interface ArrowPreviewOverlayProps {
 }
 
 export function ArrowPreviewOverlay({
-  viewBoxWidth,
-  viewBoxY,
-  viewBoxHeight,
   activeRoles,
   displayPositions,
   draggingRole,
@@ -71,16 +65,7 @@ export function ArrowPreviewOverlay({
   if (!onArrowChange) return null
 
   return (
-    <svg
-      viewBox={`0 ${viewBoxY} ${viewBoxWidth} ${viewBoxHeight}`}
-      className="pointer-events-none absolute inset-0 select-none w-full h-full max-h-full max-w-full"
-      style={{
-        display: 'block',
-        aspectRatio: `${viewBoxWidth} / ${viewBoxHeight}`,
-      }}
-      preserveAspectRatio="xMidYMid meet"
-      aria-hidden="true"
-    >
+    <g className="pointer-events-none" aria-hidden="true">
       {activeRoles.map((role) => {
         const homeBasePos = displayPositions[role] || { x: 0.5, y: 0.75 }
         const homeSvgPos = toSvgCoords(draggingRole === role && dragPosition ? dragPosition : homeBasePos)
@@ -108,11 +93,11 @@ export function ArrowPreviewOverlay({
         const isDraggingNewPreviewArrow = draggingArrowRole === role && !arrows[role] && Boolean(arrowDragPosition)
 
         const previewStartSvg = {
-          x: homeSvgPos.x + direction * edgeInset,
-          y: homeSvgPos.y - 2,
+          x: homeSvgPos.x,
+          y: homeSvgPos.y,
         }
         const defaultPreviewEndSvg = {
-          x: previewStartSvg.x + direction * previewPeekDistance,
+          x: previewStartSvg.x + direction * (edgeInset + previewPeekDistance),
           y: homeSvgPos.y - 10,
         }
         const previewEndSvg = isDraggingNewPreviewArrow && arrowDragPosition
@@ -146,6 +131,6 @@ export function ArrowPreviewOverlay({
           />
         )
       })}
-    </svg>
+    </g>
   )
 }

@@ -76,6 +76,9 @@ export default function VolleyballLayout({
   // Only show on whiteboard page
   const isWhiteboardPage = pathname === '/'
   const showContextBar = isWhiteboardPage
+  const contentBackgroundColor = isWhiteboardPage
+    ? 'var(--background)'
+    : `color-mix(in oklch, var(--background) ${backgroundOpacity}%, transparent)`
 
   // Always reserve space for context bar to prevent layout jump
   // This keeps the layout stable when navigating between pages
@@ -83,11 +86,11 @@ export default function VolleyballLayout({
 
   return (
     <div className="h-dvh relative overflow-hidden bg-background">
-      <BackgroundShader />
+      {!isWhiteboardPage && <BackgroundShader />}
 
       <div
         className="relative h-dvh flex flex-col"
-        style={{ backgroundColor: `color-mix(in oklch, var(--background) ${backgroundOpacity}%, transparent)` }}
+        style={{ backgroundColor: contentBackgroundColor }}
       >
         {/* Desktop header nav */}
         <DesktopHeaderNav onOpenPrintDialog={() => setPrintDialogOpen(true)} />

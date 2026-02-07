@@ -1942,6 +1942,28 @@ export function VolleyballCourt({
           getRoleColor={(role) => ROLE_INFO[role].color}
         />
 
+        <ArrowPreviewOverlay
+          activeRoles={activeRoles}
+          displayPositions={displayPositions}
+          draggingRole={draggingRole}
+          dragPosition={dragPosition}
+          draggingArrowRole={draggingArrowRole}
+          arrowDragPosition={arrowDragPosition}
+          arrows={arrows}
+          previewVisible={previewVisible}
+          tappedRole={tappedRole}
+          isMobile={isMobile}
+          showPosition={showPosition}
+          showPlayer={showPlayer}
+          tokenScale={tokenScale}
+          debugHitboxes={debugHitboxes}
+          toSvgCoords={toSvgCoords}
+          getPlayerInfo={getPlayerInfo}
+          onArrowChange={onArrowChange}
+          onArrowDragStart={handleArrowDragStart}
+          onPreviewHover={handlePreviewHover}
+        />
+
         {/* Players and arrow handles - rendered SECOND so they appear on top */}
         {activeRoles.map(role => {
           // --- HOME PLAYER ---
@@ -2273,31 +2295,6 @@ export function VolleyballCourt({
           />
         )}
       </svg>
-
-      <ArrowPreviewOverlay
-        viewBoxWidth={viewBoxWidth}
-        viewBoxY={vbY}
-        viewBoxHeight={vbH}
-        activeRoles={activeRoles}
-        displayPositions={displayPositions}
-        draggingRole={draggingRole}
-        dragPosition={dragPosition}
-        draggingArrowRole={draggingArrowRole}
-        arrowDragPosition={arrowDragPosition}
-        arrows={arrows}
-        previewVisible={previewVisible}
-        tappedRole={tappedRole}
-        isMobile={isMobile}
-        showPosition={showPosition}
-        showPlayer={showPlayer}
-        tokenScale={tokenScale}
-        debugHitboxes={debugHitboxes}
-        toSvgCoords={toSvgCoords}
-        getPlayerInfo={getPlayerInfo}
-        onArrowChange={onArrowChange}
-        onArrowDragStart={handleArrowDragStart}
-        onPreviewHover={handlePreviewHover}
-      />
 
       {/* Player Context UI - rendered outside SVG for proper popover/sheet behavior */}
       {onContextPlayerChange && (
