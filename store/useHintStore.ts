@@ -1,29 +1,21 @@
 'use client'
 
 import { create } from 'zustand'
-import { persist, createJSONStorage } from 'zustand/middleware'
+import { persist } from 'zustand/middleware'
+import { createSafeLocalStorage } from '@/store/safeStorage'
 
 interface HintState {
   arrowDragCount: number
   hasDeletedArrow: boolean
+  hasSeenGameTimeOnboarding: boolean
 
   // Actions
   incrementDragCount: () => void
   markDeleteLearned: () => void
+  markGameTimeOnboardingSeen: () => void
 
   // Computed helper
   shouldShowDeleteHint: () => boolean
-}
-
-const getStorage = () => {
-  if (typeof window === 'undefined') {
-    return {
-      getItem: () => null,
-      setItem: () => {},
-      removeItem: () => {},
-    }
-  }
-  return window.localStorage
 }
 
 export const useHintStore = create<HintState>()(
@@ -31,12 +23,15 @@ export const useHintStore = create<HintState>()(
     (set, get) => ({
       arrowDragCount: 0,
       hasDeletedArrow: false,
+      hasSeenGameTimeOnboarding: false,
 
       incrementDragCount: () => set((state) => ({
         arrowDragCount: state.arrowDragCount + 1
       })),
 
       markDeleteLearned: () => set({ hasDeletedArrow: true }),
+
+      markGameTimeOnboardingSeen: () => set({ hasSeenGameTimeOnboarding: true }),
 
       shouldShowDeleteHint: () => {
         const { arrowDragCount, hasDeletedArrow } = get()
@@ -45,7 +40,7 @@ export const useHintStore = create<HintState>()(
     }),
     {
       name: 'volleyball-hints',
-      storage: createJSONStorage(() => getStorage()),
+      storage: createSafeLocalStorage<HintState>(),
     }
   )
 )

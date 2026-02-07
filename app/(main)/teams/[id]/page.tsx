@@ -4,22 +4,20 @@ import { use, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '@/convex/_generated/api'
-import { SafeAreaHeader } from '@/components/ui/SafeAreaHeader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import Link from 'next/link'
 
 interface TeamPageProps {
-  params: Promise<{ slug: string }>
+  params: Promise<{ id: string }>
 }
 
 export default function TeamEditPage({ params }: TeamPageProps) {
-  const { slug } = use(params)
+  const { id } = use(params)
   const router = useRouter()
 
-  // Fetch team data
-  const team = useQuery(api.teams.getBySlug, { slug })
+  // Fetch team data by ID
+  const team = useQuery(api.teams.getBySlugOrId, { identifier: id })
   const updateTeam = useMutation(api.teams.update)
   const updateRoster = useMutation(api.teams.updateRoster)
   const deleteTeam = useMutation(api.teams.remove)
@@ -43,22 +41,8 @@ export default function TeamEditPage({ params }: TeamPageProps) {
   if (team === undefined) {
     return (
       <main className="min-h-screen bg-gradient-to-b from-background to-muted/30">
-        <SafeAreaHeader>
-          <div className="container mx-auto px-4 py-3">
-            <div className="flex items-center gap-3">
-              <Link href="/teams">
-                <Button variant="ghost" size="sm">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
-                    <path d="m15 18-6-6 6-6"/>
-                  </svg>
-                  Back
-                </Button>
-              </Link>
-              <h1 className="text-xl font-bold">Loading...</h1>
-            </div>
-          </div>
-        </SafeAreaHeader>
-        <div className="container mx-auto px-4 py-8 text-center">
+        <div className="container mx-auto px-4 py-8 text-center space-y-4">
+          <h1 className="text-xl font-bold">Loading...</h1>
           <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
         </div>
       </main>
@@ -68,22 +52,8 @@ export default function TeamEditPage({ params }: TeamPageProps) {
   if (team === null) {
     return (
       <main className="min-h-screen bg-gradient-to-b from-background to-muted/30">
-        <SafeAreaHeader>
-          <div className="container mx-auto px-4 py-3">
-            <div className="flex items-center gap-3">
-              <Link href="/teams">
-                <Button variant="ghost" size="sm">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
-                    <path d="m15 18-6-6 6-6"/>
-                  </svg>
-                  Back
-                </Button>
-              </Link>
-              <h1 className="text-xl font-bold">Team Not Found</h1>
-            </div>
-          </div>
-        </SafeAreaHeader>
-        <div className="container mx-auto px-4 py-8 text-center">
+        <div className="container mx-auto px-4 py-8 text-center space-y-2">
+          <h1 className="text-xl font-bold">Team Not Found</h1>
           <p className="text-muted-foreground">This team doesn't exist or has been deleted.</p>
         </div>
       </main>
@@ -135,28 +105,8 @@ export default function TeamEditPage({ params }: TeamPageProps) {
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-background to-muted/30">
-      <SafeAreaHeader>
-        <div className="container mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Link href="/teams">
-                <Button variant="ghost" size="sm">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
-                    <path d="m15 18-6-6 6-6"/>
-                  </svg>
-                  Back
-                </Button>
-              </Link>
-              <h1 className="text-xl font-bold">Edit Team</h1>
-            </div>
-            <Link href={`/?team=${slug}`}>
-              <Button size="sm">Open Whiteboard</Button>
-            </Link>
-          </div>
-        </div>
-      </SafeAreaHeader>
-
       <div className="container mx-auto px-4 py-6 max-w-2xl space-y-6">
+        <h1 className="text-xl font-bold">Edit Team</h1>
         {/* Team Name */}
         <Card>
           <CardHeader>

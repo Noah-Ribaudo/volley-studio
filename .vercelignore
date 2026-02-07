@@ -1,0 +1,19 @@
+# Build artifacts and backups
+.next
+.next.bak
+.next.old
+out
+
+# Dependencies and VCS metadata
+node_modules
+.git
+
+# Local tooling outputs
+.playwright-mcp
+test-results
+playwright-report
+output
+
+# Local environment files
+.env
+.env.*

@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { auth } from "./auth";
 import { Id } from "./_generated/dataModel";
-import { MutationCtx } from "./_generated/server";
+import { MutationCtx, QueryCtx } from "./_generated/server";
 import { Scrypt } from "lucia";
 
 // Password hashing using Scrypt (same algorithm used by @convex-dev/auth)
@@ -36,7 +36,7 @@ type TeamDoc = {
   slug: string;
   password?: string;
   archived: boolean;
-  roster: Array<{ id: string; name: string; number?: number }>;
+  roster: Array<{ id: string; name?: string; number?: number }>;
   lineups: Array<{
     id: string;
     name: string;
@@ -57,10 +57,16 @@ function sanitizeTeam(team: TeamDoc) {
   };
 }
 
+type TeamCtx = MutationCtx | QueryCtx;
+
+function canAccessTeam(team: TeamDoc, userId: Id<"users">): boolean {
+  return team.userId === userId;
+}
+
 // Helper to verify the current user owns the team
 // Returns the userId and team if authorized
 // Throws an error if not authenticated or not the owner
-async function assertTeamOwner(ctx: MutationCtx, teamId: Id<"teams">) {
+async function assertTeamOwner(ctx: TeamCtx, teamId: Id<"teams">) {
   const userId = await auth.getUserId(ctx);
   if (!userId) {
     throw new Error("Not authenticated");
@@ -71,9 +77,7 @@ async function assertTeamOwner(ctx: MutationCtx, teamId: Id<"teams">) {
     throw new Error("Team not found");
   }
 
-  // If team has an owner, verify it's the current user
-  // Teams without owners are allowed (legacy support during migration)
-  if (team.userId && team.userId !== userId) {
+  if (!canAccessTeam(team, userId)) {
     throw new Error("Unauthorized: You don't own this team");
   }
 
@@ -84,9 +88,15 @@ async function assertTeamOwner(ctx: MutationCtx, teamId: Id<"teams">) {
 export const list = query({
   args: {},
   handler: async (ctx) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) {
+      return [];
+    }
+
     const teams = await ctx.db
       .query("teams")
-      .withIndex("by_archived", (q) => q.eq("archived", false))
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .filter((q) => q.eq(q.field("archived"), false))
       .collect();
     return teams.map(sanitizeTeam);
   },
@@ -96,11 +106,16 @@ export const list = query({
 export const getBySlug = query({
   args: { slug: v.string() },
   handler: async (ctx, args) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) {
+      return null;
+    }
+
     const team = await ctx.db
       .query("teams")
       .withIndex("by_slug", (q) => q.eq("slug", args.slug))
       .first();
-    if (!team) return null;
+    if (!team || !canAccessTeam(team, userId)) return null;
     return sanitizeTeam(team);
   },
 });
@@ -109,8 +124,41 @@ export const getBySlug = query({
 export const get = query({
   args: { id: v.id("teams") },
   handler: async (ctx, args) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) {
+      return null;
+    }
+
     const team = await ctx.db.get(args.id);
-    if (!team) return null;
+    if (!team || !canAccessTeam(team, userId)) return null;
+    return sanitizeTeam(team);
+  },
+});
+
+// Get a team by slug or ID (sanitized - no password)
+export const getBySlugOrId = query({
+  args: { identifier: v.string() },
+  handler: async (ctx, args) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) {
+      return null;
+    }
+
+    let team: TeamDoc | null = null;
+    try {
+      team = await ctx.db.get(args.identifier as Id<"teams">);
+    } catch {
+      team = null;
+    }
+
+    if (!team) {
+      team = await ctx.db
+        .query("teams")
+        .withIndex("by_slug", (q) => q.eq("slug", args.identifier))
+        .first();
+    }
+
+    if (!team || !canAccessTeam(team, userId)) return null;
     return sanitizeTeam(team);
   },
 });
@@ -119,19 +167,28 @@ export const get = query({
 export const search = query({
   args: { query: v.string() },
   handler: async (ctx, args) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) {
+      return [];
+    }
+
     let teams;
     if (!args.query.trim()) {
-      // Return all non-archived teams if no query
       teams = await ctx.db
         .query("teams")
-        .withIndex("by_archived", (q) => q.eq("archived", false))
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .filter((q) => q.eq(q.field("archived"), false))
         .collect();
     } else {
-      // Use search index for name matching
       teams = await ctx.db
         .query("teams")
         .withSearchIndex("search_name", (q) => q.search("name", args.query))
-        .filter((q) => q.eq(q.field("archived"), false))
+        .filter((q) =>
+          q.and(
+            q.eq(q.field("archived"), false),
+            q.eq(q.field("userId"), userId)
+          )
+        )
         .collect();
     }
     return teams.map(sanitizeTeam);
@@ -156,6 +213,7 @@ export const listMyTeams = query({
 });
 
 // Create a new team (password is hashed before storing)
+// Requires authentication - no anonymous teams allowed
 export const create = mutation({
   args: {
     name: v.string(),
@@ -163,8 +221,11 @@ export const create = mutation({
     password: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    // Get the current user (if signed in)
+    // Require authentication to create teams
     const userId = await auth.getUserId(ctx);
+    if (!userId) {
+      throw new Error("Sign in required to create a team");
+    }
 
     // Check if slug already exists
     const existing = await ctx.db
@@ -183,7 +244,7 @@ export const create = mutation({
     }
 
     return await ctx.db.insert("teams", {
-      userId: userId ?? undefined,
+      userId,
       name: args.name,
       slug: args.slug,
       password: hashedPassword,
@@ -243,7 +304,7 @@ export const updateRoster = mutation({
     roster: v.array(
       v.object({
         id: v.string(),
-        name: v.string(),
+        name: v.optional(v.string()),
         number: v.optional(v.number()),
       })
     ),
@@ -296,8 +357,7 @@ export const verifyPassword = mutation({
     password: v.string(),
   },
   handler: async (ctx, args) => {
-    const team = await ctx.db.get(args.id);
-    if (!team) return false;
+    const { team } = await assertTeamOwner(ctx, args.id);
 
     // No password set means access is granted
     if (!team.password || team.password.trim() === "") {
@@ -324,13 +384,48 @@ export const verifyPassword = mutation({
 
 // Clone a team by ID (for importing via team code)
 // Note: password is NOT copied to cloned team
+// Requires authentication - no anonymous teams allowed
 export const clone = mutation({
-  args: { id: v.id("teams") },
+  args: {
+    id: v.id("teams"),
+    password: v.optional(v.string()),
+  },
   handler: async (ctx, args) => {
+    // Require authentication to import teams
     const userId = await auth.getUserId(ctx);
+    if (!userId) {
+      throw new Error("Sign in required to import a team");
+    }
+
     const original = await ctx.db.get(args.id);
     if (!original) {
       throw new Error("Team not found");
+    }
+
+    if (original.password && original.password.trim() !== "") {
+      const providedPassword = args.password?.trim();
+      if (!providedPassword) {
+        throw new Error("Team password required");
+      }
+
+      let isValidPassword = false;
+      if (isHashed(original.password)) {
+        isValidPassword = await verifyPasswordHash(
+          original.password,
+          providedPassword
+        );
+      } else {
+        isValidPassword = original.password === providedPassword;
+        if (isValidPassword) {
+          await ctx.db.patch(args.id, {
+            password: await hashPassword(providedPassword),
+          });
+        }
+      }
+
+      if (!isValidPassword) {
+        throw new Error("Invalid team password");
+      }
     }
 
     // Generate a unique slug for the copy
@@ -351,7 +446,7 @@ export const clone = mutation({
     // Create the copy with a new name, owned by current user
     // Note: password is intentionally NOT copied
     const newTeamId = await ctx.db.insert("teams", {
-      userId: userId ?? undefined,
+      userId,
       name: `${original.name} (Copy)`,
       slug,
       archived: false,
@@ -378,17 +473,5 @@ export const clone = mutation({
     }
 
     return newTeamId;
-  },
-});
-
-// Debug query - lists all teams without any index (sanitized - no password)
-export const debugList = query({
-  args: {},
-  handler: async (ctx) => {
-    const allTeams = await ctx.db.query("teams").collect();
-    return {
-      count: allTeams.length,
-      teams: allTeams.map(sanitizeTeam),
-    };
   },
 });

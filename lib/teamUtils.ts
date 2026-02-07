@@ -19,11 +19,11 @@ export function generateSlug(name: string): string {
 /**
  * Get the shareable URL for a team
  */
-export function getTeamShareUrl(teamSlug: string): string {
+export function getTeamShareUrl(teamId: string): string {
   if (typeof window === 'undefined') {
-    return `/teams/${teamSlug}`
+    return `/teams/${teamId}`
   }
-  return `${window.location.origin}/teams/${teamSlug}`
+  return `${window.location.origin}/teams/${teamId}`
 }
 
 /**

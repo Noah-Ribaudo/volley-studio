@@ -1,5 +1,6 @@
 'use client'
 
+import { useId } from 'react'
 import { Rotation, Role, ROLES, ROLE_INFO } from '@/lib/types'
 import { getRoleZone } from '@/lib/rotations'
 import { useThemeStore } from '@/store/useThemeStore'
@@ -70,7 +71,9 @@ export function CourtGrid({ width, height, showZones = true, rotation, baseOrder
   }
 
   // Generate unique IDs for gradients to avoid conflicts when multiple courts are rendered
-  const gradientId = `court-vignette-${Math.random().toString(36).slice(2, 9)}`
+  // Using useId() for SSR-safe stable IDs
+  const id = useId()
+  const gradientId = `court-vignette-${id.replace(/:/g, '')}`
 
   return (
     <g className="court-grid">

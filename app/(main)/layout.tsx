@@ -2,12 +2,11 @@
 
 import { useCallback, useState } from 'react'
 import { usePathname } from 'next/navigation'
-import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar'
-import { VolleyballSidebar } from '@/components/volleyball/VolleyballSidebar'
 import { MobileBottomNav } from '@/components/volleyball/MobileBottomNav'
 import { DesktopHeaderNav } from '@/components/volleyball/DesktopHeaderNav'
 import { MobileContextBar } from '@/components/controls'
 import { useAppStore, getCurrentPositions } from '@/store/useAppStore'
+import { useGameTimeStore } from '@/store/useGameTimeStore'
 import { Button } from '@/components/ui/button'
 import { PrinterIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -15,6 +14,7 @@ import { PrintDialog } from '@/components/print'
 import { getActiveAssignments } from '@/lib/lineups'
 import type { Rotation, Phase, PositionCoordinates, RallyPhase } from '@/lib/types'
 import { RALLY_PHASES, isRallyPhase as checkIsRallyPhase } from '@/lib/types'
+import { BackgroundShader } from '@/components/BackgroundShader'
 
 export default function VolleyballLayout({
   children,
@@ -30,7 +30,7 @@ export default function VolleyballLayout({
   const setPhase = useAppStore((state) => state.setPhase)
   const nextPhase = useAppStore((state) => state.nextPhase)
   const prevPhase = useAppStore((state) => state.prevPhase)
-  const navMode = useAppStore((state) => state.navMode)
+  const backgroundOpacity = useAppStore((state) => state.backgroundOpacity)
 
   // Data for print dialog
   const currentTeam = useAppStore((state) => state.currentTeam)
@@ -57,8 +57,12 @@ export default function VolleyballLayout({
     ? (visiblePhases ? RALLY_PHASES.filter(p => visiblePhases.has(p)) : RALLY_PHASES)
     : RALLY_PHASES
 
-  // GameTime has its own mobile-first layout without sidebar
-  if (pathname?.startsWith('/gametime')) {
+  // GameTime bypasses normal layout only when actively playing in fullscreen
+  const gamePhase = useGameTimeStore((s) => s.phase)
+  const isFullscreen = useGameTimeStore((s) => s.isFullscreen)
+  const isGameTimeFullscreen = pathname?.startsWith('/gametime') && gamePhase === 'playing' && isFullscreen
+
+  if (isGameTimeFullscreen) {
     return <>{children}</>
   }
 
@@ -71,12 +75,16 @@ export default function VolleyballLayout({
   // This keeps the layout stable when navigating between pages
   const paddingClass = '[padding-bottom:calc(6rem+env(safe-area-inset-bottom,0px))]'
 
-  // Header mode - no sidebar, just top nav on desktop
-  if (navMode === 'header') {
-    return (
-      <div className="h-dvh flex flex-col">
+  return (
+    <div className="h-dvh relative overflow-hidden bg-background">
+      <BackgroundShader />
+
+      <div
+        className="relative h-dvh flex flex-col"
+        style={{ backgroundColor: `color-mix(in oklch, var(--background) ${backgroundOpacity}%, transparent)` }}
+      >
         {/* Desktop header nav */}
-        <DesktopHeaderNav />
+        <DesktopHeaderNav onOpenPrintDialog={() => setPrintDialogOpen(true)} />
 
         {/* Mobile top header - minimal, just for context */}
         <header className="md:hidden flex items-center justify-between h-12 px-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
@@ -96,9 +104,11 @@ export default function VolleyballLayout({
 
         {/* Main content with bottom padding for mobile nav + context bar */}
         <main
-          className={`flex-1 min-h-0 overflow-auto md:pb-0 ${paddingClass}`}
+          className={`flex flex-col flex-1 min-h-0 overflow-auto md:pb-0 ${paddingClass}`}
         >
-          {children}
+          <div className="mx-auto w-full max-w-[1200px] flex flex-col flex-1 min-h-0">
+            {children}
+          </div>
         </main>
 
         {/* Mobile contextual bar (phase/rotation) - only on whiteboard */}
@@ -117,7 +127,7 @@ export default function VolleyballLayout({
         {/* Mobile bottom navigation (4 tabs) */}
         <MobileBottomNav />
 
-        {/* Print Dialog (mobile only in header mode) */}
+        {/* Print Dialog */}
         <PrintDialog
           open={printDialogOpen}
           onOpenChange={setPrintDialogOpen}
@@ -131,71 +141,6 @@ export default function VolleyballLayout({
           visiblePhases={phasesToShow as RallyPhase[]}
         />
       </div>
-    )
-  }
-
-  // Sidebar mode - original layout with sidebar
-  return (
-    <SidebarProvider defaultOpen={true}>
-      <VolleyballSidebar />
-      <SidebarInset className="h-dvh flex flex-col">
-        {/* Mobile top header with menu button */}
-        <header className="md:hidden flex items-center justify-between h-12 px-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-          <div className="flex items-center">
-            <SidebarTrigger className="h-8 w-8" />
-            <span className="ml-2 font-medium text-sm">Volleyball</span>
-          </div>
-          {isWhiteboardPage && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => setPrintDialogOpen(true)}
-              aria-label="Print rotations"
-            >
-              <HugeiconsIcon icon={PrinterIcon} className="h-4 w-4" />
-            </Button>
-          )}
-        </header>
-        {/* Floating toggle button - desktop only */}
-        <SidebarTrigger
-          className="hidden md:flex absolute top-2 left-2 z-50 h-8 w-8 rounded-lg bg-background/80 backdrop-blur-sm border shadow-sm hover:bg-accent"
-        />
-        {/* Main content with bottom padding for mobile nav + context bar */}
-        <main
-          className={`flex-1 min-h-0 overflow-auto md:pb-0 ${paddingClass}`}
-        >
-          {children}
-        </main>
-        {/* Mobile contextual bar (phase/rotation) - only on whiteboard */}
-        {showContextBar && (
-          <MobileContextBar
-            currentRotation={currentRotation}
-            currentPhase={currentPhase}
-            onPhaseChange={setPhase}
-            onRotationChange={setRotation}
-            onNext={nextPhase}
-            onPrev={prevPhase}
-            visiblePhases={visiblePhases}
-          />
-        )}
-        {/* Mobile bottom navigation (4 tabs) */}
-        <MobileBottomNav />
-
-        {/* Print Dialog (mobile only in sidebar mode) */}
-        <PrintDialog
-          open={printDialogOpen}
-          onOpenChange={setPrintDialogOpen}
-          currentRotation={currentRotation}
-          currentPhase={currentPhase}
-          getPositionsForRotation={getPositionsForRotation}
-          roster={currentTeam?.roster}
-          assignments={currentTeam ? getActiveAssignments(currentTeam) : undefined}
-          baseOrder={baseOrder}
-          teamName={currentTeam?.name}
-          visiblePhases={phasesToShow as RallyPhase[]}
-        />
-      </SidebarInset>
-    </SidebarProvider>
+    </div>
   )
 }

@@ -10,8 +10,7 @@ const TEXTURE_PREF_KEY = "texture-mode"
 const SLOW_TYPES = new Set(["slow-2g", "2g", "3g"])
 
 export const hiTextureSources = [
-  "/textures/charcoal-soft.webp",
-  "/textures/charcoal-dust.webp",
+  // Keep empty until high-fidelity textures are shipped in /public/textures.
 ]
 
 const getConnection = () => {
@@ -77,6 +76,10 @@ export const ensureTextureMode = () => {
     storeTextureMode("low")
     return
   }
+  if (hiTextureSources.length === 0) {
+    storeTextureMode("low")
+    return
+  }
 
   requestIdle(() => {
     preloadTextures(hiTextureSources).then((ready) => {
@@ -86,7 +89,6 @@ export const ensureTextureMode = () => {
     })
   })
 }
-
 
 
 

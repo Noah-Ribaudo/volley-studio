@@ -1,5 +1,14 @@
 import type { Metadata, Viewport } from "next";
 import { Barlow, Barlow_Condensed } from "next/font/google";
+import { GeistSans } from "geist/font/sans";
+import { GeistMono } from "geist/font/mono";
+import {
+  GeistPixelSquare,
+  GeistPixelGrid,
+  GeistPixelCircle,
+  GeistPixelTriangle,
+  GeistPixelLine,
+} from "geist/font/pixel";
 import "./globals.css";
 import TextureModeLoader from "@/components/TextureModeLoader";
 import ThemeInitializer from "@/components/ThemeInitializer";
@@ -64,7 +73,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" data-texture="low" data-theme="dark" suppressHydrationWarning className={`${barlow.variable} ${barlowCondensed.variable}`}>
+    <html lang="en" data-texture="low" data-theme="dark" suppressHydrationWarning className={`${barlow.variable} ${barlowCondensed.variable} ${GeistSans.variable} ${GeistMono.variable} ${GeistPixelSquare.variable} ${GeistPixelGrid.variable} ${GeistPixelCircle.variable} ${GeistPixelTriangle.variable} ${GeistPixelLine.variable}`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>

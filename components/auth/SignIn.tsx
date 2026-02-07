@@ -82,6 +82,7 @@ export function SignInWithPassword() {
         <input
           type="email"
           name="email"
+          aria-label="Email"
           placeholder="Email"
           required
           className="w-full px-4 py-3 bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -91,6 +92,7 @@ export function SignInWithPassword() {
         <input
           type="password"
           name="password"
+          aria-label="Password"
           placeholder="Password"
           required
           minLength={8}

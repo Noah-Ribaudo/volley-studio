@@ -1,0 +1,282 @@
+.printRoot {
+  --page-width: 8.5in;
+  --page-height: 11in;
+  --page-padding: 0.5in;
+  --page-content-width: calc(var(--page-width) - (2 * var(--page-padding)));
+  --page-content-height: calc(var(--page-height) - (2 * var(--page-padding)));
+  --page-header-height: 0in;
+  --grid-gap: 0.2in;
+  --section-gap: 0.16in;
+  --preview-scale: 1;
+
+  color: #111827;
+  font-family: var(--font-sans, system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif);
+}
+
+.screenOnly {
+  display: block;
+}
+
+.printOnly {
+  display: none;
+}
+
+.previewStack {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.previewPage {
+  width: calc(var(--page-width) * var(--preview-scale));
+  height: calc(var(--page-height) * var(--preview-scale));
+}
+
+.previewPageInner {
+  width: var(--page-width);
+  height: var(--page-height);
+  transform: scale(var(--preview-scale));
+  transform-origin: top left;
+}
+
+.page {
+  box-sizing: border-box;
+  width: var(--page-width);
+  height: var(--page-height);
+  padding: var(--page-padding);
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.14);
+  display: flex;
+  flex-direction: column;
+  gap: var(--section-gap);
+}
+
+.pageHeader {
+  height: var(--page-header-height);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.05in;
+  min-height: 0;
+}
+
+.pageTitle {
+  font-size: 14pt;
+  font-weight: 600;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pageSubtitle {
+  font-size: 9pt;
+  color: #6b7280;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pageGrid {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  gap: var(--grid-gap);
+}
+
+.gridStandard {
+  grid-template-columns: repeat(2, 1fr);
+  grid-auto-rows: calc((var(--page-content-height) - var(--page-header-height) - var(--section-gap) - var(--grid-gap)) / 2);
+}
+
+.gridCompact {
+  grid-template-columns: repeat(3, 1fr);
+  grid-auto-rows: calc((var(--page-content-height) - var(--page-header-height) - var(--section-gap) - var(--grid-gap)) / 2);
+}
+
+.gridSingle {
+  grid-template-columns: 1fr;
+  grid-auto-rows: calc(var(--page-content-height) - var(--page-header-height) - var(--section-gap));
+}
+
+.card {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 0.12in;
+  display: flex;
+  flex-direction: column;
+  gap: 0.08in;
+  background: #ffffff;
+  min-height: 0;
+}
+
+.cardStandard {
+  --card-header-height: 0.55in;
+  --legend-height: 0.95in;
+  --legend-font: 7pt;
+  --title-font: 11pt;
+  --subtitle-font: 7.5pt;
+}
+
+.cardCompact {
+  --card-header-height: 0.45in;
+  --legend-height: 0.7in;
+  --legend-font: 6.5pt;
+  --title-font: 10pt;
+  --subtitle-font: 7pt;
+}
+
+.cardSingle {
+  --card-header-height: 0.7in;
+  --legend-height: 1.1in;
+  --legend-font: 8pt;
+  --title-font: 14pt;
+  --subtitle-font: 9pt;
+}
+
+.cardHeader {
+  height: var(--card-header-height);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.04in;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 0.06in;
+}
+
+.cardTitle {
+  font-size: var(--title-font);
+  font-weight: 600;
+  color: #111827;
+  text-align: center;
+  line-height: 1.1;
+}
+
+.cardMeta {
+  font-size: var(--subtitle-font);
+  color: #6b7280;
+  text-align: center;
+  line-height: 1.1;
+}
+
+.cardTeam {
+  font-size: var(--subtitle-font);
+  color: #ea580c;
+  text-align: center;
+  font-weight: 600;
+}
+
+.courtWrap {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.courtSvg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.legend {
+  height: var(--legend-height);
+  border-top: 1px solid #f1f5f9;
+  padding-top: 0.06in;
+  overflow: hidden;
+}
+
+.legendGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: 1fr;
+  gap: 0.04in 0.08in;
+  font-size: var(--legend-font);
+  color: #4b5563;
+  height: 100%;
+}
+
+.legendRow {
+  display: grid;
+  grid-template-columns: 0.12in auto auto 1fr;
+  align-items: center;
+  gap: 0.05in;
+  min-width: 0;
+}
+
+.legendDot {
+  width: 0.12in;
+  height: 0.12in;
+  border-radius: 999px;
+}
+
+.legendRole {
+  font-weight: 600;
+  color: #374151;
+}
+
+.legendNumber {
+  color: #6b7280;
+}
+
+.legendName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #4b5563;
+}
+
+@media print {
+  @page {
+    size: letter;
+    margin: 0;
+  }
+
+  .printRoot {
+    background: #ffffff;
+    color: #111827;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .printRoot * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .previewStack {
+    gap: 0;
+  }
+
+  .previewPage {
+    width: var(--page-width);
+    height: var(--page-height);
+  }
+
+  .previewPageInner {
+    transform: none;
+  }
+
+  .screenOnly {
+    display: none;
+  }
+
+  .printOnly {
+    display: block;
+  }
+
+  .page {
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    break-after: page;
+    page-break-after: always;
+  }
+
+  .page:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+}

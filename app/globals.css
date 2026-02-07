@@ -25,11 +25,11 @@
   /* Role colors - colorblind-optimized accents */
   --c-setter: oklch(55% 0.22 300);      /* Purple - Setter */
   --c-oh1: oklch(55% 0.22 250);         /* Blue - Outside Hitter 1 */
-  --c-oh2: oklch(65% 0.18 90);          /* Yellow - Outside Hitter 2 */
-  --c-mb1: oklch(70% 0.18 70);          /* Orange - Middle Blocker 1 */
+  --c-oh2: oklch(70% 0.18 70);          /* Orange - Outside Hitter 2 */
+  --c-mb1: oklch(50% 0.2 150);          /* Green - Middle Blocker 1 */
   --c-mb2: oklch(60% 0.18 200);         /* Teal - Middle Blocker 2 */
   --c-opp: oklch(70% 0.18 350);         /* Pink - Opposite */
-  --c-libero: oklch(50% 0.2 150);       /* Green - Libero */
+  --c-libero: oklch(65% 0.18 90);       /* Yellow - Libero */
 
   /* Semantic colors */
   --c-destructive: oklch(55% 0.22 25);  /* Red for errors/destructive actions */
@@ -75,6 +75,12 @@
   --font-sans: var(--font-barlow), -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
   --font-display: var(--font-barlow-condensed), var(--font-barlow), sans-serif;
   --tracking-tight: -0.02em;
+
+  /* Scrollbars */
+  --scrollbar-track: color-mix(in oklch, var(--c-bg) 92%, var(--c-border));
+  --scrollbar-thumb: color-mix(in oklch, var(--c-muted) 35%, var(--c-border));
+  --scrollbar-thumb-hover: color-mix(in oklch, var(--c-muted) 55%, var(--c-border));
+  --scrollbar-thumb-active: color-mix(in oklch, var(--c-muted) 75%, var(--c-border));
 }
 
 /* Dark theme */
@@ -419,6 +425,39 @@
    ANIMATIONS
    ============================================================================= */
 
+/* =============================================================================
+   SCROLLBARS
+   ============================================================================= */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb);
+  border-radius: 999px;
+  border: 3px solid var(--scrollbar-track);
+  min-height: 24px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover);
+}
+
+*::-webkit-scrollbar-thumb:active {
+  background-color: var(--scrollbar-thumb-active);
+}
+
 /* Hide scrollbar for horizontal scroll containers */
 .scrollbar-hide {
   -ms-overflow-style: none;
@@ -430,62 +469,3 @@
 
 /* Note: Phase carousel animations moved to Motion in useCarouselAnimation.ts */
 /* Note: Fade animations like fadeIn, floatIn, bob were unused and removed */
-
-/* =============================================================================
-   PRINT STYLES
-   ============================================================================= */
-
-@media print {
-  /* Hide non-print elements */
-  .no-print,
-  header,
-  nav,
-  footer,
-  .print-hide {
-    display: none !important;
-  }
-
-  /* Reset backgrounds for printing */
-  body {
-    background: white !important;
-    color: black !important;
-  }
-
-  /* Print-specific card styling */
-  .print-card {
-    page-break-inside: avoid;
-    break-inside: avoid;
-  }
-
-  /* Ensure SVGs render properly */
-  svg {
-    print-color-adjust: exact;
-    -webkit-print-color-adjust: exact;
-  }
-
-  /* Player tokens - ensure visibility */
-  .player-token {
-    print-color-adjust: exact;
-    -webkit-print-color-adjust: exact;
-  }
-
-  /* Force all elements to use exact colors */
-  * {
-    print-color-adjust: exact;
-    -webkit-print-color-adjust: exact;
-  }
-
-  /* Page setup */
-  @page {
-    margin: 0.5in;
-    size: letter;
-  }
-
-  /* Mobile print: single column, larger cards */
-  @media (max-width: 768px) {
-    .grid {
-      grid-template-columns: 1fr !important;
-      gap: 1rem !important;
-    }
-  }
-}

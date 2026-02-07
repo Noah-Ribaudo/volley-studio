@@ -51,14 +51,16 @@ export function PositionSlot({
             'font-bold',
             isCompact ? 'text-xl' : 'text-2xl'
           )}>
-            #{player.number}
+            {player.number != null ? `#${player.number}` : player.name}
           </div>
-          <div className={cn(
-            'text-zinc-400 truncate max-w-full px-1',
-            isCompact ? 'text-[10px]' : 'text-xs'
-          )}>
-            {player.name}
-          </div>
+          {player.number != null && player.name && (
+            <div className={cn(
+              'text-zinc-400 truncate max-w-full px-1',
+              isCompact ? 'text-[10px]' : 'text-xs'
+            )}>
+              {player.name}
+            </div>
+          )}
         </>
       ) : (
         <>

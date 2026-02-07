@@ -4,27 +4,16 @@ import { use, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
 interface TeamPageProps {
-  params: Promise<{ slug: string }>
+  params: Promise<{ id: string }>
 }
 
 export default function TeamPage({ params }: TeamPageProps) {
-  const { slug } = use(params)
+  const { id } = use(params)
   const router = useRouter()
 
   useEffect(() => {
-    router.replace(`/volleyball?team=${encodeURIComponent(slug)}`)
-  }, [router, slug])
+    router.replace(`/teams/${encodeURIComponent(id)}`)
+  }, [router, id])
 
   return null
 }
-
-
-
-
-
-
-
-
-
-
-

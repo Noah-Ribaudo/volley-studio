@@ -2,10 +2,13 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { auth } from "./auth";
 import { Id } from "./_generated/dataModel";
-import { MutationCtx } from "./_generated/server";
+import { MutationCtx, QueryCtx } from "./_generated/server";
 
 // Helper to verify the current user owns the team
-async function assertTeamOwnerForLayout(ctx: MutationCtx, teamId: Id<"teams">) {
+async function assertTeamOwnerForLayout(
+  ctx: MutationCtx | QueryCtx,
+  teamId: Id<"teams">
+) {
   const userId = await auth.getUserId(ctx);
   if (!userId) {
     throw new Error("Not authenticated");
@@ -16,9 +19,7 @@ async function assertTeamOwnerForLayout(ctx: MutationCtx, teamId: Id<"teams">) {
     throw new Error("Team not found");
   }
 
-  // If team has an owner, verify it's the current user
-  // Teams without owners are allowed (legacy support during migration)
-  if (team.userId && team.userId !== userId) {
+  if (team.userId !== userId) {
     throw new Error("Unauthorized: You don't own this team");
   }
 
@@ -29,6 +30,12 @@ async function assertTeamOwnerForLayout(ctx: MutationCtx, teamId: Id<"teams">) {
 export const getByTeam = query({
   args: { teamId: v.id("teams") },
   handler: async (ctx, args) => {
+    try {
+      await assertTeamOwnerForLayout(ctx, args.teamId);
+    } catch {
+      return [];
+    }
+
     return await ctx.db
       .query("customLayouts")
       .withIndex("by_team", (q) => q.eq("teamId", args.teamId))
@@ -44,6 +51,12 @@ export const getByRotationPhase = query({
     phase: v.string(),
   },
   handler: async (ctx, args) => {
+    try {
+      await assertTeamOwnerForLayout(ctx, args.teamId);
+    } catch {
+      return null;
+    }
+
     return await ctx.db
       .query("customLayouts")
       .withIndex("by_team_rotation_phase", (q) =>
@@ -73,6 +86,7 @@ export const save = mutation({
           v.record(v.string(), v.object({ x: v.number(), y: v.number() }))
         ),
         statusFlags: v.optional(v.record(v.string(), v.array(v.string()))),
+        tagFlags: v.optional(v.record(v.string(), v.array(v.string()))),
         attackBallPosition: v.optional(
           v.union(v.object({ x: v.number(), y: v.number() }), v.null())
         ),
@@ -130,8 +144,7 @@ export const remove = mutation({
       throw new Error("Team not found");
     }
 
-    // If team has an owner, verify it's the current user
-    if (team.userId && team.userId !== userId) {
+    if (team.userId !== userId) {
       throw new Error("Unauthorized: You don't own this team");
     }
 

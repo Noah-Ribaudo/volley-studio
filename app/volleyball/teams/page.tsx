@@ -4,11 +4,13 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '@/convex/_generated/api'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { TeamCard, CreateTeamDialog, TeamSearchBar } from '@/components/team'
-import { SafeAreaHeader } from '@/components/ui/SafeAreaHeader'
 import Link from 'next/link'
+import { useAppStore } from '@/store/useAppStore'
+import type { Team } from '@/lib/types'
+import type { PresetSystem } from '@/lib/presetTypes'
 
 // Generate a URL-friendly slug from team name
 function generateSlug(name: string): string {
@@ -31,45 +33,42 @@ export default function TeamsPage() {
   const createTeam = useMutation(api.teams.create)
 
   const isLoading = teams === undefined
+  const setCurrentTeam = useAppStore((state) => state.setCurrentTeam)
 
   // Handle team creation
   const handleCreateTeam = async (name: string, password?: string) => {
     const slug = generateSlug(name)
-    await createTeam({ name, slug, password })
-    router.push(`/volleyball/teams/${slug}`)
+    const teamId = await createTeam({ name, slug, password })
+    router.push(`/teams/${teamId}`)
+  }
+
+  // Handle local-only team creation (no account)
+  const handleCreateLocalTeam = (name: string, _presetSystem?: PresetSystem) => {
+    const localTeam: Team = {
+      id: `local-${Date.now()}`,
+      name,
+      slug: generateSlug(name),
+      roster: [],
+      lineups: [{
+        id: 'default',
+        name: 'Default',
+        position_assignments: {},
+        created_at: new Date().toISOString(),
+      }],
+      active_lineup_id: 'default',
+      position_assignments: {},
+      created_at: new Date().toISOString(),
+    }
+    setCurrentTeam(localTeam)
+    router.push('/')
   }
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-background to-muted/30">
-      {/* Header */}
-      <SafeAreaHeader>
-        <div className="container mx-auto px-4 py-3">
-          <div className="flex items-center gap-3">
-            <Link href="/volleyball">
-              <Button variant="ghost" size="sm">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="mr-1"
-                >
-                  <path d="m15 18-6-6 6-6"/>
-                </svg>
-                Back
-              </Button>
-            </Link>
-            <h1 className="text-xl font-bold">Teams</h1>
-          </div>
-        </div>
-      </SafeAreaHeader>
-
       <div className="container mx-auto px-4 py-6 max-w-2xl space-y-4">
+        <Button asChild variant="ghost" size="sm">
+          <Link href="/">Back</Link>
+        </Button>
         {/* Search */}
         <TeamSearchBar
           value={searchQuery}
@@ -87,7 +86,10 @@ export default function TeamsPage() {
                     Start a new team to manage players and rotations
                   </p>
                 </div>
-                <CreateTeamDialog onCreateTeam={handleCreateTeam} />
+                <CreateTeamDialog
+                  onCreateTeam={handleCreateTeam}
+                  onCreateLocalTeam={handleCreateLocalTeam}
+                />
               </div>
             </CardContent>
           </Card>

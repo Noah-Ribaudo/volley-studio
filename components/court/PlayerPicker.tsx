@@ -76,15 +76,17 @@ export function PlayerPicker({ role, roster, assignments, onSelect, onClose }: P
                 >
                   <div className="flex items-center gap-3">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white ${roleInfo.bgColor}`}>
-                      #{player.number}
+                      {player.number != null ? `#${player.number}` : (player.name?.[0] ?? '?')}
                     </div>
                     <div className="text-left">
                       <div className="font-medium text-gray-900 dark:text-white">
-                        {player.name}
+                        {player.name ?? `#${player.number}`}
                       </div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">
-                        #{player.number}
-                      </div>
+                      {player.number != null && player.name && (
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                          #{player.number}
+                        </div>
+                      )}
                     </div>
                   </div>
                   {isSelected && (

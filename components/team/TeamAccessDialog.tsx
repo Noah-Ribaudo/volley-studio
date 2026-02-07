@@ -33,7 +33,7 @@ export function TeamAccessDialog({ team, open, onOpenChange }: TeamAccessDialogP
   const verifyPassword = useMutation(api.teams.verifyPassword)
 
   const handleViewOnly = () => {
-    router.push(`/teams/${team.slug}?viewOnly=true`)
+    router.push(`/teams/${team.id}?viewOnly=true`)
     onOpenChange(false)
   }
 
@@ -57,7 +57,7 @@ export function TeamAccessDialog({ team, open, onOpenChange }: TeamAccessDialogP
       })
 
       if (isValid) {
-        router.push(`/teams/${team.slug}?edit=true`)
+        router.push(`/teams/${team.id}?edit=true`)
         onOpenChange(false)
         setPassword('')
       } else {

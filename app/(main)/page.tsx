@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo, useRef, useCallback, useLayoutEffect, Suspense } from 'react'
+import { useEffect, useState, useMemo, useRef, useCallback, Suspense } from 'react'
 import { useAppStore, getCurrentPositions, getCurrentArrows, getCurrentTags, getActiveLineupPositionSource } from '@/store/useAppStore'
 import { VolleyballCourt } from '@/components/court'
 import { RosterManagementCard } from '@/components/roster'
@@ -90,6 +90,7 @@ function HomePageContent() {
     // Token tags
     localTagFlags,
     setTokenTags,
+    assignPlayerToRole,
     // Preview mode
     isPreviewingMovement,
     setPreviewingMovement,
@@ -129,42 +130,6 @@ function HomePageContent() {
     enabled: isMobile,
     threshold: 50,
   })
-
-  // Measure court container to calculate offset based on percentage
-  const courtContainerRef = useRef<HTMLDivElement>(null)
-  const [courtOffset, setCourtOffset] = useState(0)
-
-  // Calculate offset when visibility changes or on resize
-  useLayoutEffect(() => {
-    const updateOffset = () => {
-      if (!hideAwayTeam) {
-        setCourtOffset(0)
-        return
-      }
-
-      const container = courtContainerRef.current
-      if (!container) return
-
-      // Find the SVG inside the court container
-      const svg = container.querySelector('svg')
-      if (!svg) return
-
-      // Get the SVG's actual rendered height
-      const svgRect = svg.getBoundingClientRect()
-
-      // Hide configurable percentage of court height (away team is top half)
-      const offsetPercent = awayTeamHidePercent / 100
-      const offset = svgRect.height * offsetPercent
-
-      setCourtOffset(offset)
-    }
-
-    updateOffset()
-
-    // Also update on resize
-    window.addEventListener('resize', updateOffset)
-    return () => window.removeEventListener('resize', updateOffset)
-  }, [hideAwayTeam, awayTeamHidePercent])
 
   const [rosterSheetOpen, setRosterSheetOpen] = useState(false)
 
@@ -268,24 +233,9 @@ function HomePageContent() {
     isUsingPreset ? presetLayouts : undefined
   )
 
-  // When previewing movement, move players to their arrow endpoints
-  const effectivePositions = useMemo(() => {
-    if (!isPreviewingMovement) return positions
-
-    // Clone positions and replace with arrow endpoints where arrows exist
-    const previewPositions = { ...positions }
-    for (const role of ROLES) {
-      const arrowEnd = currentArrows[role]
-      if (arrowEnd && positions[role]) {
-        previewPositions[role] = arrowEnd
-      }
-    }
-    return previewPositions
-  }, [isPreviewingMovement, positions, currentArrows])
-
   // Positions are already in normalized format (0-1)
-  // Use effectivePositions which applies preview transformation when active
-  const normalizedPositions = effectivePositions
+  // Preview/playback is handled inside VolleyballCourt
+  const normalizedPositions = positions
 
   // Get arrow curve preferences for current rotation/phase
   const currentArrowCurves = arrowCurves[createRotationPhaseKey(currentRotation, currentPhase)] || {}
@@ -363,9 +313,9 @@ function HomePageContent() {
   const swipeOffset = swipeState.swiping ? swipeState.delta.x * 0.2 : 0
 
   return (
-    <div className="h-full bg-gradient-to-b from-background to-muted/30 flex flex-col overflow-hidden">
-      {/* Main Content Area - full screen */}
-      <div className="flex-1 min-h-0 overflow-hidden">
+    <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-gradient-to-b from-background to-muted/30">
+      {/* Main Content Area - fills available layout height */}
+      <div className="flex-1 min-h-0 h-full overflow-hidden">
         {/* Court Container - scales to fit available space */}
         <div className="w-full h-full sm:max-w-3xl mx-auto px-0 sm:px-2 relative">
           {/* Gradient overlay to fade out content behind the menu when away team is hidden */}
@@ -394,10 +344,8 @@ function HomePageContent() {
 
           {/* Court with swipe handlers for mobile */}
           <div
-            ref={courtContainerRef}
-            className="relative w-full h-full flex items-center justify-center py-2 sm:py-14"
+            className="relative w-full h-full box-border flex items-center justify-center py-2"
             style={{
-              ...(courtOffset > 0 ? { transform: `translateY(-${courtOffset}px)` } : {}),
               ...(swipeOffset !== 0 ? { transform: `translateX(${swipeOffset}px)` } : {}),
               transition: swipeState.swiping ? 'none' : 'transform 0.2s ease-out',
             }}
@@ -407,6 +355,8 @@ function HomePageContent() {
                 mode="whiteboard"
                 positions={positions}
                 awayPositions={awayPositions}
+                hideAwayTeam={hideAwayTeam}
+                awayTeamHidePercent={awayTeamHidePercent}
                 highlightedRole={highlightedRole}
                 rotation={currentRotation}
                 baseOrder={baseOrder}
@@ -478,17 +428,7 @@ function HomePageContent() {
                   setTokenTags(currentRotation, currentPhase, role, tags)
                 } : undefined}
                 onPlayerAssign={isEditingAllowed && currentTeam ? (role, playerId) => {
-                  // Update the team's active lineup with the new assignment
-                  const activeLineup = currentTeam.lineups.find(l => l.id === currentTeam.active_lineup_id)
-                  if (activeLineup) {
-                    const updatedAssignments = {
-                      ...activeLineup.position_assignments,
-                      [role]: playerId
-                    }
-                    // This will be handled by the team sync system
-                    // For now, just update locally through the store
-                    // TODO: Wire up to proper assignment change handler
-                  }
+                  assignPlayerToRole(role, playerId)
                 } : undefined}
               />
 

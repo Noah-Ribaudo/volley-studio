@@ -9,6 +9,8 @@
 
 # next.js
 /.next/
+/.next.bak/
+/.next.old/
 /out/
 
 # production
@@ -26,17 +28,20 @@ yarn-error.log*
 # local env files
 .env*.local
 .env
+.env.*
 
 # vercel
 .vercel
 
+# local tooling artifacts
+/.playwright-mcp/
+/test-results/
+/playwright-report/
+/output/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-# Environment files
-.env.prod
-.env.vercel
 
 # Environment files
 .env.prod

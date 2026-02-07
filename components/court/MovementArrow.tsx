@@ -172,7 +172,7 @@ export function MovementArrow({
           d={pathData}
           fill="none"
           stroke={debugHitboxes ? "rgba(57, 255, 20, 0.5)" : "transparent"}
-          strokeWidth={Math.max(20, strokeWidth * 4)}
+          strokeWidth={Math.max(30, strokeWidth * 6)}
           strokeLinecap="round"
           strokeLinejoin="round"
           style={{ pointerEvents: 'auto', cursor: 'pointer' }}
@@ -218,6 +218,8 @@ export function MovementArrow({
             pointerEvents: 'auto',
             touchAction: 'none'
           }}
+          onMouseEnter={onMouseEnter}
+          onMouseLeave={onMouseLeave}
           onMouseDown={(e) => {
             e.preventDefault()
             e.stopPropagation()
@@ -264,6 +266,7 @@ export function MovementArrow({
               touchAction: 'none'
             }}
             onMouseEnter={onMouseEnter}
+            onMouseLeave={onMouseLeave}
             onMouseDown={(e) => {
               e.preventDefault()
               e.stopPropagation()

@@ -1,13 +1,9 @@
 'use client'
 
-import { SafeAreaHeader } from '@/components/ui/SafeAreaHeader'
-
 import { useAppStore } from '@/store/useAppStore'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
-import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
-import Link from 'next/link'
 import {
   Select,
   SelectContent,
@@ -20,8 +16,13 @@ import { RALLY_PHASE_INFO, RallyPhase } from '@/lib/types'
 import type { LearningPanelPosition } from '@/lib/learning/types'
 import { cn } from '@/lib/utils'
 import ThemePicker from '@/components/ThemePicker'
-import { ArrowLeft01Icon, DragDropVerticalIcon } from "@hugeicons/core-free-icons"
+import { DragDropVerticalIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
+import dynamic from 'next/dynamic'
+
+const DevThemeSection = process.env.NODE_ENV === 'development'
+  ? dynamic(() => import('@/components/dev/DevThemeSection'), { ssr: false })
+  : () => null
 import {
   DndContext,
   closestCenter,
@@ -73,9 +74,6 @@ export default function SettingsPage() {
     // Debug
     debugHitboxes,
     setDebugHitboxes,
-    // Navigation
-    navMode,
-    setNavMode,
   } = useAppStore()
 
   // DnD sensors for phase reordering
@@ -104,24 +102,9 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
-      {/* Header */}
-      <SafeAreaHeader>
-        <div className="container mx-auto px-4 py-3">
-          <div className="flex items-center gap-3">
-            <Link href="/">
-              <Button variant="ghost" size="icon" className="min-w-11 min-h-11" aria-label="Back to whiteboard">
-                <HugeiconsIcon icon={ArrowLeft01Icon} className="h-5 w-5" />
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-xl font-bold text-primary">Settings</h1>
-              <p className="text-xs text-muted-foreground">Configure display and behavior</p>
-            </div>
-          </div>
-        </div>
-      </SafeAreaHeader>
-
       <div className="container mx-auto px-4 py-6 pb-32 max-w-2xl space-y-6">
+        {process.env.NODE_ENV === 'development' && <DevThemeSection />}
+
         {/* Appearance */}
         <Card>
           <CardHeader>
@@ -136,25 +119,8 @@ export default function SettingsPage() {
               </div>
               <ThemePicker />
             </div>
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label className="text-sm font-medium">Desktop Navigation</Label>
-                <p className="text-xs text-muted-foreground">Header bar or sidebar</p>
-              </div>
-              <Select
-                value={navMode}
-                onValueChange={(val) => setNavMode(val as 'sidebar' | 'header')}
-              >
-                <SelectTrigger className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="header">Header</SelectItem>
-                  <SelectItem value="sidebar">Sidebar</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </CardContent>
+
         </Card>
 
         {/* Display Options */}

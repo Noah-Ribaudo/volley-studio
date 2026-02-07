@@ -9,7 +9,10 @@
     "build": "next build",
     "build:prod": "convex deploy --cmd 'next build'",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed"
   },
   "dependencies": {
     "@auth/core": "^0.37.0",
@@ -44,6 +47,7 @@
     "cmdk": "^1.1.1",
     "convex": "^1.31.7",
     "facehash": "^0.0.5",
+    "geist": "^1.7.0",
     "lucide-react": "^0.556.0",
     "motion": "^12.29.2",
     "next": "^15.0.0",
@@ -57,6 +61,7 @@
     "zustand": "^5.0.9"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

@@ -2,6 +2,7 @@
 
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { createSafeLocalStorage } from '@/store/safeStorage'
 
 /**
  * Display settings store - controls visual appearance and display preferences.
@@ -40,6 +41,7 @@ export const useDisplayStore = create<DisplayState>()(
     }),
     {
       name: 'volleyball-display-settings',
+      storage: createSafeLocalStorage<any>(),
       partialize: (state) => ({
         showLibero: state.showLibero,
         showPosition: state.showPosition,

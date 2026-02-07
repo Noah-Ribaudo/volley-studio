@@ -51,6 +51,8 @@ import { PlayerContextUI } from '@/components/player-context'
 interface VolleyballCourtProps {
   positions: PositionCoordinates
   awayPositions?: PositionCoordinates
+  hideAwayTeam?: boolean
+  awayTeamHidePercent?: number
   highlightedRole?: Role | null
   /** The role with context UI open, or null if closed */
   contextPlayer?: Role | null
@@ -117,6 +119,8 @@ interface VolleyballCourtProps {
   onManageRoster?: () => void
   // Debug mode: show hit boxes with neon green highlight
   debugHitboxes?: boolean
+  // Debug overlay (developer HUD)
+  debugOverlay?: boolean
   // Animation trigger - incrementing counter to trigger bezier path animation
   animationTrigger?: number
   // Whether we're in preview mode (showing players at arrow endpoints after animation)
@@ -129,9 +133,31 @@ interface VolleyballCourtProps {
   onPlayerAssign?: (role: Role, playerId: string) => void
 }
 
+type PlayAnimState = {
+  role: Role
+  start: Position
+  end: Position
+  control: Position | null
+  length: number
+  distance: number
+  currentSpeed: number
+  targetSpeed: number
+  offset: Position
+  offsetVel: Position
+  done: boolean
+}
+
+type LockedPath = {
+  start: Position
+  end: Position
+  control: Position | null
+}
+
 export function VolleyballCourt({
   positions,
   awayPositions,
+  hideAwayTeam = false,
+  awayTeamHidePercent = 0,
   highlightedRole = null,
   contextPlayer = null,
   onContextPlayerChange,
@@ -175,6 +201,7 @@ export function VolleyballCourt({
   hasTeam,
   onManageRoster,
   debugHitboxes = false,
+  debugOverlay = false,
   animationTrigger = 0,
   isPreviewingMovement = false,
   tagFlags = {},
@@ -259,6 +286,7 @@ export function VolleyballCourt({
   // Initialize with positions to match SSR, will update after mount if needed
   const [animatedPositions, setAnimatedPositions] = useState<PositionCoordinates>(() => ensureCompletePositions(positions))
   const currentPositionsRef = useRef<PositionCoordinates>(ensureCompletePositions(positions))
+  const animatedPositionsRef = useRef<PositionCoordinates>(ensureCompletePositions(positions))
 
   // Sync animatedPositions with positions prop when positions change
   useEffect(() => {
@@ -277,6 +305,10 @@ export function VolleyballCourt({
       currentPositionsRef.current = complete
     }
   }, [positions, showLibero, activeRoles]) // Update when positions, showLibero, or activeRoles change
+
+  useEffect(() => {
+    animatedPositionsRef.current = animatedPositions
+  }, [animatedPositions])
   const [draggingArrowRole, setDraggingArrowRole] = useState<Role | null>(null)
   const [arrowDragPosition, setArrowDragPosition] = useState<Position | null>(null)
   const [isDraggingOffCourt, setIsDraggingOffCourt] = useState<Record<Role, boolean>>({} as Record<Role, boolean>)
@@ -291,6 +323,7 @@ export function VolleyballCourt({
   const [previewProgress, setPreviewProgress] = useState<Partial<Record<Role, number>>>({})
   const previewAnimationRef = useRef<Partial<Record<Role, AnimationPlaybackControls>>>({})
   const hoverDelayRef = useRef<Partial<Record<Role, NodeJS.Timeout>>>({})
+  const hoveredZonesRef = useRef<Partial<Record<Role, Set<string>>>>({})
   const [showArrows, setShowArrows] = useState<boolean>(true)
   const arrowTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -339,6 +372,16 @@ export function VolleyballCourt({
     maxSeparation: animationConfig?.maxSeparation ?? 3,
   }
 
+  const movementCfg = useMemo(() => ({
+    speed: 0.7,
+    acceleration: 2.4,
+    cornerSlowdown: 0.1,
+    curveStrength: 0.35,
+    collisionRadius: animationConfig?.collisionRadius ?? 0.1,
+    deflectionStrength: 0.4,
+    lookAheadTime: 0.4,
+  }), [animationConfig?.collisionRadius])
+
   // Keep refs updated
   useEffect(() => {
     onPositionChangeRef.current = onPositionChange
@@ -353,59 +396,83 @@ export function VolleyballCourt({
     currentPositionsRef.current = animatedPositions
   }, [animatedPositions])
 
-  // Arrow preview extend/retract animation
-  // Handles delayed hover (prevents flicker) and smooth animation
-  const handlePreviewHover = useCallback((role: Role, isEntering: boolean) => {
-    // Clear any pending delay for this role
+  // Arrow preview extend/retract with zone-aware hover tracking.
+  // The arrow stays extended as long as the cursor is on ANY zone (token or arrow).
+  // It only retracts once the cursor has left ALL zones.
+  const handlePreviewHover = useCallback((role: Role, zone: 'token' | 'arrow', isEntering: boolean) => {
+    // Update zone tracking
+    if (!hoveredZonesRef.current[role]) {
+      hoveredZonesRef.current[role] = new Set()
+    }
+    if (isEntering) {
+      hoveredZonesRef.current[role]!.add(zone)
+    } else {
+      hoveredZonesRef.current[role]!.delete(zone)
+    }
+
+    const anyZoneHovered = hoveredZonesRef.current[role]!.size > 0
+
+    // Always cancel pending timers — a new event supersedes them
     if (hoverDelayRef.current[role]) {
       clearTimeout(hoverDelayRef.current[role])
       delete hoverDelayRef.current[role]
     }
 
-    // Stop any existing animation for this role
-    if (previewAnimationRef.current[role]) {
-      stopAnimation(previewAnimationRef.current[role])
-      delete previewAnimationRef.current[role]
-    }
+    if (anyZoneHovered && isEntering) {
+      // Entering a zone — ensure the arrow is extending / extended
 
-    const startAnimation = () => {
-      const currentProgress = previewProgress[role] ?? 0
-      const targetProgress = isEntering ? 1 : 0
+      // Stop any running animation (e.g. a retraction in progress)
+      if (previewAnimationRef.current[role]) {
+        stopAnimation(previewAnimationRef.current[role])
+        delete previewAnimationRef.current[role]
+      }
 
-      // Different durations: extend is slower (200ms), retract is quicker (120ms)
-      const duration = isEntering ? 0.2 : 0.12
-
-      previewAnimationRef.current[role] = animate(currentProgress, targetProgress, {
-        duration,
-        ease: isEntering ? [0.0, 0.0, 0.2, 1] : [0.4, 0.0, 1, 1], // ease-out for extend, ease-in for retract
-        onUpdate: (value) => {
-          setPreviewProgress(prev => ({ ...prev, [role]: value }))
-        },
-        onComplete: () => {
+      if (zone === 'arrow') {
+        // Arrow zone: snap to full extension immediately
+        setHoveredRole(role)
+        setPreviewProgress(prev => ({ ...prev, [role]: 1 }))
+      } else {
+        // Token zone: 80ms delay then animate (prevents flicker on quick passes)
+        hoverDelayRef.current[role] = setTimeout(() => {
+          delete hoverDelayRef.current[role]
+          setHoveredRole(role)
+          const currentProgress = previewProgress[role] ?? 0
+          previewAnimationRef.current[role] = animate(currentProgress, 1, {
+            duration: 0.2,
+            ease: [0.0, 0.0, 0.2, 1],
+            onUpdate: (value) => setPreviewProgress(prev => ({ ...prev, [role]: value })),
+            onComplete: () => { delete previewAnimationRef.current[role] }
+          })
+        }, 80)
+      }
+    } else if (!anyZoneHovered) {
+      // All zones left — retract after a short grace period
+      // (covers the gap when cursor moves between token and arrow)
+      hoverDelayRef.current[role] = setTimeout(() => {
+        delete hoverDelayRef.current[role]
+        // Stop any running animation
+        if (previewAnimationRef.current[role]) {
+          stopAnimation(previewAnimationRef.current[role])
           delete previewAnimationRef.current[role]
-          // Clean up zero progress to keep state clean
-          if (targetProgress === 0) {
+        }
+        setHoveredRole(null)
+        const currentProgress = previewProgress[role] ?? 0
+        previewAnimationRef.current[role] = animate(currentProgress, 0, {
+          duration: 0.12,
+          ease: [0.4, 0.0, 1, 1],
+          onUpdate: (value) => setPreviewProgress(prev => ({ ...prev, [role]: value })),
+          onComplete: () => {
+            delete previewAnimationRef.current[role]
             setPreviewProgress(prev => {
               const next = { ...prev }
               delete next[role]
               return next
             })
           }
-        }
-      })
+        })
+      }, 150)
     }
-
-    if (isEntering) {
-      // Delay before extending (prevents flicker on quick mouse movements)
-      hoverDelayRef.current[role] = setTimeout(() => {
-        delete hoverDelayRef.current[role]
-        setHoveredRole(role)
-        startAnimation()
-      }, 80) // 80ms delay before showing
-    } else {
-      setHoveredRole(null)
-      startAnimation()
-    }
+    // else: leaving one zone while another is still hovered → do nothing, arrow stays
   }, [previewProgress])
 
   // Cleanup animation refs on unmount
@@ -504,6 +571,25 @@ export function VolleyballCourt({
 
   // Track whether bezier animation is currently running
   const [isBezierAnimating, setIsBezierAnimating] = useState(false)
+  const [playedPositions, setPlayedPositions] = useState<PositionCoordinates | null>(null)
+  const playLockedPathsRef = useRef<Partial<Record<Role, LockedPath>>>({})
+  const playStartPositionsRef = useRef<PositionCoordinates | null>(null)
+  const playAnimRef = useRef<Partial<Record<Role, PlayAnimState>>>({})
+  const playLastFrameRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (!isPreviewingMovement) {
+      setPlayedPositions(null)
+      playLockedPathsRef.current = {}
+      playStartPositionsRef.current = null
+      if (bezierRafRef.current) {
+        cancelAnimationFrame(bezierRafRef.current)
+        bezierRafRef.current = null
+      }
+      playLastFrameRef.current = null
+      setIsBezierAnimating(false)
+    }
+  }, [isPreviewingMovement])
 
   // Compute preview positions (at arrow endpoints) for when preview mode is active
   const previewPositions = useMemo(() => {
@@ -524,13 +610,21 @@ export function VolleyballCourt({
       return animatedPositions
     }
     if (isPreviewingMovement) {
-      return previewPositions
+      return playedPositions ?? animatedPositions
     }
     if (animationMode === 'raf') {
       return animatedPositions
     }
     return collisionFreePositions
-  }, [isBezierAnimating, isPreviewingMovement, animationMode, animatedPositions, previewPositions, collisionFreePositions])
+  }, [isBezierAnimating, isPreviewingMovement, animationMode, animatedPositions, collisionFreePositions, playedPositions])
+
+  const showDebugOverlay = debugOverlay || debugHitboxes
+  const displaySource = isBezierAnimating
+    ? 'bezier'
+    : (isPreviewingMovement ? (playedPositions ? 'played' : 'animated') : (animationMode === 'raf' ? 'animated' : 'collision'))
+  const fmt = (value?: number, digits = 2) => (
+    typeof value === 'number' && Number.isFinite(value) ? value.toFixed(digits) : '-'
+  )
 
   // Calculate screen position for a player token based on their displayed (collision-resolved) position
   // Uses hardcoded court dimensions (400x800, padding 40) since they're constants
@@ -659,165 +753,374 @@ export function VolleyballCourt({
 
   // Track previous animation trigger for detecting when Play is pressed
   const prevAnimationTriggerRef = useRef<number>(animationTrigger)
+  const prevPreviewRef = useRef<boolean>(isPreviewingMovement)
+
+  // Ref for RAF animation
   const bezierRafRef = useRef<number | null>(null)
 
-  // Easing function for bezier animation
-  const easeInOutCubic = (t: number) => (t < 0.5
-    ? 4 * t * t * t
-    : 1 - Math.pow(-2 * t + 2, 3) / 2)
+  const clampWithMargin = useCallback((pos: Position): Position => {
+    const margin = 0.15
+    return {
+      x: Math.max(-margin, Math.min(1 + margin, pos.x)),
+      y: Math.max(-margin, Math.min(1 + margin, pos.y)),
+    }
+  }, [])
 
-  // Bezier path animation - runs when Play button is pressed (animationTrigger changes)
-  // Animates players along their arrow paths (bezier curves) with collision avoidance
-  // Uses RAF for precise timing control
+  const getBezierPoint = useCallback((start: Position, control: Position | null, end: Position, t: number): Position => {
+    if (!control) {
+      return {
+        x: start.x + (end.x - start.x) * t,
+        y: start.y + (end.y - start.y) * t,
+      }
+    }
+    const mt = 1 - t
+    return {
+      x: mt * mt * start.x + 2 * mt * t * control.x + t * t * end.x,
+      y: mt * mt * start.y + 2 * mt * t * control.y + t * t * end.y,
+    }
+  }, [])
+
+  const getPathLength = useCallback((start: Position, control: Position | null, end: Position) => {
+    const steps = 70
+    let length = 0
+    let prev = start
+    for (let i = 1; i <= steps; i += 1) {
+      const t = i / steps
+      const point = getBezierPoint(start, control, end, t)
+      length += Math.hypot(point.x - prev.x, point.y - prev.y)
+      prev = point
+    }
+    return length
+  }, [getBezierPoint])
+
+  const getPositionAtDistance = useCallback((
+    start: Position,
+    control: Position | null,
+    end: Position,
+    distance: number,
+    totalLength: number,
+  ): Position => {
+    if (totalLength <= 0) return start
+    const steps = 90
+    let accumulated = 0
+    let prev = start
+
+    for (let i = 1; i <= steps; i += 1) {
+      const t = i / steps
+      const point = getBezierPoint(start, control, end, t)
+      const segment = Math.hypot(point.x - prev.x, point.y - prev.y)
+      if (accumulated + segment >= distance) {
+        const segmentT = segment === 0 ? 0 : (distance - accumulated) / segment
+        return {
+          x: prev.x + (point.x - prev.x) * segmentT,
+          y: prev.y + (point.y - prev.y) * segmentT,
+        }
+      }
+      accumulated += segment
+      prev = point
+    }
+
+    return end
+  }, [getBezierPoint])
+
+  const getCurvature = useCallback((start: Position, control: Position | null, end: Position, t: number) => {
+    if (!control) return 0
+    const x0 = start.x
+    const y0 = start.y
+    const x1 = control.x
+    const y1 = control.y
+    const x2 = end.x
+    const y2 = end.y
+
+    const oneMinus = 1 - t
+    const dx = 2 * oneMinus * (x1 - x0) + 2 * t * (x2 - x1)
+    const dy = 2 * oneMinus * (y1 - y0) + 2 * t * (y2 - y1)
+    const ddx = 2 * (x2 - 2 * x1 + x0)
+    const ddy = 2 * (y2 - 2 * y1 + y0)
+
+    const denom = Math.pow(dx * dx + dy * dy, 1.5)
+    if (denom < 1e-6) return 0
+    return Math.abs(dx * ddy - dy * ddx) / denom
+  }, [])
+
+  // Speed-based movement along locked paths (Play button)
   useEffect(() => {
-    // Only run when trigger changes and is > 0
-    if (animationTrigger === prevAnimationTriggerRef.current || animationTrigger === 0) {
+    const previewJustEnabled = isPreviewingMovement && !prevPreviewRef.current
+    prevPreviewRef.current = isPreviewingMovement
+
+    const triggerChanged = animationTrigger !== prevAnimationTriggerRef.current && animationTrigger !== 0
+    if (!triggerChanged && !previewJustEnabled) {
       prevAnimationTriggerRef.current = animationTrigger
       return
     }
     prevAnimationTriggerRef.current = animationTrigger
 
-    // Cancel any existing bezier animation
     if (bezierRafRef.current) {
       cancelAnimationFrame(bezierRafRef.current)
       bezierRafRef.current = null
     }
 
-    // Get start positions (current collision-free positions)
-    const startPositions = { ...collisionFreePositions }
+    playLastFrameRef.current = null
+    playAnimRef.current = {}
+    playLockedPathsRef.current = {}
+    setPlayedPositions(null)
 
-    // Build targets: for players with arrows, target is arrow endpoint; others stay in place
-    const targets: PositionCoordinates = {} as PositionCoordinates
-    const hasArrow: Set<Role> = new Set()
+    const startPositions = { ...collisionFreePositions }
+    playStartPositionsRef.current = startPositions
+
+    const states: Partial<Record<Role, PlayAnimState>> = {}
+    const locked: Partial<Record<Role, LockedPath>> = {}
+
+    const getDefaultControl = (start: Position, end: Position): Position | null => {
+      const dx = end.x - start.x
+      const dy = end.y - start.y
+      const dist = Math.sqrt(dx * dx + dy * dy)
+      if (dist < 0.0001) return null
+
+      const mid = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 }
+      const perp = { x: -dy / dist, y: dx / dist }
+      const center = { x: 0.5, y: 0.75 }
+      const vecToCenter = { x: center.x - start.x, y: center.y - start.y }
+      const side = Math.sign(dx * vecToCenter.y - dy * vecToCenter.x) || 1
+      const bend = movementCfg.curveStrength * dist
+
+      return { x: mid.x + perp.x * bend * side, y: mid.y + perp.y * bend * side }
+    }
 
     activeRoles.forEach(role => {
       const arrowEnd = arrows[role]
-      if (arrowEnd) {
-        targets[role] = arrowEnd
-        hasArrow.add(role)
-      } else {
-        targets[role] = startPositions[role] || { x: 0.5, y: 0.5 }
+      if (!arrowEnd) return
+
+      const start = startPositions[role] || { x: 0.5, y: 0.5 }
+      const control = arrowCurves[role] || getDefaultControl(start, arrowEnd)
+      const length = getPathLength(start, control, arrowEnd)
+      if (length <= 0) return
+
+      states[role] = {
+        role,
+        start,
+        end: arrowEnd,
+        control,
+        length,
+        distance: 0,
+        currentSpeed: 0,
+        targetSpeed: movementCfg.speed,
+        offset: { x: 0, y: 0 },
+        offsetVel: { x: 0, y: 0 },
+        done: false,
       }
+
+      locked[role] = { start, end: arrowEnd, control }
     })
 
-    // If no arrows, nothing to animate
-    if (hasArrow.size === 0) {
+    if (Object.keys(states).length === 0) {
       return
     }
 
-    // Mark animation as running
+    playAnimRef.current = states
+    playLockedPathsRef.current = locked
+    setAnimatedPositions(startPositions)
     setIsBezierAnimating(true)
 
-    const duration = cfg.durationMs
-    const startTime = performance.now()
-
-    // Bezier interpolation: B(t) = (1-t)²P0 + 2(1-t)tP1 + t²P2
-    // P0 = start, P1 = control point, P2 = end
-    const interpolateBezier = (
-      start: Position,
-      end: Position,
-      control: Position | null,
-      t: number
-    ): Position => {
-      if (!control) {
-        // Straight line interpolation
-        return {
-          x: start.x + (end.x - start.x) * t,
-          y: start.y + (end.y - start.y) * t,
-        }
+    const tick = (now: number) => {
+      if (playLastFrameRef.current === null) {
+        playLastFrameRef.current = now
       }
-      const oneMinusT = 1 - t
-      return {
-        x: oneMinusT * oneMinusT * start.x + 2 * oneMinusT * t * control.x + t * t * end.x,
-        y: oneMinusT * oneMinusT * start.y + 2 * oneMinusT * t * control.y + t * t * end.y,
-      }
-    }
+      const dt = Math.min((now - playLastFrameRef.current) / 1000, 0.05)
+      playLastFrameRef.current = now
 
-    const step = (now: number) => {
-      const elapsed = now - startTime
-      const rawT = Math.min(1, elapsed / duration)
-      const t = easeInOutCubic(rawT)
+      const nextPositions: PositionCoordinates = { ...animatedPositionsRef.current }
+      const statesNow = playAnimRef.current
 
-      const next: PositionCoordinates = {} as PositionCoordinates
+      activeRoles.forEach(role => {
+        const state = statesNow[role]
+        if (!state || state.done) return
 
-      // Build agents for collision avoidance
-      const agents = activeRoles.map(role => {
-        const start = startPositions[role] || { x: 0.5, y: 0.5 }
-        const end = targets[role] || { x: 0.5, y: 0.5 }
-        const curve = arrowCurves[role]
+        let targetSpeed = movementCfg.speed
+        const remainingDistance = state.length - state.distance
+        const stoppingDistance = (state.currentSpeed * state.currentSpeed) / Math.max(0.0001, movementCfg.acceleration * 2)
+        const lookAheadDistance = Math.min(
+          state.currentSpeed * movementCfg.lookAheadTime,
+          remainingDistance,
+          stoppingDistance + movementCfg.collisionRadius * 2
+        )
 
-        // Get control point in normalized coordinates (if curve exists)
-        let control: Position | null = null
-        if (curve && arrows[role]) {
-          control = { x: curve.x, y: curve.y }
+        const t = state.length > 0 ? Math.min(state.distance / state.length, 1) : 0
+        const curvature = getCurvature(state.start, state.control, state.end, t)
+        if (curvature > 0 && movementCfg.cornerSlowdown > 0) {
+          const curveSlow = 1 / (1 + curvature * movementCfg.cornerSlowdown * 0.4)
+          targetSpeed = Math.min(targetSpeed, movementCfg.speed * curveSlow)
         }
 
-        // Interpolate along bezier path
-        const interpolated = interpolateBezier(start, end, control, t)
+        const endEase = Math.min(1, remainingDistance / Math.max(movementCfg.collisionRadius * 2, 0.001))
+        targetSpeed = Math.min(targetSpeed, Math.max(movementCfg.speed * 0.2, movementCfg.speed * endEase))
 
-        return {
-          role,
-          position: interpolated,
-          target: end,
-          speed: 0.8 // default cruising speed for look-ahead calculation
+        for (const otherRole of activeRoles) {
+          if (otherRole === role) continue
+          const otherPriority = ROLE_PRIORITY[otherRole] ?? 99
+          const selfPriority = ROLE_PRIORITY[role] ?? 99
+          if (otherPriority > selfPriority) continue
+
+          const otherPos = nextPositions[otherRole]
+          if (!otherPos) continue
+
+          const selfPos = nextPositions[role] ?? state.start
+          const dx = otherPos.x - selfPos.x
+          const dy = otherPos.y - selfPos.y
+          const dist = Math.sqrt(dx * dx + dy * dy)
+
+          if (dist < movementCfg.collisionRadius * 1.2) {
+            const urgency = 1 - dist / (movementCfg.collisionRadius * 1.2)
+            const reduced = movementCfg.speed * (1 - urgency * 0.7)
+            targetSpeed = Math.min(targetSpeed, Math.max(movementCfg.speed * 0.2, reduced))
+          }
+
+          const futurePos = getPositionAtDistance(
+            state.start,
+            state.control,
+            state.end,
+            Math.min(state.distance + lookAheadDistance, state.length),
+            state.length
+          )
+          const futureDx = futurePos.x - otherPos.x
+          const futureDy = futurePos.y - otherPos.y
+          const futureDist = Math.sqrt(futureDx * futureDx + futureDy * futureDy)
+          if (futureDist < movementCfg.collisionRadius * 0.9 && remainingDistance <= lookAheadDistance + movementCfg.collisionRadius) {
+            targetSpeed = Math.min(targetSpeed, movementCfg.speed * 0.35)
+          }
         }
+
+        const speedDiff = targetSpeed - state.currentSpeed
+        const maxChange = movementCfg.acceleration * dt
+        if (Math.abs(speedDiff) <= maxChange) {
+          state.currentSpeed = targetSpeed
+        } else if (speedDiff > 0) {
+          state.currentSpeed += maxChange
+        } else {
+          state.currentSpeed -= maxChange
+        }
+
+        state.distance = Math.min(state.distance + state.currentSpeed * dt, state.length)
+        if (state.distance >= state.length) {
+          state.done = true
+        }
+
+        const basePos = getPositionAtDistance(state.start, state.control, state.end, state.distance, state.length)
+        let finalPos = basePos
+
+        if (movementCfg.deflectionStrength > 0) {
+          let avoidX = 0
+          let avoidY = 0
+          const selfPriority = ROLE_PRIORITY[role] ?? 99
+          const futurePos = getPositionAtDistance(
+            state.start,
+            state.control,
+            state.end,
+            Math.min(state.distance + lookAheadDistance, state.length),
+            state.length,
+          )
+
+          for (const otherRole of activeRoles) {
+            if (otherRole === role) continue
+            const otherPriority = ROLE_PRIORITY[otherRole] ?? 99
+            if (otherPriority > selfPriority) continue
+
+            const otherPos = nextPositions[otherRole]
+            if (!otherPos) continue
+
+            const dx = basePos.x - otherPos.x
+            const dy = basePos.y - otherPos.y
+            const dist = Math.sqrt(dx * dx + dy * dy)
+            if (dist < 0.0001) continue
+
+            if (dist < movementCfg.collisionRadius * 2.2) {
+              let push = (movementCfg.collisionRadius * 2.2 - dist) / (movementCfg.collisionRadius * 2.2)
+              const futureDx = futurePos.x - otherPos.x
+              const futureDy = futurePos.y - otherPos.y
+              const futureDist = Math.sqrt(futureDx * futureDx + futureDy * futureDy)
+              if (futureDist < movementCfg.collisionRadius * 1.6) {
+                push *= 1.3
+              }
+
+              const weight = otherPriority < selfPriority ? 1 : 0.7
+              avoidX += (dx / dist) * push * weight
+              avoidY += (dy / dist) * push * weight
+            }
+          }
+
+          const desiredOffset = {
+            x: avoidX * movementCfg.deflectionStrength * movementCfg.collisionRadius * endEase,
+            y: avoidY * movementCfg.deflectionStrength * movementCfg.collisionRadius * endEase,
+          }
+
+          const spring = 12
+          const damping = 7
+          state.offsetVel.x += (desiredOffset.x - state.offset.x) * spring * dt
+          state.offsetVel.y += (desiredOffset.y - state.offset.y) * spring * dt
+          state.offsetVel.x *= Math.max(0, 1 - damping * dt)
+          state.offsetVel.y *= Math.max(0, 1 - damping * dt)
+
+          state.offset.x += state.offsetVel.x * dt
+          state.offset.y += state.offsetVel.y * dt
+
+          const maxOffset = movementCfg.collisionRadius * 1.6
+          const offsetLen = Math.hypot(state.offset.x, state.offset.y)
+          if (offsetLen > maxOffset) {
+            state.offset.x = (state.offset.x / offsetLen) * maxOffset
+            state.offset.y = (state.offset.y / offsetLen) * maxOffset
+          }
+
+          finalPos = clampWithMargin({
+            x: basePos.x + state.offset.x,
+            y: basePos.y + state.offset.y,
+          })
+        }
+
+        nextPositions[role] = finalPos
       })
 
-      // Improvement #3: Sequential Priority Processing
-      // Sort agents by priority (lower number = higher priority = processed first)
-      const sortedRoles = [...activeRoles].sort((a, b) =>
-        (ROLE_PRIORITY[a] ?? 99) - (ROLE_PRIORITY[b] ?? 99)
-      )
+      setAnimatedPositions(nextPositions)
+      animatedPositionsRef.current = nextPositions
 
-      // Process sequentially - each agent sees updated positions of higher-priority agents
-      sortedRoles.forEach(role => {
-        const agent = agents.find(a => a.role === role)!
-
-        // Update agent's position to reflect any already-processed higher-priority agents
-        const updatedAgents = agents.map(a => {
-          const updatedPos = next[a.role]
-          return updatedPos ? { ...a, position: updatedPos } : a
-        })
-
-        const steering = computeSteering(agent, updatedAgents, {
-          collisionRadius: cfg.collisionRadius,
-          separationStrength: cfg.separationStrength,
-          maxSeparation: cfg.maxSeparation,
-          lookAheadTime: 0.4 // Look ahead 0.4 seconds for smoother anticipatory movement
-        })
-
-        // Apply steering offset (smaller for smoother curves)
-        const steered = clampPosition({
-          x: agent.position.x + steering.x * (cfg.collisionRadius * 0.15),
-          y: agent.position.y + steering.y * (cfg.collisionRadius * 0.15)
-        })
-
-        // Immediately store this agent's final position for next agents to see
-        next[role] = steered
+      const allDone = activeRoles.every(role => {
+        const state = statesNow[role]
+        return !state || state.done
       })
 
-      setAnimatedPositions(next)
-      currentPositionsRef.current = next
-
-      if (rawT < 1) {
-        bezierRafRef.current = requestAnimationFrame(step)
-      } else {
-        // Animation complete
-        bezierRafRef.current = null
+      if (allDone) {
         setIsBezierAnimating(false)
+        setPlayedPositions(nextPositions)
+        playLastFrameRef.current = null
+        bezierRafRef.current = null
+        setAnimatedPositions(nextPositions)
+        return
       }
+
+      bezierRafRef.current = requestAnimationFrame(tick)
     }
 
-    bezierRafRef.current = requestAnimationFrame(step)
+    bezierRafRef.current = requestAnimationFrame(tick)
 
     return () => {
       if (bezierRafRef.current) {
         cancelAnimationFrame(bezierRafRef.current)
         bezierRafRef.current = null
-        setIsBezierAnimating(false)
       }
+      setIsBezierAnimating(false)
     }
-  }, [animationTrigger, collisionFreePositions, arrows, arrowCurves, activeRoles, cfg])
+  }, [
+    animationTrigger,
+    isPreviewingMovement,
+    collisionFreePositions,
+    arrows,
+    arrowCurves,
+    activeRoles,
+    clampWithMargin,
+    getCurvature,
+    getPathLength,
+    getPositionAtDistance,
+    movementCfg,
+  ])
 
   // Track previous positions for detecting phase changes
   const prevPositionsRef = useRef<PositionCoordinates>(positions)
@@ -884,11 +1187,13 @@ export function VolleyballCourt({
   const courtHeight = 800
   const padding = 40
 
-  // Calculate viewBox dimensions - always show full court
+  // Calculate viewBox dimensions - optionally crop when away team is hidden
   const viewBoxWidth = courtWidth + padding * 2
   const viewBoxHeight = courtHeight + padding * 2
-  const vbY = 0
-  const vbH = viewBoxHeight
+  const hideFraction = hideAwayTeam ? Math.min(Math.max(awayTeamHidePercent / 100, 0), 0.5) : 0
+  const hideAmount = courtHeight * hideFraction
+  const vbY = hideAmount
+  const vbH = viewBoxHeight - hideAmount
 
   // Throttle state updates to parent (every 50ms during drag)
   const THROTTLE_MS = 50
@@ -1088,7 +1393,7 @@ export function VolleyballCourt({
 
   // Handle drag start
   const handleDragStart = useCallback((role: Role, e: React.MouseEvent | React.TouchEvent) => {
-    if (!isEditable || !onPositionChangeRef.current) return
+    if (!isEditable || isPreviewingMovement || !onPositionChangeRef.current) return
 
     // Note: Don't call preventDefault on touch events here - it causes passive event listener warnings
     // The touchmove handler already uses { passive: false } to prevent scrolling during drag
@@ -1101,6 +1406,11 @@ export function VolleyballCourt({
     const currentPos = toSvgCoords(positions[role] || { x: 0.5, y: 0.5 })
 
     setDraggingRole(role)
+
+    // Immediately hide any arrow preview when drag starts
+    setHoveredRole(null)
+    setPreviewProgress({})
+
     dragOffsetRef.current = {
       x: currentPos.x - pos.x,
       y: currentPos.y - pos.y
@@ -1160,7 +1470,7 @@ export function VolleyballCourt({
     document.addEventListener('mouseup', handleEnd)
       document.addEventListener('touchmove', handleMove, { passive: false })
       document.addEventListener('touchend', handleEnd)
-    }, [isEditable, positions, getEventPosition, handleDragEnd])
+    }, [isEditable, isPreviewingMovement, positions, getEventPosition, handleDragEnd])
 
   // Handle arrow drag (create, reposition, or delete movement arrows)
   const handleArrowDragStart = useCallback((
@@ -1169,7 +1479,7 @@ export function VolleyballCourt({
     initialEndSvg?: { x: number; y: number },
     initialControlSvg?: { x: number; y: number }
   ) => {
-    if (!onArrowChange) return
+    if (!onArrowChange || isPreviewingMovement) return
 
     // Note: Don't call preventDefault on touch events here - it causes passive event listener warnings
     // The touchmove handler already uses { passive: false } to prevent scrolling during drag
@@ -1271,7 +1581,7 @@ export function VolleyballCourt({
 
   // Handle curve drag - dragging the curve handle adjusts direction and intensity
   const handleCurveDragStart = useCallback((role: Role, e: React.MouseEvent | React.TouchEvent) => {
-    if (!onArrowCurveChange) return
+    if (!onArrowCurveChange || isPreviewingMovement) return
 
     if (e.type === 'mousedown') {
       e.preventDefault()
@@ -1598,11 +1908,33 @@ export function VolleyballCourt({
         WebkitUserSelect: 'none'
       }}
     >
+      {showDebugOverlay && (
+        <div className="pointer-events-none absolute left-3 top-3 z-50 max-h-[70%] max-w-[340px] overflow-auto rounded-md bg-black/70 px-2.5 py-2 font-mono text-[11px] leading-snug text-white shadow">
+          <div className="text-white/80">debug overlay</div>
+          <div>mode {mode} anim {animationMode} display {displaySource}</div>
+          <div>bezier {isBezierAnimating ? 'on' : 'off'} preview {isPreviewingMovement ? 'on' : 'off'} played {playedPositions ? 'yes' : 'no'}</div>
+          <div>trigger {animationTrigger} raf {bezierRafRef.current ? 'on' : 'off'} last {fmt(playLastFrameRef.current ?? undefined, 0)}</div>
+          <div>drag {draggingRole ?? '-'} arrow {draggingArrowRole ?? '-'} curve {draggingCurveRole ?? '-'}</div>
+          <div>cfg sp {fmt(movementCfg.speed)} acc {fmt(movementCfg.acceleration)} corner {fmt(movementCfg.cornerSlowdown)} curve {fmt(movementCfg.curveStrength)}</div>
+          <div>coll r {fmt(movementCfg.collisionRadius)} defl {fmt(movementCfg.deflectionStrength)} look {fmt(movementCfg.lookAheadTime)}</div>
+          <div className="mt-1 border-t border-white/20 pt-1">roles</div>
+          {activeRoles.map((role) => {
+            const anim = playAnimRef.current[role]
+            const locked = playLockedPathsRef.current[role]
+            const progress = anim && anim.length > 0 ? anim.distance / anim.length : 0
+            return (
+              <div key={role}>
+                {role}: {locked ? 'lock' : 'free'} {anim?.done ? 'done' : 'move'} t {fmt(progress)} v {fmt(anim?.currentSpeed)}→{fmt(anim?.targetSpeed)}
+              </div>
+            )
+          })}
+        </div>
+      )}
       <svg
         ref={svgRef}
         data-court-svg
         viewBox={`0 ${vbY} ${viewBoxWidth} ${vbH}`}
-        className="select-none w-full h-auto sm:w-full sm:h-full"
+        className="select-none w-full h-full max-h-full max-w-full"
         style={{
           touchAction: 'none',
           display: 'block',
@@ -1767,13 +2099,15 @@ export function VolleyballCourt({
           const hasHomePosition = displayPositions[role] !== undefined
           if (mode === 'simulation' && !hasHomePosition) return null
 
-          const homeBasePos = displayPositions[role] || { x: 0.5, y: 0.75 }
-          const homeSvgPos = toSvgCoords(draggingRole === role && dragPosition ? dragPosition : homeBasePos)
+          const lockedPath = (isBezierAnimating || isPreviewingMovement) ? playLockedPathsRef.current[role] : null
+          const basePosForArrow = lockedPath?.start || displayPositions[role] || { x: 0.5, y: 0.75 }
+          const homeSvgPos = toSvgCoords(draggingRole === role && dragPosition ? dragPosition : basePosForArrow)
 
           // Arrows only for home team in whiteboard mode
           const activeArrowTarget = draggingArrowRole === role && arrowDragPosition ? arrowDragPosition : arrows[role]
           const defaultHandleSvg = { x: homeSvgPos.x, y: Math.max(12, homeSvgPos.y - 28) }
-          const arrowEndSvg = activeArrowTarget ? toSvgCoords(activeArrowTarget) : defaultHandleSvg
+          const arrowEndPos = lockedPath?.end ?? activeArrowTarget
+          const arrowEndSvg = arrowEndPos ? toSvgCoords(arrowEndPos) : defaultHandleSvg
 
           // Get the control point for the arrow curve
           // If user has set a control point, use it directly
@@ -1783,11 +2117,14 @@ export function VolleyballCourt({
             if (!activeArrowTarget) return null
 
             // If user has manually set a control point, use it directly
+            if (lockedPath?.control) {
+              return { x: lockedPath.control.x, y: lockedPath.control.y }
+            }
             if (curveConfig) {
               return { x: curveConfig.x, y: curveConfig.y }
             }
 
-            const startPct = draggingRole === role && dragPosition ? dragPosition : homeBasePos
+            const startPct = draggingRole === role && dragPosition ? dragPosition : basePosForArrow
             const endPct = activeArrowTarget
             const dx = endPct.x - startPct.x
             const dy = endPct.y - startPct.y
@@ -1953,7 +2290,8 @@ export function VolleyballCourt({
           const rolePreviewProgress = previewProgress[role] ?? 0
           // Show preview when: animating OR (actively dragging from preview) OR (mobile tapped)
           // Also need no existing arrow (unless we're dragging from it)
-          const canShowPreview = (!arrows[role] || draggingArrowRole === role) && onArrowChange
+          // HIDE preview when any player token is being dragged
+          const canShowPreview = (!arrows[role] || draggingArrowRole === role) && onArrowChange && !draggingRole
           const shouldRenderPreview = canShowPreview && (
             rolePreviewProgress > 0 ||
             draggingArrowRole === role ||
@@ -1993,7 +2331,8 @@ export function VolleyballCourt({
                 opacity={0.85}
                 isDraggable={true}
                 onDragStart={(e) => handleArrowDragStart(role, e, previewEndSvg, previewControlSvg)}
-                onMouseEnter={() => handlePreviewHover(role, true)}
+                onMouseEnter={() => !draggingRole && !draggingArrowRole && handlePreviewHover(role, 'arrow', true)}
+                onMouseLeave={() => handlePreviewHover(role, 'arrow', false)}
                 debugHitboxes={debugHitboxes}
               />
             </g>
@@ -2009,7 +2348,9 @@ export function VolleyballCourt({
                 style={{
                   cursor: isEditable ? (isDragging ? 'grabbing' : 'grab') : 'pointer',
                   willChange: 'transform',
-                  transition: animationMode === 'css' && !isDragging ? `transform ${cfg.durationMs}ms ${cfg.easingCss}` : undefined
+                  transition: animationMode === 'css' && !isDragging && !isBezierAnimating
+                    ? `transform ${cfg.durationMs}ms ${cfg.easingCss}`
+                    : undefined
                 }}
               >
                 {/* Invisible SVG hit target for touch/mouse - sized to match actual token */}
@@ -2035,8 +2376,8 @@ export function VolleyballCourt({
                         touchAction: 'none',
                         WebkitTapHighlightColor: 'transparent'
                       }}
-                      onMouseEnter={() => !isMobile && !draggingArrowRole && handlePreviewHover(role, true)}
-                      onMouseLeave={() => handlePreviewHover(role, false)}
+                      onMouseEnter={() => !isMobile && !draggingRole && !draggingArrowRole && handlePreviewHover(role, 'token', true)}
+                      onMouseLeave={() => handlePreviewHover(role, 'token', false)}
                       onClick={(e) => {
                         // MOBILE FIX: Skip click if touch just ended (prevents dual firing)
                         if (recentTouchRef.current) {
@@ -2119,7 +2460,9 @@ export function VolleyballCourt({
                   style={{
                     pointerEvents: 'none',
                     willChange: 'transform',
-                    transition: animationMode === 'css' && !isDragging ? `transform ${cfg.durationMs}ms ${cfg.easingCss}` : undefined
+                    transition: animationMode === 'css' && !isDragging && !isBezierAnimating
+                      ? `transform ${cfg.durationMs}ms ${cfg.easingCss}`
+                      : undefined
                   }}
                 >
                   <PlayerToken
@@ -2169,7 +2512,9 @@ export function VolleyballCourt({
                 style={{
                   cursor: isAwayEditable ? (isAwayDragging ? 'grabbing' : 'grab') : 'default',
                   willChange: 'transform',
-                  transition: animationMode === 'css' && !isAwayDragging ? `transform ${cfg.durationMs}ms ${cfg.easingCss}` : undefined
+                  transition: animationMode === 'css' && !isAwayDragging && !isBezierAnimating
+                    ? `transform ${cfg.durationMs}ms ${cfg.easingCss}`
+                    : undefined
                 }}
               >
                 {/* Invisible SVG hit target for touch/mouse - scaled to match home team */}
@@ -2327,6 +2672,8 @@ export function VolleyballCourt({
           }
 
           // Calculate curve midpoint (quadratic bezier at t=0.5)
+          // Must match the t=0.5 math in handleCurveDragStart so the handle
+          // stays directly under the mouse during drag.
           const validControlSvg = controlSvg &&
             !isNaN(controlSvg.x) && !isNaN(controlSvg.y)
             ? controlSvg : null
