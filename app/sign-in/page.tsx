@@ -27,7 +27,7 @@ export default function SignInPage() {
       <div className="w-full max-w-sm relative z-10">
         {/* Logo */}
         <div className="flex justify-center mb-6">
-          <VolleyWordmark fillColor="currentColor" height={48} className="text-foreground" />
+          <VolleyWordmark fillColor="#f97316" height={48} />
         </div>
 
         <div className="text-center mb-8">
