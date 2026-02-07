@@ -23,7 +23,7 @@ export function RotationInfoCard({ rotation, baseOrder = DEFAULT_BASE_ORDER }: R
   const backRow = roleZones.filter(r => !r.isFront)
 
   return (
-    <Card className="bg-card/50 backdrop-blur">
+    <Card className="bg-card/70 backdrop-blur">
       <CardContent className="py-3 px-4">
         <div className="text-xs font-medium text-muted-foreground mb-2">
           Rotation {rotation} Lineup

@@ -537,7 +537,7 @@ function QuickStartPlayerEntry({
   }
 
   return (
-    <div className="bg-card/50 border border-border rounded-lg p-4">
+    <div className="bg-card/70 border border-border rounded-lg p-4">
       <h3 className="text-sm font-medium text-muted-foreground mb-3">Add Player</h3>
       <div className="flex gap-2">
         <input

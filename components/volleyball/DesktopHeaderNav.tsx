@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { Layout, Users, Timer, Settings, ChevronLeft, ChevronRight, ChevronDown, Play, RotateCcw, Printer, Eye, EyeOff, SlidersHorizontal } from 'lucide-react'
+import VolleyBall from '@/components/logo/VolleyBall'
 import { useGameTimeStore } from '@/store/useGameTimeStore'
 import { UserMenu } from '@/components/auth'
 import { Button } from '@/components/ui/button'
@@ -72,6 +73,9 @@ export function DesktopHeaderNav({ onOpenPrintDialog }: DesktopHeaderNavProps) {
 
   return (
     <header className="hidden md:flex items-center h-12 px-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+      <Link href="/" className="mr-2 flex items-center hover:opacity-80 transition-opacity">
+        <VolleyBall size={20} fillColor="#f97316" />
+      </Link>
       <nav className="flex items-center gap-1">
         {navItems.map((item) => {
           const isActive = item.url === '/'

@@ -77,7 +77,7 @@ export default function TeamsPage() {
 
         {/* Create Team Card - Standalone */}
         {!searchQuery && (
-          <Card className="bg-accent/30 border-accent/50">
+          <Card className="bg-accent/50 border-accent/50">
             <CardContent className="pt-4">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex-1 min-w-0">
