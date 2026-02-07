@@ -108,13 +108,18 @@ function SVGFilters({ chromeIntensity, chromeSurface, chromeFocus }: { chromeInt
           <feColorMatrix in="noise" type="saturate" values="0" result="grayNoise" />
           <feBlend in="SourceGraphic" in2="grayNoise" mode="multiply" />
         </filter>
-        <filter id="chrome">
+        <filter id="chrome" colorInterpolationFilters="linearRGB">
           <feGaussianBlur in="SourceGraphic" stdDeviation="1" result="blur" />
           <feSpecularLighting in="blur" surfaceScale={chromeSurface} specularConstant="1" specularExponent={chromeFocus} lightingColor="#ffffff" result="specular">
             <fePointLight x="50" y="-100" z="200" />
           </feSpecularLighting>
           <feComposite in="specular" in2="SourceGraphic" operator="in" result="specular-in" />
-          <feComposite in="SourceGraphic" in2="specular-in" operator="arithmetic" k1="0" k2="1" k3={chromeIntensity} k4="0" />
+          <feComposite in="SourceGraphic" in2="specular-in" operator="arithmetic" k1="0" k2="1" k3={chromeIntensity} k4="0" result="chromed" />
+          {/* Subtle dither to break up banding */}
+          <feTurbulence type="fractalNoise" baseFrequency="1.5" numOctaves="3" seed="1" result="dither" />
+          <feColorMatrix in="dither" type="saturate" values="0" result="grayDither" />
+          <feComposite in="grayDither" in2="chromed" operator="arithmetic" k1="0" k2="0.02" k3="1" k4="0" result="dithered" />
+          <feComposite in="dithered" in2="SourceGraphic" operator="in" />
         </filter>
         <filter id="holographic">
           <feOffset in="SourceGraphic" dx="2" dy="0" result="red" />
