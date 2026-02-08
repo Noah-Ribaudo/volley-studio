@@ -72,6 +72,8 @@ export default function SettingsPage() {
     // Debug
     debugHitboxes,
     setDebugHitboxes,
+    showPrintFeature,
+    setShowPrintFeature,
   } = useAppStore()
   const viewer = useQuery(api.users.viewer, isAuthenticated ? {} : 'skip')
   const [isSigningOut, setIsSigningOut] = useState(false)
@@ -257,6 +259,13 @@ export default function SettingsPage() {
                 description="Display green overlay on interactive touch areas"
                 checked={debugHitboxes}
                 onCheckedChange={setDebugHitboxes}
+              />
+              <SettingsToggle
+                id="show-print"
+                label="Print Feature"
+                description="Enable the print rotations feature"
+                checked={showPrintFeature}
+                onCheckedChange={setShowPrintFeature}
               />
             </CardContent>
           </Card>

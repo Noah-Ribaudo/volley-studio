@@ -41,6 +41,7 @@ export default function VolleyballLayout({
   const backgroundOpacity = useAppStore((state) => state.backgroundOpacity)
   const hideAwayTeam = useAppStore((state) => state.hideAwayTeam)
   const setHideAwayTeam = useAppStore((state) => state.setHideAwayTeam)
+  const showPrintFeature = useAppStore((state) => state.showPrintFeature)
 
   // Data for print dialog
   const currentTeam = useAppStore((state) => state.currentTeam)
@@ -125,15 +126,17 @@ export default function VolleyballLayout({
               >
                 {hideAwayTeam ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => setPrintDialogOpen(true)}
-                aria-label="Print rotations"
-              >
-                <HugeiconsIcon icon={PrinterIcon} className="h-4 w-4" />
-              </Button>
+              {showPrintFeature && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setPrintDialogOpen(true)}
+                  aria-label="Print rotations"
+                >
+                  <HugeiconsIcon icon={PrinterIcon} className="h-4 w-4" />
+                </Button>
+              )}
             </div>
           )}
         </header>
