@@ -149,6 +149,8 @@ export function UserSettingsSync() {
   const lastSyncedSignatureRef = useRef<string | null>(null)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const didSeedFromLocalRef = useRef(false)
+  const localPayloadRef = useRef<UserSettingsPayload | null>(null)
+  const localSignatureRef = useRef<string | null>(null)
 
   const localPayload = useMemo<UserSettingsPayload>(() => {
     const normalized = normalizePayload({
@@ -195,36 +197,18 @@ export function UserSettingsSync() {
 
   const localSignature = useMemo(() => payloadSignature(localPayload), [localPayload])
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      setIsReadyToPersist(false)
-      lastSyncedSignatureRef.current = null
-      didSeedFromLocalRef.current = false
-      if (saveTimerRef.current) {
-        clearTimeout(saveTimerRef.current)
-        saveTimerRef.current = null
-      }
-      return
-    }
-    if (remoteSettings === undefined) {
-      return
-    }
+  // Keep refs in sync so the server→local effect can read current local state
+  // without depending on it (which would cause it to fire on every local change).
+  localPayloadRef.current = localPayload
+  localSignatureRef.current = localSignature
 
-    if (remoteSettings === null) {
-      if (didSeedFromLocalRef.current) {
-        setIsReadyToPersist(true)
-        return
-      }
-      didSeedFromLocalRef.current = true
-      void upsertSettings(localPayload).catch((error) => {
-        console.error('Failed to initialize user settings from local state', error)
-      })
-      lastSyncedSignatureRef.current = localSignature
-      setIsReadyToPersist(true)
-      return
-    }
-
-    const serverPayload = normalizePayload({
+  // Compute a stable server payload and signature so the effect below only
+  // fires when server data *content* changes, not on every object reference.
+  // 'loading' = query still loading, 'empty' = no settings record, or the payload.
+  const serverPayload = useMemo<UserSettingsPayload | 'loading' | 'empty'>(() => {
+    if (remoteSettings === undefined) return 'loading'
+    if (remoteSettings === null) return 'empty'
+    return normalizePayload({
       showPosition: remoteSettings.showPosition,
       showPlayer: remoteSettings.showPlayer,
       showLibero: remoteSettings.showLibero,
@@ -244,9 +228,51 @@ export function UserSettingsSync() {
       highlightedRole: remoteSettings.highlightedRole as Role | undefined,
       learningPanelPosition: remoteSettings.learningPanelPosition as LearningPanelPosition,
     })
-    const serverSignature = payloadSignature(serverPayload)
+  }, [remoteSettings])
 
-    if (serverSignature !== localSignature) {
+  // Content-based signature — stable across Convex reference changes.
+  const serverSignature = useMemo(
+    () => typeof serverPayload === 'string' ? serverPayload : payloadSignature(serverPayload),
+    [serverPayload]
+  )
+
+  // Effect 1: Server → Local sync
+  // Depends on serverSignature (content-based) so it only fires when the
+  // server data actually changes, not on every Convex useQuery re-reference.
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setIsReadyToPersist(false)
+      lastSyncedSignatureRef.current = null
+      didSeedFromLocalRef.current = false
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current)
+        saveTimerRef.current = null
+      }
+      return
+    }
+    if (serverSignature === 'loading') {
+      return
+    }
+
+    if (serverSignature === 'empty') {
+      if (didSeedFromLocalRef.current) {
+        setIsReadyToPersist(true)
+        return
+      }
+      didSeedFromLocalRef.current = true
+      void upsertSettings(localPayloadRef.current!).catch((error) => {
+        console.error('Failed to initialize user settings from local state', error)
+      })
+      lastSyncedSignatureRef.current = localSignatureRef.current
+      setIsReadyToPersist(true)
+      return
+    }
+
+    // Only apply server values to local when server signature actually changed
+    // from what we last synced AND differs from current local state.
+    // This prevents the server from overriding local changes before they've
+    // been persisted.
+    if (serverSignature !== lastSyncedSignatureRef.current && serverSignature !== localSignatureRef.current && typeof serverPayload === 'object') {
       useAppStore.setState((state) => ({
         ...state,
         showPosition: serverPayload.showPosition,
@@ -273,13 +299,8 @@ export function UserSettingsSync() {
     lastSyncedSignatureRef.current = serverSignature
     didSeedFromLocalRef.current = false
     setIsReadyToPersist(true)
-  }, [
-    isAuthenticated,
-    remoteSettings,
-    localPayload,
-    localSignature,
-    upsertSettings,
-  ])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, serverSignature, upsertSettings])
 
   useEffect(() => {
     if (!isAuthenticated || !isReadyToPersist) {
