@@ -74,8 +74,9 @@ export function DesktopHeaderNav({ onOpenPrintDialog }: DesktopHeaderNavProps) {
 
   return (
     <header className="hidden md:flex items-center h-12 px-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-      <Link href="/" className="mr-2 flex items-center hover:opacity-80 transition-opacity">
+      <Link href="/" className="mr-2 flex items-center gap-1.5 hover:opacity-80 transition-opacity">
         <VolleyBall size={20} fillColor="#f97316" />
+        <span className="text-sm font-semibold text-foreground">Volley Studio</span>
       </Link>
       <nav className="flex items-center gap-1">
         {navItems.map((item) => {

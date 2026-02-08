@@ -2,8 +2,10 @@
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Check } from 'lucide-react'
 import {
   ROLE_INFO,
+  ROLES,
   PLAYER_STATUSES,
   PLAYER_STATUS_INFO,
   type Role,
@@ -23,11 +25,9 @@ interface PlayerContextContentProps {
   onStatusToggle?: (status: PlayerStatus) => void
   isHighlighted?: boolean
   onHighlightToggle?: () => void
-  /** Whether this player has an arrow (for flip curve option) */
+  /** Whether this player has an arrow */
   hasArrow?: boolean
-  /** Callback to flip the arrow curve direction */
-  onFlipArrow?: () => void
-  /** Whether we're on mobile (hides flip curve option) */
+  /** Whether we're on mobile */
   isMobile?: boolean
   /** Whether arrow placement can be started */
   canStartArrow?: boolean
@@ -37,6 +37,8 @@ interface PlayerContextContentProps {
   hasTeam?: boolean
   /** Callback to open roster management (for assigning players) */
   onManageRoster?: () => void
+  /** Callback to assign a player to this role */
+  onPlayerAssign?: (role: Role, playerId: string | undefined) => void
 }
 
 export function PlayerContextContent({
@@ -49,12 +51,12 @@ export function PlayerContextContent({
   isHighlighted,
   onHighlightToggle,
   hasArrow,
-  onFlipArrow,
   isMobile,
   canStartArrow,
   onStartArrow,
   hasTeam,
   onManageRoster,
+  onPlayerAssign,
 }: PlayerContextContentProps) {
   const roleInfo = ROLE_INFO[role]
 
@@ -97,19 +99,9 @@ export function PlayerContextContent({
                 </span>
               )}
             </>
-          ) : onManageRoster ? (
-            <button
-              onClick={onManageRoster}
-              className={cn(
-                "text-left text-primary hover:underline transition-colors",
-                isMobile ? "text-base" : "text-sm"
-              )}
-            >
-              {hasTeam ? "Assign a player →" : "Set up your team →"}
-            </button>
           ) : (
             <span className={cn("text-muted-foreground", isMobile ? "text-base" : "text-sm")}>
-              No player assigned
+              {hasTeam ? 'No player assigned' : roleInfo.name}
             </span>
           )}
         </div>
@@ -119,6 +111,83 @@ export function PlayerContextContent({
       <div className={cn("text-muted-foreground", isMobile ? "text-sm" : "text-xs")}>
         {roleInfo.name}
       </div>
+
+      {/* Roster picker - when team exists with players */}
+      {hasTeam && roster.length > 0 && onPlayerAssign && (
+        <div className={cn("border-t border-border mt-1", isMobile ? "pt-4" : "pt-3")}>
+          <div className={cn("text-muted-foreground", isMobile ? "text-sm mb-3" : "text-xs mb-2")}>
+            Assign Player
+          </div>
+          <div className={cn("grid grid-cols-2", isMobile ? "gap-2" : "gap-1")}>
+            {[...roster].sort((a, b) => (a.number ?? 0) - (b.number ?? 0)).map((rosterPlayer) => {
+              const isAssignedHere = playerId === rosterPlayer.id
+              const otherRole = ROLES.find(r => r !== role && assignments[r] === rosterPlayer.id)
+              const isAssignedElsewhere = !!otherRole
+
+              return (
+                <button
+                  key={rosterPlayer.id}
+                  onClick={() => {
+                    if (isAssignedHere) {
+                      onPlayerAssign(role, undefined)
+                    } else if (!isAssignedElsewhere) {
+                      onPlayerAssign(role, rosterPlayer.id)
+                    }
+                  }}
+                  disabled={isAssignedElsewhere}
+                  className={cn(
+                    'flex items-center gap-1.5 rounded-md transition-colors text-left min-w-0',
+                    isMobile ? 'px-2.5 py-2.5' : 'px-2 py-1.5',
+                    isAssignedHere
+                      ? 'bg-muted'
+                      : isAssignedElsewhere
+                        ? 'opacity-40 cursor-not-allowed'
+                        : 'hover:bg-muted active:bg-muted/80'
+                  )}
+                >
+                  <span className={cn(
+                    'font-bold shrink-0',
+                    isMobile ? 'text-sm' : 'text-xs',
+                    isAssignedHere ? 'text-primary' : 'text-foreground'
+                  )}>
+                    #{rosterPlayer.number}
+                  </span>
+                  <span className={cn(
+                    'truncate',
+                    isMobile ? 'text-sm' : 'text-xs',
+                    'text-muted-foreground'
+                  )}>
+                    {rosterPlayer.name}
+                  </span>
+                  {isAssignedElsewhere && (
+                    <span className={cn("shrink-0 text-muted-foreground/60", isMobile ? "text-[10px]" : "text-[9px]")}>
+                      {otherRole}
+                    </span>
+                  )}
+                  {isAssignedHere && (
+                    <Check className={cn("shrink-0 text-primary", isMobile ? "w-3.5 h-3.5" : "w-3 h-3")} />
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Set up team link - when no team exists */}
+      {!hasTeam && onManageRoster && (
+        <div className={cn("border-t border-border mt-1", isMobile ? "pt-4" : "pt-3")}>
+          <button
+            onClick={onManageRoster}
+            className={cn(
+              "text-left text-primary hover:underline transition-colors",
+              isMobile ? "text-base" : "text-sm"
+            )}
+          >
+            Set up your team →
+          </button>
+        </div>
+      )}
 
       {/* Status selection for whiteboard mode - multi-select */}
       {mode === 'whiteboard' && onStatusToggle && (
@@ -168,22 +237,6 @@ export function PlayerContextContent({
             )}
           >
             {isHighlighted ? '✓ Highlighted' : 'Highlight Player'}
-          </button>
-        </div>
-      )}
-
-      {/* Flip arrow curve - desktop only, whiteboard mode, when arrow exists */}
-      {mode === 'whiteboard' && hasArrow && onFlipArrow && !isMobile && (
-        <div className="border-t border-border pt-3 mt-1">
-          <button
-            onClick={onFlipArrow}
-            className={cn(
-              'w-full px-3 py-2 text-xs font-medium rounded-md transition-all',
-              'border border-border bg-background hover:bg-muted text-muted-foreground',
-              'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1'
-            )}
-          >
-            Flip Arrow Curve
           </button>
         </div>
       )}

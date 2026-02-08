@@ -1,9 +1,7 @@
 'use client'
 
-import { memo } from 'react'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Badge } from '@/components/ui/badge'
-import { getTextColorForOklch } from '@/lib/utils'
+import { memo, useCallback } from 'react'
+import { toast } from 'sonner'
 import type { Position, PositionCoordinates, Role } from '@/lib/types'
 
 type LegalityViolation = {
@@ -18,8 +16,6 @@ interface LegalityViolationLayerProps {
   legalityViolations: LegalityViolation[]
   displayPositions: PositionCoordinates
   toSvgCoords: (position: Position) => { x: number; y: number }
-  resolveZoneRole: (zone: string) => Role | null
-  getRoleColor: (role: Role) => string
 }
 
 function LegalityViolationLayerImpl({
@@ -28,9 +24,24 @@ function LegalityViolationLayerImpl({
   legalityViolations,
   displayPositions,
   toSvgCoords,
-  resolveZoneRole,
-  getRoleColor,
 }: LegalityViolationLayerProps) {
+  const showViolationDetails = useCallback((violation: LegalityViolation) => {
+    const [zone1, zone2] = violation.zones
+    const zone1Num = zone1.slice(1)
+    const zone2Num = zone2.slice(1)
+    const isHorizontal = violation.type === 'horizontal_overlap'
+
+    toast.error(
+      isHorizontal ? 'Horizontal Position Mismatch' : 'Vertical Position Mismatch',
+      {
+        description: isHorizontal
+          ? `Zone ${zone1Num} must be to the left of Zone ${zone2Num}.`
+          : `Zone ${zone1Num} must be in front of Zone ${zone2Num}.`,
+        duration: 3600,
+      }
+    )
+  }, [])
+
   if (mode !== 'whiteboard' || legalityViolations.length === 0) return null
 
   return (
@@ -71,103 +82,45 @@ function LegalityViolationLayerImpl({
         const svgPos2 = toSvgCoords(pos2)
         const midX = (svgPos1.x + svgPos2.x) / 2
         const midY = (svgPos1.y + svgPos2.y) / 2
-        const emojiSize = 20
-        const markerPadding = 4
-
-        const [zone1, zone2] = violation.zones
-        const zone1Role = resolveZoneRole(zone1)
-        const zone2Role = resolveZoneRole(zone2)
-        const zone1Color = zone1Role ? getRoleColor(zone1Role) : '#9ca3af'
-        const zone2Color = zone2Role ? getRoleColor(zone2Role) : '#9ca3af'
-        const zone1Num = zone1.slice(1)
-        const zone2Num = zone2.slice(1)
 
         return (
-          <foreignObject
+          <g
             key={`legality-marker-${idx}`}
-            x={midX - emojiSize / 2 - markerPadding}
-            y={midY - emojiSize / 2 - markerPadding}
-            width={emojiSize + markerPadding * 2}
-            height={emojiSize + markerPadding * 2}
-            style={{ pointerEvents: 'auto', overflow: 'visible' }}
+            transform={`translate(${midX} ${midY})`}
+            style={{ cursor: 'pointer', pointerEvents: 'auto', touchAction: 'none' }}
+            role="button"
+            tabIndex={0}
+            aria-label="Show formation violation details"
+            onPointerUp={(event) => {
+              event.preventDefault()
+              event.stopPropagation()
+              showViolationDetails(violation)
+            }}
+            onKeyDown={(event) => {
+              if (event.key !== 'Enter' && event.key !== ' ') return
+              event.preventDefault()
+              showViolationDetails(violation)
+            }}
           >
-            <Popover>
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  className="cursor-pointer flex items-center justify-center"
-                  aria-label="Show formation violation details"
-                  title="Show formation violation details"
-                  style={{
-                    width: emojiSize + markerPadding * 2,
-                    height: emojiSize + markerPadding * 2,
-                    fontSize: emojiSize,
-                    lineHeight: 1,
-                    filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))',
-                    background: 'transparent',
-                    border: 'none',
-                    padding: 0,
-                  }}
-                >
-                  ⚠️
-                </button>
-              </PopoverTrigger>
-              <PopoverContent side="top" className="w-auto">
-                <div className="flex flex-col gap-3">
-                  <div className="text-sm font-medium">
-                    {violation.type === 'horizontal_overlap' ? 'Horizontal Position Mismatch' : 'Vertical Position Mismatch'}
-                  </div>
-                  <div className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap">
-                    {violation.type === 'horizontal_overlap' ? (
-                      <>
-                        <Badge
-                          style={{
-                            backgroundColor: zone1Color,
-                            color: zone1Role ? getTextColorForOklch(zone1Color) : undefined,
-                            border: 'none',
-                          }}
-                        >
-                          Zone {zone1Num}
-                        </Badge>
-                        <span>must be to the left of</span>
-                        <Badge
-                          style={{
-                            backgroundColor: zone2Color,
-                            color: zone2Role ? getTextColorForOklch(zone2Color) : undefined,
-                            border: 'none',
-                          }}
-                        >
-                          Zone {zone2Num}
-                        </Badge>
-                      </>
-                    ) : (
-                      <>
-                        <Badge
-                          style={{
-                            backgroundColor: zone1Color,
-                            color: zone1Role ? getTextColorForOklch(zone1Color) : undefined,
-                            border: 'none',
-                          }}
-                        >
-                          Zone {zone1Num}
-                        </Badge>
-                        <span>must be in front of</span>
-                        <Badge
-                          style={{
-                            backgroundColor: zone2Color,
-                            color: zone2Role ? getTextColorForOklch(zone2Color) : undefined,
-                            border: 'none',
-                          }}
-                        >
-                          Zone {zone2Num}
-                        </Badge>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
-          </foreignObject>
+            <circle cx={0} cy={0} r={14} fill="transparent" />
+            <polygon
+              points="0,-11 10,9 -10,9"
+              fill="#facc15"
+              stroke="#b45309"
+              strokeWidth={1.5}
+            />
+            <text
+              x={0}
+              y={5}
+              textAnchor="middle"
+              fontSize={11}
+              fontWeight={700}
+              fill="#7c2d12"
+              style={{ pointerEvents: 'none', userSelect: 'none' }}
+            >
+              !
+            </text>
+          </g>
         )
       })}
     </>

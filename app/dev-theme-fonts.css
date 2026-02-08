@@ -1,0 +1,525 @@
+/* Dev Theme Lab font pack: local webfont aliases for reliable hover previews. */
+
+/* -------------------------------------------------------------------------- */
+/* Maison Neue                                                                */
+/* -------------------------------------------------------------------------- */
+
+@font-face {
+  font-family: "Maison Neue";
+  src: url("/fonts/dev-theme/maison/MaisonNeueThin.woff") format("woff");
+  font-style: normal;
+  font-weight: 100;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Maison Neue";
+  src: url("/fonts/dev-theme/maison/MaisonNeueThinItalic.woff") format("woff");
+  font-style: italic;
+  font-weight: 100;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Maison Neue";
+  src: url("/fonts/dev-theme/maison/MaisonNeueLight.woff") format("woff");
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Maison Neue";
+  src: url("/fonts/dev-theme/maison/MaisonNeueLightItalic.woff") format("woff");
+  font-style: italic;
+  font-weight: 300;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Maison Neue";
+  src: url("/fonts/dev-theme/maison/MaisonNeueBook.woff") format("woff");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Maison Neue";
+  src: url("/fonts/dev-theme/maison/MaisonNeueBookItalic.woff") format("woff");
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Maison Neue";
+  src: url("/fonts/dev-theme/maison/MaisonNeueMedium.woff") format("woff");
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Maison Neue";
+  src: url("/fonts/dev-theme/maison/MaisonNeueMediumItalic.woff") format("woff");
+  font-style: italic;
+  font-weight: 500;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Maison Neue";
+  src: url("/fonts/dev-theme/maison/MaisonNeueDemi.woff") format("woff");
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Maison Neue";
+  src: url("/fonts/dev-theme/maison/MaisonNeueDemiItalic.woff") format("woff");
+  font-style: italic;
+  font-weight: 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Maison Neue";
+  src: url("/fonts/dev-theme/maison/MaisonNeueBold.woff") format("woff");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Maison Neue";
+  src: url("/fonts/dev-theme/maison/MaisonNeueBoldItalic.woff") format("woff");
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Maison Neue";
+  src: url("/fonts/dev-theme/maison/MaisonNeueBlack.woff") format("woff");
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Maison Neue";
+  src: url("/fonts/dev-theme/maison/MaisonNeueBlackItalic.woff") format("woff");
+  font-style: italic;
+  font-weight: 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Maison Neue Thin";
+  src: url("/fonts/dev-theme/maison/MaisonNeueThin.woff") format("woff");
+  font-style: normal;
+  font-weight: 100;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Maison Neue Thin Italic";
+  src: url("/fonts/dev-theme/maison/MaisonNeueThinItalic.woff") format("woff");
+  font-style: italic;
+  font-weight: 100;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Maison Neue Light";
+  src: url("/fonts/dev-theme/maison/MaisonNeueLight.woff") format("woff");
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Maison Neue Light Italic";
+  src: url("/fonts/dev-theme/maison/MaisonNeueLightItalic.woff") format("woff");
+  font-style: italic;
+  font-weight: 300;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Maison Neue Book";
+  src: url("/fonts/dev-theme/maison/MaisonNeueBook.woff") format("woff");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Maison Neue Book Italic";
+  src: url("/fonts/dev-theme/maison/MaisonNeueBookItalic.woff") format("woff");
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Maison Neue Regular";
+  src: url("/fonts/dev-theme/maison/MaisonNeueBook.woff") format("woff");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Maison Neue Italic";
+  src: url("/fonts/dev-theme/maison/MaisonNeueBookItalic.woff") format("woff");
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Maison Neue Medium";
+  src: url("/fonts/dev-theme/maison/MaisonNeueMedium.woff") format("woff");
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Maison Neue Medium Italic";
+  src: url("/fonts/dev-theme/maison/MaisonNeueMediumItalic.woff") format("woff");
+  font-style: italic;
+  font-weight: 500;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Maison Neue Demi";
+  src: url("/fonts/dev-theme/maison/MaisonNeueDemi.woff") format("woff");
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Maison Neue Demi Italic";
+  src: url("/fonts/dev-theme/maison/MaisonNeueDemiItalic.woff") format("woff");
+  font-style: italic;
+  font-weight: 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Maison Neue Demibold";
+  src: url("/fonts/dev-theme/maison/MaisonNeueDemi.woff") format("woff");
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Maison Neue Demibold Italic";
+  src: url("/fonts/dev-theme/maison/MaisonNeueDemiItalic.woff") format("woff");
+  font-style: italic;
+  font-weight: 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Maison Neue Bold";
+  src: url("/fonts/dev-theme/maison/MaisonNeueBold.woff") format("woff");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Maison Neue Bold Italic";
+  src: url("/fonts/dev-theme/maison/MaisonNeueBoldItalic.woff") format("woff");
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Maison Neue Black";
+  src: url("/fonts/dev-theme/maison/MaisonNeueBlack.woff") format("woff");
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Maison Neue Black Italic";
+  src: url("/fonts/dev-theme/maison/MaisonNeueBlackItalic.woff") format("woff");
+  font-style: italic;
+  font-weight: 900;
+  font-display: swap;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Neuve Grotesk / Grotesqu (limited source pack: regular + bold)            */
+/* -------------------------------------------------------------------------- */
+
+@font-face {
+  font-family: "Neuve Grotesk";
+  src: url("/fonts/dev-theme/neuve/NeuveGrotesque-Regular.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Neuve Grotesk";
+  src: url("/fonts/dev-theme/neuve/NeuveGrotesque-Bold.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Neuve Grotesqu";
+  src: url("/fonts/dev-theme/neuve/NeuveGrotesque-Regular.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Neuve Grotesqu";
+  src: url("/fonts/dev-theme/neuve/NeuveGrotesque-Bold.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Neuve Grotesk Thin";
+  src: url("/fonts/dev-theme/neuve/NeuveGrotesque-Regular.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 100;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Neuve Grotesk Light";
+  src: url("/fonts/dev-theme/neuve/NeuveGrotesque-Regular.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Neuve Grotesk Regular";
+  src: url("/fonts/dev-theme/neuve/NeuveGrotesque-Regular.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Neuve Grotesk Medium";
+  src: url("/fonts/dev-theme/neuve/NeuveGrotesque-Bold.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Neuve Grotesk Semibold";
+  src: url("/fonts/dev-theme/neuve/NeuveGrotesque-Bold.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Neuve Grotesk Bold";
+  src: url("/fonts/dev-theme/neuve/NeuveGrotesque-Bold.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Neuve Grotesk Black";
+  src: url("/fonts/dev-theme/neuve/NeuveGrotesque-Bold.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Neuve Grotesqu Thin";
+  src: url("/fonts/dev-theme/neuve/NeuveGrotesque-Regular.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 100;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Neuve Grotesqu Light";
+  src: url("/fonts/dev-theme/neuve/NeuveGrotesque-Regular.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Neuve Grotesqu Regular";
+  src: url("/fonts/dev-theme/neuve/NeuveGrotesque-Regular.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Neuve Grotesqu Medium";
+  src: url("/fonts/dev-theme/neuve/NeuveGrotesque-Bold.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Neuve Grotesqu Semibold";
+  src: url("/fonts/dev-theme/neuve/NeuveGrotesque-Bold.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Neuve Grotesqu Bold";
+  src: url("/fonts/dev-theme/neuve/NeuveGrotesque-Bold.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Neuve Grotesqu Black";
+  src: url("/fonts/dev-theme/neuve/NeuveGrotesque-Bold.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Residenz Grotesk (trial package)                                           */
+/* -------------------------------------------------------------------------- */
+
+@font-face {
+  font-family: "Residenz Grotesk";
+  src: url("/fonts/dev-theme/residenz/ResidenzGrotesk-Thin.otf") format("opentype");
+  font-style: normal;
+  font-weight: 100;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Residenz Grotesk";
+  src: url("/fonts/dev-theme/residenz/ResidenzGrotesk-Light.otf") format("opentype");
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Residenz Grotesk";
+  src: url("/fonts/dev-theme/residenz/ResidenzGrotesk-Regular.otf") format("opentype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Residenz Grotesk";
+  src: url("/fonts/dev-theme/residenz/ResidenzGrotesk-Medium.otf") format("opentype");
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Residenz Grotesk";
+  src: url("/fonts/dev-theme/residenz/ResidenzGrotesk-SemiBold.otf") format("opentype");
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Residenz Grotesk";
+  src: url("/fonts/dev-theme/residenz/ResidenzGrotesk-Bold.otf") format("opentype");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Residenz Grotesk";
+  src: url("/fonts/dev-theme/residenz/ResidenzGrotesk-Bold.otf") format("opentype");
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Residenz Grotesk Thin";
+  src: url("/fonts/dev-theme/residenz/ResidenzGrotesk-Thin.otf") format("opentype");
+  font-style: normal;
+  font-weight: 100;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Residenz Grotesk Light";
+  src: url("/fonts/dev-theme/residenz/ResidenzGrotesk-Light.otf") format("opentype");
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Residenz Grotesk Regular";
+  src: url("/fonts/dev-theme/residenz/ResidenzGrotesk-Regular.otf") format("opentype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Residenz Grotesk Medium";
+  src: url("/fonts/dev-theme/residenz/ResidenzGrotesk-Medium.otf") format("opentype");
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Residenz Grotesk Semibold";
+  src: url("/fonts/dev-theme/residenz/ResidenzGrotesk-SemiBold.otf") format("opentype");
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Residenz Grotesk Bold";
+  src: url("/fonts/dev-theme/residenz/ResidenzGrotesk-Bold.otf") format("opentype");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Residenz Grotesk Black";
+  src: url("/fonts/dev-theme/residenz/ResidenzGrotesk-Bold.otf") format("opentype");
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+}

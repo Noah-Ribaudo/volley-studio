@@ -630,6 +630,10 @@ export function VolleyballCourt({
   }, [displayPositions, draggingRole, dragPosition])
 
   const effectiveLegalityViolations = useMemo(() => {
+    if (isPreviewingMovement) {
+      return []
+    }
+
     const canComputeLive =
       mode === 'whiteboard' &&
       Boolean(rotation) &&
@@ -657,6 +661,7 @@ export function VolleyballCourt({
       resolvedBaseOrder
     )
   }, [
+    isPreviewingMovement,
     mode,
     rotation,
     currentPhase,
@@ -2012,8 +2017,6 @@ export function VolleyballCourt({
           legalityViolations={effectiveLegalityViolations}
           displayPositions={legalityDisplayPositions}
           toSvgCoords={toSvgCoords}
-          resolveZoneRole={(zone) => getRoleForZone(zone, rotation, resolvedBaseOrder)}
-          getRoleColor={(role) => ROLE_INFO[role].color}
         />
 
         <MovementArrowLayer
@@ -2415,30 +2418,6 @@ export function VolleyballCourt({
             }
           } : undefined}
           hasArrow={contextPlayer ? !!arrows[contextPlayer] : false}
-          onFlipArrow={contextPlayer && onArrowCurveChange ? () => {
-            const currentCurve = arrowCurves[contextPlayer]
-            const arrowTarget = arrows[contextPlayer]
-            const playerPos = displayPositions[contextPlayer]
-            if (currentCurve && arrowTarget && playerPos) {
-              // Mirror the control point across the arrow's centerline
-              const midX = (playerPos.x + arrowTarget.x) / 2
-              const midY = (playerPos.y + arrowTarget.y) / 2
-              // Reflect control point across the midpoint
-              const flippedX = 2 * midX - currentCurve.x
-              const flippedY = 2 * midY - currentCurve.y
-              onArrowCurveChange(contextPlayer, { x: flippedX, y: flippedY })
-            } else if (arrowTarget && playerPos) {
-              // No curve set yet - create one by offsetting from midpoint
-              const midX = (playerPos.x + arrowTarget.x) / 2
-              const midY = (playerPos.y + arrowTarget.y) / 2
-              const dx = arrowTarget.x - playerPos.x
-              const dy = arrowTarget.y - playerPos.y
-              const dist = Math.sqrt(dx * dx + dy * dy)
-              const perpX = -dy / dist * 0.1
-              const perpY = dx / dist * 0.1
-              onArrowCurveChange(contextPlayer, { x: midX + perpX, y: midY + perpY })
-            }
-          } : undefined}
           canStartArrow={Boolean(contextPlayer && onArrowChange)}
           onStartArrow={contextPlayer && onArrowChange ? () => {
             clearPrime()
@@ -2451,6 +2430,14 @@ export function VolleyballCourt({
           } : undefined}
           hasTeam={hasTeam}
           onManageRoster={onManageRoster}
+          onPlayerAssign={onPlayerAssign ? (role, playerId) => {
+            if (playerId) {
+              onPlayerAssign(role, playerId)
+            } else {
+              // Unassign - pass empty string to clear
+              onPlayerAssign(role, '')
+            }
+          } : undefined}
         />
       )}
 

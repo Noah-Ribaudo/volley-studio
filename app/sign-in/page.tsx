@@ -5,7 +5,7 @@ import { useConvexAuth } from "convex/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import dynamic from "next/dynamic";
-import { SignInWithGoogle, SignInWithPassword } from "@/components/auth/SignIn";
+import { SignInWithGoogle, SignInWithPassword, DevAdminSignIn } from "@/components/auth/SignIn";
 import VolleyWordmark from "@/components/logo/VolleyWordmark";
 
 const BackgroundShader = dynamic(
@@ -63,6 +63,20 @@ export default function SignInPage() {
               Continue without signing in
             </Link>
           </div>
+
+          {process.env.NODE_ENV === "development" && (
+            <>
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-border" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">dev</span>
+                </div>
+              </div>
+              <DevAdminSignIn />
+            </>
+          )}
         </div>
       </div>
     </div>

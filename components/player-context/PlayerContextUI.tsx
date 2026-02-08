@@ -31,8 +31,6 @@ interface PlayerContextUIProps {
   onHighlightToggle?: () => void
   /** Whether the context player has an arrow */
   hasArrow?: boolean
-  /** Callback to flip the arrow curve direction */
-  onFlipArrow?: () => void
   /** Whether arrow placement can be started */
   canStartArrow?: boolean
   /** Callback to start arrow placement mode */
@@ -41,6 +39,8 @@ interface PlayerContextUIProps {
   hasTeam?: boolean
   /** Callback to open roster management */
   onManageRoster?: () => void
+  /** Callback to assign a player to a role */
+  onPlayerAssign?: (role: Role, playerId: string | undefined) => void
 }
 
 export function PlayerContextUI({
@@ -55,11 +55,11 @@ export function PlayerContextUI({
   isHighlighted,
   onHighlightToggle,
   hasArrow,
-  onFlipArrow,
   canStartArrow,
   onStartArrow,
   hasTeam,
   onManageRoster,
+  onPlayerAssign,
 }: PlayerContextUIProps) {
   const isMobile = useIsMobile()
   const isOpen = contextPlayer !== null
@@ -82,7 +82,7 @@ export function PlayerContextUI({
     }
 
     const POPOVER_WIDTH = 224 // w-56 = 14rem = 224px
-    const POPOVER_HEIGHT = 420 // Approximate max height (header + status buttons)
+    const POPOVER_HEIGHT = 520 // Approximate max height (header + roster picker + status buttons)
     const GAP = 20 // Gap between token and popover
     const VIEWPORT_PADDING = 12 // Minimum distance from viewport edge
 
@@ -137,7 +137,7 @@ export function PlayerContextUI({
   if (isMobile) {
     return (
       <Sheet open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-        <SheetContent side="bottom" className="max-h-[60vh] px-6 pt-6 pb-8">
+        <SheetContent side="bottom" className="max-h-[75vh] overflow-y-auto px-6 pt-6 pb-8">
           <VisuallyHidden>
             <SheetTitle>Player options</SheetTitle>
             <SheetDescription>Options for the selected player</SheetDescription>
@@ -153,7 +153,6 @@ export function PlayerContextUI({
               isHighlighted={isHighlighted}
               onHighlightToggle={onHighlightToggle}
               hasArrow={hasArrow}
-              onFlipArrow={onFlipArrow}
               canStartArrow={canStartArrow}
               onStartArrow={onStartArrow ? () => {
                 handleClose()
@@ -165,6 +164,7 @@ export function PlayerContextUI({
                 handleClose()
                 onManageRoster()
               } : undefined}
+              onPlayerAssign={onPlayerAssign}
             />
           )}
         </SheetContent>
@@ -188,7 +188,7 @@ export function PlayerContextUI({
       />
       {/* Popover content */}
       <div
-        className="fixed z-50 w-56 rounded-md border bg-popover p-4 text-popover-foreground shadow-md"
+        className="fixed z-50 w-56 max-h-[80vh] overflow-y-auto rounded-md border bg-popover p-4 text-popover-foreground shadow-md"
         style={{
           left: position.left,
           top: position.top,
@@ -204,7 +204,6 @@ export function PlayerContextUI({
           isHighlighted={isHighlighted}
           onHighlightToggle={onHighlightToggle}
           hasArrow={hasArrow}
-          onFlipArrow={onFlipArrow}
           canStartArrow={canStartArrow}
           onStartArrow={onStartArrow}
           isMobile={false}
@@ -213,6 +212,7 @@ export function PlayerContextUI({
             handleClose()
             onManageRoster()
           } : undefined}
+          onPlayerAssign={onPlayerAssign}
         />
       </div>
     </>,

@@ -16,7 +16,7 @@ test.describe('Privacy Policy', () => {
     // Should explain what data is stored
     await expect(page.getByText(/what we store/i)).toBeVisible()
     await expect(page.getByText(/email and name/i)).toBeVisible()
-    await expect(page.getByText(/team data/i)).toBeVisible()
+    await expect(page.getByText(/team\/settings data/i)).toBeVisible()
 
     // Should explain what we don't do
     await expect(page.getByText(/what we don't do/i)).toBeVisible()

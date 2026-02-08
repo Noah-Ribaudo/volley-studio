@@ -9,6 +9,7 @@ import {
   GeistPixelTriangle,
   GeistPixelLine,
 } from "geist/font/pixel";
+import "./dev-theme-fonts.css";
 import "./globals.css";
 import TextureModeLoader from "@/components/TextureModeLoader";
 import ThemeInitializer from "@/components/ThemeInitializer";

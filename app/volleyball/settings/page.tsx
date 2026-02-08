@@ -1,6 +1,10 @@
 'use client'
 
+import Link from 'next/link'
 import { useState } from 'react'
+import { useAuthActions } from '@convex-dev/auth/react'
+import { useConvexAuth, useQuery } from 'convex/react'
+import { api } from '@/convex/_generated/api'
 import { useAppStore } from '@/store/useAppStore'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
@@ -49,6 +53,8 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 
 export default function SettingsPage() {
+  const { isAuthenticated, isLoading: authLoading } = useConvexAuth()
+  const { signOut } = useAuthActions()
   const {
     // Display toggles
     showPosition,
@@ -61,8 +67,6 @@ export default function SettingsPage() {
     setCircleTokens,
     hideAwayTeam,
     setHideAwayTeam,
-    fullStatusLabels,
-    setFullStatusLabels,
     // Role highlight
     highlightedRole,
     setHighlightedRole,
@@ -85,6 +89,8 @@ export default function SettingsPage() {
     backgroundOpacity,
     setBackgroundOpacity,
   } = useAppStore()
+  const viewer = useQuery(api.users.viewer, isAuthenticated ? {} : 'skip')
+  const [isSigningOut, setIsSigningOut] = useState(false)
 
   // DnD sensors for phase reordering
   const sensors = useSensors(
@@ -110,12 +116,56 @@ export default function SettingsPage() {
 
   const hasTeam = Boolean(currentTeam)
   const [whiteboardPhasesOpen, setWhiteboardPhasesOpen] = useState(false)
+  const handleSignOut = async () => {
+    if (isSigningOut) return
+    setIsSigningOut(true)
+    try {
+      await signOut()
+    } finally {
+      setIsSigningOut(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
       <div className="container mx-auto px-4 py-6 pb-32 max-w-2xl space-y-6">
         {process.env.NODE_ENV === 'development' && <DevThemeSection />}
         {process.env.NODE_ENV === 'development' && <DevLogoSection />}
+
+        {/* Account */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Account</CardTitle>
+            <CardDescription>Sign in to sync teams and settings across devices</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {authLoading ? (
+              <div className="h-10 rounded-md bg-muted animate-pulse" />
+            ) : isAuthenticated ? (
+              <>
+                <div className="text-sm text-muted-foreground">
+                  Signed in as{' '}
+                  <span className="font-medium text-foreground">
+                    {viewer?.email || viewer?.name || 'your account'}
+                  </span>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleSignOut}
+                  disabled={isSigningOut}
+                >
+                  {isSigningOut ? 'Signing out...' : 'Sign out'}
+                </Button>
+              </>
+            ) : (
+              <Button asChild className="w-full">
+                <Link href="/sign-in">Sign in</Link>
+              </Button>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Appearance */}
         <Card>
@@ -232,13 +282,6 @@ export default function SettingsPage() {
               onCheckedChange={setCircleTokens}
             />
             <SettingsToggle
-              id="full-status-labels"
-              label="Full Status Labels"
-              description="Show full words (Pass, Block, etc.) instead of single letters"
-              checked={fullStatusLabels}
-              onCheckedChange={setFullStatusLabels}
-            />
-            <SettingsToggle
               id="hide-away-team"
               label="Hide Away Team"
               description="Show only your team on the whiteboard"
@@ -264,15 +307,27 @@ export default function SettingsPage() {
                 </p>
               </div>
             )}
-            <SettingsToggle
-              id="debug-hitboxes"
-              label="Show Touch Targets"
-              description="Display green overlay on interactive touch areas"
-              checked={debugHitboxes}
-              onCheckedChange={setDebugHitboxes}
-            />
           </CardContent>
         </Card>
+
+        {/* Developer Tools - dev only */}
+        {process.env.NODE_ENV === 'development' && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Developer</CardTitle>
+              <CardDescription>Tools for development and debugging</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <SettingsToggle
+                id="debug-hitboxes"
+                label="Show Touch Targets"
+                description="Display green overlay on interactive touch areas"
+                checked={debugHitboxes}
+                onCheckedChange={setDebugHitboxes}
+              />
+            </CardContent>
+          </Card>
+        )}
 
         {/* Whiteboard Phases */}
         <Card>

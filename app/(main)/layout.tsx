@@ -17,6 +17,7 @@ import { getActiveAssignments } from '@/lib/lineups'
 import type { Rotation, Phase, PositionCoordinates, RallyPhase } from '@/lib/types'
 import { RALLY_PHASES, isRallyPhase as checkIsRallyPhase } from '@/lib/types'
 import VolleyBall from '@/components/logo/VolleyBall'
+import Link from 'next/link'
 
 const BackgroundShader = dynamic(
   () => import('@/components/BackgroundShader').then((mod) => mod.BackgroundShader),
@@ -161,6 +162,14 @@ export default function VolleyballLayout({
 
         {/* Mobile bottom navigation (4 tabs) */}
         <MobileBottomNav />
+
+        {/* Privacy link - required for Google OAuth verification */}
+        <Link
+          href="/privacy"
+          className="fixed bottom-2 left-2 z-30 text-[10px] text-muted-foreground/40 hover:text-muted-foreground transition-colors hidden md:block"
+        >
+          Privacy
+        </Link>
 
         {/* Print Dialog */}
         <PrintDialog

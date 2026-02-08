@@ -107,6 +107,21 @@ const HUGEICON_ICONS: { name: string; icon: any }[] = [
   { name: 'ViewOff', icon: ViewOffIcon },
 ]
 
+function getFontVariantPreview(id: string) {
+  const key = id.toLowerCase()
+
+  let fontWeight = 400
+  if (key.includes('thin')) fontWeight = 100
+  else if (key.includes('light')) fontWeight = 300
+  else if (key.includes('medium')) fontWeight = 500
+  else if (key.includes('semibold') || key.includes('demi') || key.includes('demibold')) fontWeight = 600
+  else if (key.includes('bold')) fontWeight = 700
+  else if (key.includes('black')) fontWeight = 900
+
+  const fontStyle: 'normal' | 'italic' = key.includes('italic') ? 'italic' : 'normal'
+  return { fontWeight, fontStyle }
+}
+
 export default function DevThemeSection() {
   useDevThemeApplicator()
 
@@ -137,6 +152,28 @@ export default function DevThemeSection() {
   const setBackgroundOpacity = useAppStore((s) => s.setBackgroundOpacity)
 
   const accentColor = `oklch(${accentLightness}% ${accentChroma / 1000} ${accentHue})`
+  const selectedSansFont = FONT_OPTIONS.find((f) => f.id === fontSans)
+  const selectedDisplayFont = DISPLAY_FONT_OPTIONS.find((f) => f.id === fontDisplay)
+  const sansPreview = selectedSansFont ? getFontVariantPreview(selectedSansFont.id) : null
+  const displayPreview = selectedDisplayFont ? getFontVariantPreview(selectedDisplayFont.id) : null
+
+  const renderFontOptionLabel = (f: { id: string; label: string; cssValue: string; category: string }) => {
+    const preview = getFontVariantPreview(f.id)
+    return (
+      <span className="flex items-center gap-2">
+        <span
+          style={{
+            fontFamily: f.cssValue,
+            fontWeight: preview.fontWeight,
+            fontStyle: preview.fontStyle,
+          }}
+        >
+          {f.label}
+        </span>
+        <span className="text-[10px] text-muted-foreground">{f.category}</span>
+      </span>
+    )
+  }
 
   function handleCopyTheme() {
     const sansFont = FONT_OPTIONS.find((f) => f.id === fontSans)
@@ -206,52 +243,64 @@ export default function DevThemeSection() {
 
           <div className="space-y-2">
             <Label className="text-sm font-medium">Body Font</Label>
-            <Select value={fontSans} onValueChange={setFontSans}>
+            <p
+              className="text-sm p-3 rounded-md bg-muted/50 border"
+              style={{
+                fontFamily: selectedSansFont?.cssValue,
+                fontWeight: sansPreview?.fontWeight,
+                fontStyle: sansPreview?.fontStyle,
+              }}
+            >
+              The quick brown fox jumps over the lazy dog. 0123456789
+            </p>
+            <Select value={fontSans} onValueChange={() => undefined}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {FONT_OPTIONS.map((f) => (
-                  <SelectItem key={f.id} value={f.id}>
-                    <span className="flex items-center gap-2">
-                      <span>{f.label}</span>
-                      <span className="text-[10px] text-muted-foreground">{f.category}</span>
-                    </span>
+                  <SelectItem
+                    key={f.id}
+                    value={f.id}
+                    onMouseEnter={() => setFontSans(f.id)}
+                    onFocus={() => setFontSans(f.id)}
+                  >
+                    {renderFontOptionLabel(f)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <p
-              className="text-sm p-3 rounded-md bg-muted/50 border"
-              style={{ fontFamily: FONT_OPTIONS.find((f) => f.id === fontSans)?.cssValue }}
-            >
-              The quick brown fox jumps over the lazy dog. 0123456789
-            </p>
           </div>
 
           <div className="space-y-2">
             <Label className="text-sm font-medium">Display / Heading Font</Label>
-            <Select value={fontDisplay} onValueChange={setFontDisplay}>
+            <p
+              className="text-lg font-semibold p-3 rounded-md bg-muted/50 border"
+              style={{
+                fontFamily: selectedDisplayFont?.cssValue,
+                fontWeight: displayPreview?.fontWeight,
+                fontStyle: displayPreview?.fontStyle,
+              }}
+            >
+              Rotation 1 — Serve Receive
+            </p>
+            <Select value={fontDisplay} onValueChange={() => undefined}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {DISPLAY_FONT_OPTIONS.map((f) => (
-                  <SelectItem key={f.id} value={f.id}>
-                    <span className="flex items-center gap-2">
-                      <span>{f.label}</span>
-                      <span className="text-[10px] text-muted-foreground">{f.category}</span>
-                    </span>
+                  <SelectItem
+                    key={f.id}
+                    value={f.id}
+                    onMouseEnter={() => setFontDisplay(f.id)}
+                    onFocus={() => setFontDisplay(f.id)}
+                  >
+                    {renderFontOptionLabel(f)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <p
-              className="text-lg font-semibold p-3 rounded-md bg-muted/50 border"
-              style={{ fontFamily: DISPLAY_FONT_OPTIONS.find((f) => f.id === fontDisplay)?.cssValue }}
-            >
-              Rotation 1 — Serve Receive
-            </p>
           </div>
         </section>
 

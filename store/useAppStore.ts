@@ -445,7 +445,7 @@ export const useAppStore = create<AppState>()(
       debugHitboxes: false, // Default to hiding hitbox debug overlay
       showMotionDebugPanel: false, // Default to hidden motion debug panel
       navMode: 'header' as const, // Default to header nav (no sidebar)
-      backgroundShader: 'grain-gradient' as ShaderId, // Default background shader
+      backgroundShader: 'none' as ShaderId, // Default background shader (off by default)
       backgroundOpacity: 95, // Default background content opacity
       isPreviewingMovement: false, // Default to not previewing (not persisted)
       playAnimationTrigger: 0, // Counter to trigger play animation
