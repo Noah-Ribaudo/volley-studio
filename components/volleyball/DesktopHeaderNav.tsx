@@ -64,6 +64,7 @@ export function DesktopHeaderNav({ onOpenPrintDialog }: DesktopHeaderNavProps) {
   const triggerPlayAnimation = useAppStore((state) => state.triggerPlayAnimation)
   const hideAwayTeam = useAppStore((state) => state.hideAwayTeam)
   const setHideAwayTeam = useAppStore((state) => state.setHideAwayTeam)
+  const showPrintFeature = useAppStore((state) => state.showPrintFeature)
   const showMotionDebugPanel = useAppStore((state) => state.showMotionDebugPanel)
   const setShowMotionDebugPanel = useAppStore((state) => state.setShowMotionDebugPanel)
 
@@ -250,19 +251,21 @@ export function DesktopHeaderNav({ onOpenPrintDialog }: DesktopHeaderNavProps) {
             <span>Opponent</span>
           </Button>
 
-          {/* Divider */}
-          <div className="w-px h-6 bg-border" />
-
-          {/* Print button */}
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 gap-1.5"
-            onClick={() => onOpenPrintDialog?.()}
-          >
-            <Printer className="h-4 w-4" />
-            <span>Print</span>
-          </Button>
+          {/* Print button - dev toggle */}
+          {showPrintFeature && (
+            <>
+              <div className="w-px h-6 bg-border" />
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5"
+                onClick={() => onOpenPrintDialog?.()}
+              >
+                <Printer className="h-4 w-4" />
+                <span>Print</span>
+              </Button>
+            </>
+          )}
         </div>
       )}
 
