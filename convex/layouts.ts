@@ -4,6 +4,24 @@ import { auth } from "./auth";
 import { Id } from "./_generated/dataModel";
 import { MutationCtx, QueryCtx } from "./_generated/server";
 
+function buildLayoutKey(teamId: Id<"teams">, rotation: number, phase: string): string {
+  return `${teamId}:${rotation}:${phase}`;
+}
+
+function pickMostRecentLayout<
+  T extends {
+    _creationTime: number;
+  }
+>(layouts: T[]): T {
+  let mostRecent = layouts[0];
+  for (const layout of layouts) {
+    if (layout._creationTime > mostRecent._creationTime) {
+      mostRecent = layout;
+    }
+  }
+  return mostRecent;
+}
+
 // Helper to verify the current user owns the team
 async function assertTeamOwnerForLayout(
   ctx: MutationCtx | QueryCtx,
@@ -36,10 +54,26 @@ export const getByTeam = query({
       return [];
     }
 
-    return await ctx.db
+    const layouts = await ctx.db
       .query("customLayouts")
       .withIndex("by_team", (q) => q.eq("teamId", args.teamId))
       .collect();
+
+    if (layouts.length <= 1) {
+      return layouts;
+    }
+
+    // Defensive dedupe: always return at most one document per team+rotation+phase.
+    const deduped = new Map<string, (typeof layouts)[number]>();
+    for (const layout of layouts) {
+      const key = buildLayoutKey(layout.teamId, layout.rotation, layout.phase);
+      const existing = deduped.get(key);
+      if (!existing || layout._creationTime > existing._creationTime) {
+        deduped.set(key, layout);
+      }
+    }
+
+    return Array.from(deduped.values());
   },
 });
 
@@ -57,12 +91,18 @@ export const getByRotationPhase = query({
       return null;
     }
 
-    return await ctx.db
+    const matches = await ctx.db
       .query("customLayouts")
       .withIndex("by_team_rotation_phase", (q) =>
         q.eq("teamId", args.teamId).eq("rotation", args.rotation).eq("phase", args.phase)
       )
-      .first();
+      .collect();
+
+    if (matches.length === 0) {
+      return null;
+    }
+
+    return pickMostRecentLayout(matches);
   },
 });
 
@@ -97,31 +137,86 @@ export const save = mutation({
     // Verify user owns this team
     await assertTeamOwnerForLayout(ctx, args.teamId);
 
-    // Check if layout already exists
-    const existing = await ctx.db
+    // Check if layout already exists. We collect defensively to recover from
+    // any historical duplicates, then keep only the most recent document.
+    const existingLayouts = await ctx.db
       .query("customLayouts")
       .withIndex("by_team_rotation_phase", (q) =>
         q.eq("teamId", args.teamId).eq("rotation", args.rotation).eq("phase", args.phase)
       )
-      .first();
+      .collect();
 
-    if (existing) {
-      // Update existing layout
-      await ctx.db.patch(existing._id, {
+    if (existingLayouts.length > 0) {
+      const mostRecent = pickMostRecentLayout(existingLayouts);
+
+      // Update the canonical layout document.
+      await ctx.db.patch(mostRecent._id, {
         positions: args.positions,
         flags: args.flags,
       });
-      return existing._id;
-    } else {
-      // Insert new layout
-      return await ctx.db.insert("customLayouts", {
-        teamId: args.teamId,
-        rotation: args.rotation,
-        phase: args.phase,
-        positions: args.positions,
-        flags: args.flags,
-      });
+
+      // Remove duplicates for the same key so each rotation/phase maps to one row.
+      for (const layout of existingLayouts) {
+        if (layout._id !== mostRecent._id) {
+          await ctx.db.delete(layout._id);
+        }
+      }
+
+      return mostRecent._id;
     }
+
+    // Insert new layout
+    return await ctx.db.insert("customLayouts", {
+      teamId: args.teamId,
+      rotation: args.rotation,
+      phase: args.phase,
+      positions: args.positions,
+      flags: args.flags,
+    });
+  },
+});
+
+// Repair utility: remove duplicate layout documents for a team so each
+// team+rotation+phase combination maps to exactly one row.
+export const dedupeTeamLayouts = mutation({
+  args: { teamId: v.id("teams") },
+  handler: async (ctx, args) => {
+    await assertTeamOwnerForLayout(ctx, args.teamId);
+
+    const layouts = await ctx.db
+      .query("customLayouts")
+      .withIndex("by_team", (q) => q.eq("teamId", args.teamId))
+      .collect();
+
+    const grouped = new Map<string, (typeof layouts)>();
+    for (const layout of layouts) {
+      const key = buildLayoutKey(layout.teamId, layout.rotation, layout.phase);
+      const existing = grouped.get(key);
+      if (existing) {
+        existing.push(layout);
+      } else {
+        grouped.set(key, [layout]);
+      }
+    }
+
+    let removed = 0;
+    for (const group of grouped.values()) {
+      if (group.length <= 1) continue;
+
+      const mostRecent = pickMostRecentLayout(group);
+      for (const layout of group) {
+        if (layout._id !== mostRecent._id) {
+          await ctx.db.delete(layout._id);
+          removed++;
+        }
+      }
+    }
+
+    return {
+      total: layouts.length,
+      removed,
+      remaining: layouts.length - removed,
+    };
   },
 });
 
