@@ -157,6 +157,9 @@ export function RosterManagementCard() {
   // Determine if we're in "Practice Mode" (no saved team) or "Team Mode"
   const isTeamMode = localTeamId !== null
   const isPracticeMode = !isTeamMode
+  const manageHref = currentTeam
+    ? `/teams/${encodeURIComponent(currentTeam._id || currentTeam.id)}`
+    : '/teams'
 
   return (
     <>
@@ -180,7 +183,7 @@ export function RosterManagementCard() {
 
             {/* Team actions */}
             {isTeamMode && (
-              <Link href="/roster" className="shrink-0">
+              <Link href={manageHref} className="shrink-0">
                 <Button variant="ghost" size="sm" className="text-xs">
                   Manage
                 </Button>
@@ -241,7 +244,7 @@ export function RosterManagementCard() {
           {/* Team mode: link to full roster page for settings and team switching */}
           {isTeamMode && (
             <div className="pt-2 border-t">
-              <Link href="/roster" className="w-full">
+              <Link href={manageHref} className="w-full">
                 <Button variant="outline" size="sm" className="w-full text-xs">
                   Settings & Team Admin
                 </Button>

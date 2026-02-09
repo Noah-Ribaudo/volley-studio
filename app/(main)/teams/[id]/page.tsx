@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useEffect, useState } from 'react'
+import { use, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '@/convex/_generated/api'
@@ -52,33 +52,75 @@ export default function TeamEditPage({ params }: TeamPageProps) {
   const [selectedLineupId, setSelectedLineupId] = useState<string | null>(null)
   const [activeLineupId, setActiveLineupId] = useState<string | null>(null)
   const [lineupAssignments, setLineupAssignments] = useState<PositionAssignments>({})
-  const remoteTeam: Team | null = !isLocalTeam && team
-    ? {
-      id: team._id,
-      _id: team._id,
-      name: team.name,
-      slug: team.slug,
-      hasPassword: team.hasPassword,
-      archived: team.archived,
-      roster: team.roster.map((player) => ({
+  const remoteTeamId = team?._id ?? null
+  const remoteTeamName = team?.name ?? ''
+  const remoteTeamSlug = team?.slug ?? ''
+  const remoteTeamHasPassword = team?.hasPassword ?? false
+  const remoteTeamArchived = team?.archived ?? false
+  const remoteTeamActiveLineupId = team?.activeLineupId ?? null
+  const remoteTeamCreationTime = team?._creationTime ?? null
+  const remoteRosterJson = JSON.stringify(team?.roster ?? [])
+  const remoteLineupsJson = JSON.stringify(team?.lineups ?? [])
+  const remoteAssignmentsJson = JSON.stringify(team?.positionAssignments ?? {})
+
+  const remoteTeam = useMemo<Team | null>(() => {
+    if (isLocalTeam || !remoteTeamId || remoteTeamCreationTime === null) {
+      return null
+    }
+
+    const roster = JSON.parse(remoteRosterJson) as Array<{ id: string; name?: string; number?: number }>
+    const teamLineups = JSON.parse(remoteLineupsJson) as Array<{
+      id: string
+      name: string
+      position_assignments: Record<string, string>
+      position_source?: string
+      created_at: string
+    }>
+    const positionAssignments = JSON.parse(remoteAssignmentsJson) as Record<string, string>
+    const createdAtIso = new Date(remoteTeamCreationTime).toISOString()
+
+    return {
+      id: remoteTeamId,
+      _id: remoteTeamId,
+      name: remoteTeamName,
+      slug: remoteTeamSlug,
+      hasPassword: remoteTeamHasPassword,
+      archived: remoteTeamArchived,
+      roster: roster.map((player) => ({
         id: player.id,
         name: player.name,
         number: player.number,
       })),
-      lineups: (team.lineups || []).map((lineup) => ({
+      lineups: teamLineups.map((lineup) => ({
         id: lineup.id,
         name: lineup.name,
         position_assignments: lineup.position_assignments,
         position_source: lineup.position_source as 'custom' | 'full-5-1' | '5-1-libero' | '6-2' | undefined,
         created_at: lineup.created_at,
       })),
-      active_lineup_id: team.activeLineupId ?? null,
-      position_assignments: team.positionAssignments || {},
-      created_at: new Date(team._creationTime).toISOString(),
-      updated_at: new Date(team._creationTime).toISOString(),
+      active_lineup_id: remoteTeamActiveLineupId,
+      position_assignments: positionAssignments,
+      created_at: createdAtIso,
+      updated_at: createdAtIso,
     }
-    : null
-  const displayTeam = isLocalTeam ? localTeam : remoteTeam
+  }, [
+    isLocalTeam,
+    remoteTeamId,
+    remoteTeamName,
+    remoteTeamSlug,
+    remoteTeamHasPassword,
+    remoteTeamArchived,
+    remoteTeamActiveLineupId,
+    remoteTeamCreationTime,
+    remoteRosterJson,
+    remoteLineupsJson,
+    remoteAssignmentsJson,
+  ])
+
+  const displayTeam = useMemo(
+    () => (isLocalTeam ? localTeam : remoteTeam),
+    [isLocalTeam, localTeam, remoteTeam]
+  )
 
   useEffect(() => {
     if (!isLocalTeam) return

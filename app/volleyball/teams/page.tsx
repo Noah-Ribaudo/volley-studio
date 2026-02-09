@@ -50,14 +50,14 @@ export default function TeamsPage() {
   }, [currentTeam])
 
   // Handle team creation
-  const handleCreateTeam = async (name: string, password?: string) => {
+  const handleCreateTeam = async (name: string, password?: string, presetSystem?: PresetSystem) => {
     const slug = generateSlug(name)
-    const teamId = await createTeam({ name, slug, password })
+    const teamId = await createTeam({ name, slug, password, presetSystem })
     router.push(`/teams/${teamId}`)
   }
 
   // Handle local-only team creation (no account)
-  const handleCreateLocalTeam = (name: string, _presetSystem?: PresetSystem) => {
+  const handleCreateLocalTeam = (name: string, presetSystem?: PresetSystem) => {
     const now = new Date().toISOString()
     const localTeam: Team = {
       id: `local-${Date.now()}`,
@@ -68,6 +68,7 @@ export default function TeamsPage() {
         id: 'default',
         name: 'Default',
         position_assignments: {},
+        position_source: presetSystem,
         created_at: now,
       }],
       active_lineup_id: 'default',

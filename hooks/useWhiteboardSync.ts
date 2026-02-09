@@ -3,7 +3,7 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { useMutation } from 'convex/react'
 import { api } from '@/convex/_generated/api'
-import { useAppStore } from '@/store/useAppStore'
+import { useAppStore, getCurrentPositions } from '@/store/useAppStore'
 import { createRotationPhaseKey } from '@/lib/rotations'
 import { Role, ArrowCurveConfig, PlayerStatus, Position, ArrowPositions, LayoutExtendedData, TokenTag } from '@/lib/types'
 import type { Id } from '@/convex/_generated/dataModel'
@@ -28,6 +28,13 @@ function getPendingSaveKey(teamId: string, rotationPhaseKey: string): string {
   return `${teamId}:${rotationPhaseKey}`
 }
 
+function cloneForSave<T>(value: T): T {
+  if (typeof structuredClone === 'function') {
+    return structuredClone(value)
+  }
+  return JSON.parse(JSON.stringify(value)) as T
+}
+
 /**
  * Hook that auto-saves whiteboard changes to Convex
  *
@@ -43,6 +50,10 @@ export function useWhiteboardSync() {
     currentTeam,
     currentRotation,
     currentPhase,
+    customLayouts,
+    isReceivingContext,
+    baseOrder,
+    showLibero,
     localPositions,
     localArrows,
     arrowCurves,
@@ -67,12 +78,27 @@ export function useWhiteboardSync() {
 
   // Get current rotation/phase key
   const key = createRotationPhaseKey(currentRotation, currentPhase)
+  const currentTeamId = currentTeam?._id || currentTeam?.id || null
 
   // Get attack ball position for current key
   const currentAttackBall = attackBallPositions[key]
 
+  // Build the effective positions that should be stored for this key.
+  // This avoids saving partial/empty position payloads when only arrows/tags change.
+  const effectivePositions = getCurrentPositions(
+    currentRotation,
+    currentPhase,
+    localPositions,
+    customLayouts,
+    currentTeam ?? null,
+    isReceivingContext,
+    baseOrder,
+    showLibero,
+    currentAttackBall || null
+  )
+
   // Serialize current state for comparison
-  const positionsJson = JSON.stringify(localPositions[key] || {})
+  const positionsJson = JSON.stringify(effectivePositions || {})
   const arrowsJson = JSON.stringify(localArrows[key] || {})
   const curvesJson = JSON.stringify(arrowCurves[key] || {})
   const statusJson = JSON.stringify(localStatusFlags[key] || {})
@@ -156,8 +182,8 @@ export function useWhiteboardSync() {
 
     const prev = prevValuesRef.current
 
-    // Check if this is a meaningful change (not just initial load)
-    const hasChanges = prev && prev.teamId === currentValues.teamId && prev.key === currentValues.key && (
+    // Check if this key changed relative to our previous snapshot.
+    const hasChangesInCurrentKey = prev && prev.teamId === currentValues.teamId && prev.key === currentValues.key && (
       prev.positionsJson !== currentValues.positionsJson ||
       prev.arrowsJson !== currentValues.arrowsJson ||
       prev.curvesJson !== currentValues.curvesJson ||
@@ -177,8 +203,33 @@ export function useWhiteboardSync() {
       attackBallPositions[key]
     )
 
-    // Only queue save if this rotation/phase changed and we have local overrides.
-    if (hasChanges && hasLocalOverrides) {
+    // Compare current local snapshot to the latest server version for this key.
+    // This catches first edits after navigation (before we have a same-key baseline).
+    const matchingServerLayout = customLayouts.find((layout) => {
+      const layoutTeamId = layout.teamId || layout.team_id
+      return layoutTeamId === currentTeamId &&
+        layout.rotation === currentRotation &&
+        layout.phase === currentPhase
+    })
+    const serverFlags = matchingServerLayout?.flags ?? null
+    const differsFromServer =
+      JSON.stringify(matchingServerLayout?.positions || {}) !== currentValues.positionsJson ||
+      JSON.stringify(serverFlags?.arrows || {}) !== currentValues.arrowsJson ||
+      JSON.stringify(serverFlags?.arrowCurves || {}) !== currentValues.curvesJson ||
+      JSON.stringify(serverFlags?.statusFlags || {}) !== currentValues.statusJson ||
+      JSON.stringify(serverFlags?.tagFlags || {}) !== currentValues.tagsJson ||
+      JSON.stringify(serverFlags?.attackBallPosition || null) !== currentValues.attackBallJson
+
+    const switchedKey =
+      !prev ||
+      prev.teamId !== currentValues.teamId ||
+      prev.key !== currentValues.key
+
+    const shouldQueueSave =
+      hasLocalOverrides &&
+      (hasChangesInCurrentKey || (switchedKey && differsFromServer))
+
+    if (shouldQueueSave) {
       // Cancel any existing pending save for this key
       const existing = pendingSaves.get(pendingSaveKey)
       if (existing?.timeoutId) {
@@ -191,37 +242,37 @@ export function useWhiteboardSync() {
       // Extract arrows for this rotation/phase
       const arrows = localArrows[key]
       if (arrows && Object.keys(arrows).length > 0) {
-        flags.arrows = arrows
+        flags.arrows = cloneForSave(arrows)
       }
 
       // Extract arrow curves for this rotation/phase
       const curves = arrowCurves[key]
       if (curves && Object.keys(curves).length > 0) {
-        flags.arrowCurves = curves
+        flags.arrowCurves = cloneForSave(curves)
       }
 
       // Extract status flags for this rotation/phase
       const status = localStatusFlags[key]
       if (status && Object.keys(status).length > 0) {
-        flags.statusFlags = status
+        flags.statusFlags = cloneForSave(status)
       }
 
       // Extract tag flags for this rotation/phase
       const tags = localTagFlags[key]
       if (tags && Object.keys(tags).length > 0) {
-        flags.tagFlags = tags
+        flags.tagFlags = cloneForSave(tags)
       }
 
       // Extract attack ball position for this rotation/phase
       const attackBall = attackBallPositions[key]
       if (attackBall) {
-        flags.attackBallPosition = attackBall
+        flags.attackBallPosition = cloneForSave(attackBall)
       }
 
       // Create new pending save
       // Convert PositionCoordinates to Record<string, {x, y}> for Convex
       const positionsRecord: Record<string, { x: number; y: number }> = {}
-      const posData = localPositions[key] || {}
+      const posData = JSON.parse(currentValues.positionsJson) as Record<string, { x: number; y: number }>
       for (const [role, pos] of Object.entries(posData)) {
         if (pos) {
           positionsRecord[role] = { x: pos.x, y: pos.y }
@@ -250,6 +301,7 @@ export function useWhiteboardSync() {
     prevValuesRef.current = currentValues
   }, [
     currentTeam?._id,
+    currentTeamId,
     key,
     positionsJson,
     arrowsJson,
@@ -259,6 +311,10 @@ export function useWhiteboardSync() {
     attackBallJson,
     currentRotation,
     currentPhase,
+    customLayouts,
+    isReceivingContext,
+    baseOrder,
+    showLibero,
     localPositions,
     localArrows,
     arrowCurves,

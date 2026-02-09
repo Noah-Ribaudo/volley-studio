@@ -1,13 +1,14 @@
 'use client'
 
 import { useEffect, useState, useMemo, useRef, useCallback, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
-import { useQuery } from 'convex/react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useMutation, useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
+import { Id } from '@/convex/_generated/dataModel'
 import { useAppStore, getCurrentPositions, getCurrentArrows, getCurrentTags, getActiveLineupPositionSource } from '@/store/useAppStore'
 import { VolleyballCourt } from '@/components/court'
 import { RosterManagementCard } from '@/components/roster'
-import { Role, ROLES, RALLY_PHASES, Position, PositionCoordinates, ROTATIONS, POSITION_SOURCE_INFO, RallyPhase, Team, CustomLayout } from '@/lib/types'
+import { Role, ROLES, RALLY_PHASES, Position, PositionCoordinates, ROTATIONS, POSITION_SOURCE_INFO, RallyPhase, Team, CustomLayout, Lineup } from '@/lib/types'
 import { getActiveAssignments } from '@/lib/lineups'
 import { getWhiteboardPositions } from '@/lib/whiteboard'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
@@ -19,6 +20,18 @@ import { useWhiteboardSync } from '@/hooks/useWhiteboardSync'
 import { useLineupPresets } from '@/hooks/useLineupPresets'
 import { SwipeHint } from '@/components/mobile'
 import { ConflictResolutionModal } from '@/components/volleyball/ConflictResolutionModal'
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { getLocalTeamById, listLocalTeams, upsertLocalTeam } from '@/lib/localTeams'
+import { toast } from 'sonner'
 
 // Constants for court display
 const ANIMATION_MODE = 'css' as const
@@ -45,6 +58,7 @@ function getServerRole(rotation: number, baseOrder: Role[]): Role {
 }
 
 function HomePageContent() {
+  const router = useRouter()
   const {
     currentRotation,
     currentPhase,
@@ -83,6 +97,7 @@ function HomePageContent() {
     setContextPlayer,
     // Away team visibility
     hideAwayTeam,
+    setHideAwayTeam,
     awayTeamHidePercent,
     // Player status flags
     localStatusFlags,
@@ -104,6 +119,8 @@ function HomePageContent() {
   } = useAppStore()
   const searchParams = useSearchParams()
   const teamFromUrl = searchParams.get('team')?.trim() || ''
+  const myTeams = useQuery(api.teams.listMyTeams, {})
+  const updateLineups = useMutation(api.teams.updateLineups)
   const selectedTeam = useQuery(
     api.teams.getBySlugOrId,
     teamFromUrl ? { identifier: teamFromUrl } : 'skip'
@@ -112,6 +129,8 @@ function HomePageContent() {
     api.layouts.getByTeam,
     selectedTeam?._id ? { teamId: selectedTeam._id } : 'skip'
   )
+  const [localTeams, setLocalTeams] = useState<Team[]>([])
+  const [isSavingLineup, setIsSavingLineup] = useState(false)
   const loadedTeamFromUrlRef = useRef<string | null>(null)
 
   // Mobile detection
@@ -173,6 +192,19 @@ function HomePageContent() {
     setAccessMode,
     setTeamPasswordProvided,
   ])
+
+  useEffect(() => {
+    const refreshLocalTeams = () => {
+      setLocalTeams(listLocalTeams())
+    }
+
+    refreshLocalTeams()
+    window.addEventListener('storage', refreshLocalTeams)
+
+    return () => {
+      window.removeEventListener('storage', refreshLocalTeams)
+    }
+  }, [currentTeam?._id, currentTeam?.id])
 
   // Lineup preset management - loads presets when active lineup uses a preset source
   const { isUsingPreset, presetSystem, getPresetLayouts } = useLineupPresets()
@@ -380,6 +412,206 @@ function HomePageContent() {
     ? (legalityViolations[rotationPhaseKey] || [])
     : []
 
+  const cleanAssignments = useCallback((assignments: Record<string, string | undefined> | undefined) => {
+    const cleaned: Record<string, string> = {}
+    if (!assignments) {
+      return cleaned
+    }
+    for (const [role, playerId] of Object.entries(assignments)) {
+      if (typeof playerId === 'string' && playerId.trim() !== '') {
+        cleaned[role] = playerId
+      }
+    }
+    return cleaned
+  }, [])
+
+  const persistLineupsForTeam = useCallback(async (nextTeam: Team) => {
+    const normalizedLineups = (nextTeam.lineups || []).map((lineup) => ({
+      id: lineup.id,
+      name: lineup.name,
+      position_assignments: cleanAssignments(lineup.position_assignments),
+      position_source: lineup.position_source,
+      created_at: lineup.created_at,
+    }))
+    const normalizedActiveLineupId = nextTeam.active_lineup_id &&
+      normalizedLineups.some((lineup) => lineup.id === nextTeam.active_lineup_id)
+      ? nextTeam.active_lineup_id
+      : normalizedLineups[0]?.id
+    const activeLineup = normalizedLineups.find((lineup) => lineup.id === normalizedActiveLineupId)
+    const nextAssignments = cleanAssignments(activeLineup?.position_assignments || nextTeam.position_assignments)
+
+    if (nextTeam._id) {
+      await updateLineups({
+        id: nextTeam._id as Id<'teams'>,
+        lineups: normalizedLineups,
+        activeLineupId: normalizedActiveLineupId || undefined,
+        positionAssignments: nextAssignments,
+      })
+      return
+    }
+
+    upsertLocalTeam({
+      ...nextTeam,
+      lineups: normalizedLineups,
+      active_lineup_id: normalizedActiveLineupId ?? null,
+      position_assignments: nextAssignments,
+    })
+    setLocalTeams(listLocalTeams())
+  }, [cleanAssignments, updateLineups])
+
+  const teamSelectValue = !currentTeam
+    ? '__none__'
+    : currentTeam._id
+      ? `cloud:${currentTeam._id}`
+      : `local:${currentTeam.id}`
+  const currentLineup = useMemo(() => {
+    if (!currentTeam || !currentTeam.lineups?.length) {
+      return null
+    }
+    return currentTeam.lineups.find((lineup) => lineup.id === currentTeam.active_lineup_id) || currentTeam.lineups[0]
+  }, [currentTeam])
+  const lineupSelectValue = currentLineup?.id || '__none__'
+  const activeLineupName = currentLineup?.name?.trim() || 'No Lineup'
+  const activeTeamName = currentTeam?.name?.trim() || 'No Team Selected'
+  const activeTeamScope = !currentTeam
+    ? 'None'
+    : currentTeam._id
+      ? 'Cloud'
+      : 'Local'
+  const activeTeamScopeClass = activeTeamScope === 'Cloud'
+    ? 'text-emerald-600 dark:text-emerald-400'
+    : activeTeamScope === 'Local'
+      ? 'text-amber-600 dark:text-amber-400'
+      : 'text-muted-foreground'
+  const handleTeamSelect = useCallback((value: string) => {
+    if (value === '__new__') {
+      router.push('/teams')
+      return
+    }
+
+    if (value === '__none__') {
+      loadedTeamFromUrlRef.current = null
+      setCurrentTeam(null)
+      setCustomLayouts([])
+      setAccessMode('none')
+      setTeamPasswordProvided(false)
+      router.push('/')
+      return
+    }
+
+    if (value.startsWith('cloud:')) {
+      const teamId = value.slice('cloud:'.length)
+      if (!teamId) return
+      router.push(`/?team=${encodeURIComponent(teamId)}`)
+      return
+    }
+
+    if (value.startsWith('local:')) {
+      const localTeamId = value.slice('local:'.length)
+      const localTeam = getLocalTeamById(localTeamId)
+      if (!localTeam) return
+
+      loadedTeamFromUrlRef.current = null
+      setCurrentTeam(localTeam)
+      setCustomLayouts([])
+      setAccessMode('local')
+      setTeamPasswordProvided(true)
+      router.push('/')
+    }
+  }, [router, setAccessMode, setCurrentTeam, setCustomLayouts, setTeamPasswordProvided])
+  const handleLineupSelect = useCallback(async (value: string) => {
+    if (value === '__none__') {
+      return
+    }
+
+    if (value === '__manage__') {
+      if (currentTeam) {
+        router.push(`/teams/${encodeURIComponent(currentTeam.id)}`)
+      } else {
+        router.push('/teams')
+      }
+      return
+    }
+
+    if (value === '__new__') {
+      if (!currentTeam) {
+        router.push('/teams')
+        return
+      }
+
+      const existingLineups = currentTeam.lineups || []
+      const baseLineup = currentLineup || existingLineups[0]
+      const usedNames = new Set(existingLineups.map((lineup) => lineup.name.trim().toLowerCase()))
+      let nextIndex = existingLineups.length + 1
+      let nextName = `Lineup ${nextIndex}`
+      while (usedNames.has(nextName.toLowerCase())) {
+        nextIndex += 1
+        nextName = `Lineup ${nextIndex}`
+      }
+
+      const clonedAssignments = {
+        ...(baseLineup?.position_assignments || {}),
+      }
+      const newLineup: Lineup = {
+        id: typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+          ? crypto.randomUUID()
+          : `lineup-${Date.now()}`,
+        name: nextName,
+        position_assignments: clonedAssignments,
+        position_source: baseLineup?.position_source ?? 'custom',
+        created_at: new Date().toISOString(),
+      }
+      const nextTeam: Team = {
+        ...currentTeam,
+        lineups: [...existingLineups, newLineup],
+        active_lineup_id: newLineup.id,
+        position_assignments: clonedAssignments,
+      }
+
+      setCurrentTeam(nextTeam)
+      setIsSavingLineup(true)
+      try {
+        await persistLineupsForTeam(nextTeam)
+        toast.success(`Created ${newLineup.name}`)
+      } catch (error) {
+        setCurrentTeam(currentTeam)
+        const message = error instanceof Error ? error.message : 'Failed to create lineup'
+        toast.error(message)
+      } finally {
+        setIsSavingLineup(false)
+      }
+      return
+    }
+
+    if (!currentTeam) {
+      return
+    }
+
+    const selectedLineup = currentTeam.lineups.find((lineup) => lineup.id === value)
+    if (!selectedLineup || selectedLineup.id === currentTeam.active_lineup_id) {
+      return
+    }
+
+    const nextTeam: Team = {
+      ...currentTeam,
+      active_lineup_id: selectedLineup.id,
+      position_assignments: {
+        ...selectedLineup.position_assignments,
+      },
+    }
+    setCurrentTeam(nextTeam)
+    setIsSavingLineup(true)
+    try {
+      await persistLineupsForTeam(nextTeam)
+    } catch (error) {
+      setCurrentTeam(currentTeam)
+      const message = error instanceof Error ? error.message : 'Failed to switch lineup'
+      toast.error(message)
+    } finally {
+      setIsSavingLineup(false)
+    }
+  }, [currentLineup, currentTeam, persistLineupsForTeam, router, setCurrentTeam])
+
   // Visual feedback during swipe
   const swipeOffset = swipeState.swiping ? swipeState.delta.x * 0.2 : 0
 
@@ -389,9 +621,114 @@ function HomePageContent() {
       <div className="flex-1 min-h-0 h-full overflow-hidden">
         {/* Court Container - scales to fit available space */}
         <div className="w-full h-full sm:max-w-3xl mx-auto px-0 sm:px-2 relative">
+          <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30 w-[min(92vw,720px)]">
+            <div className="flex flex-col gap-2 px-3 py-2 bg-muted/90 backdrop-blur-sm rounded-xl border border-border shadow-sm">
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">Team</span>
+                  <Select value={teamSelectValue} onValueChange={handleTeamSelect}>
+                    <SelectTrigger className="h-8 min-w-[220px] max-w-[68vw] sm:max-w-[420px] text-xs">
+                      <SelectValue placeholder="Select team" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectLabel>Actions</SelectLabel>
+                        <SelectItem value="__new__">+ New Team...</SelectItem>
+                        <SelectItem value="__none__">Practice (No Team)</SelectItem>
+                      </SelectGroup>
+                      <SelectSeparator />
+                      {(myTeams || []).length > 0 && (
+                        <SelectGroup>
+                          <SelectLabel>Cloud Teams</SelectLabel>
+                          {(myTeams || []).map((team) => (
+                            <SelectItem key={team._id} value={`cloud:${team._id}`}>
+                              {team.name}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      )}
+                      {localTeams.length > 0 && (
+                        <>
+                          {(myTeams || []).length > 0 && <SelectSeparator />}
+                          <SelectGroup>
+                            <SelectLabel>Local Teams</SelectLabel>
+                            {localTeams.map((team) => (
+                              <SelectItem key={team.id} value={`local:${team.id}`}>
+                                {team.name}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">Lineup</span>
+                  <Select
+                    value={lineupSelectValue}
+                    onValueChange={(value) => { void handleLineupSelect(value) }}
+                    disabled={isSavingLineup}
+                  >
+                    <SelectTrigger className="h-8 min-w-[220px] max-w-[68vw] sm:max-w-[420px] text-xs">
+                      <SelectValue placeholder={currentTeam ? 'Select lineup' : 'Select team first'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectLabel>Actions</SelectLabel>
+                        <SelectItem value="__new__">+ New Lineup...</SelectItem>
+                        <SelectItem value="__manage__">Manage Lineups...</SelectItem>
+                      </SelectGroup>
+                      <SelectSeparator />
+                      {!currentTeam && (
+                        <SelectGroup>
+                          <SelectLabel>Lineups</SelectLabel>
+                          <SelectItem value="__none__" disabled>Select a team first</SelectItem>
+                        </SelectGroup>
+                      )}
+                      {currentTeam && (currentTeam.lineups || []).length === 0 && (
+                        <SelectGroup>
+                          <SelectLabel>Lineups</SelectLabel>
+                          <SelectItem value="__none__" disabled>No lineups yet</SelectItem>
+                        </SelectGroup>
+                      )}
+                      {currentTeam && (currentTeam.lineups || []).length > 0 && (
+                        <SelectGroup>
+                          <SelectLabel>Lineups</SelectLabel>
+                          {currentTeam.lineups.map((lineup) => (
+                            <SelectItem key={lineup.id} value={lineup.id}>
+                              {lineup.name}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-3 sm:justify-end">
+                <span className="text-xs text-muted-foreground truncate">
+                  Active: <span className="font-medium text-foreground">{activeTeamName}</span>
+                  {' · '}
+                  <span className="font-medium text-foreground">{activeLineupName}</span>
+                </span>
+                <label className="inline-flex items-center gap-2 text-xs text-foreground whitespace-nowrap">
+                  <input
+                    type="checkbox"
+                    checked={hideAwayTeam}
+                    onChange={(e) => setHideAwayTeam(e.target.checked)}
+                    className="h-3.5 w-3.5 rounded border-input accent-primary"
+                  />
+                  Hide Opponent
+                  <span className={activeTeamScopeClass}>{activeTeamScope}</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
           {/* Preset mode indicator - shown when viewing preset positions */}
           {isUsingPreset && (
-            <div className="absolute top-16 left-1/2 -translate-x-1/2 z-30">
+            <div className="absolute top-24 left-1/2 -translate-x-1/2 z-30">
               <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/90 backdrop-blur-sm rounded-full border border-border shadow-sm">
                 <span className="text-xs text-muted-foreground">
                   Viewing: <span className="font-medium text-foreground">{POSITION_SOURCE_INFO[activePositionSource].name}</span>

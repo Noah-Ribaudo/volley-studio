@@ -310,8 +310,9 @@ export function getCurrentPositions(
 
   // If in team mode with custom source, check for custom layout (already normalized)
   if (currentTeam && !isUsingPreset) {
+    const currentTeamId = currentTeam.id ?? currentTeam._id
     const customLayout = customLayouts.find(
-      l => l.team_id === currentTeam.id && l.rotation === rotation && l.phase === phase
+      l => (l.team_id === currentTeamId || l.teamId === currentTeamId) && l.rotation === rotation && l.phase === phase
     )
     if (customLayout) {
       return customLayout.positions
