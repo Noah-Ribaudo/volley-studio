@@ -24,7 +24,7 @@ const navItems = [
   },
   {
     title: 'Teams',
-    url: '/roster',
+    url: '/teams',
     icon: Users,
   },
   {

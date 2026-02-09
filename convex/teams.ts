@@ -225,6 +225,11 @@ export const create = mutation({
     name: v.string(),
     slug: v.string(),
     password: v.optional(v.string()),
+    presetSystem: v.optional(v.union(
+      v.literal("full-5-1"),
+      v.literal("5-1-libero"),
+      v.literal("6-2")
+    )),
   },
   handler: async (ctx, args) => {
     // Require authentication to create teams
@@ -249,6 +254,9 @@ export const create = mutation({
       hashedPassword = await hashPassword(args.password);
     }
 
+    const now = new Date().toISOString();
+    const initialLineupId = crypto.randomUUID();
+
     return await ctx.db.insert("teams", {
       userId,
       name: args.name,
@@ -256,8 +264,14 @@ export const create = mutation({
       password: hashedPassword,
       archived: false,
       roster: [],
-      lineups: [],
-      activeLineupId: undefined,
+      lineups: [{
+        id: initialLineupId,
+        name: "Lineup 1",
+        position_assignments: {},
+        position_source: args.presetSystem,
+        created_at: now,
+      }],
+      activeLineupId: initialLineupId,
       positionAssignments: {},
     });
   },
@@ -353,10 +367,20 @@ export const updateLineups = mutation({
   },
   handler: async (ctx, args) => {
     await assertTeamOwner(ctx, args.id);
+    const activeLineupId = args.activeLineupId &&
+      args.lineups.some((lineup) => lineup.id === args.activeLineupId)
+      ? args.activeLineupId
+      : args.lineups[0]?.id;
+
+    const activeLineup = activeLineupId
+      ? args.lineups.find((lineup) => lineup.id === activeLineupId)
+      : null;
+
     await ctx.db.patch(args.id, {
       lineups: args.lineups,
-      activeLineupId: args.activeLineupId,
-      positionAssignments: args.positionAssignments,
+      activeLineupId,
+      // Keep backward-compatible assignments in sync with the active lineup.
+      positionAssignments: activeLineup?.position_assignments ?? args.positionAssignments,
     });
   },
 });
