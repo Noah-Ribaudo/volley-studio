@@ -1,0 +1,7 @@
+{
+  "scripts": {
+    "setup": "npm install && cp \"$CONDUCTOR_ROOT_PATH/.env.local\" .env.local",
+    "run": "npx concurrently \"convex dev\" \"next dev --port $CONDUCTOR_PORT\""
+  },
+  "runScriptMode": "nonconcurrent"
+}
