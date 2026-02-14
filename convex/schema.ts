@@ -66,6 +66,7 @@ export default defineSchema({
 
   userSettings: defineTable({
     userId: v.id("users"),
+    themePreference: v.optional(v.union(v.literal("light"), v.literal("dark"), v.literal("auto"))),
     showPosition: v.boolean(),
     showPlayer: v.boolean(),
     showLibero: v.boolean(),

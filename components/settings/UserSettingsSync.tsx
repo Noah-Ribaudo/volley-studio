@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useConvexAuth, useMutation, useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { useAppStore } from '@/store/useAppStore'
+import { useThemeStore } from '@/store/useThemeStore'
 import {
   DEFAULT_PHASE_ORDER,
   DEFAULT_VISIBLE_PHASES,
@@ -13,11 +14,13 @@ import {
 } from '@/lib/types'
 import type { LearningPanelPosition } from '@/lib/learning/types'
 import { SHADER_OPTIONS, type ShaderId } from '@/lib/shaders'
+import type { ThemePreference } from '@/lib/themes'
 
 type NavMode = 'sidebar' | 'header'
 type TokenSize = 'big' | 'small'
 
 type UserSettingsPayload = {
+  themePreference: ThemePreference
   showPosition: boolean
   showPlayer: boolean
   showLibero: boolean
@@ -90,8 +93,12 @@ function normalizePayload(raw: UserSettingsInput): UserSettingsPayload {
   const backgroundShader = raw.backgroundShader && VALID_SHADER_IDS.has(raw.backgroundShader)
     ? raw.backgroundShader
     : 'grain-gradient'
+  const themePreference: ThemePreference = raw.themePreference === 'light' || raw.themePreference === 'dark' || raw.themePreference === 'auto'
+    ? raw.themePreference
+    : 'auto'
 
   return {
+    themePreference,
     showPosition: raw.showPosition ?? true,
     showPlayer: raw.showPlayer ?? false,
     showLibero: raw.showLibero ?? false,
@@ -144,6 +151,7 @@ export function UserSettingsSync() {
   const phaseOrder = useAppStore((state) => state.phaseOrder)
   const highlightedRole = useAppStore((state) => state.highlightedRole)
   const learningPanelPosition = useAppStore((state) => state.learningPanelPosition)
+  const themePreference = useThemeStore((state) => state.themePreference)
 
   const [isReadyToPersist, setIsReadyToPersist] = useState(false)
   const lastSyncedSignatureRef = useRef<string | null>(null)
@@ -172,6 +180,7 @@ export function UserSettingsSync() {
       phaseOrder,
       highlightedRole: highlightedRole ?? undefined,
       learningPanelPosition,
+      themePreference,
     })
     return normalized
   }, [
@@ -193,6 +202,7 @@ export function UserSettingsSync() {
     phaseOrder,
     highlightedRole,
     learningPanelPosition,
+    themePreference,
   ])
 
   const localSignature = useMemo(() => payloadSignature(localPayload), [localPayload])
@@ -209,6 +219,7 @@ export function UserSettingsSync() {
     if (remoteSettings === undefined) return 'loading'
     if (remoteSettings === null) return 'empty'
     return normalizePayload({
+      themePreference: remoteSettings.themePreference as ThemePreference | undefined,
       showPosition: remoteSettings.showPosition,
       showPlayer: remoteSettings.showPlayer,
       showLibero: remoteSettings.showLibero,
@@ -293,6 +304,13 @@ export function UserSettingsSync() {
         phaseOrder: serverPayload.phaseOrder,
         highlightedRole: serverPayload.highlightedRole ?? null,
         learningPanelPosition: serverPayload.learningPanelPosition,
+      }))
+      useThemeStore.setState((state) => ({
+        ...state,
+        themePreference: serverPayload.themePreference,
+        theme: serverPayload.themePreference === 'auto'
+          ? state.theme
+          : serverPayload.themePreference,
       }))
     }
 

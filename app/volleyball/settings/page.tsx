@@ -179,7 +179,7 @@ export default function SettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label className="text-sm font-medium">Theme</Label>
-                <p className="text-xs text-muted-foreground">Choose light or dark</p>
+                <p className="text-xs text-muted-foreground">Choose light, dark, or auto daylight mode</p>
               </div>
               <ThemePicker />
             </div>

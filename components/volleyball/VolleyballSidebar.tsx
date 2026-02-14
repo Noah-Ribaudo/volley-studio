@@ -17,7 +17,6 @@ import {
 } from '@/components/ui/sidebar'
 import { Layout, Users, Timer, Settings } from 'lucide-react'
 import VolleyBall from '@/components/logo/VolleyBall'
-import VolleyWordmark from '@/components/logo/VolleyWordmark'
 import { SidebarUserMenu } from '@/components/auth'
 import { useAppStore } from '@/store/useAppStore'
 
@@ -57,11 +56,9 @@ export function VolleyballSidebar() {
           aria-label="Volley Studio"
         >
           <VolleyBall size={20} fillColor="#f97316" className="shrink-0" />
-          <VolleyWordmark
-            height={14}
-            fillColor="currentColor"
-            className="h-4 w-auto group-data-[collapsible=icon]:hidden"
-          />
+          <span className="text-sm font-semibold text-foreground group-data-[collapsible=icon]:hidden">
+            Volley Studio
+          </span>
         </Link>
       </SidebarHeader>
 

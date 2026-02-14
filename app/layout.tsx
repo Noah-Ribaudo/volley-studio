@@ -57,7 +57,20 @@ export const viewport: Viewport = {
 // Inline script to apply theme before React hydrates (prevents flash)
 const themeScript = `
 (function() {
+  var fallbackTheme = 'dark';
   try {
+    var chicagoHour = Number(
+      new Intl.DateTimeFormat('en-US', {
+        hour: 'numeric',
+        hourCycle: 'h23',
+        timeZone: 'America/Chicago',
+      }).format(new Date())
+    );
+    fallbackTheme = chicagoHour >= 6 && chicagoHour < 18 ? 'light' : 'dark';
+  } catch (e) { /* Timezone parsing failed - use dark */ }
+
+  try {
+    document.documentElement.setAttribute('data-theme', fallbackTheme);
     var stored = localStorage.getItem('volleyball-theme');
     if (stored) {
       var parsed = JSON.parse(stored);
