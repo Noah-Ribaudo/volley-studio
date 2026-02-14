@@ -83,6 +83,8 @@ export default function SettingsPage() {
     // Debug
     debugHitboxes,
     setDebugHitboxes,
+    sidebarProfileInFooter,
+    setSidebarProfileInFooter,
     // Background shader
     backgroundShader,
     setBackgroundShader,
@@ -324,6 +326,13 @@ export default function SettingsPage() {
                 description="Display green overlay on interactive touch areas"
                 checked={debugHitboxes}
                 onCheckedChange={setDebugHitboxes}
+              />
+              <SettingsToggle
+                id="sidebar-profile-footer"
+                label="Sidebar Footer Profile"
+                description="Move the account control to the bottom of the desktop sidebar"
+                checked={sidebarProfileInFooter}
+                onCheckedChange={setSidebarProfileInFooter}
               />
             </CardContent>
           </Card>

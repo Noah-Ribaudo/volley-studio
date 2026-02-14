@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -14,7 +15,11 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from '@/components/ui/sidebar'
-import { Home, Layout, Users, Timer, Settings } from 'lucide-react'
+import { Layout, Users, Timer, Settings } from 'lucide-react'
+import VolleyBall from '@/components/logo/VolleyBall'
+import VolleyWordmark from '@/components/logo/VolleyWordmark'
+import { SidebarUserMenu } from '@/components/auth'
+import { useAppStore } from '@/store/useAppStore'
 
 const navItems = [
   {
@@ -41,20 +46,23 @@ const navItems = [
 
 export function VolleyballSidebar() {
   const pathname = usePathname()
+  const sidebarProfileInFooter = useAppStore((state) => state.sidebarProfileInFooter)
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild tooltip="Back to Home">
-              <Link href="/">
-                <Home />
-                <span>Home</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+      <SidebarHeader className="border-b border-sidebar-border">
+        <Link
+          href="/"
+          className="flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center"
+          aria-label="Volley Studio"
+        >
+          <VolleyBall size={20} fillColor="#f97316" className="shrink-0" />
+          <VolleyWordmark
+            height={14}
+            fillColor="currentColor"
+            className="h-4 w-auto group-data-[collapsible=icon]:hidden"
+          />
+        </Link>
       </SidebarHeader>
 
       <SidebarContent>
@@ -84,6 +92,12 @@ export function VolleyballSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+
+      {sidebarProfileInFooter && (
+        <SidebarFooter className="border-t border-sidebar-border">
+          <SidebarUserMenu />
+        </SidebarFooter>
+      )}
 
       <SidebarRail />
     </Sidebar>

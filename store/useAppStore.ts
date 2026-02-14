@@ -134,6 +134,7 @@ interface AppState {
   debugHitboxes: boolean // Show touch target hitboxes with green highlight (default: false)
   showMotionDebugPanel: boolean // Show motion tuning/debug panel on whiteboard (default: false)
   showPrintFeature: boolean // Show print feature (dev toggle, default: false)
+  sidebarProfileInFooter: boolean // Show account profile in sidebar footer (debug toggle, default: false)
   navMode: 'sidebar' | 'header' // Desktop navigation mode (default: 'header')
   backgroundShader: ShaderId // Background shader choice (default: grain-gradient)
   backgroundOpacity: number // Background content opacity 0-100 (default: 95)
@@ -222,6 +223,7 @@ interface AppState {
   setDebugHitboxes: (show: boolean) => void
   setShowMotionDebugPanel: (show: boolean) => void
   setShowPrintFeature: (show: boolean) => void
+  setSidebarProfileInFooter: (show: boolean) => void
   setNavMode: (mode: 'sidebar' | 'header') => void
   setBackgroundShader: (shader: ShaderId) => void
   setBackgroundOpacity: (opacity: number) => void
@@ -448,6 +450,7 @@ export const useAppStore = create<AppState>()(
       debugHitboxes: false, // Default to hiding hitbox debug overlay
       showMotionDebugPanel: false, // Default to hidden motion debug panel
       showPrintFeature: false, // Default to hidden print feature
+      sidebarProfileInFooter: false, // Default to profile in top header
       navMode: 'header' as const, // Default to header nav (no sidebar)
       backgroundShader: 'none' as ShaderId, // Default background shader (off by default)
       backgroundOpacity: 95, // Default background content opacity
@@ -929,6 +932,7 @@ export const useAppStore = create<AppState>()(
       setDebugHitboxes: (show) => set({ debugHitboxes: show }),
       setShowMotionDebugPanel: (show) => set({ showMotionDebugPanel: show }),
       setShowPrintFeature: (show) => set({ showPrintFeature: show }),
+      setSidebarProfileInFooter: (show) => set({ sidebarProfileInFooter: show }),
 
       setNavMode: (mode) => set({ navMode: mode }),
 
@@ -1111,6 +1115,7 @@ export const useAppStore = create<AppState>()(
           showLearnTab: state.showLearnTab,
           showMotionDebugPanel: state.showMotionDebugPanel,
           showPrintFeature: state.showPrintFeature,
+          sidebarProfileInFooter: state.sidebarProfileInFooter,
           navMode: state.navMode,
           backgroundShader: state.backgroundShader,
           backgroundOpacity: state.backgroundOpacity,
@@ -1200,6 +1205,10 @@ export const useAppStore = create<AppState>()(
         // Set default for print feature toggle if missing
         if (state && state.showPrintFeature === undefined) {
           state.showPrintFeature = false
+        }
+        // Set default for sidebar profile placement toggle if missing
+        if (state && state.sidebarProfileInFooter === undefined) {
+          state.sidebarProfileInFooter = false
         }
         // Set default for attackBallPositions if missing
         if (state && state.attackBallPositions === undefined) {

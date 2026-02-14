@@ -74,6 +74,8 @@ export default function SettingsPage() {
     setDebugHitboxes,
     showPrintFeature,
     setShowPrintFeature,
+    sidebarProfileInFooter,
+    setSidebarProfileInFooter,
   } = useAppStore()
   const viewer = useQuery(api.users.viewer, isAuthenticated ? {} : 'skip')
   const [isSigningOut, setIsSigningOut] = useState(false)
@@ -266,6 +268,13 @@ export default function SettingsPage() {
                 description="Enable the print rotations feature"
                 checked={showPrintFeature}
                 onCheckedChange={setShowPrintFeature}
+              />
+              <SettingsToggle
+                id="sidebar-profile-footer"
+                label="Sidebar Footer Profile"
+                description="Move the account control to the bottom of the desktop sidebar"
+                checked={sidebarProfileInFooter}
+                onCheckedChange={setSidebarProfileInFooter}
               />
             </CardContent>
           </Card>

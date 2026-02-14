@@ -72,6 +72,7 @@ export function DesktopHeaderNav({
   const showPrintFeature = useAppStore((state) => state.showPrintFeature)
   const showMotionDebugPanel = useAppStore((state) => state.showMotionDebugPanel)
   const setShowMotionDebugPanel = useAppStore((state) => state.setShowMotionDebugPanel)
+  const sidebarProfileInFooter = useAppStore((state) => state.sidebarProfileInFooter)
 
   // Get visible phases
   const phasesToShow = visiblePhases
@@ -286,14 +287,14 @@ export function DesktopHeaderNav({
       )}
 
       {/* User menu - show on right side when not on whiteboard */}
-      {!isWhiteboardPage && (
+      {!sidebarProfileInFooter && !isWhiteboardPage && (
         <div className="ml-auto">
           <UserMenu />
         </div>
       )}
 
       {/* User menu - show after whiteboard controls */}
-      {isWhiteboardPage && (
+      {!sidebarProfileInFooter && isWhiteboardPage && (
         <>
           <div className="w-px h-6 bg-border ml-2" />
           <UserMenu />
