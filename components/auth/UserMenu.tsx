@@ -1,8 +1,8 @@
 "use client";
 
+import { useAuthActions } from "@convex-dev/auth/react";
 import { useConvexAuth, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { SignOut } from "./SignIn";
 import { LogIn } from "lucide-react";
 import Link from "next/link";
 import { Facehash } from "facehash";
@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export function UserMenu() {
+  const { signOut } = useAuthActions();
   const { isAuthenticated, isLoading } = useConvexAuth();
   const user = useQuery(
     api.users.viewer,
@@ -71,8 +72,13 @@ export function UserMenu() {
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem className="p-0">
-          <SignOut />
+        <DropdownMenuItem
+          className="cursor-pointer"
+          onSelect={() => {
+            void signOut();
+          }}
+        >
+          Sign out
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

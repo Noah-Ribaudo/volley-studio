@@ -11,7 +11,9 @@ import { RosterManagementCard } from '@/components/roster'
 import { Role, ROLES, RALLY_PHASES, Position, PositionCoordinates, ROTATIONS, POSITION_SOURCE_INFO, RallyPhase, Team, Lineup } from '@/lib/types'
 import { getActiveAssignments } from '@/lib/lineups'
 import { getWhiteboardPositions } from '@/lib/whiteboard'
+import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { createRotationPhaseKey, getBackRowMiddle, getRoleZone } from '@/lib/rotations'
 import { validateRotationLegality } from '@/lib/model/legality'
 import { useIsMobile } from '@/hooks/useIsMobile'
@@ -30,6 +32,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { getLocalTeamById, listLocalTeams, upsertLocalTeam } from '@/lib/localTeams'
 import { toast } from 'sonner'
 
@@ -207,6 +211,7 @@ function HomePageContent() {
   }, [hideAwayTeam, awayTeamHidePercent])
 
   const [rosterSheetOpen, setRosterSheetOpen] = useState(false)
+  const [courtSetupOpen, setCourtSetupOpen] = useState(false)
 
   // Keyboard navigation for phases
   useEffect(() => {
@@ -451,6 +456,7 @@ function HomePageContent() {
       ? 'text-amber-600 dark:text-amber-400'
       : 'text-muted-foreground'
   const handleTeamSelect = useCallback((value: string) => {
+    setCourtSetupOpen(false)
     if (value === '__new__') {
       router.push('/teams')
       return
@@ -485,6 +491,7 @@ function HomePageContent() {
     }
   }, [router, setAccessMode, setCurrentTeam, setCustomLayouts, setTeamPasswordProvided])
   const handleLineupSelect = useCallback(async (value: string) => {
+    setCourtSetupOpen(false)
     if (value === '__none__') {
       return
     }
@@ -587,113 +594,23 @@ function HomePageContent() {
         {/* Court Container - scales to fit available space */}
         <div className="w-full h-auto sm:h-full sm:max-w-3xl mx-auto px-0 sm:px-2 relative">
           <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30 w-[min(92vw,720px)]">
-            <div className="flex flex-col gap-2 px-3 py-2 bg-muted/90 backdrop-blur-sm rounded-xl border border-border shadow-sm">
-              <div className="grid gap-2 sm:grid-cols-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-xs text-muted-foreground whitespace-nowrap">Team</span>
-                  <Select value={teamSelectValue} onValueChange={handleTeamSelect}>
-                    <SelectTrigger className="h-8 min-w-[220px] max-w-[68vw] sm:max-w-[420px] text-xs">
-                      <SelectValue placeholder="Select team" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        <SelectLabel>Actions</SelectLabel>
-                        <SelectItem value="__new__">+ New Team...</SelectItem>
-                        <SelectItem value="__none__">Practice (No Team)</SelectItem>
-                      </SelectGroup>
-                      <SelectSeparator />
-                      {(myTeams || []).length > 0 && (
-                        <SelectGroup>
-                          <SelectLabel>Cloud Teams</SelectLabel>
-                          {(myTeams || []).map((team) => (
-                            <SelectItem key={team._id} value={`cloud:${team._id}`}>
-                              {team.name}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      )}
-                      {localTeams.length > 0 && (
-                        <>
-                          {(myTeams || []).length > 0 && <SelectSeparator />}
-                          <SelectGroup>
-                            <SelectLabel>Local Teams</SelectLabel>
-                            {localTeams.map((team) => (
-                              <SelectItem key={team.id} value={`local:${team.id}`}>
-                                {team.name}
-                              </SelectItem>
-                            ))}
-                          </SelectGroup>
-                        </>
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-xs text-muted-foreground whitespace-nowrap">Lineup</span>
-                  <Select
-                    value={lineupSelectValue}
-                    onValueChange={(value) => { void handleLineupSelect(value) }}
-                    disabled={isSavingLineup}
-                  >
-                    <SelectTrigger className="h-8 min-w-[220px] max-w-[68vw] sm:max-w-[420px] text-xs">
-                      <SelectValue placeholder={currentTeam ? 'Select lineup' : 'Select team first'} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        <SelectLabel>Actions</SelectLabel>
-                        <SelectItem value="__new__">+ New Lineup...</SelectItem>
-                        <SelectItem value="__manage__">Manage Lineups...</SelectItem>
-                      </SelectGroup>
-                      <SelectSeparator />
-                      {!currentTeam && (
-                        <SelectGroup>
-                          <SelectLabel>Lineups</SelectLabel>
-                          <SelectItem value="__none__" disabled>Select a team first</SelectItem>
-                        </SelectGroup>
-                      )}
-                      {currentTeam && (currentTeam.lineups || []).length === 0 && (
-                        <SelectGroup>
-                          <SelectLabel>Lineups</SelectLabel>
-                          <SelectItem value="__none__" disabled>No lineups yet</SelectItem>
-                        </SelectGroup>
-                      )}
-                      {currentTeam && (currentTeam.lineups || []).length > 0 && (
-                        <SelectGroup>
-                          <SelectLabel>Lineups</SelectLabel>
-                          {currentTeam.lineups.map((lineup) => (
-                            <SelectItem key={lineup.id} value={lineup.id}>
-                              {lineup.name}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="flex items-center justify-between gap-3 sm:justify-end">
-                <span className="text-xs text-muted-foreground truncate">
-                  Active: <span className="font-medium text-foreground">{activeTeamName}</span>
-                  {' · '}
-                  <span className="font-medium text-foreground">{activeLineupName}</span>
-                </span>
-                <label className="inline-flex items-center gap-2 text-xs text-foreground whitespace-nowrap">
-                  <input
-                    type="checkbox"
-                    checked={hideAwayTeam}
-                    onChange={(e) => setHideAwayTeam(e.target.checked)}
-                    className="h-3.5 w-3.5 rounded border-input accent-primary"
-                  />
-                  Hide Opponent
-                  <span className={activeTeamScopeClass}>{activeTeamScope}</span>
-                </label>
-              </div>
+            <div className="flex items-center justify-between gap-2 px-3 py-2 bg-muted/90 backdrop-blur-sm rounded-xl border border-border shadow-sm">
+              <Button size="sm" variant="outline" className="h-8 text-xs shrink-0" onClick={() => setCourtSetupOpen(true)}>
+                Court Setup
+              </Button>
+              <span className="text-xs text-muted-foreground truncate">
+                Active: <span className="font-medium text-foreground">{activeTeamName}</span>
+                {' · '}
+                <span className="font-medium text-foreground">{activeLineupName}</span>
+                {' · '}
+                <span className={activeTeamScopeClass}>{activeTeamScope}</span>
+              </span>
             </div>
           </div>
 
           {/* Preset mode indicator - shown when viewing preset positions */}
           {isUsingPreset && (
-            <div className="absolute top-24 left-1/2 -translate-x-1/2 z-30">
+            <div className="absolute top-16 left-1/2 -translate-x-1/2 z-30">
               <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/90 backdrop-blur-sm rounded-full border border-border shadow-sm">
                 <span className="text-xs text-muted-foreground">
                   Viewing: <span className="font-medium text-foreground">{POSITION_SOURCE_INFO[activePositionSource].name}</span>
@@ -806,6 +723,113 @@ function HomePageContent() {
           </div>
         </div>
       </div>
+
+      <Dialog open={courtSetupOpen} onOpenChange={setCourtSetupOpen}>
+        <DialogContent className="sm:max-w-[560px]">
+          <DialogHeader>
+            <DialogTitle>Court Setup</DialogTitle>
+            <DialogDescription>
+              Choose team, lineup, and opponent visibility for the whiteboard.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">Team</Label>
+              <Select value={teamSelectValue} onValueChange={handleTeamSelect}>
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue placeholder="Select team" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectLabel>Actions</SelectLabel>
+                    <SelectItem value="__new__">+ New Team...</SelectItem>
+                    <SelectItem value="__none__">Practice (No Team)</SelectItem>
+                  </SelectGroup>
+                  <SelectSeparator />
+                  {(myTeams || []).length > 0 && (
+                    <SelectGroup>
+                      <SelectLabel>Cloud Teams</SelectLabel>
+                      {(myTeams || []).map((team) => (
+                        <SelectItem key={team._id} value={`cloud:${team._id}`}>
+                          {team.name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  )}
+                  {localTeams.length > 0 && (
+                    <>
+                      {(myTeams || []).length > 0 && <SelectSeparator />}
+                      <SelectGroup>
+                        <SelectLabel>Local Teams</SelectLabel>
+                        {localTeams.map((team) => (
+                          <SelectItem key={team.id} value={`local:${team.id}`}>
+                            {team.name}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">Lineup</Label>
+              <Select
+                value={lineupSelectValue}
+                onValueChange={(value) => { void handleLineupSelect(value) }}
+                disabled={isSavingLineup}
+              >
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue placeholder={currentTeam ? 'Select lineup' : 'Select team first'} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectLabel>Actions</SelectLabel>
+                    <SelectItem value="__new__">+ New Lineup...</SelectItem>
+                    <SelectItem value="__manage__">Manage Lineups...</SelectItem>
+                  </SelectGroup>
+                  <SelectSeparator />
+                  {!currentTeam && (
+                    <SelectGroup>
+                      <SelectLabel>Lineups</SelectLabel>
+                      <SelectItem value="__none__" disabled>Select a team first</SelectItem>
+                    </SelectGroup>
+                  )}
+                  {currentTeam && (currentTeam.lineups || []).length === 0 && (
+                    <SelectGroup>
+                      <SelectLabel>Lineups</SelectLabel>
+                      <SelectItem value="__none__" disabled>No lineups yet</SelectItem>
+                    </SelectGroup>
+                  )}
+                  {currentTeam && (currentTeam.lineups || []).length > 0 && (
+                    <SelectGroup>
+                      <SelectLabel>Lineups</SelectLabel>
+                      {currentTeam.lineups.map((lineup) => (
+                        <SelectItem key={lineup.id} value={lineup.id}>
+                          {lineup.name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center justify-between rounded-lg border border-border bg-muted/40 px-3 py-2">
+              <div className="space-y-0.5">
+                <Label htmlFor="volleyball-court-setup-hide-opponent" className="text-sm font-medium">Hide Opponent</Label>
+                <p className="text-xs text-muted-foreground">Toggle opponent tokens on the court.</p>
+              </div>
+              <Switch
+                id="volleyball-court-setup-hide-opponent"
+                checked={hideAwayTeam}
+                onCheckedChange={setHideAwayTeam}
+              />
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Roster Sheet */}
       <Sheet open={rosterSheetOpen} onOpenChange={setRosterSheetOpen}>
