@@ -11,7 +11,6 @@ import { RosterManagementCard } from '@/components/roster'
 import { Role, ROLES, RALLY_PHASES, Position, PositionCoordinates, ROTATIONS, POSITION_SOURCE_INFO, RallyPhase, Team, Lineup } from '@/lib/types'
 import { getActiveAssignments } from '@/lib/lineups'
 import { getWhiteboardPositions } from '@/lib/whiteboard'
-import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { createRotationPhaseKey, getBackRowMiddle, getRoleZone } from '@/lib/rotations'
@@ -38,6 +37,7 @@ import { getLocalTeamById, listLocalTeams, upsertLocalTeam } from '@/lib/localTe
 import { toast } from 'sonner'
 
 // Constants for court display
+const OPEN_COURT_SETUP_EVENT = 'open-court-setup'
 const ANIMATION_MODE = 'css' as const
 const TOKEN_SCALES = { desktop: 1.5, mobile: 1.5 }
 const TOKEN_DIMENSIONS = { widthOffset: 0, heightOffset: 0 }
@@ -212,6 +212,12 @@ function HomePageContent() {
 
   const [rosterSheetOpen, setRosterSheetOpen] = useState(false)
   const [courtSetupOpen, setCourtSetupOpen] = useState(false)
+
+  useEffect(() => {
+    const openCourtSetup = () => setCourtSetupOpen(true)
+    window.addEventListener(OPEN_COURT_SETUP_EVENT, openCourtSetup)
+    return () => window.removeEventListener(OPEN_COURT_SETUP_EVENT, openCourtSetup)
+  }, [])
 
   // Keyboard navigation for phases
   useEffect(() => {
@@ -594,10 +600,7 @@ function HomePageContent() {
         {/* Court Container - scales to fit available space */}
         <div className="w-full h-auto sm:h-full sm:max-w-3xl mx-auto px-0 sm:px-2 relative">
           <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30 w-[min(92vw,720px)]">
-            <div className="flex items-center justify-between gap-2 px-3 py-2 bg-muted/90 backdrop-blur-sm rounded-xl border border-border shadow-sm">
-              <Button size="sm" variant="outline" className="h-8 text-xs shrink-0" onClick={() => setCourtSetupOpen(true)}>
-                Court Setup
-              </Button>
+            <div className="flex items-center justify-center px-3 py-2 bg-muted/90 backdrop-blur-sm rounded-xl border border-border shadow-sm">
               <span className="text-xs text-muted-foreground truncate">
                 Active: <span className="font-medium text-foreground">{activeTeamName}</span>
                 {' · '}

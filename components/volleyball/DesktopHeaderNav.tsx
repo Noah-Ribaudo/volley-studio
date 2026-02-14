@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Layout, Users, Timer, Settings, ChevronLeft, ChevronRight, ChevronDown, Play, RotateCcw, Printer, Eye, EyeOff, SlidersHorizontal } from 'lucide-react'
+import { Layout, Users, Timer, Settings, ChevronLeft, ChevronRight, ChevronDown, Play, RotateCcw, Printer, SlidersHorizontal } from 'lucide-react'
 import VolleyBall from '@/components/logo/VolleyBall'
 import { useGameTimeStore } from '@/store/useGameTimeStore'
 import { UserMenu } from '@/components/auth'
@@ -42,9 +42,10 @@ const navItems = [
 
 interface DesktopHeaderNavProps {
   onOpenPrintDialog?: () => void
+  onOpenCourtSetup?: () => void
 }
 
-export function DesktopHeaderNav({ onOpenPrintDialog }: DesktopHeaderNavProps) {
+export function DesktopHeaderNav({ onOpenPrintDialog, onOpenCourtSetup }: DesktopHeaderNavProps) {
   const pathname = usePathname()
   const isWhiteboardPage = pathname === '/'
   const showMotionDebugToggle = process.env.NODE_ENV === 'development'
@@ -62,8 +63,6 @@ export function DesktopHeaderNav({ onOpenPrintDialog }: DesktopHeaderNavProps) {
   const isPreviewingMovement = useAppStore((state) => state.isPreviewingMovement)
   const setPreviewingMovement = useAppStore((state) => state.setPreviewingMovement)
   const triggerPlayAnimation = useAppStore((state) => state.triggerPlayAnimation)
-  const hideAwayTeam = useAppStore((state) => state.hideAwayTeam)
-  const setHideAwayTeam = useAppStore((state) => state.setHideAwayTeam)
   const showPrintFeature = useAppStore((state) => state.showPrintFeature)
   const showMotionDebugPanel = useAppStore((state) => state.showMotionDebugPanel)
   const setShowMotionDebugPanel = useAppStore((state) => state.setShowMotionDebugPanel)
@@ -239,16 +238,15 @@ export function DesktopHeaderNav({ onOpenPrintDialog }: DesktopHeaderNavProps) {
             <div className="w-px h-6 bg-border" />
           )}
 
-          {/* Hide/Show Opponent toggle */}
+          {/* Court setup trigger (replaces opponent toggle in header) */}
           <Button
             variant="outline"
             size="sm"
             className="h-8 gap-1.5"
-            onClick={() => setHideAwayTeam(!hideAwayTeam)}
-            title={hideAwayTeam ? "Show opponent" : "Hide opponent"}
+            onClick={() => onOpenCourtSetup?.()}
+            title="Open court setup"
           >
-            {hideAwayTeam ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            <span>Opponent</span>
+            <span>Court Setup</span>
           </Button>
 
           {/* Print button - dev toggle */}

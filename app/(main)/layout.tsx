@@ -11,7 +11,6 @@ import { useGameTimeStore } from '@/store/useGameTimeStore'
 import { Button } from '@/components/ui/button'
 import { PrinterIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { Eye, EyeOff } from 'lucide-react'
 import { PrintDialog } from '@/components/print'
 import { getActiveAssignments } from '@/lib/lineups'
 import type { Rotation, Phase, PositionCoordinates, RallyPhase } from '@/lib/types'
@@ -24,6 +23,7 @@ const BackgroundShader = dynamic(
   () => import('@/components/BackgroundShader').then((mod) => mod.BackgroundShader),
   { ssr: false }
 )
+const OPEN_COURT_SETUP_EVENT = 'open-court-setup'
 
 export default function VolleyballLayout({
   children,
@@ -40,8 +40,6 @@ export default function VolleyballLayout({
   const nextPhase = useAppStore((state) => state.nextPhase)
   const prevPhase = useAppStore((state) => state.prevPhase)
   const backgroundOpacity = useAppStore((state) => state.backgroundOpacity)
-  const hideAwayTeam = useAppStore((state) => state.hideAwayTeam)
-  const setHideAwayTeam = useAppStore((state) => state.setHideAwayTeam)
   const showPrintFeature = useAppStore((state) => state.showPrintFeature)
 
   // Data for print dialog
@@ -99,7 +97,12 @@ export default function VolleyballLayout({
         style={{ backgroundColor: contentBackgroundColor }}
       >
         {/* Desktop header nav */}
-        <DesktopHeaderNav onOpenPrintDialog={() => setPrintDialogOpen(true)} />
+        <DesktopHeaderNav
+          onOpenPrintDialog={() => setPrintDialogOpen(true)}
+          onOpenCourtSetup={() => {
+            window.dispatchEvent(new Event(OPEN_COURT_SETUP_EVENT))
+          }}
+        />
 
         {/* Mobile top header - minimal, just for context */}
         <header
@@ -120,13 +123,15 @@ export default function VolleyballLayout({
               <>
                 <Button
                   variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => setHideAwayTeam(!hideAwayTeam)}
-                  aria-label={hideAwayTeam ? 'Show opponent' : 'Hide opponent'}
-                  title={hideAwayTeam ? 'Show opponent' : 'Hide opponent'}
+                  size="sm"
+                  className="h-8 px-2 text-xs"
+                  onClick={() => {
+                    window.dispatchEvent(new Event(OPEN_COURT_SETUP_EVENT))
+                  }}
+                  aria-label="Open court setup"
+                  title="Open court setup"
                 >
-                  {hideAwayTeam ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  Court Setup
                 </Button>
                 {showPrintFeature && (
                   <Button
