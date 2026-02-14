@@ -7,6 +7,7 @@ import VolleyBall from '@/components/logo/VolleyBall'
 import { useGameTimeStore } from '@/store/useGameTimeStore'
 import { UserMenu } from '@/components/auth'
 import { Button } from '@/components/ui/button'
+import { SidebarTrigger } from '@/components/ui/sidebar'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,9 +44,14 @@ const navItems = [
 interface DesktopHeaderNavProps {
   onOpenPrintDialog?: () => void
   onOpenCourtSetup?: () => void
+  showNav?: boolean
 }
 
-export function DesktopHeaderNav({ onOpenPrintDialog, onOpenCourtSetup }: DesktopHeaderNavProps) {
+export function DesktopHeaderNav({
+  onOpenPrintDialog,
+  onOpenCourtSetup,
+  showNav = true,
+}: DesktopHeaderNavProps) {
   const pathname = usePathname()
   const isWhiteboardPage = pathname === '/'
   const showMotionDebugToggle = process.env.NODE_ENV === 'development'
@@ -74,40 +80,52 @@ export function DesktopHeaderNav({ onOpenPrintDialog, onOpenCourtSetup }: Deskto
 
   return (
     <header className="hidden md:flex items-center h-12 px-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-      <Link href="/" className="mr-2 flex items-center gap-1.5 hover:opacity-80 transition-opacity">
-        <VolleyBall size={20} fillColor="#f97316" />
-        <span className="text-sm font-semibold text-foreground">Volley Studio</span>
-      </Link>
-      <nav className="flex items-center gap-1">
-        {navItems.map((item) => {
-          const isActive = item.url === '/'
-            ? pathname === item.url
-            : pathname?.startsWith(item.url)
+      {showNav ? (
+        <>
+          <Link href="/" className="mr-2 flex items-center gap-1.5 hover:opacity-80 transition-opacity">
+            <VolleyBall size={20} fillColor="#f97316" />
+            <span className="text-sm font-semibold text-foreground">Volley Studio</span>
+          </Link>
+          <nav className="flex items-center gap-1">
+            {navItems.map((item) => {
+              const isActive = item.url === '/'
+                ? pathname === item.url
+                : pathname?.startsWith(item.url)
 
-          const showGameDot = item.url === '/gametime' && hasActiveGame && !isActive
+              const showGameDot = item.url === '/gametime' && hasActiveGame && !isActive
 
-          return (
-            <Link
-              key={item.title}
-              href={item.url}
-              className={cn(
-                'flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors relative',
-                isActive
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-              )}
-            >
-              <div className="relative">
-                <item.icon className="h-4 w-4" />
-                {showGameDot && (
-                  <div className="absolute -top-0.5 -right-1 w-2 h-2 bg-green-500 rounded-full" />
-                )}
-              </div>
-              <span>{item.title}</span>
-            </Link>
-          )
-        })}
-      </nav>
+              return (
+                <Link
+                  key={item.title}
+                  href={item.url}
+                  className={cn(
+                    'flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors relative',
+                    isActive
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                  )}
+                >
+                  <div className="relative">
+                    <item.icon className="h-4 w-4" />
+                    {showGameDot && (
+                      <div className="absolute -top-0.5 -right-1 w-2 h-2 bg-green-500 rounded-full" />
+                    )}
+                  </div>
+                  <span>{item.title}</span>
+                </Link>
+              )
+            })}
+          </nav>
+        </>
+      ) : (
+        <div className="flex items-center gap-2">
+          <SidebarTrigger className="h-8 w-8" />
+          <Link href="/" className="flex items-center gap-1.5 hover:opacity-80 transition-opacity">
+            <VolleyBall size={20} fillColor="#f97316" />
+            <span className="text-sm font-semibold text-foreground">Volley Studio</span>
+          </Link>
+        </div>
+      )}
 
       {/* Phase and Rotation controls - only on whiteboard */}
       {isWhiteboardPage && (

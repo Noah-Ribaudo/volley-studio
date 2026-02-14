@@ -3,9 +3,14 @@
 import { usePathname } from 'next/navigation'
 import { MobileBottomNav } from '@/components/volleyball/MobileBottomNav'
 import { DesktopHeaderNav } from '@/components/volleyball/DesktopHeaderNav'
+import { VolleyballSidebar } from '@/components/volleyball/VolleyballSidebar'
 import { MobileContextBar } from '@/components/controls'
 import { useAppStore } from '@/store/useAppStore'
 import { UserMenu } from '@/components/auth'
+import { Button } from '@/components/ui/button'
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
+
+const OPEN_COURT_SETUP_EVENT = 'open-court-setup'
 
 export default function VolleyballLayout({
   children,
@@ -36,9 +41,16 @@ export default function VolleyballLayout({
   const paddingClass = '[padding-bottom:calc(6rem+env(safe-area-inset-bottom,0px))]'
 
   return (
-    <div className="h-dvh flex flex-col">
+    <SidebarProvider defaultOpen className="h-dvh w-full">
+      <VolleyballSidebar />
+      <SidebarInset className="h-dvh flex flex-col">
       {/* Desktop header nav */}
-      <DesktopHeaderNav />
+      <DesktopHeaderNav
+        onOpenCourtSetup={() => {
+          window.dispatchEvent(new Event(OPEN_COURT_SETUP_EVENT))
+        }}
+        showNav={false}
+      />
 
       {/* Mobile top header - minimal, just for context */}
       <header
@@ -51,7 +63,23 @@ export default function VolleyballLayout({
         }}
       >
         <span className="font-medium text-sm">Volleyball</span>
-        <UserMenu />
+        <div className="flex items-center gap-1">
+          {isWhiteboardPage && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 text-xs"
+              onClick={() => {
+                window.dispatchEvent(new Event(OPEN_COURT_SETUP_EVENT))
+              }}
+              aria-label="Open court setup"
+              title="Open court setup"
+            >
+              Court Setup
+            </Button>
+          )}
+          <UserMenu />
+        </div>
       </header>
 
       {/* Main content with bottom padding for mobile nav + context bar */}
@@ -76,6 +104,7 @@ export default function VolleyballLayout({
 
       {/* Mobile bottom navigation (4 tabs) */}
       <MobileBottomNav />
-    </div>
+      </SidebarInset>
+    </SidebarProvider>
   )
 }

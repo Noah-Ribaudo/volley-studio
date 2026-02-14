@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { MobileBottomNav } from '@/components/volleyball/MobileBottomNav'
 import { DesktopHeaderNav } from '@/components/volleyball/DesktopHeaderNav'
+import { VolleyballSidebar } from '@/components/volleyball/VolleyballSidebar'
 import { MobileContextBar } from '@/components/controls'
 import { useAppStore, getCurrentPositions } from '@/store/useAppStore'
 import { useGameTimeStore } from '@/store/useGameTimeStore'
@@ -17,6 +18,7 @@ import type { Rotation, Phase, PositionCoordinates, RallyPhase } from '@/lib/typ
 import { RALLY_PHASES, isRallyPhase as checkIsRallyPhase } from '@/lib/types'
 import VolleyBall from '@/components/logo/VolleyBall'
 import { UserMenu } from '@/components/auth'
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import Link from 'next/link'
 
 const BackgroundShader = dynamic(
@@ -91,17 +93,19 @@ export default function VolleyballLayout({
   return (
     <div className="h-dvh relative overflow-hidden bg-background">
       {!isWhiteboardPage && <BackgroundShader />}
-
-      <div
-        className="relative h-dvh flex flex-col"
-        style={{ backgroundColor: contentBackgroundColor }}
-      >
+      <SidebarProvider defaultOpen className="h-dvh w-full">
+        <VolleyballSidebar />
+        <SidebarInset
+          className="relative h-dvh flex flex-col"
+          style={{ backgroundColor: contentBackgroundColor }}
+        >
         {/* Desktop header nav */}
         <DesktopHeaderNav
           onOpenPrintDialog={() => setPrintDialogOpen(true)}
           onOpenCourtSetup={() => {
             window.dispatchEvent(new Event(OPEN_COURT_SETUP_EVENT))
           }}
+          showNav={false}
         />
 
         {/* Mobile top header - minimal, just for context */}
@@ -196,7 +200,8 @@ export default function VolleyballLayout({
           teamName={currentTeam?.name}
           visiblePhases={phasesToShow as RallyPhase[]}
         />
-      </div>
+        </SidebarInset>
+      </SidebarProvider>
     </div>
   )
 }
