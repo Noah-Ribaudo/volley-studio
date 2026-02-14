@@ -17,6 +17,7 @@ import { getActiveAssignments } from '@/lib/lineups'
 import type { Rotation, Phase, PositionCoordinates, RallyPhase } from '@/lib/types'
 import { RALLY_PHASES, isRallyPhase as checkIsRallyPhase } from '@/lib/types'
 import VolleyBall from '@/components/logo/VolleyBall'
+import { UserMenu } from '@/components/auth'
 import Link from 'next/link'
 
 const BackgroundShader = dynamic(
@@ -114,31 +115,34 @@ export default function VolleyballLayout({
             <VolleyBall size={18} fillColor="#f97316" />
             Volley Studio
           </span>
-          {isWhiteboardPage && (
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => setHideAwayTeam(!hideAwayTeam)}
-                aria-label={hideAwayTeam ? 'Show opponent' : 'Hide opponent'}
-                title={hideAwayTeam ? 'Show opponent' : 'Hide opponent'}
-              >
-                {hideAwayTeam ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </Button>
-              {showPrintFeature && (
+          <div className="flex items-center gap-1">
+            {isWhiteboardPage && (
+              <>
                 <Button
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8"
-                  onClick={() => setPrintDialogOpen(true)}
-                  aria-label="Print rotations"
+                  onClick={() => setHideAwayTeam(!hideAwayTeam)}
+                  aria-label={hideAwayTeam ? 'Show opponent' : 'Hide opponent'}
+                  title={hideAwayTeam ? 'Show opponent' : 'Hide opponent'}
                 >
-                  <HugeiconsIcon icon={PrinterIcon} className="h-4 w-4" />
+                  {hideAwayTeam ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
-              )}
-            </div>
-          )}
+                {showPrintFeature && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setPrintDialogOpen(true)}
+                    aria-label="Print rotations"
+                  >
+                    <HugeiconsIcon icon={PrinterIcon} className="h-4 w-4" />
+                  </Button>
+                )}
+              </>
+            )}
+            <UserMenu />
+          </div>
         </header>
 
         {/* Main content with bottom padding for mobile nav + context bar */}
