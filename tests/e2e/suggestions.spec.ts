@@ -61,7 +61,7 @@ test.describe('Suggestion Box', () => {
   })
 
   test('submitting shows success toast and clears textarea', async ({ page }) => {
-    // Intercept the Convex action call to avoid creating a real GitHub issue
+    // Intercept the Convex action call to avoid creating a real Linear issue
     // Set up route before navigation to ensure it's ready
     await page.route('**/api/**', async (route) => {
       const request = route.request()
