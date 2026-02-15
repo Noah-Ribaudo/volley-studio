@@ -51,11 +51,13 @@ export function VolleyballSidebar() {
       <SidebarHeader className="border-b border-sidebar-border">
         <Link
           href="/"
-          className="flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center"
+          className="flex h-9 items-center gap-2 overflow-hidden rounded-md px-2 py-1.5 transition-colors duration-200 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
           aria-label="Volley Studio"
         >
           <VolleyBall size={20} fillColor="#f97316" className="shrink-0" />
-          <span className="text-sm font-semibold text-foreground group-data-[collapsible=icon]:hidden">
+          <span
+            className="max-w-[9rem] origin-left whitespace-nowrap text-sm font-semibold text-foreground transition-[max-width,opacity,transform] duration-200 ease-out group-data-[collapsible=icon]:max-w-0 group-data-[collapsible=icon]:-translate-x-1 group-data-[collapsible=icon]:opacity-0"
+          >
             Volley Studio
           </span>
         </Link>
