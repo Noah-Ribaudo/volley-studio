@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { useAction } from 'convex/react'
 import { api } from '@/convex/_generated/api'
+import Link from 'next/link'
+import { useConvexAuth } from 'convex/react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
@@ -14,18 +16,20 @@ const SHOW_COUNT_AT = 500
 export default function SuggestionBox() {
   const [text, setText] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const { isAuthenticated } = useConvexAuth()
   const submitSuggestion = useAction(api.suggestions.submitSuggestion)
 
   async function handleSubmit() {
-    if (!text.trim() || submitting) return
+    if (!text.trim() || submitting || !isAuthenticated) return
 
     setSubmitting(true)
     try {
       await submitSuggestion({ text: text.trim() })
       setText('')
       toast.success("Sent — thanks for the feedback!")
-    } catch {
-      toast.error("Something went wrong. Try again?")
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Something went wrong. Try again?"
+      toast.error(message)
     } finally {
       setSubmitting(false)
     }
@@ -40,6 +44,14 @@ export default function SuggestionBox() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
+        {!isAuthenticated && (
+          <p className="text-sm text-muted-foreground">
+            <Link href="/sign-in" className="underline underline-offset-2 hover:text-foreground">
+              Sign in
+            </Link>{' '}
+            to submit suggestions.
+          </p>
+        )}
         <Textarea
           placeholder="I wish this app could..."
           value={text}
@@ -49,7 +61,7 @@ export default function SuggestionBox() {
             }
           }}
           rows={3}
-          disabled={submitting}
+          disabled={submitting || !isAuthenticated}
         />
         <div className="flex items-center justify-between">
           {text.length >= SHOW_COUNT_AT ? (
@@ -62,7 +74,7 @@ export default function SuggestionBox() {
           <Button
             size="sm"
             onClick={handleSubmit}
-            disabled={!text.trim() || submitting}
+            disabled={!text.trim() || submitting || !isAuthenticated}
           >
             {submitting ? "Sending..." : "Send it"}
           </Button>
