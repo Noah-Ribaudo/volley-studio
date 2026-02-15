@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import { Role, ROLE_INFO } from '@/lib/types'
-import { animate, SPRING, stopAnimation, type AnimationPlaybackControls } from '@/lib/motion-utils'
+import { animate, animateIfAllowed, SPRING, stopAnimation, type AnimationPlaybackControls } from '@/lib/motion-utils'
 
 interface ArrowTipProps {
   role: Role
@@ -62,7 +62,7 @@ export function ArrowTip({ role, playerX, playerY, tokenRadius, onDragStart, dir
     group.style.transform = `translateX(${slideStart}px)`
 
     // Animate with spring
-    animationRef.current = animate(0, 1, {
+    animationRef.current = animateIfAllowed(() => animate(0, 1, {
       type: 'spring',
       ...SPRING.snappy,
       onUpdate: (progress) => {
@@ -70,7 +70,12 @@ export function ArrowTip({ role, playerX, playerY, tokenRadius, onDragStart, dir
         group.style.opacity = String(progress)
         group.style.transform = `translateX(${x}px)`
       },
-    })
+    }))
+
+    if (!animationRef.current) {
+      group.style.opacity = '1'
+      group.style.transform = 'translateX(0px)'
+    }
 
     return () => {
       stopAnimation(animationRef.current)

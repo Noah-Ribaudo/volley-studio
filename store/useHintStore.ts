@@ -7,15 +7,26 @@ import { createSafeLocalStorage } from '@/store/safeStorage'
 interface HintState {
   arrowDragCount: number
   hasDeletedArrow: boolean
+  nextStepHintHoverCount: number
+  hasLearnedNextStepDrag: boolean
   hasSeenGameTimeOnboarding: boolean
+  hasCompletedFirstDrag: boolean
+  hasNavigatedPhase: boolean
 
   // Actions
   incrementDragCount: () => void
   markDeleteLearned: () => void
+  incrementNextStepHintHoverCount: () => void
+  markNextStepDragLearned: () => void
   markGameTimeOnboardingSeen: () => void
+  markFirstDragCompleted: () => void
+  markPhaseNavigated: () => void
 
   // Computed helper
   shouldShowDeleteHint: () => boolean
+  shouldShowNextStepHint: () => boolean
+  shouldShowFirstDragHint: () => boolean
+  shouldShowPhaseNavigationHint: () => boolean
 }
 
 export const useHintStore = create<HintState>()(
@@ -23,7 +34,11 @@ export const useHintStore = create<HintState>()(
     (set, get) => ({
       arrowDragCount: 0,
       hasDeletedArrow: false,
+      nextStepHintHoverCount: 0,
+      hasLearnedNextStepDrag: false,
       hasSeenGameTimeOnboarding: false,
+      hasCompletedFirstDrag: false,
+      hasNavigatedPhase: false,
 
       incrementDragCount: () => set((state) => ({
         arrowDragCount: state.arrowDragCount + 1
@@ -31,12 +46,37 @@ export const useHintStore = create<HintState>()(
 
       markDeleteLearned: () => set({ hasDeletedArrow: true }),
 
+      incrementNextStepHintHoverCount: () => set((state) => ({
+        nextStepHintHoverCount: state.nextStepHintHoverCount + 1
+      })),
+
+      markNextStepDragLearned: () => set({ hasLearnedNextStepDrag: true }),
+
       markGameTimeOnboardingSeen: () => set({ hasSeenGameTimeOnboarding: true }),
+
+      markFirstDragCompleted: () => set({ hasCompletedFirstDrag: true }),
+
+      markPhaseNavigated: () => set({ hasNavigatedPhase: true }),
 
       shouldShowDeleteHint: () => {
         const { arrowDragCount, hasDeletedArrow } = get()
         return !hasDeletedArrow && arrowDragCount < 3
-      }
+      },
+
+      shouldShowNextStepHint: () => {
+        const { nextStepHintHoverCount, hasLearnedNextStepDrag } = get()
+        return !hasLearnedNextStepDrag && nextStepHintHoverCount < 3
+      },
+
+      shouldShowFirstDragHint: () => {
+        const { hasCompletedFirstDrag } = get()
+        return !hasCompletedFirstDrag
+      },
+
+      shouldShowPhaseNavigationHint: () => {
+        const { hasCompletedFirstDrag, hasNavigatedPhase } = get()
+        return hasCompletedFirstDrag && !hasNavigatedPhase
+      },
     }),
     {
       name: 'volleyball-hints',

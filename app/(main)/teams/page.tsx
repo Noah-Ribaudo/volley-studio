@@ -7,6 +7,7 @@ import { api } from '@/convex/_generated/api'
 import { Id } from '@/convex/_generated/dataModel'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import { TeamCard, CreateTeamDialog, ImportTeamDialog, TeamSearchBar } from '@/components/team'
 import { useAppStore } from '@/store/useAppStore'
 import type { Team } from '@/lib/types'
@@ -190,9 +191,30 @@ export default function TeamsPage() {
 
         {/* Loading */}
         {isLoading && (
-          <div className="text-center py-8">
-            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
-            <p className="mt-2 text-sm text-muted-foreground">Loading teams...</p>
+          <div className="space-y-3 py-1">
+            {[0, 1, 2].map((index) => (
+              <Card key={index} className="overflow-hidden">
+                <CardContent className="pt-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <Skeleton className="h-6 w-40 max-w-[70%]" />
+                      <Skeleton className="h-4 w-56 max-w-[85%]" />
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:justify-end">
+                      <Skeleton className="h-8 w-16 rounded-md" />
+                      <Skeleton className="h-8 w-20 rounded-md" />
+                      <Skeleton className="h-8 w-14 rounded-md" />
+                    </div>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-1">
+                    <Skeleton className="h-5 w-16 rounded-sm" />
+                    <Skeleton className="h-5 w-20 rounded-sm" />
+                    <Skeleton className="h-5 w-14 rounded-sm" />
+                    <Skeleton className="h-5 w-24 rounded-sm" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         )}
 

@@ -20,6 +20,7 @@ import { useSwipeNavigation } from '@/hooks/useSwipeNavigation'
 import { useWhiteboardSync } from '@/hooks/useWhiteboardSync'
 import { useLineupPresets } from '@/hooks/useLineupPresets'
 import { SwipeHint } from '@/components/mobile'
+import { WhiteboardOnboardingHint } from '@/components/court/WhiteboardOnboardingHint'
 import { ConflictResolutionModal } from '@/components/volleyball/ConflictResolutionModal'
 import {
   Select,
@@ -34,6 +35,7 @@ import {
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { getLocalTeamById, listLocalTeams, upsertLocalTeam } from '@/lib/localTeams'
+import { useHintStore } from '@/store/useHintStore'
 import { toast } from 'sonner'
 
 // Constants for court display
@@ -133,6 +135,12 @@ function HomePageContent() {
   const [localTeams, setLocalTeams] = useState<Team[]>([])
   const [isSavingLineup, setIsSavingLineup] = useState(false)
   const loadedTeamFromUrlRef = useRef<string | null>(null)
+  const previousPhaseRef = useRef(currentPhase)
+  const shouldShowFirstDragHint = useHintStore((state) => state.shouldShowFirstDragHint)
+  const shouldShowPhaseNavigationHint = useHintStore((state) => state.shouldShowPhaseNavigationHint)
+  const hasCompletedFirstDrag = useHintStore((state) => state.hasCompletedFirstDrag)
+  const hasNavigatedPhase = useHintStore((state) => state.hasNavigatedPhase)
+  const markPhaseNavigated = useHintStore((state) => state.markPhaseNavigated)
 
   // Mobile detection
   const isMobile = useIsMobile()
@@ -468,18 +476,6 @@ function HomePageContent() {
     return currentTeam.lineups.find((lineup) => lineup.id === currentTeam.active_lineup_id) || currentTeam.lineups[0]
   }, [currentTeam])
   const lineupSelectValue = currentLineup?.id || '__none__'
-  const activeLineupName = currentLineup?.name?.trim() || 'No Lineup'
-  const activeTeamName = currentTeam?.name?.trim() || 'No Team Selected'
-  const activeTeamScope = !currentTeam
-    ? 'None'
-    : currentTeam._id
-      ? 'Cloud'
-      : 'Local'
-  const activeTeamScopeClass = activeTeamScope === 'Cloud'
-    ? 'text-emerald-600 dark:text-emerald-400'
-    : activeTeamScope === 'Local'
-      ? 'text-amber-600 dark:text-amber-400'
-      : 'text-muted-foreground'
   const handleTeamSelect = useCallback((value: string) => {
     setCourtSetupOpen(false)
     if (value === '__new__') {
@@ -613,6 +609,21 @@ function HomePageContent() {
 
   // Visual feedback during swipe
   const swipeOffset = swipeState.swiping ? swipeState.delta.x * 0.2 : 0
+  const showFirstDragHint = shouldShowFirstDragHint()
+  const showPhaseNavigationHint = !showFirstDragHint && shouldShowPhaseNavigationHint()
+  const onboardingHintMessage = showFirstDragHint
+    ? 'Drag a player to reposition them'
+    : showPhaseNavigationHint
+      ? (isMobile ? 'Swipe left or right to change phase' : 'Use phase controls to change steps')
+      : null
+
+  useEffect(() => {
+    if (previousPhaseRef.current === currentPhase) return
+    previousPhaseRef.current = currentPhase
+    if (hasCompletedFirstDrag && !hasNavigatedPhase) {
+      markPhaseNavigated()
+    }
+  }, [currentPhase, hasCompletedFirstDrag, hasNavigatedPhase, markPhaseNavigated])
 
   return (
     <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-gradient-to-b from-background to-muted/30">
@@ -620,18 +631,6 @@ function HomePageContent() {
       <div className="flex-1 min-h-0 h-full overflow-hidden">
         {/* Court Container - scales to fit available space */}
         <div className="w-full h-full sm:max-w-3xl mx-auto px-0 sm:px-2 relative">
-          <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30 w-[min(92vw,720px)]">
-            <div className="flex items-center justify-center px-3 py-2 bg-muted/90 backdrop-blur-sm rounded-xl border border-border shadow-sm">
-              <span className="text-xs text-muted-foreground truncate">
-                Active: <span className="font-medium text-foreground">{activeTeamName}</span>
-                {' · '}
-                <span className="font-medium text-foreground">{activeLineupName}</span>
-                {' · '}
-                <span className={activeTeamScopeClass}>{activeTeamScope}</span>
-              </span>
-            </div>
-          </div>
-
           {/* Preset mode indicator - shown when viewing preset positions */}
           {isUsingPreset && (
             <div className="absolute top-16 left-1/2 -translate-x-1/2 z-30">
@@ -733,10 +732,15 @@ function HomePageContent() {
                 onPlayerAssign={isEditingAllowed && currentTeam ? (role, playerId) => {
                   assignPlayerToRole(role, playerId)
                 } : undefined}
-              />
+	              />
+
+          <WhiteboardOnboardingHint
+            show={Boolean(onboardingHintMessage)}
+            message={onboardingHintMessage || ''}
+          />
 
           {/* Swipe hint for mobile users - shows once */}
-          {isMobile && (
+          {isMobile && !onboardingHintMessage && (
             <SwipeHint
               storageKey="whiteboard-swipe-hint-seen"
               autoHideMs={4000}

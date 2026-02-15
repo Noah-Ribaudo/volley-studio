@@ -2,7 +2,6 @@
 
 import { useCallback, useState } from 'react'
 import { usePathname } from 'next/navigation'
-import dynamic from 'next/dynamic'
 import { MobileBottomNav } from '@/components/volleyball/MobileBottomNav'
 import { DesktopHeaderNav } from '@/components/volleyball/DesktopHeaderNav'
 import { VolleyballSidebar } from '@/components/volleyball/VolleyballSidebar'
@@ -21,10 +20,6 @@ import { UserMenu } from '@/components/auth'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import Link from 'next/link'
 
-const BackgroundShader = dynamic(
-  () => import('@/components/BackgroundShader').then((mod) => mod.BackgroundShader),
-  { ssr: false }
-)
 const OPEN_COURT_SETUP_EVENT = 'open-court-setup'
 
 export default function VolleyballLayout({
@@ -41,7 +36,6 @@ export default function VolleyballLayout({
   const setPhase = useAppStore((state) => state.setPhase)
   const nextPhase = useAppStore((state) => state.nextPhase)
   const prevPhase = useAppStore((state) => state.prevPhase)
-  const backgroundOpacity = useAppStore((state) => state.backgroundOpacity)
   const showPrintFeature = useAppStore((state) => state.showPrintFeature)
 
   // Data for print dialog
@@ -82,9 +76,7 @@ export default function VolleyballLayout({
   // Only show on whiteboard page
   const isWhiteboardPage = pathname === '/'
   const showContextBar = isWhiteboardPage
-  const contentBackgroundColor = isWhiteboardPage
-    ? 'var(--background)'
-    : `color-mix(in oklch, var(--background) ${backgroundOpacity}%, transparent)`
+  const contentBackgroundColor = 'var(--background)'
 
   // Always reserve space for context bar to prevent layout jump
   // This keeps the layout stable when navigating between pages
@@ -92,7 +84,6 @@ export default function VolleyballLayout({
 
   return (
     <div className="h-dvh relative overflow-hidden bg-background">
-      {!isWhiteboardPage && <BackgroundShader />}
       <SidebarProvider defaultOpen className="h-dvh w-full">
         <VolleyballSidebar />
         <SidebarInset

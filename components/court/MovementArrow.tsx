@@ -1,7 +1,7 @@
 'use client'
 
 import { memo, useCallback, useEffect, useRef } from 'react'
-import { animate, stopAnimation, type AnimationPlaybackControls } from '@/lib/motion-utils'
+import { animate, animateIfAllowed, stopAnimation, type AnimationPlaybackControls } from '@/lib/motion-utils'
 
 interface MovementArrowProps {
   start: { x: number; y: number }
@@ -207,7 +207,7 @@ function MovementArrowImpl({
     }
 
     // Animate path draw with spring
-    animationRef.current = animate(0, 1, {
+    animationRef.current = animateIfAllowed(() => animate(0, 1, {
       duration: 0.3,
       ease: [0.4, 0, 0.2, 1],
       onUpdate: (progress) => {
@@ -228,7 +228,15 @@ function MovementArrowImpl({
           arrowhead.style.opacity = ''
         }
       },
-    })
+    }))
+
+    if (!animationRef.current) {
+      path.style.strokeDasharray = ''
+      path.style.strokeDashoffset = ''
+      if (arrowhead) {
+        arrowhead.style.opacity = ''
+      }
+    }
 
     return () => {
       stopAnimation(animationRef.current)
@@ -256,7 +264,7 @@ function MovementArrowImpl({
       return
     }
 
-    peekAnimationRef.current = animate(start, target, {
+    peekAnimationRef.current = animateIfAllowed(() => animate(start, target, {
       duration: target > start ? 0.2 : 0.14,
       ease: target > start ? [0.0, 0.0, 0.2, 1.0] : [0.4, 0.0, 1.0, 1.0],
       onUpdate: (value) => {
@@ -267,7 +275,12 @@ function MovementArrowImpl({
         peekProgressRef.current = target
         applyPeekProgress(target)
       },
-    })
+    }))
+
+    if (!peekAnimationRef.current) {
+      peekProgressRef.current = target
+      applyPeekProgress(target)
+    }
 
     return () => {
       stopAnimation(peekAnimationRef.current)

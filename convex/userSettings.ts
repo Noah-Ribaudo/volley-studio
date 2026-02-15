@@ -70,6 +70,7 @@ export const getMine = query({
     }
 
     return {
+      themePreference: doc.themePreference ?? "auto",
       showPosition: doc.showPosition,
       showPlayer: doc.showPlayer,
       showLibero: doc.showLibero,
@@ -95,6 +96,7 @@ export const getMine = query({
 
 export const upsertMine = mutation({
   args: {
+    themePreference: v.union(v.literal("light"), v.literal("dark"), v.literal("auto")),
     showPosition: v.boolean(),
     showPlayer: v.boolean(),
     showLibero: v.boolean(),
@@ -128,6 +130,7 @@ export const upsertMine = mutation({
     const clampedAwayTeamHidePercent = Math.max(20, Math.min(50, args.awayTeamHidePercent));
 
     const payload = {
+      themePreference: args.themePreference,
       showPosition: args.showPosition,
       showPlayer: args.showPlayer,
       showLibero: args.showLibero,

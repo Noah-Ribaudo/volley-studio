@@ -221,6 +221,10 @@ export function VolleyballCourt({
   // Hint store for teaching UI
   const incrementDragCount = useHintStore((state) => state.incrementDragCount)
   const shouldShowDeleteHint = useHintStore((state) => state.shouldShowDeleteHint)
+  const incrementNextStepHintHoverCount = useHintStore((state) => state.incrementNextStepHintHoverCount)
+  const shouldShowNextStepHint = useHintStore((state) => state.shouldShowNextStepHint)
+  const markNextStepDragLearned = useHintStore((state) => state.markNextStepDragLearned)
+  const markFirstDragCompleted = useHintStore((state) => state.markFirstDragCompleted)
 
   const svgRef = useRef<SVGSVGElement>(null)
   const [draggingRole, setDraggingRole] = useState<Role | null>(null)
@@ -333,6 +337,7 @@ export function VolleyballCourt({
   const [draggingCurveRole, setDraggingCurveRole] = useState<Role | null>(null)
   const [_curveDragPosition, _setCurveDragPosition] = useState<Position | null>(null) // Current drag position in normalized coords
   const [hoveredRole, setHoveredRole] = useState<Role | null>(null) // Hovered player token (for arrow tip)
+  const [nextStepTooltipRole, setNextStepTooltipRole] = useState<Role | null>(null)
   const [hoveredArrowRole, setHoveredArrowRole] = useState<Role | null>(null) // Hovered arrow (for curve handle)
   const [tappedRole, setTappedRole] = useState<Role | null>(null) // For mobile tap-to-reveal arrow tip
   // Arrow preview hover state (boolean to avoid per-frame rerenders)
@@ -461,6 +466,12 @@ export function VolleyballCourt({
           if ((hoveredZonesRef.current[role]?.size ?? 0) === 0) return
           setHoveredRole(role)
           setPreviewVisible(prev => (prev[role] ? prev : { ...prev, [role]: true }))
+          if (shouldShowNextStepHint()) {
+            setNextStepTooltipRole(role)
+            incrementNextStepHintHoverCount()
+          } else {
+            setNextStepTooltipRole(null)
+          }
         }, 60)
       }
     } else if (!anyZoneHovered) {
@@ -470,6 +481,7 @@ export function VolleyballCourt({
         delete hoverDelayRef.current[role]
         if ((hoveredZonesRef.current[role]?.size ?? 0) > 0) return
         setHoveredRole(current => (current === role ? null : current))
+        setNextStepTooltipRole(current => (current === role ? null : current))
         setPreviewVisible(prev => {
           if (!prev[role]) return prev
           const next = { ...prev }
@@ -479,7 +491,7 @@ export function VolleyballCourt({
       }, 90)
     }
     // else: leaving one zone while another is still hovered → do nothing, arrow stays
-  }, [])
+  }, [incrementNextStepHintHoverCount, shouldShowNextStepHint])
 
   // Cleanup animation refs on unmount
   useEffect(() => {
@@ -1287,13 +1299,14 @@ export function VolleyballCourt({
         suppressArrowFadeTimeoutRef.current = null
       }, 350)
       onPositionChangeRef.current(role, finalPos)
+      markFirstDragCompleted()
     }
 
     draggingRoleRef.current = null
     dragPositionRef.current = null
     setDraggingRole(null)
     setDragPosition(null)
-  }, [])
+  }, [markFirstDragCompleted])
 
   // Handle drag start
   const handleDragStart = useCallback((role: Role, e: React.MouseEvent | React.TouchEvent) => {
@@ -1314,6 +1327,7 @@ export function VolleyballCourt({
 
     // Immediately hide any arrow preview when drag starts
     setHoveredRole(null)
+    setNextStepTooltipRole(null)
     setPreviewVisible({})
 
     dragOffsetRef.current = {
@@ -1391,6 +1405,8 @@ export function VolleyballCourt({
 
     // Track drag count for hint dismissal
     incrementDragCount()
+    markNextStepDragLearned()
+    setNextStepTooltipRole(null)
 
     // Prevent page scroll during drag
     document.body.style.overflow = 'hidden'
@@ -1492,7 +1508,7 @@ export function VolleyballCourt({
     document.addEventListener('mouseup', handleEnd)
       document.addEventListener('touchmove', handleMove, { passive: false })
       document.addEventListener('touchend', handleEnd)
-  }, [onArrowChange, onArrowCurveChange, getEventPosition, toNormalizedCoords, incrementDragCount, isMobile, arrows, arrowCurves, isPreviewingMovement])
+  }, [onArrowChange, onArrowCurveChange, getEventPosition, toNormalizedCoords, incrementDragCount, markNextStepDragLearned, isMobile, arrows, arrowCurves, isPreviewingMovement])
 
   // Handle curve drag - dragging the curve handle adjusts direction and intensity
   const handleCurveDragStart = useCallback((role: Role, e: React.MouseEvent | React.TouchEvent) => {
@@ -2349,6 +2365,21 @@ export function VolleyballCourt({
           debugHitboxes={debugHitboxes}
           onAttackBallDragStart={handleAttackBallDragStart}
         />
+
+        {/* First-time tip: teaches how to reveal the next-step arrow */}
+        {nextStepTooltipRole && !draggingArrowRole && (() => {
+          const rolePos = displayPositions[nextStepTooltipRole]
+          if (!rolePos) return null
+          const tooltipPos = toSvgCoords(rolePos)
+          return (
+            <DragTooltip
+              visible={true}
+              x={tooltipPos.x}
+              y={tooltipPos.y}
+              message="Drag me to show next step"
+            />
+          )
+        })()}
 
         {/* Floating tooltip for new users - teaches drag-off-court to delete */}
         {shouldShowDeleteHint() && draggingArrowRole && arrowDragPosition && (

@@ -17,6 +17,75 @@ function resolveColor(color: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(varMatch[1]).trim()
 }
 
+const clamp01 = (value: number): number => Math.min(1, Math.max(0, value))
+
+function parseOklch(color: string): { l: number; c: number; h: number } | null {
+  const match = color.match(/oklch\(([^)]+)\)/)
+  if (!match) return null
+  const [lchPart] = match[1].split('/')
+  const parts = lchPart.trim().split(/\s+/)
+  if (parts.length < 3) return null
+
+  let l = parseFloat(parts[0] ?? '')
+  const c = parseFloat(parts[1] ?? '')
+  const h = parseFloat(parts[2] ?? '')
+  if (Number.isNaN(l) || Number.isNaN(c) || Number.isNaN(h)) return null
+
+  if (parts[0]?.includes('%')) {
+    l /= 100
+  }
+
+  return { l, c, h }
+}
+
+function oklchToSrgb(color: string): [number, number, number] | null {
+  const parsed = parseOklch(color)
+  if (!parsed) return null
+  const { l, c, h } = parsed
+  const hRad = (h * Math.PI) / 180
+  const a = c * Math.cos(hRad)
+  const b = c * Math.sin(hRad)
+
+  const l_ = l + 0.3963377774 * a + 0.2158037573 * b
+  const m_ = l - 0.1055613458 * a - 0.0638541728 * b
+  const s_ = l - 0.0894841775 * a - 1.291485548 * b
+
+  const l3 = l_ ** 3
+  const m3 = m_ ** 3
+  const s3 = s_ ** 3
+
+  const linearR = 4.0767416621 * l3 - 3.3077115913 * m3 + 0.2309699292 * s3
+  const linearG = -1.2684380046 * l3 + 2.6097574011 * m3 - 0.3413193965 * s3
+  const linearB = -0.0041960863 * l3 - 0.7034186147 * m3 + 1.707614701 * s3
+
+  const toSrgb = (value: number) =>
+    value <= 0.0031308 ? 12.92 * value : 1.055 * Math.pow(value, 1 / 2.4) - 0.055
+
+  return [
+    clamp01(toSrgb(linearR)),
+    clamp01(toSrgb(linearG)),
+    clamp01(toSrgb(linearB)),
+  ]
+}
+
+function relativeLuminance([r, g, b]: [number, number, number]): number {
+  const toLinear = (value: number) =>
+    value <= 0.04045 ? value / 12.92 : Math.pow((value + 0.055) / 1.055, 2.4)
+
+  const R = toLinear(r)
+  const G = toLinear(g)
+  const B = toLinear(b)
+  return 0.2126 * R + 0.7152 * G + 0.0722 * B
+}
+
+function getContrastRatio(a: [number, number, number], b: [number, number, number]): number {
+  const l1 = relativeLuminance(a)
+  const l2 = relativeLuminance(b)
+  const bright = Math.max(l1, l2)
+  const dark = Math.min(l1, l2)
+  return (bright + 0.05) / (dark + 0.05)
+}
+
 /**
  * Extracts lightness value from an oklch color string
  * Handles both direct oklch values and CSS variable references
@@ -36,9 +105,16 @@ export function getOklchLightness(oklchColor: string): number | null {
  * @returns "#000" for light colors, "#fff" for dark colors
  */
 export function getTextColorForOklch(oklchColor: string): string {
-  const lightness = getOklchLightness(oklchColor)
-  // Use black text for colors with lightness > 0.7, white for darker colors
-  return lightness !== null && lightness > 0.7 ? '#000' : '#fff'
+  const resolved = resolveColor(oklchColor)
+  const rgb = oklchToSrgb(resolved)
+  if (!rgb) {
+    const lightness = getOklchLightness(oklchColor)
+    return lightness !== null && lightness > 0.7 ? '#000' : '#fff'
+  }
+
+  const whiteContrast = getContrastRatio(rgb, [1, 1, 1])
+  const blackContrast = getContrastRatio(rgb, [0, 0, 0])
+  return blackContrast >= whiteContrast ? '#000' : '#fff'
 }
 
 /**
