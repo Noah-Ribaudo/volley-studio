@@ -26,9 +26,29 @@ export const SPRING = {
   stiff: { stiffness: 500, damping: 40 } satisfies SpringOptions,
 } as const
 
+function prefersReducedMotion(): boolean {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+    return false
+  }
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+}
+
 // =============================================================================
 // ANIMATION HELPERS
 // =============================================================================
+
+/**
+ * Run a JS-driven animation only when reduced motion is not enabled.
+ * Returns null when animation is skipped so callers can jump to end state.
+ */
+export function animateIfAllowed(
+  startAnimation: () => AnimationPlaybackControls
+): AnimationPlaybackControls | null {
+  if (prefersReducedMotion()) {
+    return null
+  }
+  return startAnimation()
+}
 
 /**
  * Create a spring animation with collision avoidance callback

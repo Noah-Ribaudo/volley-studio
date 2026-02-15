@@ -108,9 +108,10 @@ function PlayerTokenImpl({
       <g
         className={`player-token transition-all duration-200 ${isDragging ? 'cursor-grabbing' : 'cursor-grab focus:outline-none'}`}
         style={{
-          transform: `translate(${x}px, ${y}px)`,
+          transform: `translate(${x}px, ${y}px) scale(${isDragging ? 1.06 : 1})`,
           opacity: dimmed ? 0.4 : 1,
-          filter: isDragging ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))' : undefined
+          filter: isDragging ? 'drop-shadow(0 8px 16px rgba(0,0,0,0.35))' : undefined,
+          transition: 'filter 120ms ease-out, transform 120ms ease-out',
         }}
         onClick={onClick}
         role="button"
@@ -466,9 +467,10 @@ function PlayerTokenImpl({
     <g
       className={`player-token transition-all duration-200 ${isDragging ? 'cursor-grabbing' : 'cursor-grab focus:outline-none'}`}
       style={{
-        transform: `translate(${x}px, ${y}px)`,
+        transform: `translate(${x}px, ${y}px) scale(${isDragging ? 1.06 : 1})`,
         opacity: dimmed ? 0.4 : 1,
-        filter: isDragging ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))' : undefined
+        filter: isDragging ? 'drop-shadow(0 8px 16px rgba(0,0,0,0.35))' : undefined,
+        transition: 'filter 120ms ease-out, transform 120ms ease-out',
       }}
       onClick={onClick}
       role="button"
