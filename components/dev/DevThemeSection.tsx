@@ -199,7 +199,7 @@ export default function DevThemeSection() {
             />
             <div>
               <CardTitle className="text-base">Theme Lab</CardTitle>
-              <CardDescription>Dev-only — live-test fonts, colors, shaders, layout</CardDescription>
+              <CardDescription>Dev-only — live-test fonts, colors, and layout</CardDescription>
             </div>
           </div>
           {isOpen && (
