@@ -225,6 +225,7 @@ export function VolleyballCourt({
   const incrementNextStepHintHoverCount = useHintStore((state) => state.incrementNextStepHintHoverCount)
   const shouldShowNextStepHint = useHintStore((state) => state.shouldShowNextStepHint)
   const markNextStepDragLearned = useHintStore((state) => state.markNextStepDragLearned)
+  const markFirstDragCompleted = useHintStore((state) => state.markFirstDragCompleted)
 
   const svgRef = useRef<SVGSVGElement>(null)
   const [draggingRole, setDraggingRole] = useState<Role | null>(null)
@@ -1320,13 +1321,14 @@ export function VolleyballCourt({
         suppressArrowFadeTimeoutRef.current = null
       }, 350)
       onPositionChangeRef.current(role, finalPos)
+      markFirstDragCompleted()
     }
 
     draggingRoleRef.current = null
     dragPositionRef.current = null
     setDraggingRole(null)
     setDragPosition(null)
-  }, [])
+  }, [markFirstDragCompleted])
 
   // Handle drag start
   const handleDragStart = useCallback((role: Role, e: React.MouseEvent | React.TouchEvent) => {

@@ -20,6 +20,7 @@ import { useSwipeNavigation } from '@/hooks/useSwipeNavigation'
 import { useWhiteboardSync } from '@/hooks/useWhiteboardSync'
 import { useLineupPresets } from '@/hooks/useLineupPresets'
 import { SwipeHint } from '@/components/mobile'
+import { WhiteboardOnboardingHint } from '@/components/court/WhiteboardOnboardingHint'
 import { ConflictResolutionModal } from '@/components/volleyball/ConflictResolutionModal'
 import {
   Select,
@@ -34,6 +35,7 @@ import {
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { getLocalTeamById, listLocalTeams, upsertLocalTeam } from '@/lib/localTeams'
+import { useHintStore } from '@/store/useHintStore'
 import { toast } from 'sonner'
 
 // Constants for court display
@@ -136,6 +138,12 @@ function HomePageContent() {
   const [localTeams, setLocalTeams] = useState<Team[]>([])
   const [isSavingLineup, setIsSavingLineup] = useState(false)
   const loadedTeamFromUrlRef = useRef<string | null>(null)
+  const previousPhaseRef = useRef(currentPhase)
+  const shouldShowFirstDragHint = useHintStore((state) => state.shouldShowFirstDragHint)
+  const shouldShowPhaseNavigationHint = useHintStore((state) => state.shouldShowPhaseNavigationHint)
+  const hasCompletedFirstDrag = useHintStore((state) => state.hasCompletedFirstDrag)
+  const hasNavigatedPhase = useHintStore((state) => state.hasNavigatedPhase)
+  const markPhaseNavigated = useHintStore((state) => state.markPhaseNavigated)
 
   // Mobile detection
   const isMobile = useIsMobile()
@@ -627,6 +635,21 @@ function HomePageContent() {
 
   // Visual feedback during swipe
   const swipeOffset = swipeState.swiping ? swipeState.delta.x * 0.2 : 0
+  const showFirstDragHint = shouldShowFirstDragHint()
+  const showPhaseNavigationHint = !showFirstDragHint && shouldShowPhaseNavigationHint()
+  const onboardingHintMessage = showFirstDragHint
+    ? 'Drag a player to reposition them'
+    : showPhaseNavigationHint
+      ? (isMobile ? 'Swipe left or right to change phase' : 'Use phase controls to change steps')
+      : null
+
+  useEffect(() => {
+    if (previousPhaseRef.current === currentPhase) return
+    previousPhaseRef.current = currentPhase
+    if (hasCompletedFirstDrag && !hasNavigatedPhase) {
+      markPhaseNavigated()
+    }
+  }, [currentPhase, hasCompletedFirstDrag, hasNavigatedPhase, markPhaseNavigated])
 
   return (
     <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-gradient-to-b from-background to-muted/30">
@@ -747,10 +770,15 @@ function HomePageContent() {
                 onPlayerAssign={isEditingAllowed && currentTeam ? (role, playerId) => {
                   assignPlayerToRole(role, playerId)
                 } : undefined}
-              />
+	              />
+
+          <WhiteboardOnboardingHint
+            show={Boolean(onboardingHintMessage)}
+            message={onboardingHintMessage || ''}
+          />
 
           {/* Swipe hint for mobile users - shows once */}
-          {isMobile && (
+          {isMobile && !onboardingHintMessage && (
             <SwipeHint
               storageKey="whiteboard-swipe-hint-seen"
               autoHideMs={4000}
