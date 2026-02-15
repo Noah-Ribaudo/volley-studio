@@ -90,8 +90,8 @@ test.describe('Suggestion Box', () => {
     await expect(page.getByRole('button', { name: /sending/i })).toBeVisible()
   })
 
-  test('suggestion box also appears on volleyball settings page', async ({ page }) => {
-    await page.goto('/volleyball/settings')
+  test('suggestion box also appears on settings page canonical URL', async ({ page }) => {
+    await page.goto('/settings')
 
     await expect(page.getByText(/got an idea/i)).toBeVisible({ timeout: 15_000 })
     await expect(page.getByPlaceholder(/I wish this app could/i)).toBeVisible()

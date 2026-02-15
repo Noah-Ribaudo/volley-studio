@@ -10,7 +10,7 @@ import { v } from "convex/values";
  */
 
 // Migration to assign unowned teams to a specific user by email
-// Run this from the Convex Dashboard with: { "email": "graystripe10@gmail.com" }
+// Run this from the Convex Dashboard with: { "email": "coach@example.com" }
 export const assignUnownedTeamsToUser = internalMutation({
   args: {
     email: v.string(),
@@ -103,7 +103,6 @@ export const seedFromSupabase = internalMutation({
     const beachBoysId = await ctx.db.insert("teams", {
       name: "Beach Boys",
       slug: "beach_boys",
-      password: "montrose",
       archived: false,
       roster: [
         { id: "player-1765461077045", name: "Noah", number: 3 },

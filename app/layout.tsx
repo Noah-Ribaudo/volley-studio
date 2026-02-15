@@ -9,7 +9,6 @@ import {
   GeistPixelTriangle,
   GeistPixelLine,
 } from "geist/font/pixel";
-import "./dev-theme-fonts.css";
 import "./globals.css";
 import TextureModeLoader from "@/components/TextureModeLoader";
 import ThemeInitializer from "@/components/ThemeInitializer";
@@ -78,6 +77,10 @@ export default function RootLayout({
   return (
     <html lang="en" data-texture="low" data-theme="dark" suppressHydrationWarning className={`${barlow.variable} ${barlowCondensed.variable} ${GeistSans.variable} ${GeistMono.variable} ${GeistPixelSquare.variable} ${GeistPixelGrid.variable} ${GeistPixelCircle.variable} ${GeistPixelTriangle.variable} ${GeistPixelLine.variable}`}>
       <head>
+        {process.env.NODE_ENV === "development" && (
+          // eslint-disable-next-line @next/next/no-css-tags
+          <link rel="stylesheet" href="/dev-theme-fonts.css" />
+        )}
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body

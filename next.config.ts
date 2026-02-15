@@ -18,6 +18,20 @@ const nextConfig: NextConfig = {
   experimental: {
     scrollRestoration: true,
   },
+  async redirects() {
+    return [
+      {
+        source: "/volleyball",
+        destination: "/",
+        permanent: true,
+      },
+      {
+        source: "/volleyball/:path*",
+        destination: "/:path*",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     const securityHeaders = [
       { key: "X-Content-Type-Options", value: "nosniff" },
