@@ -21,7 +21,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ROLES, ROLE_INFO, RALLY_PHASE_INFO, RallyPhase } from '@/lib/types'
 import { cn, getTextColorForOklch } from '@/lib/utils'
 import ThemePicker from '@/components/ThemePicker'
-import { SHADER_OPTIONS, type ShaderId } from '@/lib/shaders'
 import dynamic from 'next/dynamic'
 
 const DevThemeSection = process.env.NODE_ENV === 'development'
@@ -85,11 +84,6 @@ export default function SettingsPage() {
     setDebugHitboxes,
     sidebarProfileInFooter,
     setSidebarProfileInFooter,
-    // Background shader
-    backgroundShader,
-    setBackgroundShader,
-    backgroundOpacity,
-    setBackgroundOpacity,
   } = useAppStore()
   const viewer = useQuery(api.users.viewer, isAuthenticated ? {} : 'skip')
   const [isSigningOut, setIsSigningOut] = useState(false)
@@ -179,61 +173,9 @@ export default function SettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label className="text-sm font-medium">Theme</Label>
-                <p className="text-xs text-muted-foreground">Choose light, dark, or auto daylight mode</p>
+                <p className="text-xs text-muted-foreground">Choose light, dark, or follow your device setting</p>
               </div>
               <ThemePicker />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="shader-select" className="text-sm font-medium">
-                Background Shader
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                Pick the ambient background effect used on wide screens
-              </p>
-              <Select
-                value={backgroundShader}
-                onValueChange={(value) => setBackgroundShader(value as ShaderId)}
-              >
-                <SelectTrigger id="shader-select" className="mt-2">
-                  <SelectValue placeholder="Select shader" />
-                </SelectTrigger>
-                <SelectContent>
-                  {SHADER_OPTIONS.map((option) => (
-                    <SelectItem key={option.id} value={option.id}>
-                      <span className="flex items-center justify-between w-full gap-3">
-                        <span>{option.label}</span>
-                        {option.cost > 0 && (
-                          <span className={cn(
-                            'text-[10px] tabular-nums shrink-0',
-                            option.cost <= 3 ? 'text-muted-foreground' :
-                            option.cost <= 5 ? 'text-yellow-500' :
-                            'text-orange-500'
-                          )}>
-                            {option.cost}/10
-                          </span>
-                        )}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">Shader Visibility</Label>
-                <span className="text-xs text-muted-foreground tabular-nums">{100 - backgroundOpacity}%</span>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                How much the shader shows through the content area
-              </p>
-              <Slider
-                value={[100 - backgroundOpacity]}
-                onValueChange={([v]) => setBackgroundOpacity(100 - v)}
-                min={0}
-                max={50}
-                step={1}
-                className="mt-2"
-              />
             </div>
           </CardContent>
         </Card>

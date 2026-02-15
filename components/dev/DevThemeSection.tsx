@@ -2,10 +2,7 @@
 
 import { useDevThemeStore } from '@/store/useDevThemeStore'
 import { useDevThemeApplicator } from '@/hooks/useDevThemeApplicator'
-import { useAppStore } from '@/store/useAppStore'
 import { FONT_OPTIONS, DISPLAY_FONT_OPTIONS } from '@/lib/devThemeFonts'
-import { SHADER_PARAM_MAP } from '@/lib/devThemeShaderParams'
-import { SHADER_OPTIONS, type ShaderId } from '@/lib/shaders'
 import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
@@ -84,7 +81,6 @@ const LUCIDE_ICONS: { name: string; icon: LucideIcon }[] = [
   { name: 'Home', icon: Home },
 ]
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const HUGEICON_ICONS: { name: string; icon: any }[] = [
   { name: 'Printer', icon: PrinterIcon },
   { name: 'Share01', icon: Share01Icon },
@@ -136,20 +132,12 @@ export default function DevThemeSection() {
     setAccentHue,
     setAccentLightness,
     setAccentChroma,
-    shaderParams,
-    setShaderParam,
-    resetShaderParams,
     borderRadius,
     letterSpacing,
     setBorderRadius,
     setLetterSpacing,
     resetAll,
   } = useDevThemeStore()
-
-  const backgroundShader = useAppStore((s) => s.backgroundShader)
-  const setBackgroundShader = useAppStore((s) => s.setBackgroundShader)
-  const backgroundOpacity = useAppStore((s) => s.backgroundOpacity)
-  const setBackgroundOpacity = useAppStore((s) => s.setBackgroundOpacity)
 
   const accentColor = `oklch(${accentLightness}% ${accentChroma / 1000} ${accentHue})`
   const selectedSansFont = FONT_OPTIONS.find((f) => f.id === fontSans)
@@ -192,10 +180,6 @@ export default function DevThemeSection() {
     navigator.clipboard.writeText(lines.join('\n'))
     toast.success('Theme CSS copied to clipboard')
   }
-
-  // Current shader params config
-  const currentShaderParams = SHADER_PARAM_MAP[backgroundShader as ShaderId] ?? []
-  const currentShaderOverrides = shaderParams[backgroundShader] ?? {}
 
   const [isOpen, setIsOpen] = useState(false)
 
@@ -395,94 +379,7 @@ export default function DevThemeSection() {
           </div>
         </section>
 
-        {/* 3. Shaders */}
-        <section className="space-y-4">
-          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Shaders</h3>
-
-          <div className="space-y-2">
-            <Label htmlFor="dev-shader-select" className="text-sm font-medium">
-              Background Shader
-            </Label>
-            <Select
-              value={backgroundShader}
-              onValueChange={(value) => setBackgroundShader(value as ShaderId)}
-            >
-              <SelectTrigger id="dev-shader-select">
-                <SelectValue placeholder="Select shader" />
-              </SelectTrigger>
-              <SelectContent>
-                {SHADER_OPTIONS.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    <span className="flex items-center justify-between w-full gap-3">
-                      <span>{option.label}</span>
-                      {option.cost > 0 && (
-                        <span className={cn(
-                          'text-[10px] tabular-nums shrink-0',
-                          option.cost <= 3 ? 'text-muted-foreground' :
-                          option.cost <= 5 ? 'text-yellow-500' :
-                          'text-orange-500'
-                        )}>
-                          {option.cost}/10
-                        </span>
-                      )}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium">Shader Visibility</Label>
-              <span className="text-xs text-muted-foreground tabular-nums">{100 - backgroundOpacity}%</span>
-            </div>
-            <Slider
-              value={[100 - backgroundOpacity]}
-              onValueChange={([v]) => setBackgroundOpacity(100 - v)}
-              min={0}
-              max={50}
-              step={1}
-            />
-          </div>
-
-          {currentShaderParams.length > 0 && (
-            <>
-              <div className="flex items-center justify-between pt-2 border-t border-border/50">
-                <Label className="text-xs text-muted-foreground">
-                  {SHADER_OPTIONS.find((s) => s.id === backgroundShader)?.label} params
-                </Label>
-                <button
-                  onClick={() => resetShaderParams(backgroundShader as ShaderId)}
-                  className="text-xs px-2 py-1 rounded bg-muted hover:bg-muted/80 text-muted-foreground transition-colors"
-                >
-                  Reset
-                </button>
-              </div>
-
-              {currentShaderParams.map((param) => {
-                const value = currentShaderOverrides[param.key] ?? param.defaultValue
-                return (
-                  <div key={param.key} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-sm font-medium">{param.label}</Label>
-                      <span className="text-xs text-muted-foreground tabular-nums">{value.toFixed(2)}</span>
-                    </div>
-                    <Slider
-                      value={[value]}
-                      onValueChange={([v]) => setShaderParam(backgroundShader as ShaderId, param.key, v)}
-                      min={param.min}
-                      max={param.max}
-                      step={param.step}
-                    />
-                  </div>
-                )
-              })}
-            </>
-          )}
-        </section>
-
-        {/* 4. Icons */}
+        {/* 3. Icons */}
         <section className="space-y-4">
           <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Icons</h3>
 
@@ -511,7 +408,7 @@ export default function DevThemeSection() {
           </div>
         </section>
 
-        {/* 5. Layout */}
+        {/* 4. Layout */}
         <section className="space-y-4">
           <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Layout</h3>
 

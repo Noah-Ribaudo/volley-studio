@@ -17,7 +17,7 @@ export const THEME_OPTIONS: ThemeOption[] = [
   {
     id: 'auto',
     label: 'Auto',
-    description: 'Switches between light and dark based on daylight',
+    description: 'Follows your device setting',
     swatch: ['oklch(97% 0 0)', 'oklch(15% 0 0)'],
   },
   {
