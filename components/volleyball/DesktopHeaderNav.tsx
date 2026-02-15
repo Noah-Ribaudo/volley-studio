@@ -1,4 +1,5 @@
 'use client'
+import { useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
@@ -73,11 +74,29 @@ export function DesktopHeaderNav({
   const showMotionDebugPanel = useAppStore((state) => state.showMotionDebugPanel)
   const setShowMotionDebugPanel = useAppStore((state) => state.setShowMotionDebugPanel)
   const sidebarProfileInFooter = useAppStore((state) => state.sidebarProfileInFooter)
+  const phaseTrackRef = useRef<HTMLDivElement | null>(null)
+  const phaseButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({})
 
   // Get visible phases
   const phasesToShow = visiblePhases
     ? RALLY_PHASES.filter(p => visiblePhases.has(p))
     : RALLY_PHASES
+
+  useEffect(() => {
+    const track = phaseTrackRef.current
+    const activeButton = phaseButtonRefs.current[currentPhase]
+    if (!track || !activeButton) return
+
+    const trackRect = track.getBoundingClientRect()
+    const buttonRect = activeButton.getBoundingClientRect()
+    const leftOverflow = buttonRect.left - trackRect.left
+    const rightOverflow = buttonRect.right - trackRect.right
+
+    if (leftOverflow < 0 || rightOverflow > 0) {
+      const target = activeButton.offsetLeft - (track.clientWidth - activeButton.clientWidth) / 2
+      track.scrollTo({ left: Math.max(0, target), behavior: 'smooth' })
+    }
+  }, [currentPhase, phasesToShow.length])
 
   return (
     <header className="hidden md:flex items-center h-12 px-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
@@ -128,7 +147,7 @@ export function DesktopHeaderNav({
       {isWhiteboardPage && (
         <div className="ml-auto flex items-center gap-2">
           {/* Phase selector */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 w-[clamp(10.5rem,46vw,48rem)] min-w-[10.5rem]">
             <Button
               variant="ghost"
               size="icon"
@@ -139,29 +158,31 @@ export function DesktopHeaderNav({
               <ChevronLeft className="h-4 w-4" />
             </Button>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="h-8 px-3 gap-1.5 w-[160px] justify-between">
-                  <span className="text-sm font-medium truncate">
-                    {getPhaseInfo(currentPhase).name}
-                  </span>
-                  <ChevronDown className="h-3 w-3 opacity-50 shrink-0" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="center">
+            <div className="h-8 flex-1 min-w-[6.5rem] rounded-md border border-border bg-background/80 px-1">
+              <div
+                ref={phaseTrackRef}
+                className="flex h-full items-center gap-1 overflow-x-auto scrollbar-hide"
+              >
                 {phasesToShow.map((phase) => (
-                  <DropdownMenuItem
+                  <Button
                     key={phase}
-                    onClick={() => setPhase(phase)}
+                    ref={(el) => {
+                      phaseButtonRefs.current[phase] = el
+                    }}
+                    variant={phase === currentPhase ? 'default' : 'ghost'}
+                    size="sm"
                     className={cn(
-                      phase === currentPhase && "bg-accent"
+                      'h-7 w-[10rem] shrink-0 justify-center px-2 text-xs font-medium',
+                      phase !== currentPhase && 'text-muted-foreground hover:text-foreground'
                     )}
+                    onClick={() => setPhase(phase)}
+                    aria-pressed={phase === currentPhase}
                   >
-                    {getPhaseInfo(phase).name}
-                  </DropdownMenuItem>
+                    <span className="truncate">{getPhaseInfo(phase).name}</span>
+                  </Button>
                 ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+              </div>
+            </div>
 
             <Button
               variant="ghost"
@@ -181,7 +202,8 @@ export function DesktopHeaderNav({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="h-8 px-3 gap-1.5">
-                <span className="text-sm font-medium">R{currentRotation}</span>
+                <span className="text-sm font-medium hidden xl:inline">Rotation {currentRotation}</span>
+                <span className="text-sm font-medium xl:hidden">R{currentRotation}</span>
                 <ChevronDown className="h-3 w-3 opacity-50" />
               </Button>
             </DropdownMenuTrigger>
