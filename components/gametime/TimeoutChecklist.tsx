@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { X, Check, Circle, RotateCw } from 'lucide-react'
+import { X, Check, RotateCw } from 'lucide-react'
 import { Rotation } from '@/lib/types'
 import { cn } from '@/lib/utils'
 

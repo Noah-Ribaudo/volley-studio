@@ -75,7 +75,7 @@ function PlayerTokenImpl({
   playerName,
   playerNumber,
   isDragging = false,
-  isHovered = false,
+  isHovered: _isHovered = false,
   onClick,
   showPosition = true,
   showPlayer = true,

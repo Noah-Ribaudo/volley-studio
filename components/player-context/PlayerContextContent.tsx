@@ -50,7 +50,7 @@ export function PlayerContextContent({
   onStatusToggle,
   isHighlighted,
   onHighlightToggle,
-  hasArrow,
+  hasArrow: _hasArrow,
   isMobile,
   canStartArrow,
   onStartArrow,

@@ -63,7 +63,7 @@ export function TeamAccessDialog({ team, open, onOpenChange }: TeamAccessDialogP
       } else {
         setError('Incorrect password')
       }
-    } catch (err) {
+    } catch (_err) {
       setError('Failed to verify password')
     } finally {
       setIsVerifying(false)

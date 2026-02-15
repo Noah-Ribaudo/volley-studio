@@ -650,13 +650,13 @@ export function VolleyballCourtRebuild() {
     computeControlPoint,
     curveOverrides,
     features,
-    getCurveMidpoint,
     getCurvature,
     getPathLength,
     getPathLengthSvg,
     getPositionAtDistance,
     collisionRadius,
     deflectionStrength,
+    cornerSlowdown,
     lookAheadTime,
   ])
 

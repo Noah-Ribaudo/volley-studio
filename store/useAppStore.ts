@@ -11,7 +11,6 @@ import {
   PositionCoordinates,
   Team,
   CustomLayout,
-  ROTATIONS,
   PHASES,
   RALLY_PHASES,
   DEFAULT_VISIBLE_PHASES,
@@ -809,7 +808,7 @@ export const useAppStore = create<AppState>()(
 
       setCustomLayouts: (layouts) => set({ customLayouts: layouts }),
 
-      populateFromLayouts: (layouts) => set((state) => {
+      populateFromLayouts: (layouts) => set(() => {
         // Extract positions, arrows, status flags, etc. from loaded layouts
         const newLocalPositions: Record<string, NormalizedPositionCoordinates> = {}
         const newLocalArrows: Record<string, ArrowPositions> = {}
@@ -1077,7 +1076,7 @@ export const useAppStore = create<AppState>()(
         set({ teamConflict: null })
       },
 
-      resolveTeamConflictLoadTheirs: () => set((state) => {
+      resolveTeamConflictLoadTheirs: () => set(() => {
         // User chose to discard local changes and load server version
         // Clear the conflict - the caller will reload team data
         return {

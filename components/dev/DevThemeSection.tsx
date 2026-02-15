@@ -84,7 +84,6 @@ const LUCIDE_ICONS: { name: string; icon: LucideIcon }[] = [
   { name: 'Home', icon: Home },
 ]
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const HUGEICON_ICONS: { name: string; icon: any }[] = [
   { name: 'Printer', icon: PrinterIcon },
   { name: 'Share01', icon: Share01Icon },

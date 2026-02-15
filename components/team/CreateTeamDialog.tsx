@@ -25,7 +25,7 @@ interface CreateTeamDialogProps {
   isLoading?: boolean
 }
 
-function SignInPrompt({ onClose, onContinueWithoutAccount }: { onClose: () => void; onContinueWithoutAccount: () => void }) {
+function SignInPrompt({ onContinueWithoutAccount }: { onContinueWithoutAccount: () => void }) {
   const { signIn } = useAuthActions()
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
   const [isPasswordLoading, setIsPasswordLoading] = useState(false)
@@ -378,7 +378,6 @@ export function CreateTeamDialog({ onCreateTeam, onCreateLocalTeam, isLoading }:
           />
         ) : (
           <SignInPrompt
-            onClose={() => setOpen(false)}
             onContinueWithoutAccount={() => setShowLocalForm(true)}
           />
         )}

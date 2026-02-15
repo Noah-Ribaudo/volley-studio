@@ -29,7 +29,7 @@ const ZONE_POSITIONS: Record<number, { x: number; y: number }> = {
 // Libero position (replaces back row MB, slightly offset)
 const LIBERO_OFFSET = { x: 0, y: 5 }
 
-export function RotationOverlay({ rotation, isReceiving, onClose }: RotationOverlayProps) {
+export function RotationOverlay({ rotation, isReceiving: _isReceiving, onClose }: RotationOverlayProps) {
   const [currentRotation, setCurrentRotation] = useState<Rotation>(rotation)
 
   // Navigate rotations

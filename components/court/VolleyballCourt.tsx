@@ -24,7 +24,6 @@ import {
   ArrowPositions,
   ROLE_INFO,
   ROLE_PRIORITY,
-  COURT_ZONES,
   PlayerStatus,
   ArrowCurveConfig,
   TokenTag,
@@ -175,7 +174,7 @@ export function VolleyballCourt({
   onPositionChange,
   onAwayPositionChange,
   onRoleClick,
-  onHighlightChange,
+  onHighlightChange: _onHighlightChange,
   editable = true,
   animationMode = 'css',
   animationConfig,
@@ -193,7 +192,7 @@ export function VolleyballCourt({
   ballPosition,
   ballHeight = 0,
   ballContactFlash = false,
-  fsmPhase,
+  fsmPhase: _fsmPhase,
   legalityViolations = [],
   showLibero = false,
   attackBallPosition = null,
@@ -276,7 +275,7 @@ export function VolleyballCourt({
   )
 
   // Ensure all roles have positions (except in simulation mode where missing = inactive)
-  const ensureCompletePositions = (pos: PositionCoordinates): PositionCoordinates => {
+  const ensureCompletePositions = useCallback((pos: PositionCoordinates): PositionCoordinates => {
     const complete: PositionCoordinates = {} as PositionCoordinates
     for (const role of activeRoles) {
       // In simulation mode, don't fill in defaults - missing means inactive/substituted
@@ -298,7 +297,7 @@ export function VolleyballCourt({
       }
     }
     return complete
-  }
+  }, [activeRoles, mode, replacedMB])
 
   // Initialize with positions to match SSR, will update after mount if needed
   const [animatedPositions, setAnimatedPositions] = useState<PositionCoordinates>(() => ensureCompletePositions(positions))
@@ -321,7 +320,7 @@ export function VolleyballCourt({
       setAnimatedPositions(complete)
       currentPositionsRef.current = complete
     }
-  }, [positions, showLibero, activeRoles]) // Update when positions, showLibero, or activeRoles change
+  }, [positions, showLibero, activeRoles, animatedPositions, ensureCompletePositions]) // Update when positions, showLibero, or activeRoles change
 
   useEffect(() => {
     animatedPositionsRef.current = animatedPositions
@@ -332,7 +331,7 @@ export function VolleyballCourt({
   const isDraggingOffCourtRef = useRef<Record<Role, boolean>>({} as Record<Role, boolean>)
   // Curve dragging state
   const [draggingCurveRole, setDraggingCurveRole] = useState<Role | null>(null)
-  const [curveDragPosition, setCurveDragPosition] = useState<Position | null>(null) // Current drag position in normalized coords
+  const [_curveDragPosition, _setCurveDragPosition] = useState<Position | null>(null) // Current drag position in normalized coords
   const [hoveredRole, setHoveredRole] = useState<Role | null>(null) // Hovered player token (for arrow tip)
   const [hoveredArrowRole, setHoveredArrowRole] = useState<Role | null>(null) // Hovered arrow (for curve handle)
   const [tappedRole, setTappedRole] = useState<Role | null>(null) // For mobile tap-to-reveal arrow tip
@@ -358,7 +357,7 @@ export function VolleyballCourt({
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null)
   const longPressTouchStartRef = useRef<{ x: number; y: number; role: Role } | null>(null)
   const ignoreNextPrimedTapRef = useRef(false)
-  const lastTapTimeRef = useRef<Partial<Record<Role, number>>>({})
+  const _lastTapTimeRef = useRef<Partial<Record<Role, number>>>({})
 
   // Primed state for hold-to-prime arrow creation (mobile)
   const [primedRole, setPrimedRole] = useState<Role | null>(null)
@@ -484,8 +483,9 @@ export function VolleyballCourt({
 
   // Cleanup animation refs on unmount
   useEffect(() => {
+    const hoverTimeouts = hoverDelayRef.current
     return () => {
-      Object.values(hoverDelayRef.current).forEach(timeout => {
+      Object.values(hoverTimeouts).forEach(timeout => {
         if (timeout) clearTimeout(timeout)
       })
     }
@@ -556,7 +556,7 @@ export function VolleyballCourt({
       result[role] = newPos
     })
     return result
-  }, [cfg.collisionRadius, draggingRole])
+  }, [cfg.collisionRadius, draggingRole, activeRoles])
 
   const resolveCollisions = useCallback((targets: PositionCoordinates): PositionCoordinates => {
     let current = targets
@@ -571,7 +571,7 @@ export function VolleyballCourt({
   const collisionFreePositions = useMemo(() => {
     // Ensure all roles have positions before collision resolution
     return resolveCollisions(ensureCompletePositions(positions))
-  }, [positions, resolveCollisions])
+  }, [positions, resolveCollisions, ensureCompletePositions])
 
   // Track whether bezier animation is currently running
   const [isBezierAnimating, setIsBezierAnimating] = useState(false)
@@ -1113,44 +1113,22 @@ export function VolleyballCourt({
     return { name: player?.name, number: player?.number }
   }
 
-  // Get role for a zone in current rotation (inverse of getRoleZone)
-  const getRoleForZone = useCallback((zone: string, rotation: Rotation | undefined, baseOrder: Role[]) => {
-    if (!rotation) return null
-    const zoneNum = parseInt(zone.slice(1)) as 1 | 2 | 3 | 4 | 5 | 6
-    const zoneOrder = [1, 6, 5, 4, 3, 2] as const
-
-    // Find which position in zoneOrder this zone is at for the current rotation
-    const currentZoneIndex = zoneOrder.indexOf(zoneNum)
-    if (currentZoneIndex === -1) return null
-
-    // Rotate backwards to find the base zone index
-    const baseZoneIndex = (currentZoneIndex - (rotation - 1) + zoneOrder.length) % zoneOrder.length
-    const baseZone = zoneOrder[baseZoneIndex]
-
-    // Map baseZone (1-6) to the role index in baseOrder
-    const roleIndex = baseZone - 1
-
-    if (roleIndex < 0 || roleIndex >= baseOrder.length) return null
-
-    return baseOrder[roleIndex] || null
-  }, [])
-
   // Convert normalized position (0-1) to SVG coordinates
-  const toSvgCoords = (pos: Position): { x: number; y: number } => ({
+  const toSvgCoords = useCallback((pos: Position): { x: number; y: number } => ({
     x: padding + pos.x * courtWidth,
     y: padding + pos.y * courtHeight
-  })
+  }), [padding, courtWidth, courtHeight])
 
   // Convert SVG coordinates to normalized position
   // Allows positions slightly outside the court bounds (for off-court positioning)
-  const toNormalizedCoords = (svgX: number, svgY: number): Position => {
+  const toNormalizedCoords = useCallback((svgX: number, svgY: number): Position => {
     // Allow some margin outside the court (e.g., for serving positions)
     const margin = 0.15 // 15% margin outside court bounds
     return {
       x: Math.max(-margin, Math.min(1 + margin, (svgX - padding) / courtWidth)),
       y: Math.max(-margin, Math.min(1 + margin, (svgY - padding) / courtHeight))
     }
-  }
+  }, [padding, courtWidth, courtHeight])
 
   // Constrain position for home team: can go anywhere EXCEPT opponent's in-bounds area
   // Home team must stay on their side (y >= 0.5) when within the court bounds
@@ -1278,7 +1256,7 @@ export function VolleyballCourt({
 
     // Clear prime state
     clearPrime()
-  }, [primedRole, onArrowChange, getEventPosition, clearPrime, displayPositions])
+  }, [primedRole, onArrowChange, getEventPosition, clearPrime, displayPositions, toNormalizedCoords])
 
   // Handle long-press activation (after ~1s hold without movement)
   const activateLongPress = useCallback((role: Role, svgPos: { x: number; y: number }) => {
@@ -1392,7 +1370,7 @@ export function VolleyballCourt({
     document.addEventListener('mouseup', handleEnd)
       document.addEventListener('touchmove', handleMove, { passive: false })
       document.addEventListener('touchend', handleEnd)
-    }, [isEditable, isPreviewingMovement, positions, getEventPosition, handleDragEnd])
+    }, [isEditable, isPreviewingMovement, positions, getEventPosition, handleDragEnd, toSvgCoords, toNormalizedCoords])
 
   // Handle arrow drag (create, reposition, or delete movement arrows)
   const handleArrowDragStart = useCallback((
@@ -1514,7 +1492,7 @@ export function VolleyballCourt({
     document.addEventListener('mouseup', handleEnd)
       document.addEventListener('touchmove', handleMove, { passive: false })
       document.addEventListener('touchend', handleEnd)
-  }, [onArrowChange, onArrowCurveChange, getEventPosition, toNormalizedCoords, incrementDragCount, isMobile, arrows, arrowCurves])
+  }, [onArrowChange, onArrowCurveChange, getEventPosition, toNormalizedCoords, incrementDragCount, isMobile, arrows, arrowCurves, isPreviewingMovement])
 
   // Handle curve drag - dragging the curve handle adjusts direction and intensity
   const handleCurveDragStart = useCallback((role: Role, e: React.MouseEvent | React.TouchEvent) => {
@@ -1579,7 +1557,7 @@ export function VolleyballCourt({
     document.addEventListener('mouseup', handleEnd)
     document.addEventListener('touchmove', handleMove, { passive: false })
     document.addEventListener('touchend', handleEnd)
-  }, [onArrowCurveChange, positions, arrows, arrowCurves, getEventPosition, toNormalizedCoords])
+  }, [onArrowCurveChange, positions, arrows, arrowCurves, getEventPosition, toNormalizedCoords, isPreviewingMovement])
 
   // Handle mobile touch - drag to move, tap to open context menu
   const handleMobileTouchStart = useCallback((role: Role, e: React.TouchEvent) => {
@@ -1777,7 +1755,7 @@ export function VolleyballCourt({
     document.addEventListener('mouseup', handleEnd)
     document.addEventListener('touchmove', handleMove, { passive: false })
     document.addEventListener('touchend', handleEnd)
-  }, [isEditable, awayPositions, getEventPosition, handleAwayDragEnd])
+  }, [isEditable, awayPositions, getEventPosition, handleAwayDragEnd, toSvgCoords, toNormalizedCoords])
 
   // Constrain attack ball position: must stay on opponent side (y < 0.5) and near net
   const constrainAttackBallPosition = useCallback((pos: Position): Position => {
@@ -1790,7 +1768,7 @@ export function VolleyballCourt({
   }, [])
 
   // Default attack ball position when first created
-  const DEFAULT_ATTACK_BALL_POSITION: Position = { x: 0.5, y: 0.35 }
+  const DEFAULT_ATTACK_BALL_POSITION: Position = useMemo(() => ({ x: 0.5, y: 0.35 }), [])
 
   // Handle attack ball drag end
   const handleAttackBallDragEnd = useCallback(() => {
@@ -1871,7 +1849,7 @@ export function VolleyballCourt({
     document.addEventListener('mouseup', handleEnd)
     document.addEventListener('touchmove', handleMove, { passive: false })
     document.addEventListener('touchend', handleEnd)
-  }, [mode, currentPhase, attackBallPosition, getEventPosition, constrainAttackBallPosition, toNormalizedCoords, handleAttackBallDragEnd])
+  }, [mode, currentPhase, attackBallPosition, getEventPosition, constrainAttackBallPosition, toNormalizedCoords, handleAttackBallDragEnd, DEFAULT_ATTACK_BALL_POSITION])
 
   // Cleanup on unmount
   useEffect(() => {
@@ -2085,10 +2063,6 @@ export function VolleyballCourt({
           const isDragging = draggingRole === role
 
           // Arrow handle positioning (for next-step mode)
-          const activeArrowTarget = draggingArrowRole === role && arrowDragPosition ? arrowDragPosition : arrows[role]
-          const defaultHandleSvg = { x: homeSvgPos.x, y: Math.max(12, homeSvgPos.y - 28) }
-          const arrowEndSvg = activeArrowTarget ? toSvgCoords(activeArrowTarget) : defaultHandleSvg
-
           // Render HOME player
           const homePlayerNode = (
             <g key={`home-${role}`}>

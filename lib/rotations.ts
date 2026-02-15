@@ -3,7 +3,7 @@
 // Court orientation: Net at top (y=0), baseline at bottom (y=1)
 // Left side (x=0) to right side (x=1)
 
-import { ArrowPositions, Phase, PositionCoordinates, Rotation, Role, ROLES, COURT_ZONES } from './types'
+import { Phase, Rotation, Role, ROLES } from './types'
 
 // In 5-1, players rotate through positions:
 // Rotation 1: S in zone 1 (back right)
@@ -140,4 +140,3 @@ export function getActiveRoles(
     return true
   })
 }
-

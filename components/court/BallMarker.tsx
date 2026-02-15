@@ -1,7 +1,5 @@
 'use client'
 
-import type { Position } from '@/lib/types'
-
 interface SimulationBallProps {
   /** Ball position in SVG coordinates */
   x: number

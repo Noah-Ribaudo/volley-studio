@@ -2,7 +2,7 @@
 
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { Role, Rotation, RosterPlayer, Team, ROLES } from '@/lib/types'
+import { Role, Rotation, RosterPlayer, Team } from '@/lib/types'
 import { getBackRowMiddle } from '@/lib/rotations'
 import { createSafeLocalStorage } from '@/store/safeStorage'
 import {
@@ -14,7 +14,6 @@ import {
   ReminderType,
   Timeouts,
   GameSnapshot,
-  QuickStartPlayer,
 } from '@/lib/gametime/types'
 
 // Default timeouts per set (standard volleyball rules)

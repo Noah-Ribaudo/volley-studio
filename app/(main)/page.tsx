@@ -8,7 +8,7 @@ import { Id } from '@/convex/_generated/dataModel'
 import { useAppStore, getCurrentPositions, getCurrentArrows, getCurrentTags, getActiveLineupPositionSource } from '@/store/useAppStore'
 import { VolleyballCourt } from '@/components/court'
 import { RosterManagementCard } from '@/components/roster'
-import { Role, ROLES, RALLY_PHASES, Position, PositionCoordinates, ROTATIONS, POSITION_SOURCE_INFO, RallyPhase, Team, CustomLayout, Lineup } from '@/lib/types'
+import { Role, ROLES, RALLY_PHASES, Position, PositionCoordinates, POSITION_SOURCE_INFO, RallyPhase, Team, CustomLayout, Lineup } from '@/lib/types'
 import { getActiveAssignments } from '@/lib/lineups'
 import { getWhiteboardPositions } from '@/lib/whiteboard'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
@@ -74,8 +74,6 @@ function HomePageContent() {
     customLayouts,
     currentTeam,
     baseOrder,
-    setRotation,
-    setPhase,
     nextPhase,
     prevPhase,
     setHighlightedRole,
@@ -85,7 +83,6 @@ function HomePageContent() {
     setLegalityViolations,
     legalityViolations,
     isReceivingContext,
-    visiblePhases,
     showLibero,
     showPosition,
     showPlayer,
@@ -223,17 +220,6 @@ function HomePageContent() {
 
   // Auto-save whiteboard changes to Convex (team mode)
   useWhiteboardSync()
-
-  // Swipe navigation for mobile - navigate between phases
-  const nextRotation = useCallback(() => {
-    const idx = ROTATIONS.indexOf(currentRotation)
-    setRotation(ROTATIONS[(idx + 1) % ROTATIONS.length])
-  }, [currentRotation, setRotation])
-
-  const prevRotation = useCallback(() => {
-    const idx = ROTATIONS.indexOf(currentRotation)
-    setRotation(ROTATIONS[(idx - 1 + ROTATIONS.length) % ROTATIONS.length])
-  }, [currentRotation, setRotation])
 
   // Swipe left/right to change phases on mobile
   const { swipeState, handlers: swipeHandlers } = useSwipeNavigation({

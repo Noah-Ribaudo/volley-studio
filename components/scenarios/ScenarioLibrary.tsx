@@ -4,10 +4,10 @@ import { useState, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
-import { allScenarios, scenarioCollections, searchScenarios } from '@/lib/scenarios'
+import { allScenarios, searchScenarios } from '@/lib/scenarios'
 import type { Scenario, ScenarioCategory, ScenarioDifficulty } from '@/lib/scenarios'
 import { useAppStore } from '@/store/useAppStore'
-import { Cancel01Icon, Search01Icon, FilterIcon, BookOpen01Icon } from "@hugeicons/core-free-icons"
+import { Cancel01Icon, Search01Icon, BookOpen01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import type { Phase } from '@/lib/types'
 

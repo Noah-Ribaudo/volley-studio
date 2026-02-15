@@ -1,6 +1,6 @@
 // GameTime Types - Mobile coach assistant for tracking live games
 
-import { Role, Rotation, RosterPlayer, Team } from '../types'
+import { Role, Rotation, RosterPlayer } from '../types'
 
 // Game phase
 export type GamePhase = 'setup' | 'playing' | 'finished'
