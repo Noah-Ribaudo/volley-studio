@@ -119,12 +119,8 @@ export function DesktopHeaderNav({
           </nav>
         </>
       ) : (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center">
           <SidebarTrigger className="h-8 w-8" />
-          <Link href="/" className="flex items-center gap-1.5 hover:opacity-80 transition-opacity">
-            <VolleyBall size={20} fillColor="#f97316" />
-            <span className="text-sm font-semibold text-foreground">Volley Studio</span>
-          </Link>
         </div>
       )}
 
