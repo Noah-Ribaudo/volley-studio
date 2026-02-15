@@ -12,7 +12,6 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarRail,
 } from '@/components/ui/sidebar'
 import { Layout, Users, Timer, Settings } from 'lucide-react'
 import VolleyBall from '@/components/logo/VolleyBall'
@@ -48,10 +47,10 @@ export function VolleyballSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="border-b border-sidebar-border">
+      <SidebarHeader className="h-12 border-b border-sidebar-border p-0">
         <Link
           href="/"
-          className="flex h-9 items-center gap-2 overflow-hidden rounded-md px-2 py-1.5 transition-colors duration-200 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+          className="flex h-full items-center gap-2 overflow-hidden rounded-none px-3 py-0 transition-colors duration-200 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
           aria-label="Volley Studio"
         >
           <VolleyBall size={20} fillColor="#f97316" className="shrink-0" />
@@ -95,8 +94,6 @@ export function VolleyballSidebar() {
           <SidebarUserMenu />
         </SidebarFooter>
       )}
-
-      <SidebarRail />
     </Sidebar>
   )
 }
