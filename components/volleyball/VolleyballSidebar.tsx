@@ -50,7 +50,7 @@ export function VolleyballSidebar() {
       <SidebarHeader className="h-12 border-b border-sidebar-border p-0">
         <Link
           href="/"
-          className="flex h-full items-center gap-2 overflow-hidden rounded-none px-3 py-0 transition-colors duration-200 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
+          className="flex h-full items-center gap-2 overflow-hidden rounded-none pr-3 pl-3.5 py-0 transition-colors duration-200 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
           aria-label="Volley Studio"
         >
           <VolleyBall size={20} fillColor="#f97316" className="shrink-0" />
