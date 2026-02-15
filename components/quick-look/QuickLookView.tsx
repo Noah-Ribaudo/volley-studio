@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { Rotation, ROTATIONS, Role } from '@/lib/types'
+import { Rotation, ROTATIONS } from '@/lib/types'
 import { getWhiteboardPositions } from '@/lib/whiteboard'
 import { VolleyballCourt } from '@/components/court'
 import { Button } from '@/components/ui/button'

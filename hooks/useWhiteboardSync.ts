@@ -5,7 +5,7 @@ import { useMutation } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { useAppStore, getCurrentPositions } from '@/store/useAppStore'
 import { createRotationPhaseKey } from '@/lib/rotations'
-import { Role, ArrowCurveConfig, PlayerStatus, Position, ArrowPositions, LayoutExtendedData, TokenTag } from '@/lib/types'
+import { LayoutExtendedData } from '@/lib/types'
 import type { Id } from '@/convex/_generated/dataModel'
 
 // Debounce delay in milliseconds

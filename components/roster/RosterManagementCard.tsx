@@ -8,13 +8,12 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RosterEditor, PositionAssigner } from '@/components/roster'
 import { useAppStore } from '@/store/useAppStore'
-import { isSupabaseConfigured, createTeam, updateTeam, getAllTeams, getTeamLayouts, generateSlug } from '@/lib/teams'
-import { PositionAssignments, RosterPlayer, Team, CustomLayout } from '@/lib/types'
+import { generateSlug } from '@/lib/teamUtils'
+import { PositionAssignments, RosterPlayer, Team } from '@/lib/types'
 import { toast } from 'sonner'
 import { getRandomTeamName } from '@/lib/teamNames'
-import { useTeamSync } from '@/hooks/useTeamSync'
-import { TeamConflictResolutionModal } from '@/components/volleyball/ConflictResolutionModal'
 import Link from 'next/link'
+import { upsertLocalTeam } from '@/lib/localTeams'
 
 // Default placeholder used for SSR to avoid hydration mismatch
 const DEFAULT_TEAM_NAME = 'New Team'
@@ -25,8 +24,6 @@ export function RosterManagementCard() {
     setCurrentTeam,
     setAccessMode,
     setTeamPasswordProvided,
-    setCustomLayouts,
-    populateFromLayouts,
     showLibero,
   } = useAppStore()
 
@@ -53,17 +50,6 @@ export function RosterManagementCard() {
     }
   }, [isHydrated, currentTeam])
 
-  // Auto-save hook for team data (roster, lineups, team name)
-  // Only activates when we have a saved team (localTeamId exists)
-  useTeamSync(
-    localRoster,
-    currentTeam?.lineups || [],
-    currentTeam?.active_lineup_id || null,
-    localAssignments,
-    localTeamName,
-    localTeamId
-  )
-
   // Initialize from current team or default blank
   useEffect(() => {
     if (currentTeam) {
@@ -82,12 +68,10 @@ export function RosterManagementCard() {
 
   const handleRosterChange = (next: RosterPlayer[]) => {
     setLocalRoster(next)
-    // Auto-save is handled by useTeamSync hook
   }
 
   const handleAssignmentsChange = (next: PositionAssignments) => {
     setLocalAssignments(next)
-    // Auto-save is handled by useTeamSync hook
   }
 
   // Create a new team (only used when localTeamId is null)
@@ -96,54 +80,29 @@ export function RosterManagementCard() {
     setIsSaving(true)
     setTeamError('')
     try {
-      // No Supabase configured: save locally
-      if (!isSupabaseConfigured()) {
-        const localId = `local-${Date.now()}`
-        const now = new Date().toISOString()
-        const tempTeam: Team = {
-          id: localId,
-          name,
-          slug: generateSlug(name),
-          roster: localRoster,
-          lineups: [],
-          active_lineup_id: null,
-          position_assignments: localAssignments,
-          hasPassword: false,
-          archived: false,
-          created_at: now,
-          updated_at: now
-        }
-        setCurrentTeam(tempTeam)
-        setAccessMode('full')
-        setTeamPasswordProvided(true)
-        setLocalTeamId(localId)
-        toast.success('Team created locally')
-        return tempTeam
+      const localId = `local-${Date.now()}`
+      const now = new Date().toISOString()
+      const tempTeam: Team = {
+        id: localId,
+        name,
+        slug: generateSlug(name),
+        roster: localRoster,
+        lineups: [],
+        active_lineup_id: null,
+        position_assignments: localAssignments,
+        hasPassword: false,
+        archived: false,
+        created_at: now,
+        updated_at: now
       }
 
-      // Create in Supabase
-      const created = await createTeam(name)
-      const savedTeam = await updateTeam(created.id, {
-        roster: localRoster,
-        position_assignments: localAssignments
-      })
-
-      setCurrentTeam(savedTeam)
-      setAccessMode('full')
+      setCurrentTeam(tempTeam)
+      setAccessMode('local')
       setTeamPasswordProvided(true)
-      setLocalTeamId(savedTeam.id)
-
-      // Refresh teams list
-      await getAllTeams()
-
-      // Load layouts for court
-      const layouts = await getTeamLayouts(savedTeam.id)
-      setCustomLayouts(layouts as CustomLayout[])
-      // Populate whiteboard state from loaded layouts (positions, arrows, status tags, etc.)
-      populateFromLayouts(layouts as CustomLayout[])
-
-      toast.success('Team created')
-      return savedTeam
+      setLocalTeamId(localId)
+      upsertLocalTeam(tempTeam)
+      toast.success('Team saved on this device')
+      return tempTeam
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to create team'
       setTeamError(msg)
@@ -163,8 +122,6 @@ export function RosterManagementCard() {
 
   return (
     <>
-      {/* Team conflict resolution modal for auto-save conflicts */}
-      <TeamConflictResolutionModal />
       <Card className="bg-card/80 backdrop-blur">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between gap-2">

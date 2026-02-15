@@ -1,9 +1,14 @@
 {
   "name": "Volley Studio",
   "short_name": "Volley",
+  "id": "/",
+  "scope": "/",
   "description": "Volleyball rotation visualization and training system",
+  "lang": "en-US",
+  "categories": ["sports", "productivity", "education"],
   "start_url": "/",
   "display": "standalone",
+  "orientation": "portrait-primary",
   "background_color": "#ffffff",
   "theme_color": "#f97316",
   "icons": [

@@ -1,6 +1,6 @@
 'use client'
 
-import { X, TrendingUp, TrendingDown, Minus } from 'lucide-react'
+import { X, TrendingUp, TrendingDown } from 'lucide-react'
 import { RallyEvent } from '@/lib/gametime/types'
 import { Rotation } from '@/lib/types'
 import { cn } from '@/lib/utils'

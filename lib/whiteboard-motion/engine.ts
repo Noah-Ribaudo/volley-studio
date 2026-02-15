@@ -10,7 +10,6 @@ import {
   vecCross,
   vecDot,
   vecLength,
-  vecNormalize,
   vecScale,
   vecSub,
 } from './path'

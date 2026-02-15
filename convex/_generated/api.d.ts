@@ -9,7 +9,6 @@
  */
 
 import type * as auth from "../auth.js";
-import type * as customLayouts from "../customLayouts.js";
 import type * as http from "../http.js";
 import type * as layouts from "../layouts.js";
 import type * as seed from "../seed.js";
@@ -26,7 +25,6 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
-  customLayouts: typeof customLayouts;
   http: typeof http;
   layouts: typeof layouts;
   seed: typeof seed;

@@ -1,7 +1,5 @@
 // Core Types for 5-1 Volleyball Rotation App
 
-import type { FlagType } from '@/lib/presetTypes'
-
 export type Role = 'S' | 'OH1' | 'OH2' | 'MB1' | 'MB2' | 'OPP' | 'L'
 
 // Rally phases for the whiteboard

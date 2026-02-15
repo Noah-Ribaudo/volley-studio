@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useGameTimeStore } from '@/store/useGameTimeStore'
 import { Role, ROLE_INFO, Rotation, RosterPlayer } from '@/lib/types'
-import { getRoleZone, isInFrontRow, getBackRowMiddle } from '@/lib/rotations'
+import { getRoleZone, isInFrontRow } from '@/lib/rotations'
 import {
   Undo2,
   Timer,
@@ -54,7 +54,7 @@ export function GameScreen() {
     dismissReminder,
     setFullscreen,
     resetGame,
-    phase,
+    phase: _phase,
   } = useGameTimeStore()
 
   // Prevent zoom on mobile when fullscreen (restore when leaving)

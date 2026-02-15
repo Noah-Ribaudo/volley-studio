@@ -18,18 +18,6 @@ interface CourtGridProps {
   fullCourt?: boolean
 }
 
-// Zone boundaries (as percentages of a SINGLE side)
-const ZONE_BOUNDS: Record<number, { x: number; y: number; width: number; height: number }> = {
-  // Front row zones (from net to 10ft line, roughly y: 0-33%)
-  // Back row zones (from 10ft line to baseline, roughly y: 33-100%)
-  1: { x: 66.67, y: 33, width: 33.33, height: 67 }, // Back right
-  2: { x: 66.67, y: 0, width: 33.33, height: 33 },   // Front right
-  3: { x: 33.33, y: 0, width: 33.34, height: 33 },    // Front center
-  4: { x: 0, y: 0, width: 33.33, height: 33 },        // Front left
-  5: { x: 0, y: 33, width: 33.33, height: 67 },      // Back left
-  6: { x: 33.33, y: 33, width: 33.34, height: 67 },  // Back center
-}
-
 // Get which role is in each zone for a given rotation
 function getZoneRoleMap(rotation: Rotation, baseOrder?: Role[]): Record<number, Role> {
   const zoneRoleMap: Record<number, Role> = {}
@@ -48,7 +36,6 @@ function getZoneRoleMap(rotation: Rotation, baseOrder?: Role[]): Record<number, 
 export function CourtGrid({ width, height, showZones = true, rotation, baseOrder, fullCourt = false }: CourtGridProps) {
   // Court dimensions as percentages
   const netY = height / 2
-  const attackLineOffset = 0.1667 // 3m / 18m total length
 
   // Get current theme to determine court background color
   const theme = useThemeStore((state) => state.theme)

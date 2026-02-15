@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore, useCallback } from 'react'
+import { useSyncExternalStore, useCallback } from 'react'
 
 const MOBILE_BREAKPOINT_PX = 768
 
@@ -33,7 +33,6 @@ export function useIsMobile(breakpoint: number = MOBILE_BREAKPOINT_PX): boolean 
 
   return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
 }
-
 
 
 

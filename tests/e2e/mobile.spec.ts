@@ -134,7 +134,7 @@ test.describe('Mobile Experience', () => {
     await expect(page.getByText(/what we don't do/i)).toBeVisible()
   })
 
-  test('viewport is properly sized for mobile', async ({ page, isMobile, browserName }, testInfo) => {
+  test('viewport is properly sized for mobile', async ({ page, isMobile }, testInfo) => {
     // Only run on mobile project, not tablet
     test.skip(!isMobile || testInfo.project.name === 'tablet', 'This test only runs on mobile phones')
 

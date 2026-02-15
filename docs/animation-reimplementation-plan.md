@@ -9,7 +9,7 @@
   - CSS transition movement (`animationMode === 'css'`, token group transform transitions).
   - Motion spring interpolation (`animate(... type: 'spring')`) for non-play changes.
   - RAF-based play loop for path travel.
-- A prototype rebuild also exists in `components/court/VolleyballCourtRebuild.tsx` and is exposed at `/canvas-rebuild`.
+- A prototype rebuild also exists in `components/court/VolleyballCourtRebuild.tsx` (the old `/canvas-rebuild` route has been removed).
 
 ## Root Problems Observed
 1. Competing animation authorities

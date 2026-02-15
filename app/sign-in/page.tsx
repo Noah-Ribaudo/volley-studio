@@ -5,13 +5,19 @@ import { useConvexAuth } from "convex/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import dynamic from "next/dynamic";
-import { SignInWithGoogle, SignInWithPassword, DevAdminSignIn } from "@/components/auth/SignIn";
+import { SignInWithGoogle, SignInWithPassword } from "@/components/auth/SignIn";
 import VolleyWordmark from "@/components/logo/VolleyWordmark";
 
 const BackgroundShader = dynamic(
   () => import("@/components/BackgroundShader").then((mod) => mod.BackgroundShader),
   { ssr: false }
 );
+const DevAdminSignIn = process.env.NODE_ENV === "development"
+  ? dynamic(
+      () => import("@/components/auth/DevAdminSignIn").then((mod) => mod.DevAdminSignIn),
+      { ssr: false }
+    )
+  : () => null;
 
 export default function SignInPage() {
   const { isAuthenticated, isLoading } = useConvexAuth();

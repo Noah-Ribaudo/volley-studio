@@ -2,7 +2,6 @@
 
 import { Role, RosterPlayer, PositionAssignments, ROLE_INFO } from '@/lib/types'
 import { X } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 
 interface PlayerPickerProps {
   /** The role being assigned */

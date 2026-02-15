@@ -2,15 +2,11 @@
  * Rotation Presets Data Layer
  *
  * Handles loading rotation presets for read-only display.
- * Falls back to code-based defaults when database is empty.
- *
- * Note: Supabase has been removed from this project, so these functions
- * will always return defaults until presets are migrated to Convex.
+ * Presets are generated from the built-in whiteboard model.
  */
 
-import { supabase, isSupabaseConfigured } from './supabase'
 import type { PresetSystem } from '@/lib/presetTypes'
-import type { Rotation, Phase, LayoutExtendedData, PositionCoordinates, CustomLayout, RallyPhase } from './types'
+import type { Rotation, Phase, LayoutExtendedData, PositionCoordinates, RallyPhase } from './types'
 import { getWhiteboardPositions } from './whiteboard'
 import { RALLY_PHASES, DEFAULT_VISIBLE_PHASES } from './types'
 import { DEFAULT_BASE_ORDER } from './rotations'
@@ -27,63 +23,29 @@ export interface RotationPreset {
   updated_at: string | null
 }
 
-/**
- * Load all presets for a specific system from the database
- */
 export async function loadPresetsForSystem(system: PresetSystem): Promise<RotationPreset[]> {
-  if (!isSupabaseConfigured() || !supabase) {
-    return []
-  }
-
-  const { data, error } = await (supabase as any)
-    .from('rotation_presets')
-    .select('*')
-    .eq('system', system)
-
-  if (error) {
-    console.error('Failed to load presets:', error)
-    return []
-  }
-
-  return (data || []).map((row: any) => ({
-    ...row,
-    positions: row.positions as unknown as PositionCoordinates,
-    flags: row.flags as LayoutExtendedData | null,
+  const now = new Date().toISOString()
+  return generateDefaultPresets(system).map((preset) => ({
+    id: `preset-${system}-${preset.rotation}-${preset.phase}`,
+    system,
+    rotation: preset.rotation,
+    phase: preset.phase,
+    positions: preset.positions,
+    flags: preset.flags,
+    created_at: now,
+    updated_at: null,
   }))
 }
 
-/**
- * Load a specific preset by system, rotation, and phase
- */
 export async function loadPreset(
   system: PresetSystem,
   rotation: Rotation,
   phase: Phase
 ): Promise<RotationPreset | null> {
-  if (!isSupabaseConfigured() || !supabase) {
-    return null
-  }
+  const presets = await loadPresetsForSystem(system)
+  const preset = presets.find((entry) => entry.rotation === rotation && entry.phase === phase)
 
-  const { data, error } = await (supabase as any)
-    .from('rotation_presets')
-    .select('*')
-    .eq('system', system)
-    .eq('rotation', rotation)
-    .eq('phase', phase)
-    .single()
-
-  if (error) {
-    if (error.code !== 'PGRST116') { // Not found is OK
-      console.error('Failed to load preset:', error)
-    }
-    return null
-  }
-
-  return {
-    ...data,
-    positions: data.positions as unknown as PositionCoordinates,
-    flags: data.flags as LayoutExtendedData | null,
-  }
+  return preset ?? null
 }
 
 /**

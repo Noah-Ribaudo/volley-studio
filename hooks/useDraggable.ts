@@ -52,8 +52,8 @@ export function useDraggable({
           const parsed = JSON.parse(stored)
           return { x: parsed.x ?? initialPosition.x, y: parsed.y ?? initialPosition.y }
         }
-      } catch (e) {
-        console.warn('Failed to load draggable position from storage:', e)
+      } catch {
+        // Ignore malformed local storage payloads.
       }
     }
     return initialPosition
@@ -71,8 +71,8 @@ export function useDraggable({
     if (storageKey && typeof window !== 'undefined') {
       try {
         localStorage.setItem(storageKey, JSON.stringify(pos))
-      } catch (e) {
-        console.warn('Failed to save draggable position to storage:', e)
+      } catch {
+        // Ignore local storage write failures.
       }
     }
   }, [storageKey])

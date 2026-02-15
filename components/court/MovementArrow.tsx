@@ -1,6 +1,6 @@
 'use client'
 
-import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useRef } from 'react'
 import { animate, stopAnimation, type AnimationPlaybackControls } from '@/lib/motion-utils'
 
 interface MovementArrowProps {
@@ -80,7 +80,6 @@ function MovementArrowImpl({
   const animationRef = useRef<AnimationPlaybackControls | null>(null)
   const peekAnimationRef = useRef<AnimationPlaybackControls | null>(null)
   const peekProgressRef = useRef<number>(peekActive ? 1 : 0)
-  const [isAnimating, setIsAnimating] = useState(animateIn)
 
   const canDrag = isDraggable && Boolean(onDragStart)
   const canDragFromPath = canDrag && (dragHitArea === 'path' || dragHitArea === 'both')
@@ -228,7 +227,6 @@ function MovementArrowImpl({
         if (arrowhead) {
           arrowhead.style.opacity = ''
         }
-        setIsAnimating(false)
       },
     })
 

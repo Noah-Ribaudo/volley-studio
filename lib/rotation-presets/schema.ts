@@ -6,7 +6,7 @@
  * player positions and movement arrows for each rotation/phase combination.
  */
 
-import { Position, Role } from '@/lib/types'
+import { Position } from '@/lib/types'
 
 /**
  * The five phases shown in the rotation guide diagrams

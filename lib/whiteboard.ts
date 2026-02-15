@@ -2,7 +2,7 @@
 // Simplified position calculations for the whiteboard view.
 
 import type { RallyPhase, Role, Rotation, PositionCoordinates, ArrowPositions, Position } from './types'
-import { ROLES, COURT_ZONES } from './types'
+import { COURT_ZONES } from './types'
 import { getRoleZone, DEFAULT_BASE_ORDER, getBackRowMiddle, getActiveRoles } from './rotations'
 
 /**
@@ -99,13 +99,13 @@ export function getNextPhaseInFlow(phase: RallyPhase): RallyPhase {
  * Returns empty - users can add their own arrows via the whiteboard.
  */
 export function getAutoArrows(
-  rotation: Rotation,
-  currentPhase: RallyPhase,
-  isReceiving: boolean,
-  baseOrder?: Role[],
-  court?: unknown,
-  showLibero?: boolean,
-  attackBallPosition?: Position | null
+  _rotation: Rotation,
+  _currentPhase: RallyPhase,
+  _isReceiving: boolean,
+  _baseOrder?: Role[],
+  _court?: unknown,
+  _showLibero?: boolean,
+  _attackBallPosition?: Position | null
 ): ArrowPositions {
   // Return empty arrows - users can add their own
   return {}

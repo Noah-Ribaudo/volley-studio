@@ -2,7 +2,6 @@
 
 import { useAppStore } from "@/store/useAppStore";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,

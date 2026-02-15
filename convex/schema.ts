@@ -87,4 +87,9 @@ export default defineSchema({
     updatedAt: v.number(),
     createdAt: v.number(),
   }).index("by_user", ["userId"]),
+
+  suggestionSubmissions: defineTable({
+    userId: v.id("users"),
+    createdAt: v.number(),
+  }).index("by_user_createdAt", ["userId", "createdAt"]),
 });
