@@ -16,7 +16,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useAppStore } from '@/store/useAppStore'
-import { ROTATIONS, RALLY_PHASES } from '@/lib/types'
+import { ROTATIONS, RALLY_PHASES, type RallyPhase } from '@/lib/types'
 import { getPhaseInfo } from '@/lib/phaseIcons'
 
 const navItems = [
@@ -78,9 +78,15 @@ export function DesktopHeaderNav({
   const phaseButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({})
 
   // Get visible phases
-  const phasesToShow = visiblePhases
+  const enabledPhases = visiblePhases
     ? RALLY_PHASES.filter(p => visiblePhases.has(p))
     : RALLY_PHASES
+  const phaseSeen = new Set<RallyPhase>()
+  const phasesToShow = enabledPhases.filter((phase) => {
+    if (phaseSeen.has(phase)) return false
+    phaseSeen.add(phase)
+    return true
+  })
 
   useEffect(() => {
     const track = phaseTrackRef.current
