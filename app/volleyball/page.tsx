@@ -457,18 +457,6 @@ function HomePageContent() {
     return currentTeam.lineups.find((lineup) => lineup.id === currentTeam.active_lineup_id) || currentTeam.lineups[0]
   }, [currentTeam])
   const lineupSelectValue = currentLineup?.id || '__none__'
-  const activeLineupName = currentLineup?.name?.trim() || 'No Lineup'
-  const activeTeamName = currentTeam?.name?.trim() || 'No Team Selected'
-  const activeTeamScope = !currentTeam
-    ? 'None'
-    : currentTeam._id
-      ? 'Cloud'
-      : 'Local'
-  const activeTeamScopeClass = activeTeamScope === 'Cloud'
-    ? 'text-emerald-600 dark:text-emerald-400'
-    : activeTeamScope === 'Local'
-      ? 'text-amber-600 dark:text-amber-400'
-      : 'text-muted-foreground'
   const handleTeamSelect = useCallback((value: string) => {
     setCourtSetupOpen(false)
     if (value === '__new__') {
@@ -622,18 +610,6 @@ function HomePageContent() {
       <div className="flex-1 min-h-0 h-full overflow-hidden">
         {/* Court Container - scales to fit available space */}
         <div className="w-full h-auto sm:h-full sm:max-w-3xl mx-auto px-0 sm:px-2 relative">
-          <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30 w-[min(92vw,720px)]">
-            <div className="flex items-center justify-center px-3 py-2 bg-muted/90 backdrop-blur-sm rounded-xl border border-border shadow-sm">
-              <span className="text-xs text-muted-foreground truncate">
-                Active: <span className="font-medium text-foreground">{activeTeamName}</span>
-                {' · '}
-                <span className="font-medium text-foreground">{activeLineupName}</span>
-                {' · '}
-                <span className={activeTeamScopeClass}>{activeTeamScope}</span>
-              </span>
-            </div>
-          </div>
-
           {/* Preset mode indicator - shown when viewing preset positions */}
           {isUsingPreset && (
             <div className="absolute top-16 left-1/2 -translate-x-1/2 z-30">
