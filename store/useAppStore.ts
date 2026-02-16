@@ -136,6 +136,10 @@ interface AppState {
   sidebarProfileInFooter: boolean // Show account profile in sidebar footer (debug toggle, default: false)
   courtSetupSurfaceVariant: 'popover' | 'panel' // Desktop court setup presentation variant (default: 'popover')
   navMode: 'sidebar' | 'header' // Desktop navigation mode (default: 'header')
+  uiMode: 'normal' | 'minimal' // Current UI mode (default: 'normal')
+  minimalContrast: 'soft' | 'high' // Minimal mode contrast level (default: 'soft')
+  minimalAllowAccent: boolean // Allow restrained accent usage in minimal mode (default: true)
+  minimalDenseLayout: boolean // Dense module spacing in minimal mode (default: false)
   backgroundShader: ShaderId // Background shader choice (default: grain-gradient)
   backgroundOpacity: number // Background content opacity 0-100 (default: 95)
   isPreviewingMovement: boolean // Preview mode: show players at arrow endpoints (default: false, not persisted)
@@ -228,6 +232,10 @@ interface AppState {
   setSidebarProfileInFooter: (show: boolean) => void
   setCourtSetupSurfaceVariant: (variant: 'popover' | 'panel') => void
   setNavMode: (mode: 'sidebar' | 'header') => void
+  setUiMode: (mode: 'normal' | 'minimal') => void
+  setMinimalContrast: (contrast: 'soft' | 'high') => void
+  setMinimalAllowAccent: (allow: boolean) => void
+  setMinimalDenseLayout: (dense: boolean) => void
   setBackgroundShader: (shader: ShaderId) => void
   setBackgroundOpacity: (opacity: number) => void
   setPreviewingMovement: (preview: boolean) => void
@@ -457,6 +465,10 @@ export const useAppStore = create<AppState>()(
       sidebarProfileInFooter: false, // Default to profile in top header
       courtSetupSurfaceVariant: 'popover', // Default to anchored popover on desktop
       navMode: 'header' as const, // Default to header nav (no sidebar)
+      uiMode: 'normal' as const, // Default to normal UI mode
+      minimalContrast: 'soft' as const, // Default minimal contrast profile
+      minimalAllowAccent: true, // Default to allowing restrained accent in minimal mode
+      minimalDenseLayout: false, // Default to regular spacing in minimal mode
       backgroundShader: 'none' as ShaderId, // Default background shader (off by default)
       backgroundOpacity: 95, // Default background content opacity
       isPreviewingMovement: false, // Default to not previewing (not persisted)
@@ -929,6 +941,10 @@ export const useAppStore = create<AppState>()(
       setCourtSetupSurfaceVariant: (variant) => set({ courtSetupSurfaceVariant: variant }),
 
       setNavMode: (mode) => set({ navMode: mode }),
+      setUiMode: (mode) => set({ uiMode: mode }),
+      setMinimalContrast: (contrast) => set({ minimalContrast: contrast }),
+      setMinimalAllowAccent: (allow) => set({ minimalAllowAccent: allow }),
+      setMinimalDenseLayout: (dense) => set({ minimalDenseLayout: dense }),
 
       setBackgroundShader: (shader) => set({ backgroundShader: shader }),
       setBackgroundOpacity: (opacity) => set({ backgroundOpacity: opacity }),
@@ -1113,6 +1129,10 @@ export const useAppStore = create<AppState>()(
           sidebarProfileInFooter: state.sidebarProfileInFooter,
           courtSetupSurfaceVariant: state.courtSetupSurfaceVariant,
           navMode: state.navMode,
+          uiMode: state.uiMode,
+          minimalContrast: state.minimalContrast,
+          minimalAllowAccent: state.minimalAllowAccent,
+          minimalDenseLayout: state.minimalDenseLayout,
           backgroundShader: state.backgroundShader,
           backgroundOpacity: state.backgroundOpacity,
           attackBallPositions: state.attackBallPositions,
@@ -1212,6 +1232,19 @@ export const useAppStore = create<AppState>()(
         // Set default for court setup surface variant if missing
         if (state && state.courtSetupSurfaceVariant === undefined) {
           state.courtSetupSurfaceVariant = 'popover'
+        }
+        // Set defaults for minimal mode preferences if missing
+        if (state && state.uiMode === undefined) {
+          state.uiMode = 'normal'
+        }
+        if (state && state.minimalContrast === undefined) {
+          state.minimalContrast = 'soft'
+        }
+        if (state && state.minimalAllowAccent === undefined) {
+          state.minimalAllowAccent = true
+        }
+        if (state && state.minimalDenseLayout === undefined) {
+          state.minimalDenseLayout = false
         }
         // Set default for attackBallPositions if missing
         if (state && state.attackBallPositions === undefined) {

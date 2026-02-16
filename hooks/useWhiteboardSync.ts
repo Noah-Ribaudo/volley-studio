@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef, useCallback, useSyncExternalStore } from 'react'
 import { useMutation } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { useAppStore, getCurrentPositions } from '@/store/useAppStore'
@@ -19,13 +19,50 @@ interface PendingSave {
   positions: Record<string, { x: number; y: number }>
   flags: LayoutExtendedData
   timeoutId: ReturnType<typeof setTimeout> | null
+  status: 'pending' | 'saving'
 }
 
 // Track pending saves by rotation/phase key
 const pendingSaves = new Map<string, PendingSave>()
+const pendingSaveListeners = new Set<() => void>()
+
+function emitPendingSaveChange() {
+  for (const listener of pendingSaveListeners) {
+    listener()
+  }
+}
+
+function subscribePendingSaveChanges(listener: () => void) {
+  pendingSaveListeners.add(listener)
+  return () => {
+    pendingSaveListeners.delete(listener)
+  }
+}
 
 function getPendingSaveKey(teamId: string, rotationPhaseKey: string): string {
   return `${teamId}:${rotationPhaseKey}`
+}
+
+function getPendingSaveStatus(teamId: string | null, rotationPhaseKey: string): 'idle' | 'pending' | 'saving' {
+  if (!teamId) {
+    return 'idle'
+  }
+  const pending = pendingSaves.get(getPendingSaveKey(teamId, rotationPhaseKey))
+  if (!pending) {
+    return 'idle'
+  }
+  return pending.status
+}
+
+export function useWhiteboardSaveState(
+  teamId: string | null,
+  rotationPhaseKey: string
+): 'idle' | 'pending' | 'saving' {
+  return useSyncExternalStore(
+    subscribePendingSaveChanges,
+    () => getPendingSaveStatus(teamId, rotationPhaseKey),
+    () => 'idle'
+  )
 }
 
 function cloneForSave<T>(value: T): T {
@@ -152,6 +189,7 @@ export function useWhiteboardSync() {
   const flushPendingSaves = useCallback(() => {
     const saves = Array.from(pendingSaves.values())
     pendingSaves.clear()
+    emitPendingSaveChange()
 
     for (const pending of saves) {
       if (pending.timeoutId) {
@@ -286,15 +324,31 @@ export function useWhiteboardSync() {
         positions: positionsRecord,
         flags,
         timeoutId: null,
+        status: 'pending',
       }
 
       // Set up debounced execution
       pending.timeoutId = setTimeout(async () => {
+        const currentPending = pendingSaves.get(pendingSaveKey)
+        if (!currentPending) {
+          return
+        }
+
+        pendingSaves.set(pendingSaveKey, {
+          ...currentPending,
+          timeoutId: null,
+          status: 'saving',
+        })
+        emitPendingSaveChange()
+
+        await executeSave({ ...currentPending, timeoutId: null, status: 'saving' })
+
         pendingSaves.delete(pendingSaveKey)
-        await executeSave(pending)
+        emitPendingSaveChange()
       }, DEBOUNCE_MS)
 
       pendingSaves.set(pendingSaveKey, pending)
+      emitPendingSaveChange()
     }
 
     // Update previous values
@@ -357,6 +411,7 @@ export function useFlushWhiteboardSync() {
   return useCallback(async () => {
     const saves = Array.from(pendingSaves.values())
     pendingSaves.clear()
+    emitPendingSaveChange()
 
     // Clear all timeouts
     for (const save of saves) {

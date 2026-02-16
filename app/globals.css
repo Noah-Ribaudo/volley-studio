@@ -191,6 +191,88 @@
 }
 
 /* =============================================================================
+   MINIMAL MODE - Text-first, grayscale-first coaching surface
+   ============================================================================= */
+
+[data-mode="minimal"] {
+  --background: oklch(96% 0 0);
+  --foreground: oklch(18% 0 0);
+  --card: oklch(98% 0 0);
+  --card-foreground: var(--foreground);
+  --popover: var(--card);
+  --popover-foreground: var(--foreground);
+  --muted: oklch(93% 0 0);
+  --muted-foreground: oklch(45% 0 0);
+  --accent: oklch(91% 0 0);
+  --accent-foreground: var(--foreground);
+  --border: oklch(84% 0 0);
+  --input: var(--border);
+  --primary: oklch(54% 0.16 230);
+  --primary-foreground: oklch(98% 0 0);
+  --ring: var(--primary);
+}
+
+[data-mode="minimal"],
+[data-mode="minimal"] * {
+  font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+  font-weight: 400 !important;
+}
+
+[data-mode="minimal"] h1,
+[data-mode="minimal"] h2,
+[data-mode="minimal"] h3,
+[data-mode="minimal"] h4,
+[data-mode="minimal"] h5,
+[data-mode="minimal"] h6 {
+  letter-spacing: 0;
+}
+
+:root[data-theme="dark"] [data-mode="minimal"] {
+  --background: oklch(13% 0 0);
+  --foreground: oklch(92% 0 0);
+  --card: oklch(16% 0 0);
+  --card-foreground: var(--foreground);
+  --popover: var(--card);
+  --popover-foreground: var(--foreground);
+  --muted: oklch(20% 0 0);
+  --muted-foreground: oklch(68% 0 0);
+  --accent: oklch(23% 0 0);
+  --accent-foreground: var(--foreground);
+  --border: oklch(29% 0 0);
+  --input: var(--border);
+  --primary: oklch(68% 0.13 230);
+  --primary-foreground: oklch(12% 0 0);
+}
+
+[data-mode="minimal"][data-minimal-contrast="high"] {
+  --background: oklch(100% 0 0);
+  --card: oklch(100% 0 0);
+  --foreground: oklch(10% 0 0);
+  --muted: oklch(90% 0 0);
+  --muted-foreground: oklch(34% 0 0);
+  --border: oklch(74% 0 0);
+}
+
+:root[data-theme="dark"] [data-mode="minimal"][data-minimal-contrast="high"] {
+  --background: oklch(8% 0 0);
+  --card: oklch(11% 0 0);
+  --foreground: oklch(98% 0 0);
+  --muted: oklch(18% 0 0);
+  --muted-foreground: oklch(80% 0 0);
+  --border: oklch(43% 0 0);
+}
+
+[data-mode="minimal"][data-minimal-accent="off"] {
+  --primary: var(--foreground);
+  --primary-foreground: var(--background);
+  --ring: var(--foreground);
+}
+
+[data-mode="minimal"] [class*="shadow"] {
+  box-shadow: none !important;
+}
+
+/* =============================================================================
    SURFACE TEXTURES
    Subtle noise overlay for tactile quality - activates on hi-fi mode
    ============================================================================= */
