@@ -8,12 +8,14 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarSeparator,
 } from '@/components/ui/sidebar'
-import { Layout, Users, Timer, Settings } from 'lucide-react'
+import { Layout, Users, Timer, Settings, SlidersHorizontal } from 'lucide-react'
 import VolleyBall from '@/components/logo/VolleyBall'
 import { SidebarUserMenu } from '@/components/auth'
 import { useAppStore } from '@/store/useAppStore'
@@ -44,6 +46,9 @@ const navItems = [
 export function VolleyballSidebar() {
   const pathname = usePathname()
   const sidebarProfileInFooter = useAppStore((state) => state.sidebarProfileInFooter)
+  const showMotionDebugPanel = useAppStore((state) => state.showMotionDebugPanel)
+  const setShowMotionDebugPanel = useAppStore((state) => state.setShowMotionDebugPanel)
+  const showMotionDebugToggle = process.env.NODE_ENV === 'development'
 
   return (
     <Sidebar collapsible="icon">
@@ -87,6 +92,30 @@ export function VolleyballSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {showMotionDebugToggle && (
+          <>
+            <SidebarSeparator className="mx-2" />
+            <SidebarGroup>
+              <SidebarGroupLabel>Developer</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      type="button"
+                      isActive={showMotionDebugPanel}
+                      tooltip="Motion Debug"
+                      onClick={() => setShowMotionDebugPanel(!showMotionDebugPanel)}
+                    >
+                      <SlidersHorizontal />
+                      <span>Motion Debug</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </>
+        )}
       </SidebarContent>
 
       {sidebarProfileInFooter && (

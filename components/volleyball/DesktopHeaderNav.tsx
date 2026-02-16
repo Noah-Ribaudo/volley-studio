@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Layout, Users, Timer, Settings, ChevronLeft, ChevronRight, ChevronDown, Play, RotateCcw, Printer, SlidersHorizontal } from 'lucide-react'
+import { Layout, Users, Timer, Settings, ChevronLeft, ChevronRight, ChevronDown, Play, RotateCcw, Printer } from 'lucide-react'
 import VolleyBall from '@/components/logo/VolleyBall'
 import { useGameTimeStore } from '@/store/useGameTimeStore'
 import { UserMenu } from '@/components/auth'
@@ -55,7 +55,6 @@ export function DesktopHeaderNav({
 }: DesktopHeaderNavProps) {
   const pathname = usePathname()
   const isWhiteboardPage = pathname === '/'
-  const showMotionDebugToggle = process.env.NODE_ENV === 'development'
   const gamePhase = useGameTimeStore((s) => s.phase)
   const hasActiveGame = gamePhase === 'playing'
 
@@ -71,8 +70,6 @@ export function DesktopHeaderNav({
   const setPreviewingMovement = useAppStore((state) => state.setPreviewingMovement)
   const triggerPlayAnimation = useAppStore((state) => state.triggerPlayAnimation)
   const showPrintFeature = useAppStore((state) => state.showPrintFeature)
-  const showMotionDebugPanel = useAppStore((state) => state.showMotionDebugPanel)
-  const setShowMotionDebugPanel = useAppStore((state) => state.setShowMotionDebugPanel)
   const sidebarProfileInFooter = useAppStore((state) => state.sidebarProfileInFooter)
   const phaseTrackRef = useRef<HTMLDivElement | null>(null)
   const phaseButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({})
@@ -152,90 +149,86 @@ export function DesktopHeaderNav({
       {/* Phase and Rotation controls - only on whiteboard */}
       {isWhiteboardPage && (
         <div className="ml-auto flex items-center gap-2">
-          {/* Phase selector */}
-          <div className="flex items-center gap-1 min-w-[13rem] max-w-[min(48rem,46vw)]">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={prevPhase}
-              aria-label="Previous phase"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-
-            <div className="h-8 min-w-[8rem] rounded-md border border-border bg-background/80 px-1 max-w-[min(42rem,40vw)]">
-              <div
-                ref={phaseTrackRef}
-                className="flex h-full items-center gap-1 overflow-x-auto scrollbar-hide"
+          <div className="flex items-center gap-2 rounded-lg border border-border/70 bg-card/40 px-2 py-1 shadow-sm">
+            {/* Phase selector */}
+            <div className="flex items-center gap-1 min-w-[13rem] max-w-[min(48rem,46vw)]">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={prevPhase}
+                aria-label="Previous phase"
               >
-                {phasesToShow.map((phase) => (
-                  <Button
-                    key={phase}
-                    ref={(el) => {
-                      phaseButtonRefs.current[phase] = el
-                    }}
-                    variant={phase === currentPhase ? 'default' : 'ghost'}
-                    size="sm"
-                    className={cn(
-                      'h-7 w-auto max-w-[11.5rem] shrink-0 justify-center px-2.5 text-xs font-medium',
-                      phase !== currentPhase && 'text-muted-foreground hover:text-foreground'
-                    )}
-                    onClick={() => setPhase(phase)}
-                    aria-pressed={phase === currentPhase}
-                  >
-                    <span className="truncate">{getPhaseInfo(phase).name}</span>
-                  </Button>
-                ))}
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+
+              <div className="h-8 min-w-[8rem] rounded-md bg-background/80 px-1 max-w-[min(42rem,40vw)]">
+                <div
+                  ref={phaseTrackRef}
+                  className="flex h-full items-center gap-1 overflow-x-auto scrollbar-hide"
+                >
+                  {phasesToShow.map((phase) => (
+                    <Button
+                      key={phase}
+                      ref={(el) => {
+                        phaseButtonRefs.current[phase] = el
+                      }}
+                      variant={phase === currentPhase ? 'default' : 'ghost'}
+                      size="sm"
+                      className={cn(
+                        'h-7 w-auto max-w-[11.5rem] shrink-0 justify-center px-2.5 text-xs font-medium',
+                        phase !== currentPhase && 'text-muted-foreground hover:text-foreground'
+                      )}
+                      onClick={() => setPhase(phase)}
+                      aria-pressed={phase === currentPhase}
+                    >
+                      <span className="truncate">{getPhaseInfo(phase).name}</span>
+                    </Button>
+                  ))}
+                </div>
               </div>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={nextPhase}
+                aria-label="Next phase"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={nextPhase}
-              aria-label="Next phase"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+            {/* Rotation selector */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="h-8 px-3 gap-1.5 bg-background/80">
+                  <span className="text-sm font-medium hidden xl:inline">Rotation {currentRotation}</span>
+                  <span className="text-sm font-medium xl:hidden">R{currentRotation}</span>
+                  <ChevronDown className="h-3 w-3 opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {ROTATIONS.map((rotation) => (
+                  <DropdownMenuItem
+                    key={rotation}
+                    onClick={() => setRotation(rotation)}
+                    className={cn(
+                      rotation === currentRotation && "bg-accent"
+                    )}
+                  >
+                    Rotation {rotation}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-
-          {/* Divider */}
-          <div className="w-px h-6 bg-border" />
-
-          {/* Rotation selector */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="h-8 px-3 gap-1.5">
-                <span className="text-sm font-medium hidden xl:inline">Rotation {currentRotation}</span>
-                <span className="text-sm font-medium xl:hidden">R{currentRotation}</span>
-                <ChevronDown className="h-3 w-3 opacity-50" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {ROTATIONS.map((rotation) => (
-                <DropdownMenuItem
-                  key={rotation}
-                  onClick={() => setRotation(rotation)}
-                  className={cn(
-                    rotation === currentRotation && "bg-accent"
-                  )}
-                >
-                  Rotation {rotation}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* Divider */}
-          <div className="w-px h-6 bg-border" />
 
           {/* Play/Reset button */}
           <Button
             variant="outline"
             size="sm"
-            className="h-8 w-24 gap-1.5"
+            className="h-8 w-24 gap-1.5 bg-background/70"
             onClick={() => {
               if (isPreviewingMovement) {
                 setPreviewingMovement(false)
@@ -259,35 +252,11 @@ export function DesktopHeaderNav({
             )}
           </Button>
 
-          {showMotionDebugToggle ? (
-            <>
-              {/* Divider */}
-              <div className="w-px h-6 bg-border" />
-
-              {/* Motion debug panel toggle */}
-              <Button
-                variant={showMotionDebugPanel ? "default" : "outline"}
-                size="sm"
-                className="h-8 gap-1.5"
-                onClick={() => setShowMotionDebugPanel(!showMotionDebugPanel)}
-                title="Toggle motion debug panel"
-              >
-                <SlidersHorizontal className="h-4 w-4" />
-                <span>Debug</span>
-              </Button>
-
-              {/* Divider */}
-              <div className="w-px h-6 bg-border" />
-            </>
-          ) : (
-            <div className="w-px h-6 bg-border" />
-          )}
-
-          {/* Court setup trigger (replaces opponent toggle in header) */}
+          {/* Court setup trigger */}
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
-            className="h-8 gap-1.5"
+            className="h-8 gap-1.5 text-muted-foreground hover:text-foreground"
             onClick={(event) => onOpenCourtSetup?.(event.currentTarget.getBoundingClientRect())}
             title="Open court setup"
           >
@@ -296,18 +265,15 @@ export function DesktopHeaderNav({
 
           {/* Print button - dev toggle */}
           {showPrintFeature && (
-            <>
-              <div className="w-px h-6 bg-border" />
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1.5"
-                onClick={() => onOpenPrintDialog?.()}
-              >
-                <Printer className="h-4 w-4" />
-                <span>Print</span>
-              </Button>
-            </>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 gap-1.5 text-muted-foreground hover:text-foreground"
+              onClick={() => onOpenPrintDialog?.()}
+            >
+              <Printer className="h-4 w-4" />
+              <span>Print</span>
+            </Button>
           )}
         </div>
       )}
@@ -321,10 +287,9 @@ export function DesktopHeaderNav({
 
       {/* User menu - show after whiteboard controls */}
       {!sidebarProfileInFooter && isWhiteboardPage && (
-        <>
-          <div className="w-px h-6 bg-border ml-2" />
+        <div className="ml-1">
           <UserMenu />
-        </>
+        </div>
       )}
 
     </header>
