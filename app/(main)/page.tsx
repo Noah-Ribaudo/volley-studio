@@ -266,7 +266,7 @@ function HomePageContent() {
     const openCourtSetup = (event: Event) => {
       const maybeCustomEvent = event as CustomEvent<OpenCourtSetupEventDetail>
       setCourtSetupAnchorRect(maybeCustomEvent.detail?.anchorRect ?? null)
-      setCourtSetupOpen(true)
+      setCourtSetupOpen((prev) => !prev)
     }
     window.addEventListener(OPEN_COURT_SETUP_EVENT, openCourtSetup)
     return () => window.removeEventListener(OPEN_COURT_SETUP_EVENT, openCourtSetup)
