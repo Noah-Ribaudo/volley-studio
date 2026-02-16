@@ -15,7 +15,7 @@ import {
   SidebarMenuItem,
   SidebarSeparator,
 } from '@/components/ui/sidebar'
-import { Layout, Users, Timer, Settings, SlidersHorizontal } from 'lucide-react'
+import { Layout, Users, Timer, Settings, SlidersHorizontal, Palette, Paintbrush } from 'lucide-react'
 import VolleyBall from '@/components/logo/VolleyBall'
 import { SidebarUserMenu } from '@/components/auth'
 import { useAppStore } from '@/store/useAppStore'
@@ -40,6 +40,19 @@ const navItems = [
     title: 'Settings',
     url: '/settings',
     icon: Settings,
+  },
+]
+
+const developerNavItems = [
+  {
+    title: 'Theme Lab',
+    url: '/developer/theme-lab',
+    icon: Palette,
+  },
+  {
+    title: 'Logo Lab',
+    url: '/developer/logo-lab',
+    icon: Paintbrush,
   },
 ]
 
@@ -111,6 +124,20 @@ export function VolleyballSidebar() {
                       <span>Motion Debug</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
+                  {developerNavItems.map((item) => (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={pathname?.startsWith(item.url)}
+                        tooltip={item.title}
+                      >
+                        <Link href={item.url}>
+                          <item.icon />
+                          <span>{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>

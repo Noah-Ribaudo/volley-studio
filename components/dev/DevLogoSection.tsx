@@ -191,8 +191,12 @@ function Swatch({ color }: { color: string }) {
 }
 
 // ─── Main Component ──────────────────────────────────────────────────────────
-export default function DevLogoSection() {
-  const [isOpen, setIsOpen] = useState(false)
+type DevLogoSectionProps = {
+  defaultOpen?: boolean
+}
+
+export default function DevLogoSection({ defaultOpen = false }: DevLogoSectionProps = {}) {
+  const [isOpen, setIsOpen] = useState(defaultOpen)
 
   const [variant, setVariant] = useState<LogoVariant>('ball')
   const [bgMode, setBgMode] = useState<BackgroundMode>('dark')

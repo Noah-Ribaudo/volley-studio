@@ -118,7 +118,11 @@ function getFontVariantPreview(id: string) {
   return { fontWeight, fontStyle }
 }
 
-export default function DevThemeSection() {
+type DevThemeSectionProps = {
+  defaultOpen?: boolean
+}
+
+export default function DevThemeSection({ defaultOpen = false }: DevThemeSectionProps = {}) {
   useDevThemeApplicator()
 
   const {
@@ -181,7 +185,7 @@ export default function DevThemeSection() {
     toast.success('Theme CSS copied to clipboard')
   }
 
-  const [isOpen, setIsOpen] = useState(false)
+  const [isOpen, setIsOpen] = useState(defaultOpen)
 
   return (
     <Card className="border-dashed border-orange-500/30 bg-orange-500/[0.02]">

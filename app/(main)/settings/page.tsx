@@ -24,15 +24,6 @@ import ThemePicker from '@/components/ThemePicker'
 import SuggestionBox from '@/components/SuggestionBox'
 import { DragDropVerticalIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import dynamic from 'next/dynamic'
-
-const DevThemeSection = process.env.NODE_ENV === 'development'
-  ? dynamic(() => import('@/components/dev/DevThemeSection'), { ssr: false })
-  : () => null
-
-const DevLogoSection = process.env.NODE_ENV === 'development'
-  ? dynamic(() => import('@/components/dev/DevLogoSection'), { ssr: false })
-  : () => null
 import {
   DndContext,
   closestCenter,
@@ -129,9 +120,6 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
       <div className="container mx-auto px-4 py-6 pb-32 max-w-2xl space-y-6">
-        {process.env.NODE_ENV === 'development' && <DevThemeSection />}
-        {process.env.NODE_ENV === 'development' && <DevLogoSection />}
-
         {/* Account */}
         <Card>
           <CardHeader>
