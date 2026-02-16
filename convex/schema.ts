@@ -23,6 +23,7 @@ export default defineSchema({
         name: v.string(),
         position_assignments: v.record(v.string(), v.string()),
         position_source: v.optional(v.string()),
+        starting_rotation: v.optional(v.number()),
         created_at: v.string(),
       })
     ),
@@ -69,6 +70,7 @@ export default defineSchema({
     themePreference: v.optional(v.union(v.literal("light"), v.literal("dark"), v.literal("auto"))),
     showPosition: v.boolean(),
     showPlayer: v.boolean(),
+    showNumber: v.optional(v.boolean()),
     showLibero: v.boolean(),
     circleTokens: v.boolean(),
     hideAwayTeam: v.boolean(),

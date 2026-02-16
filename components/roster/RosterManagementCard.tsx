@@ -1,6 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { useMutation } from 'convex/react'
+import { api } from '@/convex/_generated/api'
+import type { Id } from '@/convex/_generated/dataModel'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
@@ -14,6 +17,7 @@ import { toast } from 'sonner'
 import { getRandomTeamName } from '@/lib/teamNames'
 import Link from 'next/link'
 import { upsertLocalTeam } from '@/lib/localTeams'
+import { createLineup } from '@/lib/lineups'
 
 // Default placeholder used for SSR to avoid hydration mismatch
 const DEFAULT_TEAM_NAME = 'New Team'
@@ -37,6 +41,8 @@ export function RosterManagementCard() {
   const [teamError, setTeamError] = useState('')
   const [defaultTeamName, setDefaultTeamName] = useState(DEFAULT_TEAM_NAME)
   const [isHydrated, setIsHydrated] = useState(false)
+  const updateRoster = useMutation(api.teams.updateRoster)
+  const updateLineups = useMutation(api.teams.updateLineups)
 
   // Set random names only after hydration to avoid mismatch
   useEffect(() => {
@@ -68,11 +74,109 @@ export function RosterManagementCard() {
 
   const handleRosterChange = (next: RosterPlayer[]) => {
     setLocalRoster(next)
+    if (!currentTeam || localTeamId === null) {
+      return
+    }
+    const validRosterIds = new Set(next.map((player) => player.id))
+    const prunedAssignments = Object.fromEntries(
+      Object.entries(localAssignments).filter(([, playerId]) => playerId && validRosterIds.has(playerId))
+    ) as PositionAssignments
+    setLocalAssignments(prunedAssignments)
+    void persistTeamChanges(next, prunedAssignments)
   }
 
   const handleAssignmentsChange = (next: PositionAssignments) => {
     setLocalAssignments(next)
+    if (!currentTeam || localTeamId === null) {
+      return
+    }
+    void persistTeamChanges(localRoster, next)
   }
+
+  const cleanAssignments = useCallback((assignments: PositionAssignments, validRosterIds: Set<string>) => {
+    const cleaned: PositionAssignments = {}
+    for (const [role, playerId] of Object.entries(assignments)) {
+      if (typeof playerId === 'string' && playerId.trim() !== '' && validRosterIds.has(playerId)) {
+        cleaned[role] = playerId
+      }
+    }
+    return cleaned
+  }, [])
+
+  const persistTeamChanges = useCallback(async (nextRoster: RosterPlayer[], nextAssignments: PositionAssignments) => {
+    if (!currentTeam || localTeamId === null) {
+      return
+    }
+
+    setIsSaving(true)
+    setTeamError('')
+
+    const validRosterIds = new Set(nextRoster.map((player) => player.id))
+    const cleanedAssignments = cleanAssignments(nextAssignments, validRosterIds)
+    const existingLineups = currentTeam.lineups.length > 0
+      ? currentTeam.lineups
+      : [createLineup('Lineup 1', cleanedAssignments)]
+    const activeLineupId = currentTeam.active_lineup_id ?? existingLineups[0]?.id ?? null
+    const normalizedActiveLineupId = activeLineupId && existingLineups.some((lineup) => lineup.id === activeLineupId)
+      ? activeLineupId
+      : existingLineups[0]?.id ?? null
+
+    const normalizedLineups = existingLineups.map((lineup) => {
+      const sourceAssignments = lineup.id === normalizedActiveLineupId
+        ? cleanedAssignments
+        : lineup.position_assignments
+      return {
+        ...lineup,
+        position_assignments: cleanAssignments(sourceAssignments, validRosterIds),
+        starting_rotation: lineup.starting_rotation ?? 1,
+      }
+    })
+
+    const activeAssignments = normalizedLineups.find(
+      (lineup) => lineup.id === normalizedActiveLineupId
+    )?.position_assignments || cleanedAssignments
+
+    const updatedTeam: Team = {
+      ...currentTeam,
+      roster: nextRoster,
+      lineups: normalizedLineups,
+      active_lineup_id: normalizedActiveLineupId,
+      position_assignments: activeAssignments,
+      updated_at: new Date().toISOString(),
+    }
+
+    setCurrentTeam(updatedTeam)
+
+    try {
+      if (updatedTeam._id) {
+        await updateRoster({
+          id: updatedTeam._id as Id<'teams'>,
+          roster: nextRoster,
+        })
+        await updateLineups({
+          id: updatedTeam._id as Id<'teams'>,
+          lineups: normalizedLineups.map((lineup) => ({
+            id: lineup.id,
+            name: lineup.name,
+            position_assignments: lineup.position_assignments as Record<string, string>,
+            position_source: lineup.position_source,
+            starting_rotation: lineup.starting_rotation ?? 1,
+            created_at: lineup.created_at,
+          })),
+          activeLineupId: normalizedActiveLineupId || undefined,
+          positionAssignments: activeAssignments as Record<string, string>,
+        })
+      } else {
+        upsertLocalTeam(updatedTeam)
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to save team updates'
+      setTeamError(message)
+      toast.error(message)
+    } finally {
+      setIsSaving(false)
+    }
+  }, [cleanAssignments, currentTeam, localTeamId, setCurrentTeam, updateLineups, updateRoster])
 
   // Create a new team (only used when localTeamId is null)
   const handleCreateTeam = async () => {
@@ -82,13 +186,14 @@ export function RosterManagementCard() {
     try {
       const localId = `local-${Date.now()}`
       const now = new Date().toISOString()
+      const defaultLineup = createLineup('Lineup 1', localAssignments)
       const tempTeam: Team = {
         id: localId,
         name,
         slug: generateSlug(name),
         roster: localRoster,
-        lineups: [],
-        active_lineup_id: null,
+        lineups: [defaultLineup],
+        active_lineup_id: defaultLineup.id,
         position_assignments: localAssignments,
         hasPassword: false,
         archived: false,

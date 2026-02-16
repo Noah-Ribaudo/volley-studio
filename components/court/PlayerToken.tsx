@@ -47,6 +47,7 @@ interface PlayerTokenProps {
   onClick?: () => void
   showPosition?: boolean
   showPlayer?: boolean
+  showNumber?: boolean
   mobileScale?: number
   isInViolation?: boolean
   colorOverride?: string
@@ -79,6 +80,7 @@ function PlayerTokenImpl({
   onClick,
   showPosition = true,
   showPlayer = true,
+  showNumber = true,
   mobileScale = 1,
   isInViolation = false,
   colorOverride,
@@ -268,9 +270,10 @@ function PlayerTokenImpl({
 
   // Big tokens - original implementation
   // Determine what we're showing
-  const showingBoth = showPosition && showPlayer && hasAssignedPlayer
-  const showingPlayerOnly = showPlayer && !showPosition && hasAssignedPlayer
-  const showingPositionOnly = showPosition && (!showPlayer || !hasAssignedPlayer)
+  const shouldShowName = showPlayer && !!playerName
+  const shouldShowNumber = showNumber && playerNumber !== undefined
+  const hasPlayerContent = hasAssignedPlayer && (shouldShowName || shouldShowNumber)
+  const showingPositionOnly = showPosition && !hasPlayerContent
 
   // Two size configurations:
   // 1. Position-only: Larger size for better visibility
@@ -360,34 +363,35 @@ function PlayerTokenImpl({
   let contentLines: string[] = []
   let isMultiLine = false
 
-  if (showingBoth && hasAssignedPlayer) {
-    // Position + number on first line, name on second
-    const firstName = playerName ? getFirstName(playerName) : ''
-    contentLines = [
-      `${role}${playerNumber !== undefined ? ` #${playerNumber}` : ''}`,
-      firstName
-    ].filter(Boolean)
-    isMultiLine = true
-  } else if (showingPositionOnly || (showPosition && !hasAssignedPlayer)) {
-    // Just position
-    contentLines = [role]
-    isMultiLine = false
-  } else if (showingPlayerOnly && hasAssignedPlayer) {
-    if (playerNumber !== undefined && playerName) {
-      // Number on first line, name on second
-      contentLines = [`#${playerNumber}`, getFirstName(playerName)]
+  if (showPosition) {
+    const lineOneParts: string[] = [role]
+    if (shouldShowNumber) {
+      lineOneParts.push(`#${playerNumber}`)
+    }
+    const lineOne = lineOneParts.join(' ')
+
+    if (shouldShowName) {
+      contentLines = [lineOne, getFirstName(playerName)]
       isMultiLine = true
-    } else if (playerNumber !== undefined) {
-      // Just number
-      contentLines = [`#${playerNumber}`]
-      isMultiLine = false
-    } else if (playerName) {
-      // Just name
-      contentLines = [getFirstName(playerName)]
+    } else {
+      contentLines = [lineOne]
       isMultiLine = false
     }
-  } else if (showPosition) {
-    // Fallback: just position
+  } else if (hasAssignedPlayer) {
+    if (shouldShowName && shouldShowNumber) {
+      contentLines = [`${getFirstName(playerName)} #${playerNumber}`]
+      isMultiLine = false
+    } else if (shouldShowName) {
+      contentLines = [getFirstName(playerName)]
+      isMultiLine = false
+    } else if (shouldShowNumber) {
+      contentLines = [`#${playerNumber}`]
+      isMultiLine = false
+    } else {
+      contentLines = [role]
+      isMultiLine = false
+    }
+  } else {
     contentLines = [role]
     isMultiLine = false
   }
@@ -459,7 +463,7 @@ function PlayerTokenImpl({
 
   const labelParts = [
     ROLE_INFO[role].name,
-    playerNumber ? `#${playerNumber}` : null,
+    playerNumber !== undefined ? `#${playerNumber}` : null,
     playerName ? playerName : null
   ].filter(Boolean)
 
@@ -822,6 +826,7 @@ const arePlayerTokenPropsEqual = (prev: PlayerTokenProps, next: PlayerTokenProps
     prev.isHovered === next.isHovered &&
     prev.showPosition === next.showPosition &&
     prev.showPlayer === next.showPlayer &&
+    prev.showNumber === next.showNumber &&
     prev.mobileScale === next.mobileScale &&
     prev.isInViolation === next.isInViolation &&
     prev.colorOverride === next.colorOverride &&

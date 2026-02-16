@@ -74,6 +74,7 @@ export default function TeamsPage() {
         name: 'Default',
         position_assignments: {},
         position_source: presetSystem,
+        starting_rotation: 1,
         created_at: now,
       }],
       active_lineup_id: 'default',
@@ -237,6 +238,7 @@ export default function TeamsPage() {
                   lineups: (team.lineups || []).map(l => ({
                     ...l,
                     position_source: l.position_source as 'custom' | 'full-5-1' | '5-1-libero' | '6-2' | undefined,
+                    starting_rotation: (l.starting_rotation as 1 | 2 | 3 | 4 | 5 | 6 | undefined) ?? 1,
                   })),
                   active_lineup_id: team.activeLineupId ?? null,
                   position_assignments: team.positionAssignments || {},

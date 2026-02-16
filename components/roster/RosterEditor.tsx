@@ -111,6 +111,14 @@ export function RosterEditor({ roster, onChange, isLoading }: RosterEditorProps)
                 key={player.id}
                 className="flex items-center gap-2 p-2 bg-card border rounded-lg"
               >
+                <div className="flex-1 min-w-0">
+                  <Input
+                    value={player.name ?? ''}
+                    onChange={(e) => handleUpdatePlayer(player.id, { name: e.target.value || undefined })}
+                    placeholder="Name"
+                    className="h-8 text-sm"
+                  />
+                </div>
                 <Input
                   type="number"
                   min={0}
@@ -120,14 +128,6 @@ export function RosterEditor({ roster, onChange, isLoading }: RosterEditorProps)
                   placeholder="#"
                   className="w-20 h-9 text-sm"
                 />
-                <div className="flex-1 min-w-0">
-                  <Input
-                    value={player.name ?? ''}
-                    onChange={(e) => handleUpdatePlayer(player.id, { name: e.target.value || undefined })}
-                    placeholder="Name"
-                    className="h-8 text-sm"
-                  />
-                </div>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -217,4 +217,3 @@ export function RosterEditor({ roster, onChange, isLoading }: RosterEditorProps)
     </div>
   )
 }
-

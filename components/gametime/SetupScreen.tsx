@@ -56,6 +56,7 @@ export function SetupScreen() {
     lineups: t.lineups.map(l => ({
       ...l,
       position_source: l.position_source as 'custom' | 'full-5-1' | '5-1-libero' | '6-2' | undefined,
+      starting_rotation: (l.starting_rotation as 1 | 2 | 3 | 4 | 5 | 6 | undefined) ?? 1,
     })),
     active_lineup_id: t.activeLineupId ?? null,
     position_assignments: t.positionAssignments,
@@ -236,15 +237,17 @@ export function SetupScreen() {
                     : 'hover:bg-zinc-800 active:bg-zinc-700'
               )}
             >
-              <span className={cn(
-                'text-sm font-bold shrink-0',
-                isAlreadyHere ? 'text-blue-400' : 'text-white'
-              )}>
-                #{player.number}
+              <span className="text-sm text-zinc-300 truncate min-w-0 flex-1">
+                {player.name || 'Unnamed Player'}
               </span>
-              <span className="text-sm text-zinc-300 truncate">
-                {player.name}
-              </span>
+              {player.number !== undefined && (
+                <span className={cn(
+                  'text-sm font-semibold shrink-0',
+                  isAlreadyHere ? 'text-blue-400' : 'text-white'
+                )}>
+                  #{player.number}
+                </span>
+              )}
               {isAssignedElsewhere && (
                 <span className="text-[10px] text-zinc-500 shrink-0">
                   {otherRole || 'L'}

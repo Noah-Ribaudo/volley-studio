@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { toast } from 'sonner'
 import { LineupSelector } from '@/components/roster/LineupSelector'
 import { PositionAssigner } from '@/components/roster/PositionAssigner'
-import type { Team, Lineup, PositionAssignments } from '@/lib/types'
+import type { Team, Lineup, PositionAssignments, PositionSource, Rotation } from '@/lib/types'
 import { useAppStore } from '@/store/useAppStore'
 import { generateSlug } from '@/lib/teamUtils'
 import { getLocalTeamById, removeLocalTeam, upsertLocalTeam } from '@/lib/localTeams'
@@ -75,6 +75,7 @@ export default function TeamEditPage({ params }: TeamPageProps) {
       name: string
       position_assignments: Record<string, string>
       position_source?: string
+      starting_rotation?: number
       created_at: string
     }>
     const positionAssignments = JSON.parse(remoteAssignmentsJson) as Record<string, string>
@@ -97,6 +98,7 @@ export default function TeamEditPage({ params }: TeamPageProps) {
         name: lineup.name,
         position_assignments: lineup.position_assignments,
         position_source: lineup.position_source as 'custom' | 'full-5-1' | '5-1-libero' | '6-2' | undefined,
+        starting_rotation: (lineup.starting_rotation as Rotation | undefined) ?? 1,
         created_at: lineup.created_at,
       })),
       active_lineup_id: remoteTeamActiveLineupId,
@@ -252,6 +254,12 @@ export default function TeamEditPage({ params }: TeamPageProps) {
           id: team._id,
           roster: nextRoster,
         })
+        if (currentTeam?.id === team._id || currentTeam?._id === team._id) {
+          setCurrentTeam({
+            ...currentTeam,
+            roster: nextRoster,
+          })
+        }
       }
       toast.success(successMessage)
       return true
@@ -283,6 +291,7 @@ export default function TeamEditPage({ params }: TeamPageProps) {
     const normalizedLineups = ensured.lineups.map((lineup) => ({
       ...lineup,
       position_assignments: cleanAssignments(lineup.position_assignments),
+      starting_rotation: lineup.starting_rotation ?? 1,
     }))
     const normalizedActiveLineupId = nextActiveLineupId && normalizedLineups.some((lineup) => lineup.id === nextActiveLineupId)
       ? nextActiveLineupId
@@ -313,11 +322,20 @@ export default function TeamEditPage({ params }: TeamPageProps) {
             name: lineup.name,
             position_assignments: cleanAssignments(lineup.position_assignments),
             position_source: lineup.position_source,
+            starting_rotation: lineup.starting_rotation ?? 1,
             created_at: lineup.created_at,
           })),
           activeLineupId: normalizedActiveLineupId || undefined,
           positionAssignments: activeAssignments,
         })
+        if (currentTeam?.id === team._id || currentTeam?._id === team._id) {
+          setCurrentTeam({
+            ...currentTeam,
+            lineups: normalizedLineups,
+            active_lineup_id: normalizedActiveLineupId,
+            position_assignments: activeAssignments,
+          })
+        }
       }
 
       setLineups(normalizedLineups)
@@ -504,6 +522,25 @@ export default function TeamEditPage({ params }: TeamPageProps) {
     await persistLineups(nextLineups, activeLineupId)
   }
 
+  const handlePositionSourceChange = async (lineupId: string, source: PositionSource) => {
+    const nextLineups = lineups.map((lineup) =>
+      lineup.id === lineupId
+        ? { ...lineup, position_source: source }
+        : lineup
+    )
+    await persistLineups(nextLineups, activeLineupId)
+  }
+
+  const handleStartingRotationChange = async (rotation: Rotation) => {
+    if (!selectedLineupId) return
+    const nextLineups = lineups.map((lineup) =>
+      lineup.id === selectedLineupId
+        ? { ...lineup, starting_rotation: rotation }
+        : lineup
+    )
+    await persistLineups(nextLineups, activeLineupId)
+  }
+
   const handleDeleteTeam = async () => {
     setIsDeleting(true)
     setActionError(null)
@@ -607,12 +644,15 @@ export default function TeamEditPage({ params }: TeamPageProps) {
               onDuplicateLineup={(lineupId, newName) => { void handleDuplicateLineup(lineupId, newName) }}
               onDeleteLineup={(lineupId) => { void handleDeleteLineup(lineupId) }}
               onSetActiveLineup={(lineupId) => { void handleSetActiveLineup(lineupId) }}
+              onPositionSourceChange={(lineupId, source) => { void handlePositionSourceChange(lineupId, source) }}
               disabled={isSaving}
             />
             <PositionAssigner
               roster={editorTeam.roster}
               assignments={lineupAssignments}
               onChange={(next) => { void handleAssignmentsChange(next) }}
+              rotation={(lineups.find((lineup) => lineup.id === selectedLineupId)?.starting_rotation as Rotation | undefined) ?? 1}
+              onRotationChange={(rotation) => { void handleStartingRotationChange(rotation) }}
               isLoading={isSaving}
             />
           </CardContent>
@@ -663,18 +703,18 @@ export default function TeamEditPage({ params }: TeamPageProps) {
                   >
                     <div className="flex flex-1 items-center gap-2">
                       <Input
+                        value={playerDrafts[player.id]?.name ?? ''}
+                        onChange={(e) => updatePlayerDraft(player.id, 'name', e.target.value)}
+                        className="flex-1"
+                        placeholder="Player name"
+                      />
+                      <Input
                         value={playerDrafts[player.id]?.number ?? ''}
                         onChange={(e) => updatePlayerDraft(player.id, 'number', e.target.value)}
                         className="w-20"
                         maxLength={3}
                         inputMode="numeric"
                         placeholder="#"
-                      />
-                      <Input
-                        value={playerDrafts[player.id]?.name ?? ''}
-                        onChange={(e) => updatePlayerDraft(player.id, 'name', e.target.value)}
-                        className="flex-1"
-                        placeholder="Player name"
                       />
                     </div>
                     <div className="ml-2 flex items-center gap-1">

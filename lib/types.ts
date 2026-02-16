@@ -236,6 +236,7 @@ export interface Lineup {
   name: string
   position_assignments: PositionAssignments
   position_source?: PositionSource // Which position source to use (default: 'custom')
+  starting_rotation?: Rotation // Setter starting zone for this lineup (defaults to 1)
   created_at: string
 }
 

@@ -146,19 +146,21 @@ export function PlayerContextContent({
                   )}
                 >
                   <span className={cn(
-                    'font-bold shrink-0',
-                    isMobile ? 'text-sm' : 'text-xs',
-                    isAssignedHere ? 'text-primary' : 'text-foreground'
-                  )}>
-                    #{rosterPlayer.number}
-                  </span>
-                  <span className={cn(
-                    'truncate',
+                    'min-w-0 flex-1 truncate',
                     isMobile ? 'text-sm' : 'text-xs',
                     'text-muted-foreground'
                   )}>
-                    {rosterPlayer.name}
+                    {rosterPlayer.name || 'Unnamed Player'}
                   </span>
+                  {rosterPlayer.number !== undefined && (
+                    <span className={cn(
+                      'font-semibold shrink-0',
+                      isMobile ? 'text-sm' : 'text-xs',
+                      isAssignedHere ? 'text-primary' : 'text-foreground'
+                    )}>
+                      #{rosterPlayer.number}
+                    </span>
+                  )}
                   {isAssignedElsewhere && (
                     <span className={cn("shrink-0 text-muted-foreground/60", isMobile ? "text-[10px]" : "text-[9px]")}>
                       {otherRole}

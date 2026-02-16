@@ -23,6 +23,10 @@ interface CreateTeamDialogProps {
   onCreateTeam: (name: string, password?: string, presetSystem?: PresetSystem) => Promise<void>
   onCreateLocalTeam?: (name: string, presetSystem?: PresetSystem) => void
   isLoading?: boolean
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+  hideTrigger?: boolean
+  triggerLabel?: string
 }
 
 function SignInPrompt({ onContinueWithoutAccount }: { onContinueWithoutAccount: () => void }) {
@@ -320,44 +324,63 @@ function CreateTeamForm({
   )
 }
 
-export function CreateTeamDialog({ onCreateTeam, onCreateLocalTeam, isLoading }: CreateTeamDialogProps) {
-  const [open, setOpen] = useState(false)
+export function CreateTeamDialog({
+  onCreateTeam,
+  onCreateLocalTeam,
+  isLoading,
+  open,
+  onOpenChange,
+  hideTrigger = false,
+  triggerLabel = 'New Team',
+}: CreateTeamDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false)
   const [showLocalForm, setShowLocalForm] = useState(false)
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth()
+  const isControlled = open !== undefined
+  const dialogOpen = isControlled ? open : internalOpen
+
+  const setDialogOpen = (nextOpen: boolean) => {
+    if (!isControlled) {
+      setInternalOpen(nextOpen)
+    }
+    onOpenChange?.(nextOpen)
+  }
 
   const handleOpenChange = (isOpen: boolean) => {
-    setOpen(isOpen)
+    setDialogOpen(isOpen)
     if (!isOpen) setShowLocalForm(false)
   }
 
   const handleLocalCreate = async (name: string, _password?: string, presetSystem?: PresetSystem) => {
     onCreateLocalTeam?.(name, presetSystem)
-    setOpen(false)
+    setDialogOpen(false)
     setShowLocalForm(false)
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="mr-1.5"
-          >
-            <path d="M5 12h14"/>
-            <path d="M12 5v14"/>
-          </svg>
-          New Team
-        </Button>
-      </DialogTrigger>
+    <Dialog open={dialogOpen} onOpenChange={handleOpenChange}>
+      {!hideTrigger && (
+        <DialogTrigger asChild>
+          <Button>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="mr-1.5"
+            >
+              <path d="M5 12h14"/>
+              <path d="M12 5v14"/>
+            </svg>
+            {triggerLabel}
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-[425px]">
         {authLoading ? (
           <div className="flex items-center justify-center py-8">
@@ -367,13 +390,13 @@ export function CreateTeamDialog({ onCreateTeam, onCreateLocalTeam, isLoading }:
           <CreateTeamForm
             onCreateTeam={onCreateTeam}
             isLoading={isLoading}
-            onClose={() => setOpen(false)}
+            onClose={() => handleOpenChange(false)}
           />
         ) : showLocalForm ? (
           <CreateTeamForm
             onCreateTeam={handleLocalCreate}
             isLoading={false}
-            onClose={() => setOpen(false)}
+            onClose={() => handleOpenChange(false)}
             localOnly
           />
         ) : (

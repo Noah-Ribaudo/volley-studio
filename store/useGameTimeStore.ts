@@ -148,14 +148,46 @@ export const useGameTimeStore = create<GameTimeState>()(
 
       // Setup actions
       selectTeam: (team: Team) => {
-        // Load roster into bench, clear lineup
+        const activeLineup = team.lineups.find((lineup) => lineup.id === team.active_lineup_id) || team.lineups[0]
+        const sourceAssignments = activeLineup?.position_assignments || team.position_assignments || {}
+
+        const seededLineup: Lineup = {}
+        const assignedPlayerIds = new Set<string>()
+
+        for (const role of LINEUP_ROLES) {
+          const playerId = sourceAssignments[role]
+          if (!playerId) continue
+          const player = team.roster.find((entry) => entry.id === playerId)
+          if (!player) continue
+          seededLineup[role] = player
+          assignedPlayerIds.add(playerId)
+        }
+
+        let seededLibero: RosterPlayer | null = null
+        const liberoId = sourceAssignments.L
+        if (liberoId) {
+          const liberoPlayer = team.roster.find((entry) => entry.id === liberoId)
+          if (liberoPlayer) {
+            for (const role of LINEUP_ROLES) {
+              if (seededLineup[role]?.id === liberoPlayer.id) {
+                delete seededLineup[role]
+              }
+            }
+            seededLibero = liberoPlayer
+            assignedPlayerIds.add(liberoPlayer.id)
+          }
+        }
+
+        const seededBench = team.roster.filter((player) => !assignedPlayerIds.has(player.id))
+
         set({
           team,
           teamName: team.name,
           isQuickStart: false,
-          lineup: {},
-          libero: null,
-          bench: [...team.roster],
+          lineup: seededLineup,
+          libero: seededLibero,
+          bench: seededBench,
+          rotation: activeLineup?.starting_rotation ?? 1,
         })
       },
 

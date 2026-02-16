@@ -42,6 +42,7 @@ type TeamDoc = {
     name: string;
     position_assignments: Record<string, string>;
     position_source?: string;
+    starting_rotation?: number;
     created_at: string;
   }>;
   activeLineupId?: string;
@@ -269,6 +270,7 @@ export const create = mutation({
         name: "Lineup 1",
         position_assignments: {},
         position_source: args.presetSystem,
+        starting_rotation: 1,
         created_at: now,
       }],
       activeLineupId: initialLineupId,
@@ -359,6 +361,7 @@ export const updateLineups = mutation({
         name: v.string(),
         position_assignments: v.record(v.string(), v.string()),
         position_source: v.optional(v.string()),
+        starting_rotation: v.optional(v.number()),
         created_at: v.string(),
       })
     ),

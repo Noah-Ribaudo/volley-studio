@@ -23,6 +23,7 @@ type UserSettingsPayload = {
   themePreference: ThemePreference
   showPosition: boolean
   showPlayer: boolean
+  showNumber: boolean
   showLibero: boolean
   circleTokens: boolean
   hideAwayTeam: boolean
@@ -101,6 +102,7 @@ function normalizePayload(raw: UserSettingsInput): UserSettingsPayload {
     themePreference,
     showPosition: raw.showPosition ?? true,
     showPlayer: raw.showPlayer ?? false,
+    showNumber: raw.showNumber ?? true,
     showLibero: raw.showLibero ?? false,
     circleTokens: raw.circleTokens ?? true,
     hideAwayTeam: raw.hideAwayTeam ?? true,
@@ -135,6 +137,7 @@ export function UserSettingsSync() {
 
   const showPosition = useAppStore((state) => state.showPosition)
   const showPlayer = useAppStore((state) => state.showPlayer)
+  const showNumber = useAppStore((state) => state.showNumber)
   const showLibero = useAppStore((state) => state.showLibero)
   const circleTokens = useAppStore((state) => state.circleTokens)
   const hideAwayTeam = useAppStore((state) => state.hideAwayTeam)
@@ -164,6 +167,7 @@ export function UserSettingsSync() {
     const normalized = normalizePayload({
       showPosition,
       showPlayer,
+      showNumber,
       showLibero,
       circleTokens,
       hideAwayTeam,
@@ -186,6 +190,7 @@ export function UserSettingsSync() {
   }, [
     showPosition,
     showPlayer,
+    showNumber,
     showLibero,
     circleTokens,
     hideAwayTeam,
@@ -222,6 +227,7 @@ export function UserSettingsSync() {
       themePreference: remoteSettings.themePreference as ThemePreference | undefined,
       showPosition: remoteSettings.showPosition,
       showPlayer: remoteSettings.showPlayer,
+      showNumber: remoteSettings.showNumber,
       showLibero: remoteSettings.showLibero,
       circleTokens: remoteSettings.circleTokens,
       hideAwayTeam: remoteSettings.hideAwayTeam,
@@ -288,6 +294,7 @@ export function UserSettingsSync() {
         ...state,
         showPosition: serverPayload.showPosition,
         showPlayer: serverPayload.showPlayer,
+        showNumber: serverPayload.showNumber,
         showLibero: serverPayload.showLibero,
         circleTokens: serverPayload.circleTokens,
         hideAwayTeam: serverPayload.hideAwayTeam,

@@ -25,6 +25,8 @@ interface ThemeState {
   setAutoTimeZone: (timeZone: string) => void
 }
 
+type PersistedThemeState = Pick<ThemeState, 'theme' | 'themePreference' | 'autoTimeZone'>
+
 // Migrate old theme values to new ones
 const migrateTheme = (storedTheme: string): ThemeId => {
   // Map old themes to their closest new equivalent
@@ -80,7 +82,7 @@ export const useThemeStore = create<ThemeState>()(
     }),
     {
       name: THEME_STORAGE_KEY,
-      storage: createSafeLocalStorage<ThemeState>(),
+      storage: createSafeLocalStorage<PersistedThemeState>(),
       partialize: (state) => ({
         theme: state.theme,
         themePreference: state.themePreference,

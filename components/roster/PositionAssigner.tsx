@@ -1,6 +1,6 @@
 'use client'
 
-import { RosterPlayer, PositionAssignments } from '@/lib/types'
+import { RosterPlayer, PositionAssignments, Rotation } from '@/lib/types'
 import { PositionCourt } from '@/components/team'
 
 interface PositionAssignerProps {
@@ -9,6 +9,8 @@ interface PositionAssignerProps {
   onChange: (assignments: PositionAssignments) => void
   isLoading?: boolean
   showLibero?: boolean
+  rotation?: Rotation
+  onRotationChange?: (rotation: Rotation) => void
 }
 
 export function PositionAssigner({
@@ -16,7 +18,9 @@ export function PositionAssigner({
   assignments,
   onChange,
   isLoading,
-  showLibero = false
+  showLibero = false,
+  rotation = 1,
+  onRotationChange,
 }: PositionAssignerProps) {
   return (
     <PositionCourt
@@ -24,6 +28,8 @@ export function PositionAssigner({
       assignments={assignments}
       onChange={onChange}
       showLibero={showLibero}
+      rotation={rotation}
+      onRotationChange={onRotationChange}
       isLoading={isLoading}
     />
   )

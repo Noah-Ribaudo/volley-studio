@@ -94,6 +94,7 @@ interface VolleyballCourtProps {
   baseOrder?: Role[]
   showPosition?: boolean
   showPlayer?: boolean
+  showNumber?: boolean
   circleTokens?: boolean
   tokenScaleDesktop?: number
   tokenScaleMobile?: number
@@ -185,6 +186,7 @@ export function VolleyballCourt({
   baseOrder = DEFAULT_BASE_ORDER,
   showPosition = true,
   showPlayer = true,
+  showNumber = true,
   circleTokens = false,
   tokenScaleDesktop = 1.5,
   tokenScaleMobile = 1.5,
@@ -2058,6 +2060,7 @@ export function VolleyballCourt({
           isMobile={isMobile}
           showPosition={showPosition}
           showPlayer={showPlayer}
+          showNumber={showNumber}
           tokenScale={tokenScale}
           debugHitboxes={debugHitboxes}
           toSvgCoords={toSvgCoords}
@@ -2104,7 +2107,7 @@ export function VolleyballCourt({
                 {(() => {
                   // Calculate hit target size based on actual token dimensions
                   const hasAssignedPlayer = playerInfo.name !== undefined || playerInfo.number !== undefined
-                  const isPositionOnlyMode = showPosition && (!showPlayer || !hasAssignedPlayer)
+                  const isPositionOnlyMode = showPosition && ((!showPlayer && !showNumber) || !hasAssignedPlayer)
                   const baseTokenSize = isPositionOnlyMode ? 56 : 48
                   const hitTargetSize = Math.max(baseTokenSize * tokenScale, 48) // Min 48px for touch targets
                   const hitRadius = hitTargetSize / 2
@@ -2224,6 +2227,7 @@ export function VolleyballCourt({
                     onClick={() => onRoleClick?.(role)}
                     showPosition={showPosition}
                     showPlayer={showPlayer}
+                    showNumber={showNumber}
                     isCircle={circleTokens}
                     mobileScale={tokenScale}
                     isInViolation={effectiveLegalityViolations.some(v =>
@@ -2302,6 +2306,7 @@ export function VolleyballCourt({
                     colorOverride="#4b5563"
                     showPosition={showPosition}
                     showPlayer={false} // Don't show player info for away team by default
+                    showNumber={false}
                     isCircle={circleTokens}
                     mobileScale={tokenScale}
                     isDragging={isAwayDragging}

@@ -51,8 +51,10 @@ export default function SettingsPage() {
     // Display toggles
     showPosition,
     showPlayer,
+    showNumber,
     setShowPosition,
     setShowPlayer,
+    setShowNumber,
     showLibero,
     setShowLibero,
     circleTokens,
@@ -103,6 +105,7 @@ export default function SettingsPage() {
   }
 
   const hasTeam = Boolean(currentTeam)
+  const enabledDisplayCount = Number(showPosition) + Number(showPlayer) + Number(showNumber)
   const [whiteboardPhasesOpen, setWhiteboardPhasesOpen] = useState(false)
   const handleSignOut = async () => {
     if (isSigningOut) return
@@ -188,7 +191,7 @@ export default function SettingsPage() {
                   description="Display position labels on players"
                   checked={showPosition}
                   onCheckedChange={(checked) => {
-                    if (!checked && !showPlayer) return
+                    if (!checked && enabledDisplayCount <= 1) return
                     setShowPosition(checked)
                   }}
                 />
@@ -198,8 +201,18 @@ export default function SettingsPage() {
                   description="Display player names on tokens"
                   checked={showPlayer}
                   onCheckedChange={(checked) => {
-                    if (!checked && !showPosition) return
+                    if (!checked && enabledDisplayCount <= 1) return
                     setShowPlayer(checked)
+                  }}
+                />
+                <SettingsToggle
+                  id="show-numbers"
+                  label="Show Player Numbers"
+                  description="Display player numbers on tokens"
+                  checked={showNumber}
+                  onCheckedChange={(checked) => {
+                    if (!checked && enabledDisplayCount <= 1) return
+                    setShowNumber(checked)
                   }}
                 />
               </>

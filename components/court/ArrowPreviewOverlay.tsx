@@ -27,6 +27,7 @@ interface ArrowPreviewOverlayProps {
   isMobile: boolean
   showPosition: boolean
   showPlayer: boolean
+  showNumber: boolean
   tokenScale: number
   debugHitboxes: boolean
   toSvgCoords: (pos: Position) => { x: number; y: number }
@@ -54,6 +55,7 @@ export function ArrowPreviewOverlay({
   isMobile,
   showPosition,
   showPlayer,
+  showNumber,
   tokenScale,
   debugHitboxes,
   toSvgCoords,
@@ -73,7 +75,7 @@ export function ArrowPreviewOverlay({
 
         const playerInfo = getPlayerInfo(role)
         const hasAssignedPlayer = playerInfo.name !== undefined || playerInfo.number !== undefined
-        const isPositionOnlyMode = showPosition && (!showPlayer || !hasAssignedPlayer)
+        const isPositionOnlyMode = showPosition && ((!showPlayer && !showNumber) || !hasAssignedPlayer)
         const baseTokenSize = isPositionOnlyMode ? 56 : 48
         const actualTokenRadius = Math.max(baseTokenSize * tokenScale, 48) / 2
 

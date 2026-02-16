@@ -17,13 +17,12 @@ import { Popover, PopoverContent } from '@/components/ui/popover'
 import { createRotationPhaseKey, getBackRowMiddle, getRoleZone } from '@/lib/rotations'
 import { validateRotationLegality } from '@/lib/model/legality'
 import { useIsMobile } from '@/hooks/useIsMobile'
-import { useSwipeNavigation } from '@/hooks/useSwipeNavigation'
 import { useWhiteboardSync } from '@/hooks/useWhiteboardSync'
 import { useLineupPresets } from '@/hooks/useLineupPresets'
-import { SwipeHint } from '@/components/mobile'
 import { WhiteboardOnboardingHint } from '@/components/court/WhiteboardOnboardingHint'
 import { ConflictResolutionModal } from '@/components/volleyball/ConflictResolutionModal'
 import { useThemeStore } from '@/store/useThemeStore'
+import { CreateTeamDialog } from '@/components/team'
 import {
   Select,
   SelectContent,
@@ -37,6 +36,8 @@ import {
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { getLocalTeamById, listLocalTeams, upsertLocalTeam } from '@/lib/localTeams'
+import { generateSlug } from '@/lib/teamUtils'
+import type { PresetSystem } from '@/lib/presetTypes'
 import { useHintStore } from '@/store/useHintStore'
 import { toast } from 'sonner'
 
@@ -91,6 +92,10 @@ function HomePageContent() {
     showLibero,
     showPosition,
     showPlayer,
+    showNumber,
+    setShowPosition,
+    setShowPlayer,
+    setShowNumber,
     circleTokens,
     fullStatusLabels,
     debugHitboxes,
@@ -130,6 +135,7 @@ function HomePageContent() {
   const teamFromUrl = searchParams.get('team')?.trim() || ''
   const myTeams = useQuery(api.teams.listMyTeams, {})
   const updateLineups = useMutation(api.teams.updateLineups)
+  const createTeam = useMutation(api.teams.create)
   const selectedTeam = useQuery(
     api.teams.getBySlugOrId,
     teamFromUrl ? { identifier: teamFromUrl } : 'skip'
@@ -171,6 +177,7 @@ function HomePageContent() {
       lineups: (selectedTeam.lineups || []).map((lineup) => ({
         ...lineup,
         position_source: lineup.position_source as 'custom' | 'full-5-1' | '5-1-libero' | '6-2' | undefined,
+        starting_rotation: (lineup.starting_rotation as 1 | 2 | 3 | 4 | 5 | 6 | undefined) ?? 1,
       })),
       active_lineup_id: selectedTeam.activeLineupId ?? null,
       position_assignments: selectedTeam.positionAssignments || {},
@@ -235,17 +242,10 @@ function HomePageContent() {
   // Auto-save whiteboard changes to Convex (team mode)
   useWhiteboardSync()
 
-  // Swipe left/right to change phases on mobile
-  const { swipeState, handlers: swipeHandlers } = useSwipeNavigation({
-    onSwipeLeft: nextPhase,
-    onSwipeRight: prevPhase,
-    enabled: isMobile,
-    threshold: 50,
-  })
-
   const [rosterSheetOpen, setRosterSheetOpen] = useState(false)
   const [courtSetupOpen, setCourtSetupOpen] = useState(false)
   const [courtSetupAnchorRect, setCourtSetupAnchorRect] = useState<DOMRect | null>(null)
+  const [createTeamDialogOpen, setCreateTeamDialogOpen] = useState(false)
 
   useEffect(() => {
     const openCourtSetup = (event: Event) => {
@@ -447,6 +447,7 @@ function HomePageContent() {
       name: lineup.name,
       position_assignments: cleanAssignments(lineup.position_assignments),
       position_source: lineup.position_source,
+      starting_rotation: lineup.starting_rotation ?? 1,
       created_at: lineup.created_at,
     }))
     const normalizedActiveLineupId = nextTeam.active_lineup_id &&
@@ -490,7 +491,7 @@ function HomePageContent() {
   const handleTeamSelect = useCallback((value: string) => {
     setCourtSetupOpen(false)
     if (value === '__new__') {
-      router.push('/teams')
+      setCreateTeamDialogOpen(true)
       return
     }
 
@@ -523,6 +524,65 @@ function HomePageContent() {
       setTeamPasswordProvided(true)
       router.push('/')
     }
+  }, [router, setAccessMode, setCurrentTeam, setCustomLayouts, setTeamPasswordProvided])
+  const handleCreateCloudTeam = useCallback(async (
+    name: string,
+    _password?: string,
+    presetSystem?: PresetSystem
+  ) => {
+    const trimmedName = name.trim()
+    if (!trimmedName) {
+      throw new Error('Team name is required')
+    }
+
+    const createdTeamId = await createTeam({
+      name: trimmedName,
+      slug: generateSlug(trimmedName),
+      presetSystem,
+    })
+
+    setCreateTeamDialogOpen(false)
+    setCourtSetupOpen(false)
+    router.push(`/?team=${encodeURIComponent(createdTeamId)}`)
+  }, [createTeam, router])
+  const handleCreateLocalTeam = useCallback((name: string, presetSystem?: PresetSystem) => {
+    const trimmedName = name.trim()
+    const lineupId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : `lineup-${Date.now()}`
+    const now = new Date().toISOString()
+    const localTeam: Team = {
+      id: `local-${Date.now()}`,
+      name: trimmedName,
+      slug: generateSlug(trimmedName),
+      hasPassword: false,
+      archived: false,
+      roster: [],
+      lineups: [{
+        id: lineupId,
+        name: 'Lineup 1',
+        position_assignments: {},
+        position_source: presetSystem,
+        starting_rotation: 1,
+        created_at: now,
+      }],
+      active_lineup_id: lineupId,
+      position_assignments: {},
+      created_at: now,
+      updated_at: now,
+    }
+
+    loadedTeamFromUrlRef.current = null
+    const nextLocalTeams = upsertLocalTeam(localTeam)
+    setLocalTeams(nextLocalTeams)
+    setCurrentTeam(localTeam)
+    setCustomLayouts([])
+    setAccessMode('local')
+    setTeamPasswordProvided(true)
+    setCreateTeamDialogOpen(false)
+    setCourtSetupOpen(false)
+    router.push('/')
+    toast.success(`Created local team: ${trimmedName}`)
   }, [router, setAccessMode, setCurrentTeam, setCustomLayouts, setTeamPasswordProvided])
   const handleLineupSelect = useCallback(async (value: string) => {
     setCourtSetupOpen(false)
@@ -565,6 +625,7 @@ function HomePageContent() {
         name: nextName,
         position_assignments: clonedAssignments,
         position_source: baseLineup?.position_source ?? 'custom',
+        starting_rotation: baseLineup?.starting_rotation ?? 1,
         created_at: new Date().toISOString(),
       }
       const nextTeam: Team = {
@@ -618,14 +679,13 @@ function HomePageContent() {
     }
   }, [currentLineup, currentTeam, persistLineupsForTeam, router, setCurrentTeam])
 
-  // Visual feedback during swipe
-  const swipeOffset = swipeState.swiping ? swipeState.delta.x * 0.2 : 0
   const showFirstDragHint = shouldShowFirstDragHint()
   const showPhaseNavigationHint = !showFirstDragHint && shouldShowPhaseNavigationHint()
+  const enabledDisplayCount = Number(showPosition) + Number(showPlayer) + Number(showNumber)
   const onboardingHintMessage = showFirstDragHint
     ? 'Drag a player to reposition them'
     : showPhaseNavigationHint
-      ? (isMobile ? 'Swipe left or right to change phase' : 'Use phase controls to change steps')
+      ? 'Tap a phase to change steps'
       : null
 
   useEffect(() => {
@@ -732,6 +792,48 @@ function HomePageContent() {
           onCheckedChange={setHideAwayTeam}
         />
       </div>
+
+      <div className="space-y-2 rounded-lg border border-border bg-muted/40 px-3 py-3">
+        <div className="space-y-0.5">
+          <Label className="text-sm font-medium">Token Labels</Label>
+          <p className="text-xs text-muted-foreground">Pick what appears on player tokens.</p>
+        </div>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="court-setup-show-positions" className="text-sm">Show Positions</Label>
+            <Switch
+              id="court-setup-show-positions"
+              checked={showPosition}
+              onCheckedChange={(checked) => {
+                if (!checked && enabledDisplayCount <= 1) return
+                setShowPosition(checked)
+              }}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="court-setup-show-names" className="text-sm">Show Names</Label>
+            <Switch
+              id="court-setup-show-names"
+              checked={showPlayer}
+              onCheckedChange={(checked) => {
+                if (!checked && enabledDisplayCount <= 1) return
+                setShowPlayer(checked)
+              }}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="court-setup-show-numbers" className="text-sm">Show Numbers</Label>
+            <Switch
+              id="court-setup-show-numbers"
+              checked={showNumber}
+              onCheckedChange={(checked) => {
+                if (!checked && enabledDisplayCount <= 1) return
+                setShowNumber(checked)
+              }}
+            />
+          </div>
+        </div>
+      </div>
     </div>
   )
 
@@ -753,16 +855,13 @@ function HomePageContent() {
             </div>
           )}
 
-          {/* Court with swipe handlers for mobile */}
+          {/* Court */}
           <div
             className="relative w-full h-full box-border flex items-center justify-center py-2"
             style={{
-              ...(swipeOffset !== 0 ? { transform: `translateX(${swipeOffset}px)` } : {}),
-              transition: swipeState.swiping ? 'none' : 'transform 0.2s ease-out',
               visibility: isUiHydrated ? 'visible' : 'hidden',
               pointerEvents: isUiHydrated ? 'auto' : 'none',
             }}
-            {...(isMobile ? swipeHandlers : {})}
           >
               <VolleyballCourt
                 mode="whiteboard"
@@ -798,6 +897,7 @@ function HomePageContent() {
                 } : undefined}
                 showPosition={showPosition}
                 showPlayer={showPlayer}
+                showNumber={showNumber}
                 circleTokens={circleTokens}
                 tokenScaleDesktop={TOKEN_SCALES.desktop}
                 tokenScaleMobile={TOKEN_SCALES.mobile}
@@ -850,14 +950,6 @@ function HomePageContent() {
             show={Boolean(onboardingHintMessage)}
             message={onboardingHintMessage || ''}
           />
-
-          {/* Swipe hint for mobile users - shows once */}
-          {isMobile && !onboardingHintMessage && (
-            <SwipeHint
-              storageKey="whiteboard-swipe-hint-seen"
-              autoHideMs={4000}
-            />
-          )}
           </div>
         </div>
       </div>
@@ -916,6 +1008,14 @@ function HomePageContent() {
 
       {/* Conflict Resolution Modal - shown when save conflict is detected */}
       <ConflictResolutionModal />
+
+      <CreateTeamDialog
+        open={createTeamDialogOpen}
+        onOpenChange={setCreateTeamDialogOpen}
+        hideTrigger
+        onCreateTeam={handleCreateCloudTeam}
+        onCreateLocalTeam={handleCreateLocalTeam}
+      />
     </div>
   )
 }

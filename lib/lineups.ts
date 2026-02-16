@@ -7,12 +7,14 @@ import { generateUUID } from './utils'
  */
 export function createLineup(
   name: string,
-  assignments: PositionAssignments = {}
+  assignments: PositionAssignments = {},
+  startingRotation: 1 | 2 | 3 | 4 | 5 | 6 = 1
 ): Lineup {
   return {
     id: generateUUID(),
     name,
     position_assignments: assignments,
+    starting_rotation: startingRotation,
     created_at: new Date().toISOString(),
   }
 }
@@ -87,7 +89,7 @@ export function findLineupById(team: Team, lineupId: string): Lineup | undefined
  * Duplicate a lineup with a new name
  */
 export function duplicateLineup(lineup: Lineup, newName: string): Lineup {
-  return createLineup(newName, { ...lineup.position_assignments })
+  return createLineup(newName, { ...lineup.position_assignments }, lineup.starting_rotation ?? 1)
 }
 
 /**

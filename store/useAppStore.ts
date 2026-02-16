@@ -125,6 +125,7 @@ interface AppState {
   showLibero: boolean // Show libero in visualizations (default: false)
   showPosition: boolean // Show position labels on tokens (default: true)
   showPlayer: boolean // Show player names on tokens (default: false)
+  showNumber: boolean // Show player numbers on tokens (default: true)
   circleTokens: boolean // Use circular tokens instead of rounded rectangles (default: true)
   tokenSize: 'big' | 'small' // Token size (big = current, small = circular)
   hideAwayTeam: boolean // Hide the away team on the whiteboard (default: true)
@@ -200,7 +201,7 @@ interface AppState {
   togglePlayerStatus: (rotation: Rotation, phase: Phase, role: Role, status: PlayerStatus) => void
   setTokenTags: (rotation: Rotation, phase: Phase, role: Role, tags: TokenTag[]) => void
   setCurrentTeam: (team: Team | null) => void
-  assignPlayerToRole: (role: Role, playerId: string) => void
+  assignPlayerToRole: (role: Role, playerId: string | undefined) => void
   setCustomLayouts: (layouts: CustomLayout[]) => void
   populateFromLayouts: (layouts: CustomLayout[]) => void
   setAccessMode: (mode: 'none' | 'local' | 'full') => void
@@ -215,6 +216,7 @@ interface AppState {
   setShowLibero: (show: boolean) => void
   setShowPosition: (show: boolean) => void
   setShowPlayer: (show: boolean) => void
+  setShowNumber: (show: boolean) => void
   setCircleTokens: (circle: boolean) => void
   setTokenSize: (size: 'big' | 'small') => void
   setHideAwayTeam: (hide: boolean) => void
@@ -442,6 +444,7 @@ export const useAppStore = create<AppState>()(
       showLibero: false, // Default to off
       showPosition: true, // Default to showing position labels
       showPlayer: false, // Default to hiding player names
+      showNumber: true, // Default to showing player numbers
       circleTokens: true, // Default to circular tokens
       tokenSize: 'big' as const, // Default to big tokens
       hideAwayTeam: true, // Default to hiding away team
@@ -787,22 +790,29 @@ export const useAppStore = create<AppState>()(
           if (lineup.id !== activeLineupId) {
             return lineup
           }
+          const nextAssignments = { ...lineup.position_assignments }
+          if (playerId) {
+            nextAssignments[role] = playerId
+          } else {
+            delete nextAssignments[role]
+          }
           return {
             ...lineup,
-            position_assignments: {
-              ...lineup.position_assignments,
-              [role]: playerId,
-            },
+            position_assignments: nextAssignments,
           }
         })
+
+        const nextTeamAssignments = { ...state.currentTeam.position_assignments }
+        if (playerId) {
+          nextTeamAssignments[role] = playerId
+        } else {
+          delete nextTeamAssignments[role]
+        }
 
         return {
           currentTeam: {
             ...state.currentTeam,
-            position_assignments: {
-              ...state.currentTeam.position_assignments,
-              [role]: playerId,
-            },
+            position_assignments: nextTeamAssignments,
             lineups: nextLineups,
           },
         }
@@ -919,6 +929,8 @@ export const useAppStore = create<AppState>()(
       setShowPosition: (show) => set({ showPosition: show }),
 
       setShowPlayer: (show) => set({ showPlayer: show }),
+
+      setShowNumber: (show) => set({ showNumber: show }),
 
       setCircleTokens: (circle) => set({ circleTokens: circle }),
 
@@ -1108,6 +1120,7 @@ export const useAppStore = create<AppState>()(
           showLibero: state.showLibero,
           showPosition: state.showPosition,
           showPlayer: state.showPlayer,
+          showNumber: state.showNumber,
           circleTokens: state.circleTokens,
           fullStatusLabels: state.fullStatusLabels,
           debugHitboxes: state.debugHitboxes,
@@ -1182,6 +1195,9 @@ export const useAppStore = create<AppState>()(
         }
         if (state && state.showPlayer === undefined) {
           state.showPlayer = false
+        }
+        if (state && state.showNumber === undefined) {
+          state.showNumber = true
         }
         if (state && state.circleTokens === undefined) {
           state.circleTokens = true
