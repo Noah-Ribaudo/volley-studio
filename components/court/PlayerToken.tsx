@@ -97,7 +97,7 @@ function PlayerTokenImpl({
   const roleInfo = ROLE_INFO[role]
   const hasAssignedPlayer = playerName !== undefined || playerNumber !== undefined
   const tokenColor = colorOverride || roleInfo.color
-  const textColor = getTextColorForOklch(tokenColor)
+  const textColor = '#fff'
 
   // Small circular tokens only show role abbreviation
   if (tokenSize === 'small') {
