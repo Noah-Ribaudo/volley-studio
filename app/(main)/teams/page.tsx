@@ -100,7 +100,7 @@ export default function TeamsPage() {
     setLocalTeams(nextLocalTeams)
     setCurrentTeam(localTeam)
     setSearchQuery('')
-    toast.success(`Created local team: ${name}`)
+    toast.success(`Created Unsaved (Local) team: ${name}`)
     router.push(`/teams/${localTeam.id}`)
   }
 
@@ -209,15 +209,15 @@ export default function TeamsPage() {
           </div>
         )}
 
-        {/* Local Teams */}
+        {/* Unsaved (Local) Teams */}
         {!searchQuery && localTeams.length > 0 && (
           <Card className="border-primary/40 bg-primary/5">
             <CardContent className="pt-4">
               <div className="space-y-3">
                 <div>
-                  <h3 className="font-semibold text-lg">Local Teams</h3>
+                  <h3 className="font-semibold text-lg">Unsaved (Local)</h3>
                   <p className="text-sm text-muted-foreground">
-                    Saved on this device only
+                    Stays on this device until you save to your account
                   </p>
                 </div>
                 {localTeams.map((team) => (

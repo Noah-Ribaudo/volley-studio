@@ -206,7 +206,7 @@ export function RosterManagementCard() {
       setTeamPasswordProvided(true)
       setLocalTeamId(localId)
       upsertLocalTeam(tempTeam)
-      toast.success('Team saved on this device')
+      toast.success('Team saved as Unsaved (Local)')
       return tempTeam
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to create team'
@@ -221,6 +221,12 @@ export function RosterManagementCard() {
   // Determine if we're in "Practice Mode" (no saved team) or "Team Mode"
   const isTeamMode = localTeamId !== null
   const isPracticeMode = !isTeamMode
+  const isSavedCloudTeam = Boolean(currentTeam?._id)
+  const modeDescription = isPracticeMode
+    ? 'Not saved yet'
+    : isSavedCloudTeam
+      ? 'Saved (Cloud)'
+      : 'Unsaved (Local)'
   const manageHref = currentTeam
     ? `/teams/${encodeURIComponent(currentTeam._id || currentTeam.id)}`
     : '/teams'
@@ -233,13 +239,13 @@ export function RosterManagementCard() {
             {/* Mode indicator */}
             {isPracticeMode ? (
               <div>
-                <CardTitle className="text-base text-muted-foreground">Practice Session</CardTitle>
-                <p className="text-xs text-muted-foreground mt-0.5">Changes won't be saved</p>
+                <CardTitle className="text-base text-muted-foreground">Practice (No Team)</CardTitle>
+                <p className="text-xs text-muted-foreground mt-0.5">{modeDescription}</p>
               </div>
             ) : (
               <div className="min-w-0 flex-1">
                 <CardTitle className="text-base truncate">{localTeamName}</CardTitle>
-                <p className="text-xs text-muted-foreground mt-0.5">Auto-saving</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{modeDescription}</p>
               </div>
             )}
 

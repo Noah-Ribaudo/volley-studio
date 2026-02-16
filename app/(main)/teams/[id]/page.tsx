@@ -555,7 +555,7 @@ export default function TeamEditPage({ params }: TeamPageProps) {
         await deleteTeam({ id: team._id })
       }
       router.push('/teams')
-      toast.success(isLocalTeam ? 'Local team deleted' : 'Team deleted')
+      toast.success(isLocalTeam ? 'Unsaved (Local) team deleted' : 'Team deleted')
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to delete team'
       setActionError(message)

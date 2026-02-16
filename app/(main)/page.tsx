@@ -35,6 +35,8 @@ import {
 } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { getLocalTeamById, listLocalTeams, upsertLocalTeam } from '@/lib/localTeams'
 import { generateSlug } from '@/lib/teamUtils'
 import type { PresetSystem } from '@/lib/presetTypes'
@@ -257,6 +259,17 @@ function HomePageContent() {
   const courtSetupTriggerRef = useRef<HTMLElement | null>(null)
   const [viewportWidth, setViewportWidth] = useState(0)
   const [createTeamDialogOpen, setCreateTeamDialogOpen] = useState(false)
+  const whiteboardMode: 'practice' | 'unsavedLocal' | 'savedCloud' = !currentTeam
+    ? 'practice'
+    : currentTeam._id
+      ? 'savedCloud'
+      : 'unsavedLocal'
+  const whiteboardModeLabel = whiteboardMode === 'savedCloud'
+    ? 'Saved (Cloud)'
+    : whiteboardMode === 'unsavedLocal'
+      ? 'Unsaved (Local)'
+      : 'Practice (No Team)'
+  const showSaveAsTeamCta = whiteboardMode !== 'savedCloud'
 
   useEffect(() => {
     const updateViewportWidth = () => {
@@ -645,8 +658,12 @@ function HomePageContent() {
     setCreateTeamDialogOpen(false)
     setCourtSetupOpen(false)
     router.push('/')
-    toast.success(`Created local team: ${trimmedName}`)
+    toast.success(`Created Unsaved (Local) team: ${trimmedName}`)
   }, [router, setAccessMode, setCurrentTeam, setCustomLayouts, setTeamPasswordProvided])
+  const handleSaveAsTeamCta = useCallback(() => {
+    setCourtSetupOpen(false)
+    setCreateTeamDialogOpen(true)
+  }, [])
   const handleLineupSelect = useCallback(async (value: string) => {
     setCourtSetupOpen(false)
     if (value === '__none__') {
@@ -771,13 +788,13 @@ function HomePageContent() {
           <SelectContent>
             <SelectGroup>
               <SelectLabel>Actions</SelectLabel>
-              <SelectItem value="__new__">+ New Team...</SelectItem>
+              <SelectItem value="__new__">Save as Team...</SelectItem>
               <SelectItem value="__none__">Practice (No Team)</SelectItem>
             </SelectGroup>
             <SelectSeparator />
             {(myTeams || []).length > 0 && (
               <SelectGroup>
-                <SelectLabel>Cloud Teams</SelectLabel>
+                <SelectLabel>Saved (Cloud)</SelectLabel>
                 {(myTeams || []).map((team) => (
                   <SelectItem key={team._id} value={`cloud:${team._id}`}>
                     {team.name}
@@ -789,7 +806,7 @@ function HomePageContent() {
               <>
                 {(myTeams || []).length > 0 && <SelectSeparator />}
                 <SelectGroup>
-                  <SelectLabel>Local Teams</SelectLabel>
+                  <SelectLabel>Unsaved (Local)</SelectLabel>
                   {localTeams.map((team) => (
                     <SelectItem key={team.id} value={`local:${team.id}`}>
                       {team.name}
@@ -919,6 +936,29 @@ function HomePageContent() {
       <div className="flex-1 min-h-0 h-full overflow-hidden">
         {/* Court Container - scales to fit available space */}
         <div className="w-full h-full sm:max-w-3xl mx-auto px-0 sm:px-2 relative">
+          <div className="absolute top-3 inset-x-3 z-30 flex items-start justify-between pointer-events-none">
+            <Badge
+              variant="outline"
+              className="h-8 px-3 text-xs font-semibold bg-background/85 backdrop-blur-sm pointer-events-auto"
+            >
+              {whiteboardModeLabel}
+            </Badge>
+            <div className="w-[7.75rem] flex justify-end pointer-events-auto">
+              {showSaveAsTeamCta ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 px-3 text-xs font-semibold bg-background/85 backdrop-blur-sm"
+                  onClick={handleSaveAsTeamCta}
+                >
+                  Save as Team
+                </Button>
+              ) : (
+                <span aria-hidden className="h-8 w-[7.75rem]" />
+              )}
+            </div>
+          </div>
+
           {/* Preset mode indicator - shown when viewing preset positions */}
           {isUsingPreset && (
             <div className="absolute top-16 left-1/2 -translate-x-1/2 z-30">
