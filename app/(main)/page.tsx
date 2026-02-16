@@ -134,6 +134,7 @@ function HomePageContent() {
     setAccessMode,
     setTeamPasswordProvided,
     isHydrated: isAppHydrated,
+    activeContext,
   } = useAppStore()
   const isThemeHydrated = useThemeStore((state) => state.isHydrated)
   const isUiHydrated = isAppHydrated && isThemeHydrated
@@ -259,11 +260,7 @@ function HomePageContent() {
   const courtSetupTriggerRef = useRef<HTMLElement | null>(null)
   const [viewportWidth, setViewportWidth] = useState(0)
   const [createTeamDialogOpen, setCreateTeamDialogOpen] = useState(false)
-  const whiteboardMode: 'practice' | 'unsavedLocal' | 'savedCloud' = !currentTeam
-    ? 'practice'
-    : currentTeam._id
-      ? 'savedCloud'
-      : 'unsavedLocal'
+  const whiteboardMode = activeContext.mode
   const whiteboardModeLabel = whiteboardMode === 'savedCloud'
     ? 'Saved (Cloud)'
     : whiteboardMode === 'unsavedLocal'
@@ -552,11 +549,9 @@ function HomePageContent() {
     setLocalTeams(listLocalTeams())
   }, [cleanAssignments, updateLineups])
 
-  const teamSelectValue = !currentTeam
+  const teamSelectValue = activeContext.mode === 'practice' || !activeContext.teamId
     ? '__none__'
-    : currentTeam._id
-      ? `cloud:${currentTeam._id}`
-      : `local:${currentTeam.id}`
+    : `${activeContext.mode === 'savedCloud' ? 'cloud' : 'local'}:${activeContext.teamId}`
   const currentLineup = useMemo(() => {
     if (!currentTeam || !currentTeam.lineups?.length) {
       return null
