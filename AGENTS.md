@@ -85,3 +85,19 @@ lsof -nP -iTCP:3000 -sTCP:LISTEN
 curl -I --max-time 5 http://localhost:3000
 tmux capture-pane -pt volley-dev | tail -n 60
 ```
+
+## Pull Requests (Required)
+
+Every completed task **must** result in a real GitHub PR. Do not rely on internal metadata tools alone.
+
+1. **Branch naming**: Use a descriptive branch name based on the task (e.g., `fix/play-reset-width-jitter`), not generic names like `work`.
+2. **Push the branch**: `git push -u origin <branch>`
+3. **Create the PR**: Use `gh pr create --base main --head <branch> --title "..." --body-file /tmp/pr_body.md`
+   - Always use `--body-file` with a temp file instead of inline `--body` to avoid shell escaping issues with markdown.
+4. **Return the PR URL**: Always include the live GitHub PR link in your final response.
+5. **If PR creation fails**: Report the exact command and error output, then retry with corrected flags.
+
+## Verification
+
+- Always run `npm run lint` before committing.
+- `npm run build` and `npm run dev` may fail in the Codex sandbox (Google Fonts blocked, Convex login prompt). This is expected — don't treat these as blockers.
