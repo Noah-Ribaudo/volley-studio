@@ -343,6 +343,7 @@ function HomePageContent() {
         isReceiving: isReceivingContext,
         showBothSides: true,
         baseOrder,
+        showLibero,
         attackBallPosition: currentAttackBallPosition,
       })
     : null

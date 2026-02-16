@@ -54,7 +54,7 @@ function ArrowPreviewOverlayImpl({
   previewVisible,
   tappedRole,
   isMobile,
-  showPosition,
+  showPosition: _showPosition,
   showPlayer,
   showNumber,
   tokenScale,
@@ -75,8 +75,9 @@ function ArrowPreviewOverlayImpl({
         const isLeftSide = homeBasePos.x > 0.5
 
         const playerInfo = getPlayerInfo(role)
-        const hasAssignedPlayer = playerInfo.name !== undefined || playerInfo.number !== undefined
-        const isPositionOnlyMode = showPosition && ((!showPlayer && !showNumber) || !hasAssignedPlayer)
+        const hasVisibleName = showPlayer && Boolean(playerInfo.name)
+        const hasVisibleNumber = showNumber && playerInfo.number !== undefined
+        const isPositionOnlyMode = !(hasVisibleName || hasVisibleNumber)
         const baseTokenSize = isPositionOnlyMode ? 56 : 48
         const actualTokenRadius = Math.max(baseTokenSize * tokenScale, 48) / 2
 

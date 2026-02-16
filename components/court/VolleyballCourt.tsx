@@ -2322,8 +2322,9 @@ export function VolleyballCourt({
                 {/* Invisible SVG hit target for touch/mouse - sized to match actual token */}
                 {(() => {
                   // Calculate hit target size based on actual token dimensions
-                  const hasAssignedPlayer = playerInfo.name !== undefined || playerInfo.number !== undefined
-                  const isPositionOnlyMode = showPosition && ((!showPlayer && !showNumber) || !hasAssignedPlayer)
+                  const hasVisibleName = showPlayer && Boolean(playerInfo.name)
+                  const hasVisibleNumber = showNumber && playerInfo.number !== undefined
+                  const isPositionOnlyMode = !(hasVisibleName || hasVisibleNumber)
                   const baseTokenSize = isPositionOnlyMode ? 56 : 48
                   const hitTargetSize = Math.max(baseTokenSize * tokenScale, 48) // Min 48px for touch targets
                   const hitRadius = hitTargetSize / 2
@@ -2598,8 +2599,9 @@ export function VolleyballCourt({
           if (!rolePos) return null
 
           const tooltipPlayer = getPlayerInfo(nextStepTooltipRole)
-          const hasAssignedPlayer = tooltipPlayer.name !== undefined || tooltipPlayer.number !== undefined
-          const isPositionOnlyMode = showPosition && (!showPlayer || !hasAssignedPlayer)
+          const hasVisibleName = showPlayer && Boolean(tooltipPlayer.name)
+          const hasVisibleNumber = showNumber && tooltipPlayer.number !== undefined
+          const isPositionOnlyMode = !(hasVisibleName || hasVisibleNumber)
           const baseTokenSize = isPositionOnlyMode ? 56 : 48
           const tokenRadius = Math.max(baseTokenSize * tokenScale, 48) / 2
 
