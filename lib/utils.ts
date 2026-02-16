@@ -9,11 +9,11 @@ export function cn(...inputs: ClassValue[]) {
 const SERVER_COLOR_VARIABLES: Record<string, string> = {
   '--c-setter': 'oklch(55% 0.22 300)',
   '--c-oh1': 'oklch(55% 0.22 250)',
-  '--c-oh2': 'oklch(70% 0.18 70)',
+  '--c-oh2': 'oklch(55% 0.18 70)',
   '--c-mb1': 'oklch(50% 0.2 150)',
-  '--c-mb2': 'oklch(60% 0.18 188)',
-  '--c-opp': 'oklch(70% 0.18 350)',
-  '--c-libero': 'oklch(65% 0.18 96)',
+  '--c-mb2': 'oklch(50% 0.16 188)',
+  '--c-opp': 'oklch(55% 0.18 350)',
+  '--c-libero': 'oklch(55% 0.18 96)',
 }
 
 /**
