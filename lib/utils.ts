@@ -5,16 +5,35 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+// Keep server-side color resolution in sync with CSS role variables in app/globals.css.
+const SERVER_COLOR_VARIABLES: Record<string, string> = {
+  '--c-setter': 'oklch(55% 0.22 300)',
+  '--c-oh1': 'oklch(55% 0.22 250)',
+  '--c-oh2': 'oklch(70% 0.18 70)',
+  '--c-mb1': 'oklch(50% 0.2 150)',
+  '--c-mb2': 'oklch(60% 0.18 188)',
+  '--c-opp': 'oklch(70% 0.18 350)',
+  '--c-libero': 'oklch(65% 0.18 96)',
+}
+
 /**
  * Resolves a color string that might be a CSS variable reference.
  * If the string is "var(--foo)", reads the computed value from :root.
  * Otherwise returns the string as-is.
  */
 function resolveColor(color: string): string {
-  if (typeof window === 'undefined') return color
-  const varMatch = color.match(/^var\((--[^)]+)\)$/)
+  const varMatch = color.match(/^var\((--[^),\s]+)(?:,\s*([^)]+))?\)$/)
   if (!varMatch) return color
-  return getComputedStyle(document.documentElement).getPropertyValue(varMatch[1]).trim()
+
+  const varName = varMatch[1]
+  const fallbackValue = varMatch[2]?.trim()
+
+  if (typeof window === 'undefined') {
+    return SERVER_COLOR_VARIABLES[varName] ?? fallbackValue ?? color
+  }
+
+  const resolvedValue = getComputedStyle(document.documentElement).getPropertyValue(varName).trim()
+  return resolvedValue || fallbackValue || color
 }
 
 const clamp01 = (value: number): number => Math.min(1, Math.max(0, value))
