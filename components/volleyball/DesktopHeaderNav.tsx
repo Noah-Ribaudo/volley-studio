@@ -44,7 +44,7 @@ const navItems = [
 
 interface DesktopHeaderNavProps {
   onOpenPrintDialog?: () => void
-  onOpenCourtSetup?: () => void
+  onOpenCourtSetup?: (anchorRect?: DOMRect) => void
   showNav?: boolean
 }
 
@@ -288,7 +288,7 @@ export function DesktopHeaderNav({
             variant="outline"
             size="sm"
             className="h-8 gap-1.5"
-            onClick={() => onOpenCourtSetup?.()}
+            onClick={(event) => onOpenCourtSetup?.(event.currentTarget.getBoundingClientRect())}
             title="Open court setup"
           >
             <span>Court Setup</span>

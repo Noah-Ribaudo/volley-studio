@@ -13,6 +13,7 @@ import { getActiveAssignments } from '@/lib/lineups'
 import { getWhiteboardPositions } from '@/lib/whiteboard'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Popover, PopoverContent } from '@/components/ui/popover'
 import { createRotationPhaseKey, getBackRowMiddle, getRoleZone } from '@/lib/rotations'
 import { validateRotationLegality } from '@/lib/model/legality'
 import { useIsMobile } from '@/hooks/useIsMobile'
@@ -40,6 +41,7 @@ import { toast } from 'sonner'
 
 // Constants for court display
 const OPEN_COURT_SETUP_EVENT = 'open-court-setup'
+type OpenCourtSetupEventDetail = { anchorRect?: DOMRect }
 const ANIMATION_MODE = 'css' as const
 const TOKEN_SCALES = { desktop: 1.5, mobile: 1.5 }
 const TOKEN_DIMENSIONS = { widthOffset: 0, heightOffset: 0 }
@@ -239,9 +241,14 @@ function HomePageContent() {
 
   const [rosterSheetOpen, setRosterSheetOpen] = useState(false)
   const [courtSetupOpen, setCourtSetupOpen] = useState(false)
+  const [courtSetupAnchorRect, setCourtSetupAnchorRect] = useState<DOMRect | null>(null)
 
   useEffect(() => {
-    const openCourtSetup = () => setCourtSetupOpen(true)
+    const openCourtSetup = (event: Event) => {
+      const maybeCustomEvent = event as CustomEvent<OpenCourtSetupEventDetail>
+      setCourtSetupAnchorRect(maybeCustomEvent.detail?.anchorRect ?? null)
+      setCourtSetupOpen(true)
+    }
     window.addEventListener(OPEN_COURT_SETUP_EVENT, openCourtSetup)
     return () => window.removeEventListener(OPEN_COURT_SETUP_EVENT, openCourtSetup)
   }, [])
@@ -625,6 +632,105 @@ function HomePageContent() {
     }
   }, [currentPhase, hasCompletedFirstDrag, hasNavigatedPhase, markPhaseNavigated])
 
+  const courtSetupContent = (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Label className="text-xs text-muted-foreground">Team</Label>
+        <Select value={teamSelectValue} onValueChange={handleTeamSelect}>
+          <SelectTrigger className="h-9 text-sm">
+            <SelectValue placeholder="Select team" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              <SelectLabel>Actions</SelectLabel>
+              <SelectItem value="__new__">+ New Team...</SelectItem>
+              <SelectItem value="__none__">Practice (No Team)</SelectItem>
+            </SelectGroup>
+            <SelectSeparator />
+            {(myTeams || []).length > 0 && (
+              <SelectGroup>
+                <SelectLabel>Cloud Teams</SelectLabel>
+                {(myTeams || []).map((team) => (
+                  <SelectItem key={team._id} value={`cloud:${team._id}`}>
+                    {team.name}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            )}
+            {localTeams.length > 0 && (
+              <>
+                {(myTeams || []).length > 0 && <SelectSeparator />}
+                <SelectGroup>
+                  <SelectLabel>Local Teams</SelectLabel>
+                  {localTeams.map((team) => (
+                    <SelectItem key={team.id} value={`local:${team.id}`}>
+                      {team.name}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </>
+            )}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label className="text-xs text-muted-foreground">Lineup</Label>
+        <Select
+          value={lineupSelectValue}
+          onValueChange={(value) => { void handleLineupSelect(value) }}
+          disabled={isSavingLineup}
+        >
+          <SelectTrigger className="h-9 text-sm">
+            <SelectValue placeholder={currentTeam ? 'Select lineup' : 'Select team first'} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              <SelectLabel>Actions</SelectLabel>
+              <SelectItem value="__new__">+ New Lineup...</SelectItem>
+              <SelectItem value="__manage__">Manage Lineups...</SelectItem>
+            </SelectGroup>
+            <SelectSeparator />
+            {!currentTeam && (
+              <SelectGroup>
+                <SelectLabel>Lineups</SelectLabel>
+                <SelectItem value="__none__" disabled>Select a team first</SelectItem>
+              </SelectGroup>
+            )}
+            {currentTeam && (currentTeam.lineups || []).length === 0 && (
+              <SelectGroup>
+                <SelectLabel>Lineups</SelectLabel>
+                <SelectItem value="__none__" disabled>No lineups yet</SelectItem>
+              </SelectGroup>
+            )}
+            {currentTeam && (currentTeam.lineups || []).length > 0 && (
+              <SelectGroup>
+                <SelectLabel>Lineups</SelectLabel>
+                {currentTeam.lineups.map((lineup) => (
+                  <SelectItem key={lineup.id} value={lineup.id}>
+                    {lineup.name}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            )}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="flex items-center justify-between rounded-lg border border-border bg-muted/40 px-3 py-2">
+        <div className="space-y-0.5">
+          <Label htmlFor="court-setup-hide-opponent" className="text-sm font-medium">Hide Opponent</Label>
+          <p className="text-xs text-muted-foreground">Toggle opponent tokens on the court.</p>
+        </div>
+        <Switch
+          id="court-setup-hide-opponent"
+          checked={hideAwayTeam}
+          onCheckedChange={setHideAwayTeam}
+        />
+      </div>
+    </div>
+  )
+
   return (
     <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-gradient-to-b from-background to-muted/30">
       {/* Main Content Area - fills available layout height */}
@@ -750,112 +856,44 @@ function HomePageContent() {
         </div>
       </div>
 
-      <Dialog open={courtSetupOpen} onOpenChange={setCourtSetupOpen}>
-        <DialogContent className="sm:max-w-[560px]">
-          <DialogHeader>
-            <DialogTitle>Court Setup</DialogTitle>
-            <DialogDescription>
-              Choose team, lineup, and opponent visibility for the whiteboard.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">Team</Label>
-              <Select value={teamSelectValue} onValueChange={handleTeamSelect}>
-                <SelectTrigger className="h-9 text-sm">
-                  <SelectValue placeholder="Select team" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectLabel>Actions</SelectLabel>
-                    <SelectItem value="__new__">+ New Team...</SelectItem>
-                    <SelectItem value="__none__">Practice (No Team)</SelectItem>
-                  </SelectGroup>
-                  <SelectSeparator />
-                  {(myTeams || []).length > 0 && (
-                    <SelectGroup>
-                      <SelectLabel>Cloud Teams</SelectLabel>
-                      {(myTeams || []).map((team) => (
-                        <SelectItem key={team._id} value={`cloud:${team._id}`}>
-                          {team.name}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  )}
-                  {localTeams.length > 0 && (
-                    <>
-                      {(myTeams || []).length > 0 && <SelectSeparator />}
-                      <SelectGroup>
-                        <SelectLabel>Local Teams</SelectLabel>
-                        {localTeams.map((team) => (
-                          <SelectItem key={team.id} value={`local:${team.id}`}>
-                            {team.name}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">Lineup</Label>
-              <Select
-                value={lineupSelectValue}
-                onValueChange={(value) => { void handleLineupSelect(value) }}
-                disabled={isSavingLineup}
-              >
-                <SelectTrigger className="h-9 text-sm">
-                  <SelectValue placeholder={currentTeam ? 'Select lineup' : 'Select team first'} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectLabel>Actions</SelectLabel>
-                    <SelectItem value="__new__">+ New Lineup...</SelectItem>
-                    <SelectItem value="__manage__">Manage Lineups...</SelectItem>
-                  </SelectGroup>
-                  <SelectSeparator />
-                  {!currentTeam && (
-                    <SelectGroup>
-                      <SelectLabel>Lineups</SelectLabel>
-                      <SelectItem value="__none__" disabled>Select a team first</SelectItem>
-                    </SelectGroup>
-                  )}
-                  {currentTeam && (currentTeam.lineups || []).length === 0 && (
-                    <SelectGroup>
-                      <SelectLabel>Lineups</SelectLabel>
-                      <SelectItem value="__none__" disabled>No lineups yet</SelectItem>
-                    </SelectGroup>
-                  )}
-                  {currentTeam && (currentTeam.lineups || []).length > 0 && (
-                    <SelectGroup>
-                      <SelectLabel>Lineups</SelectLabel>
-                      {currentTeam.lineups.map((lineup) => (
-                        <SelectItem key={lineup.id} value={lineup.id}>
-                          {lineup.name}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex items-center justify-between rounded-lg border border-border bg-muted/40 px-3 py-2">
-              <div className="space-y-0.5">
-                <Label htmlFor="court-setup-hide-opponent" className="text-sm font-medium">Hide Opponent</Label>
-                <p className="text-xs text-muted-foreground">Toggle opponent tokens on the court.</p>
-              </div>
-              <Switch
-                id="court-setup-hide-opponent"
-                checked={hideAwayTeam}
-                onCheckedChange={setHideAwayTeam}
-              />
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {isMobile ? (
+        <Dialog open={courtSetupOpen} onOpenChange={setCourtSetupOpen}>
+          <DialogContent className="sm:max-w-[560px]">
+            <DialogHeader>
+              <DialogTitle>Court Setup</DialogTitle>
+              <DialogDescription>
+                Choose team, lineup, and opponent visibility for the whiteboard.
+              </DialogDescription>
+            </DialogHeader>
+            {courtSetupContent}
+          </DialogContent>
+        </Dialog>
+      ) : (
+        <Popover open={courtSetupOpen} onOpenChange={setCourtSetupOpen}>
+          <PopoverContent
+            side="bottom"
+            align="start"
+            sideOffset={8}
+            className="w-[560px] max-w-[calc(100vw-2rem)]"
+            onOpenAutoFocus={(event) => event.preventDefault()}
+            style={courtSetupAnchorRect
+              ? {
+                  position: 'fixed',
+                  left: `${courtSetupAnchorRect.left}px`,
+                  top: `${courtSetupAnchorRect.bottom + 8}px`,
+                }
+              : undefined}
+          >
+            <DialogHeader>
+              <DialogTitle>Court Setup</DialogTitle>
+              <DialogDescription>
+                Choose team, lineup, and opponent visibility for the whiteboard.
+              </DialogDescription>
+            </DialogHeader>
+            {courtSetupContent}
+          </PopoverContent>
+        </Popover>
+      )}
 
       {/* Roster Sheet */}
       <Sheet open={rosterSheetOpen} onOpenChange={setRosterSheetOpen}>

@@ -93,8 +93,8 @@ export default function VolleyballLayout({
         {/* Desktop header nav */}
         <DesktopHeaderNav
           onOpenPrintDialog={() => setPrintDialogOpen(true)}
-          onOpenCourtSetup={() => {
-            window.dispatchEvent(new Event(OPEN_COURT_SETUP_EVENT))
+          onOpenCourtSetup={(anchorRect) => {
+            window.dispatchEvent(new CustomEvent(OPEN_COURT_SETUP_EVENT, { detail: { anchorRect } }))
           }}
           showNav={false}
         />
