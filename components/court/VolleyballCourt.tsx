@@ -366,6 +366,15 @@ export function VolleyballCourt({
       Math.abs(next.y - previous.y) > POSITION_EPSILON
   }
 
+  const hasMeaningfulCurveDelta = (
+    previous: ArrowCurveConfig | null,
+    next: ArrowCurveConfig
+  ) => {
+    if (!previous) return true
+    return Math.abs(next.x - previous.x) > POSITION_EPSILON ||
+      Math.abs(next.y - previous.y) > POSITION_EPSILON
+  }
+
   // Long-press state for mobile arrow drawing
   const [longPressRole, setLongPressRole] = useState<Role | null>(null)
   const [longPressSvgPos, setLongPressSvgPos] = useState<{ x: number; y: number } | null>(null)
@@ -1425,6 +1434,11 @@ export function VolleyballCourt({
     markNextStepDragLearned()
     setNextStepTooltipRole(null)
 
+    const isCreatingNewArrow = !arrows[role]
+    const previewCurveHeight = 25
+    const homeBasePos = displayPositions[role] || positions[role] || { x: 0.5, y: 0.75 }
+    const dragStartSvg = toSvgCoords(homeBasePos)
+
     // Prevent page scroll during drag
     document.body.style.overflow = 'hidden'
     document.body.style.touchAction = 'none'
@@ -1481,6 +1495,20 @@ export function VolleyballCourt({
         }
         arrowDragPositionRef.current = normalizedPos
         setArrowDragPosition(normalizedPos)
+
+        // Keep the persisted curve synced with the live helper arrow while creating
+        // a brand new arrow from the preview affordance.
+        if (isCreatingNewArrow && onArrowCurveChange) {
+          const controlSvg = {
+            x: (dragStartSvg.x + pos.x) / 2,
+            y: Math.min(dragStartSvg.y, pos.y) - (previewCurveHeight * 0.65),
+          }
+          const nextControl = toNormalizedCoords(controlSvg.x, controlSvg.y)
+          if (hasMeaningfulCurveDelta(curveControlRef.current, nextControl)) {
+            curveControlRef.current = nextControl
+            onArrowCurveChange(role, nextControl)
+          }
+        }
       })
     }
 
@@ -1525,7 +1553,7 @@ export function VolleyballCourt({
     document.addEventListener('mouseup', handleEnd)
       document.addEventListener('touchmove', handleMove, { passive: false })
       document.addEventListener('touchend', handleEnd)
-  }, [onArrowChange, onArrowCurveChange, getEventPosition, toNormalizedCoords, incrementDragCount, markNextStepDragLearned, isMobile, arrows, arrowCurves, isPreviewingMovement])
+  }, [onArrowChange, onArrowCurveChange, getEventPosition, toNormalizedCoords, incrementDragCount, markNextStepDragLearned, isMobile, arrows, arrowCurves, isPreviewingMovement, displayPositions, positions, toSvgCoords])
 
   // Handle curve drag - dragging the curve handle adjusts direction and intensity
   const handleCurveDragStart = useCallback((role: Role, e: React.MouseEvent | React.TouchEvent) => {
