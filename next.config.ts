@@ -20,6 +20,7 @@ const contentSecurityPolicy = [
 const nextConfig: NextConfig = {
   experimental: {
     scrollRestoration: true,
+    devtoolSegmentExplorer: false,
   },
   async redirects() {
     return [
