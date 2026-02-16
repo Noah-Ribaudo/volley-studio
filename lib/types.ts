@@ -65,20 +65,20 @@ export const RALLY_PHASES: RallyPhase[] = [
 // Default visible phases (hide intermediate transitions)
 export const DEFAULT_VISIBLE_PHASES: RallyPhase[] = [
   'PRE_SERVE',
+  'DEFENSE_PHASE',
   'SERVE_RECEIVE',
   'ATTACK_PHASE',
-  'DEFENSE_PHASE',
 ]
 // Default order shown in Settings > Whiteboard Phases
 export const DEFAULT_PHASE_ORDER: RallyPhase[] = [
   'PRE_SERVE',
-  'SERVE_IN_AIR',
-  'TRANSITION_TO_DEFENSE',
   'DEFENSE_PHASE',
   'SERVE_RECEIVE',
-  'TRANSITION_TO_OFFENSE',
-  'SET_PHASE',
   'ATTACK_PHASE',
+  'TRANSITION_TO_OFFENSE',
+  'SERVE_IN_AIR',
+  'SET_PHASE',
+  'TRANSITION_TO_DEFENSE',
   'BALL_DEAD',
 ]
 export const ROTATIONS = [1, 2, 3, 4, 5, 6] as const
