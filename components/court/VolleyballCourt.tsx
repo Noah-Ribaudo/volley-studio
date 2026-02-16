@@ -307,6 +307,7 @@ export function VolleyballCourt({
 
   // Initialize with positions to match SSR, will update after mount if needed
   const [animatedPositions, setAnimatedPositions] = useState<PositionCoordinates>(() => ensureCompletePositions(positions))
+  const [isBezierAnimating, setIsBezierAnimating] = useState(false)
   const currentPositionsRef = useRef<PositionCoordinates>(ensureCompletePositions(positions))
   const animatedPositionsRef = useRef<PositionCoordinates>(ensureCompletePositions(positions))
 
@@ -594,8 +595,7 @@ export function VolleyballCourt({
     return resolveCollisions(ensureCompletePositions(positions))
   }, [positions, resolveCollisions, ensureCompletePositions])
 
-  // Track whether bezier animation is currently running
-  const [isBezierAnimating, setIsBezierAnimating] = useState(false)
+  // Track whether speed-based play animation has completed
   const [playedPositions, setPlayedPositions] = useState<PositionCoordinates | null>(null)
   const playLockedPathsRef = useRef<Partial<Record<Role, LockedPath>>>({})
   const playAnimRef = useRef<Partial<Record<Role, PlayAnimState>>>({})

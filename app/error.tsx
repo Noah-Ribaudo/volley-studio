@@ -19,9 +19,9 @@ export default function Error({
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
       <div className="w-full max-w-xl rounded-xl border bg-card p-6 shadow-sm">
-        <h1 className="text-xl font-semibold">Something went wrong in this page</h1>
+        <h1 className="text-xl font-semibold">This page ran into a problem</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          The app hit an error while rendering this route. You can retry, or go back and continue working.
+          We couldn't load this screen right now. Try again, or go back and keep working.
         </p>
 
         <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/5 p-3">
