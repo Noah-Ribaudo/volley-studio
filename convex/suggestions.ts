@@ -8,19 +8,32 @@ const RATE_LIMIT_MAX_SUBMISSIONS = 3;
 
 export const reserveSubmissionSlot = internalMutation({
   args: {
-    userId: v.id("users"),
+    userId: v.optional(v.id("users")),
+    clientId: v.optional(v.string()),
     createdAt: v.number(),
     windowStart: v.number(),
     maxSubmissions: v.number(),
     submitterName: v.optional(v.string()),
+    submitterEmail: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const recentSubmissions = await ctx.db
-      .query("suggestionSubmissions")
-      .withIndex("by_user_createdAt", (q) =>
-        q.eq("userId", args.userId).gte("createdAt", args.windowStart)
-      )
-      .collect();
+    if (!args.userId && !args.clientId) {
+      throw new Error("Missing submitter identity.");
+    }
+
+    const recentSubmissions = args.userId
+      ? await ctx.db
+          .query("suggestionSubmissions")
+          .withIndex("by_user_createdAt", (q) =>
+            q.eq("userId", args.userId!).gte("createdAt", args.windowStart)
+          )
+          .collect()
+      : await ctx.db
+          .query("suggestionSubmissions")
+          .withIndex("by_client_createdAt", (q) =>
+            q.eq("clientId", args.clientId!).gte("createdAt", args.windowStart)
+          )
+          .collect();
 
     if (recentSubmissions.length >= args.maxSubmissions) {
       throw new Error("You have reached the suggestion limit. Please try again later.");
@@ -28,8 +41,10 @@ export const reserveSubmissionSlot = internalMutation({
 
     await ctx.db.insert("suggestionSubmissions", {
       userId: args.userId,
+      clientId: args.clientId,
       createdAt: args.createdAt,
       submitterName: args.submitterName,
+      submitterEmail: args.submitterEmail,
     });
   },
 });
@@ -37,6 +52,7 @@ export const reserveSubmissionSlot = internalMutation({
 export const submitSuggestion = action({
   args: {
     text: v.string(),
+    clientId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const { text } = args;
@@ -44,20 +60,24 @@ export const submitSuggestion = action({
     if (!text.trim()) {
       throw new Error("Suggestion text cannot be empty");
     }
+
+    const clientId = args.clientId?.trim();
     const userId = await auth.getUserId(ctx);
-    if (!userId) {
-      throw new Error("Please sign in to submit suggestions.");
+    if (!userId && !clientId) {
+      throw new Error("Could not submit suggestion. Please refresh and try again.");
     }
 
-    const user = await ctx.runQuery(api.users.viewer, {});
+    const user = userId ? await ctx.runQuery(api.users.viewer, {}) : null;
 
     const now = Date.now();
     await ctx.runMutation(internal.suggestions.reserveSubmissionSlot, {
-      userId,
+      userId: userId ?? undefined,
+      clientId: clientId || undefined,
       createdAt: now,
       windowStart: now - RATE_LIMIT_WINDOW_MS,
       maxSubmissions: RATE_LIMIT_MAX_SUBMISSIONS,
       submitterName: user?.name ?? undefined,
+      submitterEmail: user?.email ?? undefined,
     });
 
     const apiKey = process.env.LINEAR_API_KEY;
@@ -80,9 +100,12 @@ export const submitSuggestion = action({
     }
 
     const submittedAtIso = new Date().toISOString();
-    const submittedByLine = user?.name
-      ? `Submitted by @${user.name} from Volley Studio on ${submittedAtIso}`
-      : `Submitted from Volley Studio on ${submittedAtIso}`;
+    const submitterDetails = [user?.name ? `name: ${user.name}` : null, user?.email ? `email: ${user.email}` : null]
+      .filter((detail): detail is string => Boolean(detail))
+      .join(", ");
+    const submittedByLine = submitterDetails
+      ? `Submitted by ${submitterDetails} from Volley Studio on ${submittedAtIso}`
+      : `Submitted anonymously from Volley Studio on ${submittedAtIso}`;
     const description = `${trimmed}\n\n---\n${submittedByLine}`;
 
     const linearHeaders = {
