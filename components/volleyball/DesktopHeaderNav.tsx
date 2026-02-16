@@ -146,8 +146,8 @@ export function DesktopHeaderNav({
       {/* Phase and Rotation controls - only on whiteboard */}
       {isWhiteboardPage && (
         <div className="ml-auto flex items-center gap-2">
-          <div className="flex items-center gap-2 rounded-lg border border-border/70 bg-card/40 px-2 py-1 shadow-sm">
-            {/* Phase selector */}
+          {/* Phase selector */}
+          <div className="flex items-center gap-1 rounded-lg border border-border/70 bg-card/40 px-1.5 py-1 shadow-sm">
             <div className="flex items-center gap-1 min-w-[13rem] max-w-[min(48rem,46vw)]">
               <Button
                 variant="ghost"
@@ -197,31 +197,36 @@ export function DesktopHeaderNav({
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
-
-            {/* Rotation selector */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="h-8 px-3 gap-1.5 bg-background/80">
-                  <span className="text-sm font-medium hidden xl:inline">Rotation {currentRotation}</span>
-                  <span className="text-sm font-medium xl:hidden">R{currentRotation}</span>
-                  <ChevronDown className="h-3 w-3 opacity-50" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {ROTATIONS.map((rotation) => (
-                  <DropdownMenuItem
-                    key={rotation}
-                    onClick={() => setRotation(rotation)}
-                    className={cn(
-                      rotation === currentRotation && "bg-accent"
-                    )}
-                  >
-                    Rotation {rotation}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
+
+          {/* Rotation selector */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                className="h-9 w-[8.75rem] justify-between px-3 bg-background/80 tabular-nums"
+              >
+                <span className="inline-flex items-center gap-1 text-sm font-medium">
+                  <span>Rotation</span>
+                  <span className="inline-block w-[2ch] text-right">{currentRotation}</span>
+                </span>
+                <ChevronDown className="h-3 w-3 opacity-50" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {ROTATIONS.map((rotation) => (
+                <DropdownMenuItem
+                  key={rotation}
+                  onClick={() => setRotation(rotation)}
+                  className={cn(
+                    rotation === currentRotation && "bg-accent"
+                  )}
+                >
+                  Rotation {rotation}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {/* Play/Reset button */}
           <Button
