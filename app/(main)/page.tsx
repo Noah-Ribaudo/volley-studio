@@ -59,7 +59,17 @@ const ANIMATION_CONFIG = {
 const COURT_SETUP_POPOVER_WIDTH = 560
 const COURT_SETUP_VIEWPORT_MARGIN = 16
 const WHITEBOARD_PREFETCH_SESSION_KEY = 'whiteboard-prefetch-complete-v1'
-const WHITEBOARD_PREFETCH_ROUTES = ['/teams', '/gametime', '/settings', '/learn', '/privacy'] as const
+const WHITEBOARD_PREFETCH_ROUTES = [
+  '/teams',
+  '/gametime',
+  '/settings',
+  '/learn',
+  '/privacy',
+  '/roster',
+  '/sign-in',
+  '/developer/theme-lab',
+  '/developer/logo-lab',
+] as const
 
 // Helper to get server role from rotation
 function getServerRole(rotation: number, baseOrder: Role[]): Role {
