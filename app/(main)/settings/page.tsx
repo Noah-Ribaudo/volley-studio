@@ -11,6 +11,13 @@ import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { RALLY_PHASE_INFO, RallyPhase } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import ThemePicker from '@/components/ThemePicker'
@@ -78,6 +85,8 @@ export default function SettingsPage() {
     setShowPrintFeature,
     sidebarProfileInFooter,
     setSidebarProfileInFooter,
+    courtSetupSurfaceVariant,
+    setCourtSetupSurfaceVariant,
   } = useAppStore()
   const viewer = useQuery(api.users.viewer, isAuthenticated ? {} : 'skip')
   const [isSigningOut, setIsSigningOut] = useState(false)
@@ -289,6 +298,26 @@ export default function SettingsPage() {
                 checked={sidebarProfileInFooter}
                 onCheckedChange={setSidebarProfileInFooter}
               />
+              <div className="space-y-2">
+                <Label htmlFor="court-setup-surface" className="text-sm font-medium">
+                  Court Setup Surface
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Choose which desktop court setup UI to evaluate.
+                </p>
+                <Select
+                  value={courtSetupSurfaceVariant}
+                  onValueChange={(value) => setCourtSetupSurfaceVariant(value as 'popover' | 'panel')}
+                >
+                  <SelectTrigger id="court-setup-surface" className="h-9 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="popover">Popover</SelectItem>
+                    <SelectItem value="panel">Right Panel</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </CardContent>
           </Card>
         )}
