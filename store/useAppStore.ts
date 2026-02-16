@@ -12,7 +12,6 @@ import {
   Team,
   CustomLayout,
   PHASES,
-  RALLY_PHASES,
   DEFAULT_VISIBLE_PHASES,
   DEFAULT_PHASE_ORDER,
   ArrowPositions,
@@ -58,7 +57,7 @@ import {
 } from '@/lib/rotations'
 import { ROLES, COURT_ZONES } from '@/lib/types'
 import { getWhiteboardPositions, getAutoArrows } from '@/lib/whiteboard'
-import { getNextPhaseInFlow, getPrevPhaseInFlow } from '@/lib/phaseFlow'
+import { getVisibleOrderedRallyPhases } from '@/lib/rallyPhaseOrder'
 import type { LearningProgress, LearningPanelPosition } from '@/lib/learning/types'
 import type { ShaderId } from '@/lib/shaders'
 
@@ -516,39 +515,28 @@ export const useAppStore = create<AppState>()(
       })),
 
       nextPhase: () => set((state) => {
-        // If current phase is a RallyPhase, use flow
+        // If current phase is a RallyPhase, use user-defined order + visibility.
         if (isRallyPhase(state.currentPhase)) {
-          let currentPhase = state.currentPhase
-          let nextPhase = getNextPhaseInFlow(currentPhase)
-          let loopedBack = false
-          let iterations = 0
-          const maxIterations = RALLY_PHASES.length // Safety limit
+          const orderedVisiblePhases = getVisibleOrderedRallyPhases(state.phaseOrder, state.visiblePhases)
+          if (orderedVisiblePhases.length === 0) return {}
 
-          // Skip hidden phases - keep going until we find a visible one
-          while (!state.visiblePhases.has(nextPhase) && iterations < maxIterations) {
-            iterations++
-            // If we loop back to PRE_SERVE, mark it and advance rotation
-            if (nextPhase === 'PRE_SERVE' && currentPhase !== 'PRE_SERVE') {
-              loopedBack = true
-              break
-            }
-            currentPhase = nextPhase
-            nextPhase = getNextPhaseInFlow(currentPhase)
-
-            // Safety check: if we've checked all phases and none are visible, just use the next one
-            if (nextPhase === state.currentPhase) {
-              break
-            }
+          const currentIndex = orderedVisiblePhases.indexOf(state.currentPhase)
+          if (currentIndex === -1) {
+            return { currentPhase: orderedVisiblePhases[0] as Phase }
           }
 
-          // If looping back to PRE_SERVE, advance rotation
-          if (loopedBack || (nextPhase === 'PRE_SERVE' && state.currentPhase !== 'PRE_SERVE')) {
+          const nextIndex = (currentIndex + 1) % orderedVisiblePhases.length
+          const didWrap = nextIndex === 0 && orderedVisiblePhases.length > 1
+          const nextVisiblePhase = orderedVisiblePhases[nextIndex]
+
+          if (didWrap) {
             return {
-              currentPhase: nextPhase as Phase,
+              currentPhase: nextVisiblePhase as Phase,
               currentRotation: state.currentRotation === 6 ? 1 : (state.currentRotation + 1) as Rotation
             }
           }
-          return { currentPhase: nextPhase as Phase }
+
+          return { currentPhase: nextVisiblePhase as Phase }
         }
 
         // Legacy phase handling
@@ -566,39 +554,28 @@ export const useAppStore = create<AppState>()(
       }),
 
       prevPhase: () => set((state) => {
-        // If current phase is a RallyPhase, use flow
+        // If current phase is a RallyPhase, use user-defined order + visibility.
         if (isRallyPhase(state.currentPhase)) {
-          let currentPhase = state.currentPhase
-          let prevPhase = getPrevPhaseInFlow(currentPhase)
-          let loopedBack = false
-          let iterations = 0
-          const maxIterations = RALLY_PHASES.length // Safety limit
+          const orderedVisiblePhases = getVisibleOrderedRallyPhases(state.phaseOrder, state.visiblePhases)
+          if (orderedVisiblePhases.length === 0) return {}
 
-          // Skip hidden phases - keep going until we find a visible one
-          while (!state.visiblePhases.has(prevPhase) && iterations < maxIterations) {
-            iterations++
-            // If we loop from PRE_SERVE to DEFENSE_PHASE, mark it and go to previous rotation
-            if (prevPhase === 'DEFENSE_PHASE' && currentPhase === 'PRE_SERVE') {
-              loopedBack = true
-              break
-            }
-            currentPhase = prevPhase
-            prevPhase = getPrevPhaseInFlow(currentPhase)
-
-            // Safety check: if we've checked all phases and none are visible, just use the previous one
-            if (prevPhase === state.currentPhase) {
-              break
-            }
+          const currentIndex = orderedVisiblePhases.indexOf(state.currentPhase)
+          if (currentIndex === -1) {
+            return { currentPhase: orderedVisiblePhases[orderedVisiblePhases.length - 1] as Phase }
           }
 
-          // If looping from PRE_SERVE, go to previous rotation
-          if (loopedBack || (prevPhase === 'DEFENSE_PHASE' && state.currentPhase === 'PRE_SERVE')) {
+          const prevIndex = (currentIndex - 1 + orderedVisiblePhases.length) % orderedVisiblePhases.length
+          const didWrap = currentIndex === 0 && orderedVisiblePhases.length > 1
+          const prevVisiblePhase = orderedVisiblePhases[prevIndex]
+
+          if (didWrap) {
             return {
-              currentPhase: prevPhase as Phase,
+              currentPhase: prevVisiblePhase as Phase,
               currentRotation: state.currentRotation === 1 ? 6 : (state.currentRotation - 1) as Rotation
             }
           }
-          return { currentPhase: prevPhase as Phase }
+
+          return { currentPhase: prevVisiblePhase as Phase }
         }
 
         // Legacy phase handling

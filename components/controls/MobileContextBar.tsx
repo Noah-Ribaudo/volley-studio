@@ -1,13 +1,14 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
-import { Phase, PHASES, RALLY_PHASES, Rotation, ROTATIONS } from '@/lib/types'
+import { Phase, PHASES, Rotation, ROTATIONS } from '@/lib/types'
 import type { RallyPhase } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { getPhaseInfo, getCompactPhaseIcon, isRallyPhase as checkIsRallyPhase } from '@/lib/phaseIcons'
 import { ArrowLeft01Icon, ArrowRight01Icon, ArrowDown01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useAppStore } from '@/store/useAppStore'
+import { getVisibleOrderedRallyPhases } from '@/lib/rallyPhaseOrder'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,10 +43,16 @@ export function MobileContextBar({
   const isPreviewingMovement = useAppStore((state) => state.isPreviewingMovement)
   const setPreviewingMovement = useAppStore((state) => state.setPreviewingMovement)
   const triggerPlayAnimation = useAppStore((state) => state.triggerPlayAnimation)
+  const phaseOrder = useAppStore((state) => state.phaseOrder)
 
   const isRallyPhase = checkIsRallyPhase(currentPhase)
-  const phasesToShow = isRallyPhase
-    ? (visiblePhases ? RALLY_PHASES.filter((phase) => visiblePhases.has(phase)) : RALLY_PHASES)
+  const orderedVisiblePhases = getVisibleOrderedRallyPhases(phaseOrder, visiblePhases)
+  const phasesToShow: Phase[] = isRallyPhase
+    ? (
+        orderedVisiblePhases.includes(currentPhase)
+          ? orderedVisiblePhases
+          : [currentPhase, ...orderedVisiblePhases]
+      )
     : PHASES
 
   const phaseCount = phasesToShow.length

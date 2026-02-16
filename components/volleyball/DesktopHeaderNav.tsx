@@ -16,7 +16,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useAppStore } from '@/store/useAppStore'
-import { ROTATIONS, RALLY_PHASES, type RallyPhase } from '@/lib/types'
+import { ROTATIONS, isRallyPhase, type RallyPhase } from '@/lib/types'
+import { getVisibleOrderedRallyPhases } from '@/lib/rallyPhaseOrder'
 import { getPhaseInfo } from '@/lib/phaseIcons'
 
 const navItems = [
@@ -62,6 +63,7 @@ export function DesktopHeaderNav({
   const currentRotation = useAppStore((state) => state.currentRotation)
   const currentPhase = useAppStore((state) => state.currentPhase)
   const visiblePhases = useAppStore((state) => state.visiblePhases)
+  const phaseOrder = useAppStore((state) => state.phaseOrder)
   const setRotation = useAppStore((state) => state.setRotation)
   const setPhase = useAppStore((state) => state.setPhase)
   const nextPhase = useAppStore((state) => state.nextPhase)
@@ -74,16 +76,11 @@ export function DesktopHeaderNav({
   const phaseTrackRef = useRef<HTMLDivElement | null>(null)
   const phaseButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({})
 
-  // Get visible phases
-  const enabledPhases = visiblePhases
-    ? RALLY_PHASES.filter(p => visiblePhases.has(p))
-    : RALLY_PHASES
-  const phaseSeen = new Set<RallyPhase>()
-  const phasesToShow = enabledPhases.filter((phase) => {
-    if (phaseSeen.has(phase)) return false
-    phaseSeen.add(phase)
-    return true
-  })
+  const orderedVisiblePhases = getVisibleOrderedRallyPhases(phaseOrder, visiblePhases)
+  const phasesToShow: RallyPhase[] = isRallyPhase(currentPhase) && !orderedVisiblePhases.includes(currentPhase)
+    ? [currentPhase, ...orderedVisiblePhases]
+    : orderedVisiblePhases
+  const phaseSequenceKey = phasesToShow.join('|')
 
   useEffect(() => {
     const track = phaseTrackRef.current
@@ -99,7 +96,7 @@ export function DesktopHeaderNav({
       const target = activeButton.offsetLeft - (track.clientWidth - activeButton.clientWidth) / 2
       track.scrollTo({ left: Math.max(0, target), behavior: 'smooth' })
     }
-  }, [currentPhase, phasesToShow.length])
+  }, [currentPhase, phaseSequenceKey])
 
   return (
     <header className="hidden md:flex items-center h-12 px-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
@@ -173,11 +170,13 @@ export function DesktopHeaderNav({
                       ref={(el) => {
                         phaseButtonRefs.current[phase] = el
                       }}
-                      variant={phase === currentPhase ? 'default' : 'ghost'}
+                      variant="ghost"
                       size="sm"
                       className={cn(
-                        'h-7 w-auto max-w-[11.5rem] shrink-0 justify-center px-2.5 text-xs font-medium',
-                        phase !== currentPhase && 'text-muted-foreground hover:text-foreground'
+                        'h-7 w-auto max-w-[11.5rem] shrink-0 justify-center px-2.5 text-xs font-medium border border-transparent active:scale-100 !transition-colors',
+                        phase === currentPhase
+                          ? 'bg-primary text-primary-foreground border-primary/70 shadow-sm hover:bg-primary/90 hover:text-primary-foreground'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-accent hover:border-border/50'
                       )}
                       onClick={() => setPhase(phase)}
                       aria-pressed={phase === currentPhase}
