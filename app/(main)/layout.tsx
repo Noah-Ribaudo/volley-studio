@@ -21,6 +21,14 @@ import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import Link from 'next/link'
 
 const OPEN_COURT_SETUP_EVENT = 'open-court-setup'
+type CourtSetupAnchorRect = {
+  left: number
+  right: number
+  top: number
+  bottom: number
+  width: number
+  height: number
+}
 
 export default function VolleyballLayout({
   children,
@@ -93,8 +101,10 @@ export default function VolleyballLayout({
         {/* Desktop header nav */}
         <DesktopHeaderNav
           onOpenPrintDialog={() => setPrintDialogOpen(true)}
-          onOpenCourtSetup={() => {
-            window.dispatchEvent(new Event(OPEN_COURT_SETUP_EVENT))
+          onOpenCourtSetup={(anchorRect: CourtSetupAnchorRect) => {
+            window.dispatchEvent(new CustomEvent(OPEN_COURT_SETUP_EVENT, {
+              detail: { anchorRect },
+            }))
           }}
           showNav={false}
         />
@@ -120,8 +130,20 @@ export default function VolleyballLayout({
                   variant="ghost"
                   size="sm"
                   className="h-8 px-2 text-xs"
-                  onClick={() => {
-                    window.dispatchEvent(new Event(OPEN_COURT_SETUP_EVENT))
+                  onClick={(event) => {
+                    const buttonRect = (event.currentTarget as HTMLButtonElement).getBoundingClientRect()
+                    window.dispatchEvent(new CustomEvent(OPEN_COURT_SETUP_EVENT, {
+                      detail: {
+                        anchorRect: {
+                          left: buttonRect.left,
+                          right: buttonRect.right,
+                          top: buttonRect.top,
+                          bottom: buttonRect.bottom,
+                          width: buttonRect.width,
+                          height: buttonRect.height,
+                        },
+                      },
+                    }))
                   }}
                   aria-label="Open court setup"
                   title="Open court setup"

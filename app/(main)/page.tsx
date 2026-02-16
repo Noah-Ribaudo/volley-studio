@@ -40,6 +40,14 @@ import { toast } from 'sonner'
 
 // Constants for court display
 const OPEN_COURT_SETUP_EVENT = 'open-court-setup'
+type CourtSetupAnchorRect = {
+  left: number
+  right: number
+  top: number
+  bottom: number
+  width: number
+  height: number
+}
 const ANIMATION_MODE = 'css' as const
 const TOKEN_SCALES = { desktop: 1.5, mobile: 1.5 }
 const TOKEN_DIMENSIONS = { widthOffset: 0, heightOffset: 0 }
@@ -239,12 +247,91 @@ function HomePageContent() {
 
   const [rosterSheetOpen, setRosterSheetOpen] = useState(false)
   const [courtSetupOpen, setCourtSetupOpen] = useState(false)
+  const [courtSetupAnchorRect, setCourtSetupAnchorRect] = useState<CourtSetupAnchorRect | null>(null)
+  const [courtSetupPosition, setCourtSetupPosition] = useState<{ left: number; top: number } | null>(null)
+  const courtSetupMenuRef = useRef<HTMLDivElement | null>(null)
+
+  const getCourtSetupPosition = useCallback((anchorRect: CourtSetupAnchorRect | null) => {
+    const MENU_WIDTH = Math.min(384, window.innerWidth - 24)
+    const MENU_HEIGHT = 460
+    const VIEWPORT_PADDING = 12
+    const GAP = 8
+    const fallbackTop = 56
+    const fallbackLeft = window.innerWidth - MENU_WIDTH - VIEWPORT_PADDING
+
+    const anchor = anchorRect ?? {
+      left: fallbackLeft,
+      right: fallbackLeft + MENU_WIDTH,
+      top: fallbackTop,
+      bottom: fallbackTop,
+      width: MENU_WIDTH,
+      height: 0,
+    }
+
+    let left = anchor.left
+    if (left + MENU_WIDTH > window.innerWidth - VIEWPORT_PADDING) {
+      left = window.innerWidth - MENU_WIDTH - VIEWPORT_PADDING
+    }
+    if (left < VIEWPORT_PADDING) {
+      left = VIEWPORT_PADDING
+    }
+
+    let top = anchor.bottom + GAP
+    if (top + MENU_HEIGHT > window.innerHeight - VIEWPORT_PADDING) {
+      top = anchor.top - MENU_HEIGHT - GAP
+    }
+    if (top < VIEWPORT_PADDING) {
+      top = VIEWPORT_PADDING
+    }
+
+    return { left, top }
+  }, [])
 
   useEffect(() => {
-    const openCourtSetup = () => setCourtSetupOpen(true)
+    const openCourtSetup = (event: Event) => {
+      const customEvent = event as CustomEvent<{ anchorRect?: CourtSetupAnchorRect }>
+      setCourtSetupAnchorRect(customEvent.detail?.anchorRect ?? null)
+      setCourtSetupOpen((isOpen) => isMobile ? true : !isOpen)
+    }
     window.addEventListener(OPEN_COURT_SETUP_EVENT, openCourtSetup)
     return () => window.removeEventListener(OPEN_COURT_SETUP_EVENT, openCourtSetup)
-  }, [])
+  }, [isMobile])
+
+  useEffect(() => {
+    if (!courtSetupOpen || isMobile) {
+      setCourtSetupPosition(null)
+      return
+    }
+
+    const updatePosition = () => setCourtSetupPosition(getCourtSetupPosition(courtSetupAnchorRect))
+    updatePosition()
+    window.addEventListener('resize', updatePosition)
+    return () => window.removeEventListener('resize', updatePosition)
+  }, [courtSetupOpen, courtSetupAnchorRect, getCourtSetupPosition, isMobile])
+
+  useEffect(() => {
+    if (!courtSetupOpen || isMobile) return
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Node | null
+      if (!target) return
+      if (courtSetupMenuRef.current?.contains(target)) return
+      setCourtSetupOpen(false)
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setCourtSetupOpen(false)
+      }
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [courtSetupOpen, isMobile])
 
   // Keyboard navigation for phases
   useEffect(() => {
@@ -862,23 +949,21 @@ function HomePageContent() {
           </DialogContent>
         </Dialog>
       ) : (
-        <Sheet open={courtSetupOpen} onOpenChange={setCourtSetupOpen} modal={false}>
-          <SheetContent
-            side="right"
-            showOverlay={false}
-            className="w-full max-w-[420px] overflow-y-auto gap-3"
+        courtSetupOpen && courtSetupPosition && (
+          <div
+            ref={courtSetupMenuRef}
+            className="fixed z-50 w-[min(24rem,calc(100vw-1.5rem))] max-h-[min(70vh,36rem)] overflow-y-auto rounded-md border bg-popover p-4 text-popover-foreground shadow-md"
+            style={{ left: courtSetupPosition.left, top: courtSetupPosition.top }}
           >
-            <SheetHeader className="pb-1">
-              <SheetTitle>Court Setup</SheetTitle>
-              <SheetDescription>
+            <div className="pb-3">
+              <h2 className="text-sm font-semibold">Court Setup</h2>
+              <p className="text-xs text-muted-foreground">
                 Choose team, lineup, and opponent visibility for the whiteboard.
-              </SheetDescription>
-            </SheetHeader>
-            <div className="px-4 pb-4">
-              {courtSetupFields}
+              </p>
             </div>
-          </SheetContent>
-        </Sheet>
+            {courtSetupFields}
+          </div>
+        )
       )}
 
       {/* Roster Sheet */}
