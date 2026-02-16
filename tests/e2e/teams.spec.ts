@@ -9,17 +9,16 @@ test.describe('Teams Page', () => {
     // Should see the page header
     await expect(page.getByRole('heading', { name: /teams/i })).toBeVisible()
 
-    // Should see create and import options
-    await expect(page.getByText(/create new team/i)).toBeVisible()
-    await expect(page.getByText(/import team/i)).toBeVisible()
+    // Should see create and import actions
+    await expect(page.getByRole('button', { name: /new team/i })).toBeVisible()
+    await expect(page.getByRole('button', { name: /^import$/i })).toBeVisible()
   })
 
-  test('shows search bar', async ({ page }) => {
+  test('hides search bar until enough teams exist', async ({ page }) => {
     await page.goto('/teams')
 
-    // Should have a search input
-    const searchInput = page.getByPlaceholder(/search/i)
-    await expect(searchInput).toBeVisible()
+    // Search should not be shown in a fresh/short team list state
+    await expect(page.getByPlaceholder(/search teams/i)).toHaveCount(0)
   })
 
   test('create team button opens dialog', async ({ page }) => {
@@ -97,16 +96,8 @@ test.describe('Teams Page', () => {
     await expect(page.getByRole('heading', { name: /create new team/i })).toBeVisible()
   })
 
-  test('back button returns to home', async ({ page }) => {
+  test('does not show an in-page back button', async ({ page }) => {
     await page.goto('/teams')
-    await page.waitForLoadState('networkidle')
-
-    // Click the in-page back link (not the header nav)
-    const backLink = page.locator('main a[href="/"]', { hasText: 'Back' }).first()
-    await expect(backLink).toBeVisible()
-    await backLink.click()
-
-    // Should be back on main page
-    await expect(page).toHaveURL('/', { timeout: 15_000 })
+    await expect(page.locator('main a[href="/"]', { hasText: 'Back' })).toHaveCount(0)
   })
 })

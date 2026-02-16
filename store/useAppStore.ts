@@ -12,7 +12,6 @@ import {
   Team,
   CustomLayout,
   PHASES,
-  RALLY_PHASES,
   DEFAULT_VISIBLE_PHASES,
   DEFAULT_PHASE_ORDER,
   ArrowPositions,
@@ -58,7 +57,7 @@ import {
 } from '@/lib/rotations'
 import { ROLES, COURT_ZONES } from '@/lib/types'
 import { getWhiteboardPositions, getAutoArrows } from '@/lib/whiteboard'
-import { getNextPhaseInFlow, getPrevPhaseInFlow } from '@/lib/phaseFlow'
+import { getVisibleOrderedRallyPhases } from '@/lib/rallyPhaseOrder'
 import type { LearningProgress, LearningPanelPosition } from '@/lib/learning/types'
 import type { ShaderId } from '@/lib/shaders'
 
@@ -135,6 +134,7 @@ interface AppState {
   showMotionDebugPanel: boolean // Show motion tuning/debug panel on whiteboard (default: false)
   showPrintFeature: boolean // Show print feature (dev toggle, default: false)
   sidebarProfileInFooter: boolean // Show account profile in sidebar footer (debug toggle, default: false)
+  courtSetupSurfaceVariant: 'popover' | 'panel' // Desktop court setup presentation variant (default: 'popover')
   navMode: 'sidebar' | 'header' // Desktop navigation mode (default: 'header')
   backgroundShader: ShaderId // Background shader choice (default: grain-gradient)
   backgroundOpacity: number // Background content opacity 0-100 (default: 95)
@@ -226,6 +226,7 @@ interface AppState {
   setShowMotionDebugPanel: (show: boolean) => void
   setShowPrintFeature: (show: boolean) => void
   setSidebarProfileInFooter: (show: boolean) => void
+  setCourtSetupSurfaceVariant: (variant: 'popover' | 'panel') => void
   setNavMode: (mode: 'sidebar' | 'header') => void
   setBackgroundShader: (shader: ShaderId) => void
   setBackgroundOpacity: (opacity: number) => void
@@ -454,6 +455,7 @@ export const useAppStore = create<AppState>()(
       showMotionDebugPanel: false, // Default to hidden motion debug panel
       showPrintFeature: false, // Default to hidden print feature
       sidebarProfileInFooter: false, // Default to profile in top header
+      courtSetupSurfaceVariant: 'popover', // Default to anchored popover on desktop
       navMode: 'header' as const, // Default to header nav (no sidebar)
       backgroundShader: 'none' as ShaderId, // Default background shader (off by default)
       backgroundOpacity: 95, // Default background content opacity
@@ -513,39 +515,28 @@ export const useAppStore = create<AppState>()(
       })),
 
       nextPhase: () => set((state) => {
-        // If current phase is a RallyPhase, use flow
+        // If current phase is a RallyPhase, use user-defined order + visibility.
         if (isRallyPhase(state.currentPhase)) {
-          let currentPhase = state.currentPhase
-          let nextPhase = getNextPhaseInFlow(currentPhase)
-          let loopedBack = false
-          let iterations = 0
-          const maxIterations = RALLY_PHASES.length // Safety limit
+          const orderedVisiblePhases = getVisibleOrderedRallyPhases(state.phaseOrder, state.visiblePhases)
+          if (orderedVisiblePhases.length === 0) return {}
 
-          // Skip hidden phases - keep going until we find a visible one
-          while (!state.visiblePhases.has(nextPhase) && iterations < maxIterations) {
-            iterations++
-            // If we loop back to PRE_SERVE, mark it and advance rotation
-            if (nextPhase === 'PRE_SERVE' && currentPhase !== 'PRE_SERVE') {
-              loopedBack = true
-              break
-            }
-            currentPhase = nextPhase
-            nextPhase = getNextPhaseInFlow(currentPhase)
-
-            // Safety check: if we've checked all phases and none are visible, just use the next one
-            if (nextPhase === state.currentPhase) {
-              break
-            }
+          const currentIndex = orderedVisiblePhases.indexOf(state.currentPhase)
+          if (currentIndex === -1) {
+            return { currentPhase: orderedVisiblePhases[0] as Phase }
           }
 
-          // If looping back to PRE_SERVE, advance rotation
-          if (loopedBack || (nextPhase === 'PRE_SERVE' && state.currentPhase !== 'PRE_SERVE')) {
+          const nextIndex = (currentIndex + 1) % orderedVisiblePhases.length
+          const didWrap = nextIndex === 0 && orderedVisiblePhases.length > 1
+          const nextVisiblePhase = orderedVisiblePhases[nextIndex]
+
+          if (didWrap) {
             return {
-              currentPhase: nextPhase as Phase,
+              currentPhase: nextVisiblePhase as Phase,
               currentRotation: state.currentRotation === 6 ? 1 : (state.currentRotation + 1) as Rotation
             }
           }
-          return { currentPhase: nextPhase as Phase }
+
+          return { currentPhase: nextVisiblePhase as Phase }
         }
 
         // Legacy phase handling
@@ -563,39 +554,28 @@ export const useAppStore = create<AppState>()(
       }),
 
       prevPhase: () => set((state) => {
-        // If current phase is a RallyPhase, use flow
+        // If current phase is a RallyPhase, use user-defined order + visibility.
         if (isRallyPhase(state.currentPhase)) {
-          let currentPhase = state.currentPhase
-          let prevPhase = getPrevPhaseInFlow(currentPhase)
-          let loopedBack = false
-          let iterations = 0
-          const maxIterations = RALLY_PHASES.length // Safety limit
+          const orderedVisiblePhases = getVisibleOrderedRallyPhases(state.phaseOrder, state.visiblePhases)
+          if (orderedVisiblePhases.length === 0) return {}
 
-          // Skip hidden phases - keep going until we find a visible one
-          while (!state.visiblePhases.has(prevPhase) && iterations < maxIterations) {
-            iterations++
-            // If we loop from PRE_SERVE to DEFENSE_PHASE, mark it and go to previous rotation
-            if (prevPhase === 'DEFENSE_PHASE' && currentPhase === 'PRE_SERVE') {
-              loopedBack = true
-              break
-            }
-            currentPhase = prevPhase
-            prevPhase = getPrevPhaseInFlow(currentPhase)
-
-            // Safety check: if we've checked all phases and none are visible, just use the previous one
-            if (prevPhase === state.currentPhase) {
-              break
-            }
+          const currentIndex = orderedVisiblePhases.indexOf(state.currentPhase)
+          if (currentIndex === -1) {
+            return { currentPhase: orderedVisiblePhases[orderedVisiblePhases.length - 1] as Phase }
           }
 
-          // If looping from PRE_SERVE, go to previous rotation
-          if (loopedBack || (prevPhase === 'DEFENSE_PHASE' && state.currentPhase === 'PRE_SERVE')) {
+          const prevIndex = (currentIndex - 1 + orderedVisiblePhases.length) % orderedVisiblePhases.length
+          const didWrap = currentIndex === 0 && orderedVisiblePhases.length > 1
+          const prevVisiblePhase = orderedVisiblePhases[prevIndex]
+
+          if (didWrap) {
             return {
-              currentPhase: prevPhase as Phase,
+              currentPhase: prevVisiblePhase as Phase,
               currentRotation: state.currentRotation === 1 ? 6 : (state.currentRotation - 1) as Rotation
             }
           }
-          return { currentPhase: prevPhase as Phase }
+
+          return { currentPhase: prevVisiblePhase as Phase }
         }
 
         // Legacy phase handling
@@ -946,6 +926,7 @@ export const useAppStore = create<AppState>()(
       setShowMotionDebugPanel: (show) => set({ showMotionDebugPanel: show }),
       setShowPrintFeature: (show) => set({ showPrintFeature: show }),
       setSidebarProfileInFooter: (show) => set({ sidebarProfileInFooter: show }),
+      setCourtSetupSurfaceVariant: (variant) => set({ courtSetupSurfaceVariant: variant }),
 
       setNavMode: (mode) => set({ navMode: mode }),
 
@@ -1130,6 +1111,7 @@ export const useAppStore = create<AppState>()(
           showMotionDebugPanel: state.showMotionDebugPanel,
           showPrintFeature: state.showPrintFeature,
           sidebarProfileInFooter: state.sidebarProfileInFooter,
+          courtSetupSurfaceVariant: state.courtSetupSurfaceVariant,
           navMode: state.navMode,
           backgroundShader: state.backgroundShader,
           backgroundOpacity: state.backgroundOpacity,
@@ -1226,6 +1208,10 @@ export const useAppStore = create<AppState>()(
         // Set default for sidebar profile placement toggle if missing
         if (state && state.sidebarProfileInFooter === undefined) {
           state.sidebarProfileInFooter = false
+        }
+        // Set default for court setup surface variant if missing
+        if (state && state.courtSetupSurfaceVariant === undefined) {
+          state.courtSetupSurfaceVariant = 'popover'
         }
         // Set default for attackBallPositions if missing
         if (state && state.attackBallPositions === undefined) {

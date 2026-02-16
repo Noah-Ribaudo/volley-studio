@@ -273,12 +273,12 @@ function PlayerTokenImpl({
   const shouldShowName = showPlayer && !!playerName
   const shouldShowNumber = showNumber && playerNumber !== undefined
   const hasPlayerContent = hasAssignedPlayer && (shouldShowName || shouldShowNumber)
-  const showingPositionOnly = showPosition && !hasPlayerContent
 
   // Two size configurations:
   // 1. Position-only: Larger size for better visibility
   // 2. Player/Player+Position: Smaller, more compact size
-  const isPositionOnlyMode = showingPositionOnly || (showPosition && !hasAssignedPlayer)
+  // If no visible player info exists, the token is effectively position-only.
+  const isPositionOnlyMode = !hasPlayerContent
 
   // Base sizes (will be scaled for mobile)
   // Position-only: larger for visibility, min 44px for touch target on mobile

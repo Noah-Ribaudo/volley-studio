@@ -1,6 +1,6 @@
 'use client'
 
-import { useId } from 'react'
+import { memo, useId } from 'react'
 import { Rotation, Role, ROLES, ROLE_INFO } from '@/lib/types'
 import { getRoleZone } from '@/lib/rotations'
 import { useThemeStore } from '@/store/useThemeStore'
@@ -33,7 +33,7 @@ function getZoneRoleMap(rotation: Rotation, baseOrder?: Role[]): Record<number, 
   return zoneRoleMap
 }
 
-export function CourtGrid({ width, height, showZones = true, rotation, baseOrder, fullCourt = false }: CourtGridProps) {
+function CourtGridImpl({ width, height, showZones = true, rotation, baseOrder, fullCourt = false }: CourtGridProps) {
   // Court dimensions as percentages
   const netY = height / 2
 
@@ -274,3 +274,5 @@ export function CourtGrid({ width, height, showZones = true, rotation, baseOrder
     </g>
   )
 }
+
+export const CourtGrid = memo(CourtGridImpl)

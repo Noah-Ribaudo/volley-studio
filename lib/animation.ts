@@ -3,9 +3,9 @@
 import { Position, Role, ROLE_PRIORITY } from './types'
 
 export const DEFAULT_ANIMATION_CONFIG = {
-  COLLISION_RADIUS: 0.12, // Normalized (was 12 in percentage)
-  SEPARATION_STRENGTH: 6,
-  MAX_SEPARATION: 3,
+  COLLISION_RADIUS: 0.07, // Normalized (was 12 in percentage)
+  SEPARATION_STRENGTH: 3.45,
+  MAX_SEPARATION: 0.4,
 } as const
 
 // Basic vector helpers

@@ -86,30 +86,49 @@ function MovementArrowImpl({
   const canDragFromTip = canDrag && (dragHitArea === 'tip' || dragHitArea === 'both')
   const shouldRenderHitPath = Boolean(onMouseEnter || onMouseLeave || canDragFromPath)
 
-  // Calculate arrowhead direction
-  const calculateArrowhead = () => {
-    // If we have a control point, calculate the tangent at the end of the curve
-    // Otherwise, use the direction from start to end
-    let dx: number
-    let dy: number
-
-    if (control) {
-      // For quadratic bezier: derivative at t=1 is 2*(end - control)
-      dx = 2 * (end.x - control.x)
-      dy = 2 * (end.y - control.y)
-    } else {
-      dx = end.x - start.x
-      dy = end.y - start.y
+  const evaluatePathPoint = (t: number) => {
+    if (!control) {
+      return {
+        x: start.x + (end.x - start.x) * t,
+        y: start.y + (end.y - start.y) * t,
+      }
     }
 
-    const length = Math.sqrt(dx * dx + dy * dy)
-    if (length < 0.0001) return { dx: 0, dy: -1 } // Default to up if no direction
+    const mt = 1 - t
+    return {
+      x: mt * mt * start.x + 2 * mt * t * control.x + t * t * end.x,
+      y: mt * mt * start.y + 2 * mt * t * control.y + t * t * end.y,
+    }
+  }
 
-    // Normalize
-    dx /= length
-    dy /= length
+  // Calculate arrowhead direction from the final visible segment of the path.
+  // This keeps the head visually aligned even when control points create a
+  // very sharp tangent right at the endpoint.
+  const calculateArrowhead = () => {
+    let dx = end.x - start.x
+    let dy = end.y - start.y
 
-    return { dx, dy }
+    if (control) {
+      const approxLength =
+        Math.hypot(control.x - start.x, control.y - start.y) +
+        Math.hypot(end.x - control.x, end.y - control.y)
+      const lookbackPx = Math.min(24, Math.max(10, approxLength * 0.12))
+      const t = Math.max(0.75, 1 - lookbackPx / Math.max(approxLength, 1))
+      const nearEnd = evaluatePathPoint(t)
+      dx = end.x - nearEnd.x
+      dy = end.y - nearEnd.y
+
+      // Fallback for degenerate near-end samples.
+      if (Math.hypot(dx, dy) < 0.0001) {
+        dx = end.x - control.x
+        dy = end.y - control.y
+      }
+    }
+
+    const length = Math.hypot(dx, dy)
+    if (length < 0.0001) return { dx: 0, dy: -1 }
+
+    return { dx: dx / length, dy: dy / length }
   }
 
   // Calculate the midpoint of the Bezier curve at t=0.5

@@ -160,6 +160,17 @@ type LockedPath = {
   control: Position | null
 }
 
+type WhiteboardCollisionTuning = {
+  collisionRadius: number
+  separationStrength: number
+  maxSeparation: number
+}
+
+type ClientPoint = {
+  x: number
+  y: number
+}
+
 export function VolleyballCourt({
   positions,
   awayPositions,
@@ -412,14 +423,48 @@ export function VolleyballCourt({
   // Detect reduced motion preference
   const prefersReducedMotion = useReducedMotion()
 
-  const cfg = {
-    durationMs: prefersReducedMotion ? 0 : (animationConfig?.durationMs ?? 500),
-    easingCss: animationConfig?.easingCss ?? 'cubic-bezier(0.4, 0, 0.2, 1)',
-    easingFn: animationConfig?.easingFn ?? 'cubic',
-    collisionRadius: animationConfig?.collisionRadius ?? 0.12, // Normalized (was 12 in percentage)
-    separationStrength: animationConfig?.separationStrength ?? 6,
-    maxSeparation: animationConfig?.maxSeparation ?? 3,
-  }
+  const defaultWhiteboardCollisionTuning = useMemo<WhiteboardCollisionTuning>(
+    () => ({
+      collisionRadius: animationConfig?.collisionRadius ?? 0.12, // Normalized (was 12 in percentage)
+      separationStrength: animationConfig?.separationStrength ?? 6,
+      maxSeparation: animationConfig?.maxSeparation ?? 3,
+    }),
+    [animationConfig?.collisionRadius, animationConfig?.separationStrength, animationConfig?.maxSeparation]
+  )
+
+  const [whiteboardCollisionTuning, setWhiteboardCollisionTuning] =
+    useState<WhiteboardCollisionTuning>(defaultWhiteboardCollisionTuning)
+
+  const updateWhiteboardCollisionTuning = useCallback(
+    <K extends keyof WhiteboardCollisionTuning>(key: K, value: number) => {
+      setWhiteboardCollisionTuning((prev) => ({ ...prev, [key]: value }))
+    },
+    []
+  )
+
+  const resetWhiteboardCollisionTuning = useCallback(() => {
+    setWhiteboardCollisionTuning(defaultWhiteboardCollisionTuning)
+  }, [defaultWhiteboardCollisionTuning])
+
+  const cfg = useMemo(
+    () => ({
+      durationMs: prefersReducedMotion ? 0 : (animationConfig?.durationMs ?? 500),
+      easingCss: animationConfig?.easingCss ?? 'cubic-bezier(0.4, 0, 0.2, 1)',
+      easingFn: animationConfig?.easingFn ?? 'cubic',
+      collisionRadius: whiteboardCollisionTuning.collisionRadius,
+      separationStrength: whiteboardCollisionTuning.separationStrength,
+      maxSeparation: whiteboardCollisionTuning.maxSeparation,
+    }),
+    [
+      prefersReducedMotion,
+      animationConfig?.durationMs,
+      animationConfig?.easingCss,
+      animationConfig?.easingFn,
+      whiteboardCollisionTuning.collisionRadius,
+      whiteboardCollisionTuning.separationStrength,
+      whiteboardCollisionTuning.maxSeparation,
+    ]
+  )
 
   const [playTuning, setPlayTuning] = useState<WhiteboardMotionTuning>(() =>
     sanitizeMotionTuning(DEFAULT_WHITEBOARD_MOTION_TUNING)
@@ -431,6 +476,34 @@ export function VolleyballCourt({
     },
     []
   )
+
+  const resetPreviewTuning = useCallback(() => {
+    setPlayTuning((prev) =>
+      sanitizeMotionTuning({
+        ...prev,
+        cruiseSpeed: DEFAULT_WHITEBOARD_MOTION_TUNING.cruiseSpeed,
+        acceleration: DEFAULT_WHITEBOARD_MOTION_TUNING.acceleration,
+        braking: DEFAULT_WHITEBOARD_MOTION_TUNING.braking,
+        lookAheadTime: DEFAULT_WHITEBOARD_MOTION_TUNING.lookAheadTime,
+        maxLateralAccel: DEFAULT_WHITEBOARD_MOTION_TUNING.maxLateralAccel,
+        tokenRadius: DEFAULT_WHITEBOARD_MOTION_TUNING.tokenRadius,
+        minSpacingRadii: DEFAULT_WHITEBOARD_MOTION_TUNING.minSpacingRadii,
+        avoidanceBlend: DEFAULT_WHITEBOARD_MOTION_TUNING.avoidanceBlend,
+        deflectionStrength: DEFAULT_WHITEBOARD_MOTION_TUNING.deflectionStrength,
+        maxLateralOffsetRadii: DEFAULT_WHITEBOARD_MOTION_TUNING.maxLateralOffsetRadii,
+      })
+    )
+  }, [])
+
+  const resetSharedTuning = useCallback(() => {
+    setPlayTuning((prev) =>
+      sanitizeMotionTuning({
+        ...prev,
+        curveStrength: DEFAULT_WHITEBOARD_MOTION_TUNING.curveStrength,
+      })
+    )
+  }, [])
+
   const playTuningRef = useRef(playTuning)
 
   useEffect(() => {
@@ -738,6 +811,16 @@ export function VolleyballCourt({
     legalityDisplayPositions,
     resolvedBaseOrder,
   ])
+
+  const rolesInViolation = useMemo(() => {
+    const set = new Set<Role>()
+    effectiveLegalityViolations.forEach((violation) => {
+      if (!violation.roles) return
+      set.add(violation.roles[0])
+      set.add(violation.roles[1])
+    })
+    return set
+  }, [effectiveLegalityViolations])
 
   // Calculate screen position for a player token based on their displayed (collision-resolved) position
   // Uses hardcoded court dimensions (400x800, padding 40) since they're constants
@@ -1177,12 +1260,29 @@ export function VolleyballCourt({
   const vbH = viewBoxHeight - hideAmount
 
   // Get player info from roster/assignments
-  const getPlayerInfo = (role: Role) => {
-    const playerId = assignments[role]
-    if (!playerId) return { name: undefined, number: undefined }
-    const player = roster.find(p => p.id === playerId)
-    return { name: player?.name, number: player?.number }
-  }
+  const playerLookup = useMemo(() => {
+    const map = new Map<string, RosterPlayer>()
+    roster.forEach((player) => map.set(player.id, player))
+    return map
+  }, [roster])
+
+  const playerInfoByRole = useMemo(() => {
+    const info: Partial<Record<Role, { name?: string; number?: number }>> = {}
+    activeRoles.forEach((role) => {
+      const playerId = assignments[role]
+      if (!playerId) {
+        info[role] = { name: undefined, number: undefined }
+        return
+      }
+      const player = playerLookup.get(playerId)
+      info[role] = { name: player?.name, number: player?.number }
+    })
+    return info
+  }, [activeRoles, assignments, playerLookup])
+
+  const getPlayerInfo = useCallback((role: Role) => {
+    return playerInfoByRole[role] ?? { name: undefined, number: undefined }
+  }, [playerInfoByRole])
 
   // Convert normalized position (0-1) to SVG coordinates
   const toSvgCoords = useCallback((pos: Position): { x: number; y: number } => ({
@@ -1233,36 +1333,40 @@ export function VolleyballCourt({
     return pos
   }
 
-  // Get mouse/touch position in SVG coordinates
-  // Uses getScreenCTM() to correctly handle preserveAspectRatio scaling
-  const getEventPosition = useCallback((e: MouseEvent | TouchEvent) => {
+  const getClientPoint = useCallback((e: MouseEvent | TouchEvent): ClientPoint | null => {
+    if ('touches' in e) {
+      // `touchend` events have an empty `touches` list; use `changedTouches`.
+      const touchPoint = e.touches[0] ?? e.changedTouches[0]
+      if (!touchPoint) return null
+      return { x: touchPoint.clientX, y: touchPoint.clientY }
+    }
+    return { x: e.clientX, y: e.clientY }
+  }, [])
+
+  const clientToSvgCoords = useCallback((client: ClientPoint): ClientPoint => {
     if (!svgRef.current) return { x: 0, y: 0 }
 
     const svg = svgRef.current
 
-    let clientX: number, clientY: number
-    if ('touches' in e) {
-      // `touchend` events have an empty `touches` list; use `changedTouches`.
-      const touchPoint = e.touches[0] ?? e.changedTouches[0]
-      if (!touchPoint) return { x: 0, y: 0 }
-      clientX = touchPoint.clientX
-      clientY = touchPoint.clientY
-    } else {
-      clientX = e.clientX
-      clientY = e.clientY
-    }
-
     // Use SVG's coordinate transformation for accurate conversion
     // This properly handles preserveAspectRatio centering/letterboxing
     const point = svg.createSVGPoint()
-    point.x = clientX
-    point.y = clientY
+    point.x = client.x
+    point.y = client.y
     const ctm = svg.getScreenCTM()
     if (!ctm) return { x: 0, y: 0 }
     const svgPoint = point.matrixTransform(ctm.inverse())
 
     return { x: svgPoint.x, y: svgPoint.y }
   }, [])
+
+  // Get mouse/touch position in SVG coordinates
+  // Uses getScreenCTM() to correctly handle preserveAspectRatio scaling
+  const getEventPosition = useCallback((e: MouseEvent | TouchEvent) => {
+    const clientPoint = getClientPoint(e)
+    if (!clientPoint) return { x: 0, y: 0 }
+    return clientToSvgCoords(clientPoint)
+  }, [getClientPoint, clientToSvgCoords])
 
   // Clear long-press state and timer
   const clearLongPress = useCallback(() => {
@@ -1295,7 +1399,7 @@ export function VolleyballCourt({
 
     // Get event coordinates
     const pos = getEventPosition(e.nativeEvent as MouseEvent | TouchEvent)
-    const normalizedPos = toNormalizedCoords(pos.x, pos.y)
+    const normalizedPos = constrainHomePosition(toNormalizedCoords(pos.x, pos.y))
 
     // Get the primed player's position
     const primedPlayerPos = displayPositions[primedRole]
@@ -1399,16 +1503,22 @@ export function VolleyballCourt({
     document.body.style.overflow = 'hidden'
     document.body.style.touchAction = 'none'
 
-    // Smooth drag handler using requestAnimationFrame
+    let latestClientPoint: ClientPoint | null = null
+
+    // Smooth drag handler using requestAnimationFrame with event coalescing
     const handleMove = (e: MouseEvent | TouchEvent) => {
       e.preventDefault() // Prevent scrolling on mobile
 
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current)
-      }
+      const clientPoint = getClientPoint(e)
+      if (!clientPoint) return
+      latestClientPoint = clientPoint
+
+      if (rafRef.current !== null) return
 
       rafRef.current = requestAnimationFrame(() => {
-        const pos = getEventPosition(e)
+        rafRef.current = null
+        if (!latestClientPoint) return
+        const pos = clientToSvgCoords(latestClientPoint)
         const newX = pos.x + dragOffsetRef.current.x
         const newY = pos.y + dragOffsetRef.current.y
 
@@ -1430,6 +1540,7 @@ export function VolleyballCourt({
       document.body.style.overflow = ''
       document.body.style.touchAction = ''
 
+      latestClientPoint = null
       handleDragEnd()
       document.removeEventListener('mousemove', handleMove)
       document.removeEventListener('mouseup', handleEnd)
@@ -1441,7 +1552,7 @@ export function VolleyballCourt({
     document.addEventListener('mouseup', handleEnd)
       document.addEventListener('touchmove', handleMove, { passive: false })
       document.addEventListener('touchend', handleEnd)
-    }, [isEditable, isPreviewingMovement, positions, getEventPosition, handleDragEnd, toSvgCoords, toNormalizedCoords, clearAllPreviewState])
+    }, [isEditable, isPreviewingMovement, positions, getEventPosition, getClientPoint, clientToSvgCoords, handleDragEnd, toSvgCoords, toNormalizedCoords, clearAllPreviewState])
 
   // Handle arrow drag (create, reposition, or delete movement arrows)
   const handleArrowDragStart = useCallback((
@@ -1477,7 +1588,7 @@ export function VolleyballCourt({
 
     // Initialize with preview position for seamless transition (no visual jump)
     if (initialEndSvg) {
-      const normalizedEnd = toNormalizedCoords(initialEndSvg.x, initialEndSvg.y)
+      const normalizedEnd = constrainHomePosition(toNormalizedCoords(initialEndSvg.x, initialEndSvg.y))
       arrowDragPositionRef.current = normalizedEnd
       curveControlRef.current = arrowCurves[role] ?? null
       setArrowDragPosition(normalizedEnd)
@@ -1499,14 +1610,21 @@ export function VolleyballCourt({
       onArrowCurveChange(role, normalizedControl)
     }
 
+    let latestClientPoint: ClientPoint | null = null
+
     const handleMove = (event: MouseEvent | TouchEvent) => {
       event.preventDefault() // Prevent scrolling on mobile
 
-      if (arrowRafRef.current) {
-        cancelAnimationFrame(arrowRafRef.current)
-      }
+      const clientPoint = getClientPoint(event)
+      if (!clientPoint) return
+      latestClientPoint = clientPoint
+
+      if (arrowRafRef.current !== null) return
+
       arrowRafRef.current = requestAnimationFrame(() => {
-        const pos = getEventPosition(event)
+        arrowRafRef.current = null
+        if (!latestClientPoint) return
+        const pos = clientToSvgCoords(latestClientPoint)
 
         // Check if position is off court (outside padding bounds) using raw SVG coordinates
         const isOffCourt = pos.x < padding || pos.x > padding + courtWidth ||
@@ -1519,7 +1637,7 @@ export function VolleyballCourt({
           isDraggingOffCourtRef.current[role] = isOffCourt
         }
 
-        const normalizedPos = toNormalizedCoords(pos.x, pos.y)
+        const normalizedPos = constrainHomePosition(toNormalizedCoords(pos.x, pos.y))
 
         // Always update visual position immediately for smooth feedback
         if (!hasMeaningfulPositionDelta(arrowDragPositionRef.current, normalizedPos)) {
@@ -1548,6 +1666,7 @@ export function VolleyballCourt({
       // Re-enable page scroll
       document.body.style.overflow = ''
       document.body.style.touchAction = ''
+      latestClientPoint = null
 
       // Use ref instead of state to get current value (avoids stale closure)
       const wasOffCourt = isDraggingOffCourtRef.current[role]
@@ -1587,7 +1706,7 @@ export function VolleyballCourt({
     document.addEventListener('mouseup', handleEnd)
       document.addEventListener('touchmove', handleMove, { passive: false })
       document.addEventListener('touchend', handleEnd)
-  }, [onArrowChange, onArrowCurveChange, getEventPosition, toNormalizedCoords, incrementDragCount, markNextStepDragLearned, isMobile, arrows, arrowCurves, isPreviewingMovement, displayPositions, positions, toSvgCoords, clearPreviewStateForRole])
+  }, [onArrowChange, onArrowCurveChange, getClientPoint, clientToSvgCoords, toNormalizedCoords, incrementDragCount, markNextStepDragLearned, isMobile, arrows, arrowCurves, isPreviewingMovement, displayPositions, positions, toSvgCoords, clearPreviewStateForRole])
 
   // Handle curve drag - dragging the curve handle adjusts direction and intensity
   const handleCurveDragStart = useCallback((role: Role, e: React.MouseEvent | React.TouchEvent) => {
@@ -1606,15 +1725,23 @@ export function VolleyballCourt({
     setDraggingCurveRole(role)
     curveControlRef.current = arrowCurves[role] ?? null
 
+    let latestClientPoint: ClientPoint | null = null
+
     const handleMove = (moveEvent: MouseEvent | TouchEvent) => {
       moveEvent.preventDefault()
 
-      if (curveRafRef.current) {
-        cancelAnimationFrame(curveRafRef.current)
-      }
+      const clientPoint = getClientPoint(moveEvent)
+      if (!clientPoint) return
+      latestClientPoint = clientPoint
+
+      if (curveRafRef.current !== null) return
+
       curveRafRef.current = requestAnimationFrame(() => {
+        curveRafRef.current = null
+        if (!latestClientPoint) return
+
         // Use shared coordinate conversion (screen → SVG → normalized)
-        const svgPos = getEventPosition(moveEvent)
+        const svgPos = clientToSvgCoords(latestClientPoint)
         const desiredMidpoint = toNormalizedCoords(svgPos.x, svgPos.y)
 
         // For a quadratic bezier, midpoint at t=0.5 is: 0.25*start + 0.5*control + 0.25*end
@@ -1640,6 +1767,7 @@ export function VolleyballCourt({
         cancelAnimationFrame(curveRafRef.current)
         curveRafRef.current = null
       }
+      latestClientPoint = null
       curveControlRef.current = null
       setDraggingCurveRole(null)
       document.removeEventListener('mousemove', handleMove)
@@ -1652,7 +1780,7 @@ export function VolleyballCourt({
     document.addEventListener('mouseup', handleEnd)
     document.addEventListener('touchmove', handleMove, { passive: false })
     document.addEventListener('touchend', handleEnd)
-  }, [onArrowCurveChange, positions, arrows, arrowCurves, getEventPosition, toNormalizedCoords, isPreviewingMovement])
+  }, [onArrowCurveChange, positions, arrows, arrowCurves, getClientPoint, clientToSvgCoords, toNormalizedCoords, isPreviewingMovement])
 
   // Handle mobile touch - drag to move, tap to open context menu
   const handleMobileTouchStart = useCallback((role: Role, e: React.TouchEvent) => {
@@ -1810,16 +1938,22 @@ export function VolleyballCourt({
     document.body.style.overflow = 'hidden'
     document.body.style.touchAction = 'none'
 
-    // Smooth drag handler using requestAnimationFrame
+    let latestClientPoint: ClientPoint | null = null
+
+    // Smooth drag handler using requestAnimationFrame with event coalescing
     const handleMove = (e: MouseEvent | TouchEvent) => {
       e.preventDefault()
 
-      if (awayRafRef.current) {
-        cancelAnimationFrame(awayRafRef.current)
-      }
+      const clientPoint = getClientPoint(e)
+      if (!clientPoint) return
+      latestClientPoint = clientPoint
+
+      if (awayRafRef.current !== null) return
 
       awayRafRef.current = requestAnimationFrame(() => {
-        const pos = getEventPosition(e)
+        awayRafRef.current = null
+        if (!latestClientPoint) return
+        const pos = clientToSvgCoords(latestClientPoint)
         const newX = pos.x + awayDragOffsetRef.current.x
         const newY = pos.y + awayDragOffsetRef.current.y
 
@@ -1839,6 +1973,7 @@ export function VolleyballCourt({
       document.body.style.overflow = ''
       document.body.style.touchAction = ''
 
+      latestClientPoint = null
       handleAwayDragEnd()
       document.removeEventListener('mousemove', handleMove)
       document.removeEventListener('mouseup', handleEnd)
@@ -1850,7 +1985,7 @@ export function VolleyballCourt({
     document.addEventListener('mouseup', handleEnd)
     document.addEventListener('touchmove', handleMove, { passive: false })
     document.addEventListener('touchend', handleEnd)
-  }, [isEditable, awayPositions, getEventPosition, handleAwayDragEnd, toSvgCoords, toNormalizedCoords])
+  }, [isEditable, awayPositions, getEventPosition, getClientPoint, clientToSvgCoords, handleAwayDragEnd, toSvgCoords, toNormalizedCoords])
 
   // Constrain attack ball position: must stay on opponent side (y < 0.5) and near net
   const constrainAttackBallPosition = useCallback((pos: Position): Position => {
@@ -1908,16 +2043,22 @@ export function VolleyballCourt({
     document.body.style.overflow = 'hidden'
     document.body.style.touchAction = 'none'
 
-    // Smooth drag handler using requestAnimationFrame
+    let latestClientPoint: ClientPoint | null = null
+
+    // Smooth drag handler using requestAnimationFrame with event coalescing
     const handleMove = (e: MouseEvent | TouchEvent) => {
       e.preventDefault()
 
-      if (attackBallRafRef.current) {
-        cancelAnimationFrame(attackBallRafRef.current)
-      }
+      const clientPoint = getClientPoint(e)
+      if (!clientPoint) return
+      latestClientPoint = clientPoint
+
+      if (attackBallRafRef.current !== null) return
 
       attackBallRafRef.current = requestAnimationFrame(() => {
-        const pos = getEventPosition(e)
+        attackBallRafRef.current = null
+        if (!latestClientPoint) return
+        const pos = clientToSvgCoords(latestClientPoint)
         const normalizedPos = constrainAttackBallPosition(toNormalizedCoords(pos.x, pos.y))
 
         // Update visual position immediately
@@ -1933,6 +2074,7 @@ export function VolleyballCourt({
       document.body.style.overflow = ''
       document.body.style.touchAction = ''
 
+      latestClientPoint = null
       handleAttackBallDragEnd()
       document.removeEventListener('mousemove', handleMove)
       document.removeEventListener('mouseup', handleEnd)
@@ -1944,7 +2086,7 @@ export function VolleyballCourt({
     document.addEventListener('mouseup', handleEnd)
     document.addEventListener('touchmove', handleMove, { passive: false })
     document.addEventListener('touchend', handleEnd)
-  }, [mode, currentPhase, attackBallPosition, getEventPosition, constrainAttackBallPosition, toNormalizedCoords, handleAttackBallDragEnd, DEFAULT_ATTACK_BALL_POSITION])
+  }, [mode, currentPhase, attackBallPosition, getClientPoint, clientToSvgCoords, constrainAttackBallPosition, toNormalizedCoords, handleAttackBallDragEnd, DEFAULT_ATTACK_BALL_POSITION])
 
   // Cleanup on unmount
   useEffect(() => {
@@ -1991,8 +2133,13 @@ export function VolleyballCourt({
           draggingRole={draggingRole}
           draggingArrowRole={draggingArrowRole}
           draggingCurveRole={draggingCurveRole}
+          whiteboardTuning={whiteboardCollisionTuning}
+          onWhiteboardTuningChange={updateWhiteboardCollisionTuning}
+          onResetWhiteboardTuning={resetWhiteboardCollisionTuning}
           tuning={playTuning}
           onTuningChange={updatePlayTuning}
+          onResetPreviewTuning={resetPreviewTuning}
+          onResetSharedTuning={resetSharedTuning}
           roles={activeRoles.map((role) => {
             const anim = playAnimRef.current[role]
             const locked = Boolean(playLockedPathsRef.current[role])
@@ -2080,7 +2227,7 @@ export function VolleyballCourt({
           replacedMB={replacedMB}
           isBezierAnimating={isBezierAnimating}
           arrows={arrows}
-          displayPositions={displayPositions}
+          displayPositions={legalityDisplayPositions}
           lineColor={lineColor}
         />
 
@@ -2175,8 +2322,9 @@ export function VolleyballCourt({
                 {/* Invisible SVG hit target for touch/mouse - sized to match actual token */}
                 {(() => {
                   // Calculate hit target size based on actual token dimensions
-                  const hasAssignedPlayer = playerInfo.name !== undefined || playerInfo.number !== undefined
-                  const isPositionOnlyMode = showPosition && ((!showPlayer && !showNumber) || !hasAssignedPlayer)
+                  const hasVisibleName = showPlayer && Boolean(playerInfo.name)
+                  const hasVisibleNumber = showNumber && playerInfo.number !== undefined
+                  const isPositionOnlyMode = !(hasVisibleName || hasVisibleNumber)
                   const baseTokenSize = isPositionOnlyMode ? 56 : 48
                   const hitTargetSize = Math.max(baseTokenSize * tokenScale, 48) // Min 48px for touch targets
                   const hitRadius = hitTargetSize / 2
@@ -2293,15 +2441,12 @@ export function VolleyballCourt({
                     playerNumber={playerInfo.number}
                     isDragging={isDragging}
                     isHovered={hoveredRole === role}
-                    onClick={() => onRoleClick?.(role)}
                     showPosition={showPosition}
                     showPlayer={showPlayer}
                     showNumber={showNumber}
                     isCircle={circleTokens}
                     mobileScale={tokenScale}
-                    isInViolation={effectiveLegalityViolations.some(v =>
-                      v.roles && (v.roles[0] === role || v.roles[1] === role)
-                    )}
+                    isInViolation={rolesInViolation.has(role)}
                     isContextOpen={contextPlayer === role}
                     tokenSize={tokenSize}
                     widthOffset={tokenWidthOffset}
@@ -2454,8 +2599,9 @@ export function VolleyballCourt({
           if (!rolePos) return null
 
           const tooltipPlayer = getPlayerInfo(nextStepTooltipRole)
-          const hasAssignedPlayer = tooltipPlayer.name !== undefined || tooltipPlayer.number !== undefined
-          const isPositionOnlyMode = showPosition && (!showPlayer || !hasAssignedPlayer)
+          const hasVisibleName = showPlayer && Boolean(tooltipPlayer.name)
+          const hasVisibleNumber = showNumber && tooltipPlayer.number !== undefined
+          const isPositionOnlyMode = !(hasVisibleName || hasVisibleNumber)
           const baseTokenSize = isPositionOnlyMode ? 56 : 48
           const tokenRadius = Math.max(baseTokenSize * tokenScale, 48) / 2
 

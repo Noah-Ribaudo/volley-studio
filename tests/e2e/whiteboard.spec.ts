@@ -1,11 +1,37 @@
 import { test, expect } from '@playwright/test'
 
+const CLIENT_ERROR_PATTERN = /hydration failed|server rendered html didn't match|didn't match the client|cannot read properties of undefined \(reading 'call'\)/i
+
+function captureClientErrors(page: import('@playwright/test').Page) {
+  const messages: string[] = []
+
+  page.on('console', (message) => {
+    const text = message.text()
+    if (CLIENT_ERROR_PATTERN.test(text)) {
+      messages.push(`console:${text}`)
+    }
+  })
+
+  page.on('pageerror', (error) => {
+    const text = error.message
+    if (CLIENT_ERROR_PATTERN.test(text)) {
+      messages.push(`pageerror:${text}`)
+    }
+  })
+
+  return messages
+}
+
 test.describe('Whiteboard', () => {
   test('loads the main whiteboard page', async ({ page }) => {
+    const clientErrors = captureClientErrors(page)
     await page.goto('/')
+    await page.waitForLoadState('networkidle')
+    await page.waitForTimeout(250)
 
     // Page should have loaded without errors
     await expect(page).toHaveTitle(/Volley Studio/i)
+    expect(clientErrors, clientErrors.join('\n')).toEqual([])
 
     // Should have SVG elements on the page (court and/or icons)
     const svgCount = await page.locator('svg').count()

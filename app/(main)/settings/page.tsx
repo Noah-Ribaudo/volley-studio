@@ -11,21 +11,19 @@ import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { RALLY_PHASE_INFO, RallyPhase } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import ThemePicker from '@/components/ThemePicker'
 import SuggestionBox from '@/components/SuggestionBox'
 import { DragDropVerticalIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import dynamic from 'next/dynamic'
-
-const DevThemeSection = process.env.NODE_ENV === 'development'
-  ? dynamic(() => import('@/components/dev/DevThemeSection'), { ssr: false })
-  : () => null
-
-const DevLogoSection = process.env.NODE_ENV === 'development'
-  ? dynamic(() => import('@/components/dev/DevLogoSection'), { ssr: false })
-  : () => null
 import {
   DndContext,
   closestCenter,
@@ -55,8 +53,6 @@ export default function SettingsPage() {
     setShowPosition,
     setShowPlayer,
     setShowNumber,
-    showLibero,
-    setShowLibero,
     circleTokens,
     setCircleTokens,
     hideAwayTeam,
@@ -78,6 +74,8 @@ export default function SettingsPage() {
     setShowPrintFeature,
     sidebarProfileInFooter,
     setSidebarProfileInFooter,
+    courtSetupSurfaceVariant,
+    setCourtSetupSurfaceVariant,
   } = useAppStore()
   const viewer = useQuery(api.users.viewer, isAuthenticated ? {} : 'skip')
   const [isSigningOut, setIsSigningOut] = useState(false)
@@ -120,9 +118,6 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
       <div className="container mx-auto px-4 py-6 pb-32 max-w-2xl space-y-6">
-        {process.env.NODE_ENV === 'development' && <DevThemeSection />}
-        {process.env.NODE_ENV === 'development' && <DevLogoSection />}
-
         {/* Account */}
         <Card>
           <CardHeader>
@@ -218,13 +213,6 @@ export default function SettingsPage() {
               </>
             )}
             <SettingsToggle
-              id="show-libero"
-              label="Show Libero"
-              description="Display libero substitutions"
-              checked={showLibero}
-              onCheckedChange={setShowLibero}
-            />
-            <SettingsToggle
               id="circle-tokens"
               label="Circle Tokens"
               description="Use circular tokens instead of rounded rectangles"
@@ -289,6 +277,26 @@ export default function SettingsPage() {
                 checked={sidebarProfileInFooter}
                 onCheckedChange={setSidebarProfileInFooter}
               />
+              <div className="space-y-2">
+                <Label htmlFor="court-setup-surface" className="text-sm font-medium">
+                  Court Setup Surface
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Choose which desktop court setup UI to evaluate.
+                </p>
+                <Select
+                  value={courtSetupSurfaceVariant}
+                  onValueChange={(value) => setCourtSetupSurfaceVariant(value as 'popover' | 'panel')}
+                >
+                  <SelectTrigger id="court-setup-surface" className="h-9 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="popover">Popover</SelectItem>
+                    <SelectItem value="panel">Right Panel</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </CardContent>
           </Card>
         )}

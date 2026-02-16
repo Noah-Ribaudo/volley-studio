@@ -12,9 +12,10 @@ import { TeamCard, CreateTeamDialog, ImportTeamDialog, TeamSearchBar } from '@/c
 import { useAppStore } from '@/store/useAppStore'
 import type { Team } from '@/lib/types'
 import type { PresetSystem } from '@/lib/presetTypes'
-import Link from 'next/link'
 import { toast } from 'sonner'
 import { listLocalTeams, upsertLocalTeam } from '@/lib/localTeams'
+
+const SEARCH_MIN_TEAM_COUNT = 10
 
 // Generate a URL-friendly slug from team name
 function generateSlug(name: string): string {
@@ -35,11 +36,13 @@ export default function TeamsPage() {
   const [localTeams, setLocalTeams] = useState<Team[]>([])
 
   // Convex queries - automatically reactive
+  const allCloudTeams = useQuery(api.teams.search, { query: '' })
   const teams = useQuery(api.teams.search, { query: searchQuery })
   const createTeam = useMutation(api.teams.create)
   const cloneTeam = useMutation(api.teams.clone)
 
   const isLoading = teams === undefined
+  const isCloudTeamCountLoading = allCloudTeams === undefined
 
   const setCurrentTeam = useAppStore((state) => state.setCurrentTeam)
   const currentTeam = useAppStore((state) => state.currentTeam)
@@ -53,6 +56,17 @@ export default function TeamsPage() {
     }
     setLocalTeams(storedTeams)
   }, [currentTeam])
+
+  const cloudTeamCount = allCloudTeams?.length ?? 0
+  const totalTeamCount = cloudTeamCount + localTeams.length
+  const shouldShowSearch = totalTeamCount >= SEARCH_MIN_TEAM_COUNT
+  const hasAnyTeams = totalTeamCount > 0
+
+  useEffect(() => {
+    if (!shouldShowSearch && searchQuery) {
+      setSearchQuery('')
+    }
+  }, [searchQuery, shouldShowSearch])
 
   // Handle team creation (cloud)
   const handleCreateTeam = async (name: string, password?: string, presetSystem?: PresetSystem) => {
@@ -117,18 +131,59 @@ export default function TeamsPage() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-background to-muted/30">
       <div className="container mx-auto px-4 py-6 max-w-2xl space-y-4">
-        <Button asChild variant="ghost" size="sm">
-          <Link href="/">Back</Link>
-        </Button>
         <h1 className="text-xl font-bold">Teams</h1>
-        {/* Search */}
-        <TeamSearchBar
-          value={searchQuery}
-          onChange={setSearchQuery}
-        />
+        {/* Search (only after team list is large enough) */}
+        {shouldShowSearch && (
+          <TeamSearchBar
+            value={searchQuery}
+            onChange={setSearchQuery}
+          />
+        )}
+
+        {!shouldShowSearch && hasAnyTeams && !searchQuery && (
+          <p className="text-sm text-muted-foreground">
+            Search will appear automatically once you have more teams.
+          </p>
+        )}
+
+        {/* Empty first-run state */}
+        {!isLoading && !isCloudTeamCountLoading && !searchQuery && !hasAnyTeams && (
+          <Card className="border-dashed border-border/70 bg-card/60">
+            <CardContent className="pt-8 pb-8">
+              <div className="mx-auto max-w-md text-center space-y-3">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="28"
+                    height="28"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                  </svg>
+                </div>
+                <h2 className="text-lg font-semibold">No teams yet</h2>
+                <p className="text-sm text-muted-foreground">
+                  Create your first team or import one with a team code.
+                </p>
+              </div>
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                <CreateTeamDialog onCreateTeam={handleCreateTeam} onCreateLocalTeam={handleCreateLocalTeam} />
+                <ImportTeamDialog onImportTeam={handleImportTeam} isLoading={isImporting} />
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Create & Import Cards */}
-        {!searchQuery && (
+        {!searchQuery && hasAnyTeams && (
           <div className="grid gap-4 sm:grid-cols-2">
             {/* Create Team Card */}
             <Card className="bg-accent/50 border-accent/50">
@@ -251,7 +306,7 @@ export default function TeamsPage() {
         )}
 
         {/* Empty State */}
-        {!isLoading && teams && teams.length === 0 && searchQuery && (
+        {!isLoading && teams && teams.length === 0 && searchQuery && shouldShowSearch && (
           <Card>
             <CardContent className="pt-6">
               <div className="text-center py-8">

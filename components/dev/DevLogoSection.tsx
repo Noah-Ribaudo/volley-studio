@@ -4,11 +4,9 @@ import { useState, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import VolleyBall from '@/components/logo/VolleyBall'
 import VolleyWordmark from '@/components/logo/VolleyWordmark'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
 import { cn } from '@/lib/utils'
-import { ChevronDown } from 'lucide-react'
 
 // Dynamic imports for heavy shader components (no SSR)
 const MetallicPaint = dynamic(() => import('@/components/logo/MetallicPaint'), {
@@ -192,8 +190,6 @@ function Swatch({ color }: { color: string }) {
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 export default function DevLogoSection() {
-  const [isOpen, setIsOpen] = useState(false)
-
   const [variant, setVariant] = useState<LogoVariant>('ball')
   const [bgMode, setBgMode] = useState<BackgroundMode>('dark')
   const [bgCustom, setBgCustom] = useState('#1a1a1a')
@@ -258,7 +254,7 @@ export default function DevLogoSection() {
   const showCanvas = isCanvasEffect(effect)
 
   return (
-    <Card className="border-dashed border-orange-500/30 bg-orange-500/[0.02]">
+    <div className="space-y-6 rounded-xl border border-border bg-background/50 p-4 sm:p-6">
       <SVGFilters chromeIntensity={chromeIntensity} chromeSurface={chromeSurface} chromeFocus={chromeFocus} />
 
       {/* Gradient def */}
@@ -284,28 +280,7 @@ export default function DevLogoSection() {
         </defs>
       </svg>
 
-      <CardHeader
-        className="cursor-pointer select-none"
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <ChevronDown
-              className={cn(
-                'w-4 h-4 text-muted-foreground transition-transform duration-200',
-                !isOpen && '-rotate-90'
-              )}
-            />
-            <div>
-              <CardTitle className="text-base">Logo Lab</CardTitle>
-              <CardDescription>Dev-only — test logo variants, fills, and effects</CardDescription>
-            </div>
-          </div>
-        </div>
-      </CardHeader>
-
-      {isOpen && (
-        <CardContent className="space-y-6">
+      <div className="space-y-6">
           {/* ─── Preview ─────────────────────────────────────── */}
           <div className="rounded-xl overflow-hidden border border-border">
             <div className="flex items-center justify-center p-8 min-h-[250px] transition-colors duration-300" style={bgStyle}>
@@ -560,8 +535,7 @@ export default function DevLogoSection() {
               </div>
             )}
           </div>
-        </CardContent>
-      )}
-    </Card>
+      </div>
+    </div>
   )
 }

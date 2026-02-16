@@ -3,8 +3,6 @@
 import { useDevThemeStore } from '@/store/useDevThemeStore'
 import { useDevThemeApplicator } from '@/hooks/useDevThemeApplicator'
 import { FONT_OPTIONS, DISPLAY_FONT_OPTIONS } from '@/lib/devThemeFonts'
-import { useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
 import {
@@ -14,7 +12,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import type { ComponentType, SVGProps } from 'react'
 
@@ -181,46 +178,22 @@ export default function DevThemeSection() {
     toast.success('Theme CSS copied to clipboard')
   }
 
-  const [isOpen, setIsOpen] = useState(false)
-
   return (
-    <Card className="border-dashed border-orange-500/30 bg-orange-500/[0.02]">
-      <CardHeader
-        className="cursor-pointer select-none"
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <ChevronDown
-              className={cn(
-                "w-4 h-4 text-muted-foreground transition-transform duration-200",
-                !isOpen && "-rotate-90"
-              )}
-            />
-            <div>
-              <CardTitle className="text-base">Theme Lab</CardTitle>
-              <CardDescription>Dev-only — live-test fonts, colors, and layout</CardDescription>
-            </div>
-          </div>
-          {isOpen && (
-            <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-              <button
-                onClick={resetAll}
-                className="text-xs px-3 py-1.5 rounded-md bg-muted hover:bg-muted/80 text-muted-foreground transition-colors"
-              >
-                Reset All
-              </button>
-              <button
-                onClick={handleCopyTheme}
-                className="text-xs px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
-              >
-                Copy Theme as CSS
-              </button>
-            </div>
-          )}
-        </div>
-      </CardHeader>
-      {isOpen && <CardContent className="space-y-8">
+    <div className="space-y-8 rounded-xl border border-border bg-background/50 p-4 sm:p-6">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <button
+          onClick={resetAll}
+          className="text-xs px-3 py-1.5 rounded-md bg-muted hover:bg-muted/80 text-muted-foreground transition-colors"
+        >
+          Reset All
+        </button>
+        <button
+          onClick={handleCopyTheme}
+          className="text-xs px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
+        >
+          Copy Theme as CSS
+        </button>
+      </div>
         {/* 1. Typography */}
         <section className="space-y-4">
           <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Typography</h3>
@@ -459,7 +432,6 @@ export default function DevThemeSection() {
             </button>
           </div>
         </section>
-      </CardContent>}
-    </Card>
+    </div>
   )
 }

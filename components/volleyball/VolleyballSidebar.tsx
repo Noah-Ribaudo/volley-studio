@@ -1,19 +1,21 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarSeparator,
 } from '@/components/ui/sidebar'
-import { Layout, Users, Timer, Settings } from 'lucide-react'
+import { Layout, Users, Timer, Settings, SlidersHorizontal, Palette, Paintbrush } from 'lucide-react'
 import VolleyBall from '@/components/logo/VolleyBall'
 import { SidebarUserMenu } from '@/components/auth'
 import { useAppStore } from '@/store/useAppStore'
@@ -41,9 +43,36 @@ const navItems = [
   },
 ]
 
+const developerNavItems = [
+  {
+    title: 'Theme Lab',
+    url: '/developer/theme-lab',
+    icon: Palette,
+  },
+  {
+    title: 'Logo Lab',
+    url: '/developer/logo-lab',
+    icon: Paintbrush,
+  },
+]
+
 export function VolleyballSidebar() {
   const pathname = usePathname()
+  const router = useRouter()
   const sidebarProfileInFooter = useAppStore((state) => state.sidebarProfileInFooter)
+  const showMotionDebugPanel = useAppStore((state) => state.showMotionDebugPanel)
+  const setShowMotionDebugPanel = useAppStore((state) => state.setShowMotionDebugPanel)
+  const showMotionDebugToggle = process.env.NODE_ENV === 'development'
+  const isOnWhiteboard = pathname === '/'
+
+  const handleMotionDebugClick = () => {
+    if (isOnWhiteboard) {
+      setShowMotionDebugPanel(!showMotionDebugPanel)
+      return
+    }
+    setShowMotionDebugPanel(true)
+    router.push('/')
+  }
 
   return (
     <Sidebar collapsible="icon">
@@ -87,6 +116,44 @@ export function VolleyballSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {showMotionDebugToggle && (
+          <>
+            <SidebarSeparator className="mx-2" />
+            <SidebarGroup>
+              <SidebarGroupLabel>Developer</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      type="button"
+                      isActive={showMotionDebugPanel && isOnWhiteboard}
+                      tooltip="Motion Debug"
+                      onClick={handleMotionDebugClick}
+                    >
+                      <SlidersHorizontal />
+                      <span>Motion Debug</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  {developerNavItems.map((item) => (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={pathname?.startsWith(item.url)}
+                        tooltip={item.title}
+                      >
+                        <Link href={item.url}>
+                          <item.icon />
+                          <span>{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </>
+        )}
       </SidebarContent>
 
       {sidebarProfileInFooter && (

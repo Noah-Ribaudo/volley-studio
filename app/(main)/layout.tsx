@@ -81,6 +81,9 @@ export default function VolleyballLayout({
   // Always reserve space for context bar to prevent layout jump
   // This keeps the layout stable when navigating between pages
   const paddingClass = '[padding-bottom:calc(6rem+env(safe-area-inset-bottom,0px))]'
+  const contentShellClass = isWhiteboardPage
+    ? 'mx-auto w-full max-w-[1200px] flex flex-col flex-1 min-h-0'
+    : 'w-full flex flex-col flex-1 min-h-0'
 
   return (
     <div className="h-dvh relative overflow-hidden bg-background">
@@ -149,7 +152,7 @@ export default function VolleyballLayout({
         <main
           className={`flex flex-col flex-1 min-h-0 md:pb-0 ${isWhiteboardPage ? 'overflow-hidden overscroll-none' : 'overflow-auto'} ${paddingClass}`}
         >
-          <div className="mx-auto w-full max-w-[1200px] flex flex-col flex-1 min-h-0">
+          <div className={contentShellClass}>
             {children}
           </div>
         </main>
