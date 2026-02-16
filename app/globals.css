@@ -30,13 +30,13 @@
   --c-surface-raised: oklch(97% 0.008 95); /* Elevated surfaces */
 
   /* Role colors - colorblind-optimized accents */
-  --c-setter: oklch(48% 0.22 300);      /* Purple - Setter */
-  --c-oh1: oklch(48% 0.22 250);         /* Blue - Outside Hitter 1 */
-  --c-oh2: oklch(56% 0.18 70);          /* Orange - Outside Hitter 2 */
-  --c-mb1: oklch(46% 0.2 150);          /* Green - Middle Blocker 1 */
-  --c-mb2: oklch(50% 0.18 188);         /* Teal - Middle Blocker 2 */
-  --c-opp: oklch(56% 0.18 350);         /* Pink - Opposite */
-  --c-libero: oklch(52% 0.18 96);       /* Yellow-green - Libero */
+  --c-setter: oklch(55% 0.22 300);      /* Purple - Setter */
+  --c-oh1: oklch(55% 0.22 250);         /* Blue - Outside Hitter 1 */
+  --c-oh2: oklch(55% 0.18 70);          /* Orange - Outside Hitter 2 */
+  --c-mb1: oklch(50% 0.2 150);          /* Green - Middle Blocker 1 */
+  --c-mb2: oklch(50% 0.16 188);         /* Teal - Middle Blocker 2 */
+  --c-opp: oklch(55% 0.18 350);         /* Pink - Opposite */
+  --c-libero: oklch(55% 0.18 96);       /* Yellow-green - Libero */
 
   /* Semantic colors */
   --c-destructive: oklch(55% 0.22 25);  /* Red for errors/destructive actions */

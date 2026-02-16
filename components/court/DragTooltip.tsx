@@ -5,16 +5,18 @@ interface DragTooltipProps {
   x: number // SVG coordinates
   y: number
   message: string
+  anchorRadius?: number
 }
 
-export function DragTooltip({ visible, x, y, message }: DragTooltipProps) {
+export function DragTooltip({ visible, x, y, message, anchorRadius = 0 }: DragTooltipProps) {
   if (!visible) return null
 
-  // Position tooltip above and to the right of the drag point
-  const tooltipX = x + 24
-  const tooltipY = y - 36
-  const width = 140
+  // Keep the hint above the interaction target (token/arrow), not on top of it.
+  const width = 176
   const height = 28
+  const gap = 12
+  const tooltipX = x - width / 2
+  const tooltipY = y - anchorRadius - height - gap
 
   return (
     <g

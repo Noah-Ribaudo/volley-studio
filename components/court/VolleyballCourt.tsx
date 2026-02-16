@@ -2370,12 +2370,20 @@ export function VolleyballCourt({
         {nextStepTooltipRole && !draggingArrowRole && (() => {
           const rolePos = displayPositions[nextStepTooltipRole]
           if (!rolePos) return null
+
+          const tooltipPlayer = getPlayerInfo(nextStepTooltipRole)
+          const hasAssignedPlayer = tooltipPlayer.name !== undefined || tooltipPlayer.number !== undefined
+          const isPositionOnlyMode = showPosition && (!showPlayer || !hasAssignedPlayer)
+          const baseTokenSize = isPositionOnlyMode ? 56 : 48
+          const tokenRadius = Math.max(baseTokenSize * tokenScale, 48) / 2
+
           const tooltipPos = toSvgCoords(rolePos)
           return (
             <DragTooltip
               visible={true}
               x={tooltipPos.x}
               y={tooltipPos.y}
+              anchorRadius={tokenRadius}
               message="Drag me to show next step"
             />
           )
