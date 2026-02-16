@@ -231,31 +231,33 @@ export function DesktopHeaderNav({
           {/* Divider */}
           <div className="w-px h-6 bg-border" />
 
-          {/* Play/Reset buttons */}
-          {isPreviewingMovement ? (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 gap-1.5"
-              onClick={() => setPreviewingMovement(false)}
-            >
-              <RotateCcw className="h-4 w-4" />
-              <span>Reset</span>
-            </Button>
-          ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 gap-1.5"
-              onClick={() => {
-                triggerPlayAnimation()
-                setPreviewingMovement(true)
-              }}
-            >
-              <Play className="h-4 w-4" />
-              <span>Play</span>
-            </Button>
-          )}
+          {/* Play/Reset button */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 w-24 gap-1.5"
+            onClick={() => {
+              if (isPreviewingMovement) {
+                setPreviewingMovement(false)
+                return
+              }
+
+              triggerPlayAnimation()
+              setPreviewingMovement(true)
+            }}
+          >
+            {isPreviewingMovement ? (
+              <>
+                <RotateCcw className="h-4 w-4" />
+                <span>Reset</span>
+              </>
+            ) : (
+              <>
+                <Play className="h-4 w-4" />
+                <span>Play</span>
+              </>
+            )}
+          </Button>
 
           {showMotionDebugToggle ? (
             <>
