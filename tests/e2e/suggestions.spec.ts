@@ -60,7 +60,7 @@ test.describe('Suggestion Box', () => {
     await expect(page.getByText('1000/1000')).toBeVisible()
   })
 
-  test('submitting shows success toast and clears textarea', async ({ page }) => {
+  test('submitting shows local success feedback and clears textarea', async ({ page }) => {
     // Intercept the Convex action call to avoid creating a real Linear issue
     // Set up route before navigation to ensure it's ready
     await page.route('**/api/**', async (route) => {
@@ -86,8 +86,13 @@ test.describe('Suggestion Box', () => {
     await textarea.fill('Test suggestion for e2e')
     await submitButton.click()
 
-    // Button should show sending state
+    // Button shows sending state first
     await expect(page.getByRole('button', { name: /sending/i })).toBeVisible()
+
+    // Then button swaps to success state and textarea resets
+    await expect(page.getByRole('button', { name: /^sent$/i })).toBeVisible()
+    await expect(textarea).toHaveValue('')
+    await expect(page.getByText(/sent\. thanks for the feedback\./i)).toBeVisible()
   })
 
   test('suggestion box also appears on settings page canonical URL', async ({ page }) => {
