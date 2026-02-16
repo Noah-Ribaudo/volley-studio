@@ -55,6 +55,8 @@ const ANIMATION_CONFIG = {
   separationStrength: 6,
   maxSeparation: 3,
 }
+const COURT_SETUP_POPOVER_WIDTH = 560
+const COURT_SETUP_VIEWPORT_MARGIN = 16
 
 // Helper to get server role from rotation
 function getServerRole(rotation: number, baseOrder: Role[]): Role {
@@ -245,7 +247,18 @@ function HomePageContent() {
   const [rosterSheetOpen, setRosterSheetOpen] = useState(false)
   const [courtSetupOpen, setCourtSetupOpen] = useState(false)
   const [courtSetupAnchorRect, setCourtSetupAnchorRect] = useState<DOMRect | null>(null)
+  const [viewportWidth, setViewportWidth] = useState(0)
   const [createTeamDialogOpen, setCreateTeamDialogOpen] = useState(false)
+
+  useEffect(() => {
+    const updateViewportWidth = () => {
+      setViewportWidth(window.innerWidth)
+    }
+
+    updateViewportWidth()
+    window.addEventListener('resize', updateViewportWidth)
+    return () => window.removeEventListener('resize', updateViewportWidth)
+  }, [])
 
   useEffect(() => {
     const openCourtSetup = (event: Event) => {
@@ -256,6 +269,38 @@ function HomePageContent() {
     window.addEventListener(OPEN_COURT_SETUP_EVENT, openCourtSetup)
     return () => window.removeEventListener(OPEN_COURT_SETUP_EVENT, openCourtSetup)
   }, [])
+
+  const desktopCourtSetupPopoverStyle = useMemo(() => {
+    if (!courtSetupAnchorRect) return undefined
+
+    const fallbackLeft = courtSetupAnchorRect.left
+    if (viewportWidth <= 0) {
+      return {
+        position: 'fixed' as const,
+        left: `${fallbackLeft}px`,
+        top: `${courtSetupAnchorRect.bottom + 8}px`,
+      }
+    }
+
+    const popoverWidth = Math.min(
+      COURT_SETUP_POPOVER_WIDTH,
+      Math.max(0, viewportWidth - COURT_SETUP_VIEWPORT_MARGIN * 2)
+    )
+    const maxLeft = Math.max(
+      COURT_SETUP_VIEWPORT_MARGIN,
+      viewportWidth - popoverWidth - COURT_SETUP_VIEWPORT_MARGIN
+    )
+    const clampedLeft = Math.min(
+      Math.max(courtSetupAnchorRect.left, COURT_SETUP_VIEWPORT_MARGIN),
+      maxLeft
+    )
+
+    return {
+      position: 'fixed' as const,
+      left: `${clampedLeft}px`,
+      top: `${courtSetupAnchorRect.bottom + 8}px`,
+    }
+  }, [courtSetupAnchorRect, viewportWidth])
 
   // Keyboard navigation for phases
   useEffect(() => {
@@ -974,13 +1019,7 @@ function HomePageContent() {
             sideOffset={8}
             className="w-[560px] max-w-[calc(100vw-2rem)]"
             onOpenAutoFocus={(event) => event.preventDefault()}
-            style={courtSetupAnchorRect
-              ? {
-                  position: 'fixed',
-                  left: `${courtSetupAnchorRect.left}px`,
-                  top: `${courtSetupAnchorRect.bottom + 8}px`,
-                }
-              : undefined}
+            style={desktopCourtSetupPopoverStyle}
           >
             <div className="mb-4 space-y-1.5">
               <h2 className="text-lg font-semibold leading-none tracking-tight">Court Setup</h2>
