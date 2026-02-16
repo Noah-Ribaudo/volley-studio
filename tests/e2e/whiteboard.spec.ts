@@ -52,4 +52,21 @@ test.describe('Whiteboard', () => {
     const circleCount = await court.locator('circle').count()
     expect(circleCount).toBeGreaterThanOrEqual(6)
   })
+
+  test('court setup button toggles open and close', async ({ page }) => {
+    await page.goto('/')
+    await page.waitForLoadState('networkidle')
+
+    const courtSetupButton = page.getByRole('button', { name: /^Court Setup$/i }).first()
+    const setupDescription = page.getByText('Choose team, lineup, and opponent visibility for the whiteboard.').first()
+
+    await expect(courtSetupButton).toBeVisible()
+    await expect(setupDescription).not.toBeVisible()
+
+    await courtSetupButton.click()
+    await expect(setupDescription).toBeVisible()
+
+    await courtSetupButton.click()
+    await expect(setupDescription).not.toBeVisible()
+  })
 })
