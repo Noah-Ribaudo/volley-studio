@@ -60,10 +60,68 @@ import { getWhiteboardPositions, getAutoArrows } from '@/lib/whiteboard'
 import { getVisibleOrderedRallyPhases } from '@/lib/rallyPhaseOrder'
 import type { LearningProgress, LearningPanelPosition } from '@/lib/learning/types'
 import type { ShaderId } from '@/lib/shaders'
+import { withLegacyAssignmentsFromActiveLineup } from '@/lib/lineups'
 
 // Internal storage uses normalized coordinates (0-1)
 // PositionCoordinates is now normalized, so this type alias is for clarity
 type NormalizedPositionCoordinates = PositionCoordinates
+
+export type ActiveContextMode = 'practice' | 'unsavedLocal' | 'savedCloud'
+
+export interface ActiveContext {
+  mode: ActiveContextMode
+  teamId?: string
+  lineupId?: string
+}
+
+function contextModeFromAccessMode(mode: 'none' | 'local' | 'full'): ActiveContextMode {
+  if (mode === 'full') return 'savedCloud'
+  if (mode === 'local') return 'unsavedLocal'
+  return 'practice'
+}
+
+function accessModeFromContextMode(mode: ActiveContextMode): 'none' | 'local' | 'full' {
+  if (mode === 'savedCloud') return 'full'
+  if (mode === 'unsavedLocal') return 'local'
+  return 'none'
+}
+
+function buildActiveContext(
+  mode: ActiveContextMode,
+  teamId?: string,
+  lineupId?: string
+): ActiveContext {
+  if (mode === 'practice') {
+    return { mode: 'practice' }
+  }
+  const nextContext: ActiveContext = { mode }
+  if (teamId) nextContext.teamId = teamId
+  if (lineupId) nextContext.lineupId = lineupId
+  return nextContext
+}
+
+function deriveActiveContextFromTeam(team: Team | null): ActiveContext {
+  if (!team) return { mode: 'practice' }
+  const teamId = team._id ?? team.id
+  const lineupId = team.active_lineup_id ?? team.lineups?.[0]?.id
+  const isUnsavedLocal = typeof teamId === 'string' && teamId.startsWith('local-')
+  return buildActiveContext(isUnsavedLocal ? 'unsavedLocal' : 'savedCloud', teamId, lineupId ?? undefined)
+}
+
+function deriveActiveContextFromLegacyState(
+  team: Team | null,
+  accessMode: 'none' | 'local' | 'full'
+): ActiveContext {
+  const fromTeam = deriveActiveContextFromTeam(team)
+  if (fromTeam.mode !== 'practice') {
+    return fromTeam
+  }
+  return buildActiveContext(contextModeFromAccessMode(accessMode))
+}
+
+function isActiveContextMode(value: unknown): value is ActiveContextMode {
+  return value === 'practice' || value === 'unsavedLocal' || value === 'savedCloud'
+}
 
 // Normalize/denormalize functions for backward compatibility
 // Handles 0-100 percentage values from older versions
@@ -159,6 +217,7 @@ interface AppState {
   attackBallPositions: Record<string, Position>
 
   // Team mode
+  activeContext: ActiveContext
   currentTeam: Team | null
   customLayouts: CustomLayout[]
   accessMode: 'none' | 'local' | 'full'
@@ -480,6 +539,7 @@ export const useAppStore = create<AppState>()(
       localTagFlags: {},
       legalityViolations: {},
       attackBallPositions: {},
+      activeContext: { mode: 'practice' },
       currentTeam: null,
       customLayouts: [],
       accessMode: 'none',
@@ -764,12 +824,17 @@ export const useAppStore = create<AppState>()(
         }
       }),
 
-      setCurrentTeam: (team) => set({
-        currentTeam: team,
-        // Track when we loaded this team for conflict detection
-        teamLoadedTimestamp: team?.updated_at || null,
-        // Clear any existing team conflict when switching teams
-        teamConflict: null,
+      setCurrentTeam: (team) => set(() => {
+        const activeContext = deriveActiveContextFromTeam(team)
+        return {
+          currentTeam: team,
+          activeContext,
+          accessMode: accessModeFromContextMode(activeContext.mode),
+          // Track when we loaded this team for conflict detection
+          teamLoadedTimestamp: team?.updated_at || null,
+          // Clear any existing team conflict when switching teams
+          teamConflict: null,
+        }
       }),
 
       assignPlayerToRole: (role, playerId) => set((state) => {
@@ -794,19 +859,11 @@ export const useAppStore = create<AppState>()(
           }
         })
 
-        const nextTeamAssignments = { ...state.currentTeam.position_assignments }
-        if (playerId) {
-          nextTeamAssignments[role] = playerId
-        } else {
-          delete nextTeamAssignments[role]
-        }
-
         return {
-          currentTeam: {
+          currentTeam: withLegacyAssignmentsFromActiveLineup({
             ...state.currentTeam,
-            position_assignments: nextTeamAssignments,
             lineups: nextLineups,
-          },
+          }),
         }
       }),
 
@@ -869,7 +926,19 @@ export const useAppStore = create<AppState>()(
         }
       }),
 
-      setAccessMode: (mode) => set({ accessMode: mode }),
+      setAccessMode: (mode) => set((state) => {
+        const nextMode = contextModeFromAccessMode(mode)
+        const teamContext = deriveActiveContextFromTeam(state.currentTeam)
+
+        return {
+          accessMode: mode,
+          activeContext: buildActiveContext(
+            nextMode,
+            teamContext.teamId,
+            teamContext.lineupId
+          ),
+        }
+      }),
 
       setTeamPasswordProvided: (val) => set({ teamPasswordProvided: val }),
 
@@ -1107,6 +1176,7 @@ export const useAppStore = create<AppState>()(
           arrowCurves: state.arrowCurves,
           localStatusFlags: state.localStatusFlags,
           localTagFlags: state.localTagFlags,
+          activeContext: state.activeContext,
           currentTeam: state.currentTeam,
           accessMode: state.accessMode,
           teamPasswordProvided: state.teamPasswordProvided,
@@ -1167,6 +1237,38 @@ export const useAppStore = create<AppState>()(
         // Default phaseOrder if not set
         if (state && !state.phaseOrder) {
           state.phaseOrder = [...DEFAULT_PHASE_ORDER]
+        }
+        // Active context migration + normalization
+        if (state) {
+          const legacyAccessMode: 'none' | 'local' | 'full' =
+            state.accessMode === 'full' || state.accessMode === 'local' || state.accessMode === 'none'
+              ? state.accessMode
+              : 'none'
+          const stateAny = state as unknown as {
+            activeContext?: {
+              mode?: unknown
+              teamId?: unknown
+              lineupId?: unknown
+            }
+          }
+          const rawActiveContext = stateAny.activeContext
+
+          if (state.currentTeam) {
+            state.activeContext = deriveActiveContextFromTeam(state.currentTeam)
+          } else if (rawActiveContext && typeof rawActiveContext === 'object' && isActiveContextMode(rawActiveContext.mode)) {
+            const teamId = typeof rawActiveContext.teamId === 'string' && rawActiveContext.teamId.trim()
+              ? rawActiveContext.teamId
+              : undefined
+            const lineupId = typeof rawActiveContext.lineupId === 'string' && rawActiveContext.lineupId.trim()
+              ? rawActiveContext.lineupId
+              : undefined
+            state.activeContext = buildActiveContext(rawActiveContext.mode, teamId, lineupId)
+          } else {
+            state.activeContext = deriveActiveContextFromLegacyState(state.currentTeam ?? null, legacyAccessMode)
+          }
+
+          // Keep legacy accessMode synchronized for compatibility.
+          state.accessMode = accessModeFromContextMode(state.activeContext.mode)
         }
         // Normalize legacy arrows
         if (state && state.localArrows) {

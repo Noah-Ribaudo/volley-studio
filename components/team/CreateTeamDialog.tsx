@@ -71,15 +71,15 @@ function SignInPrompt({ onContinueWithoutAccount }: { onContinueWithoutAccount: 
   return (
     <div className="space-y-4">
       <DialogHeader>
-        <DialogTitle>Quick sign-in to save your team and settings</DialogTitle>
+        <DialogTitle>Quick sign-in to keep your teams as Saved (Cloud)</DialogTitle>
         <DialogDescription className="space-y-2 pt-2">
           <span className="block">
-            This is <strong>only</strong> so your teams and settings persist across devices.
+            This is <strong>only</strong> so your teams and settings stay in Saved (Cloud) across devices.
             I don't want your data for anything else — no tracking, no marketing, no selling to anyone.
           </span>
           <span className="block text-xs">
             Don't want to sign in? That's fine — you can still use the whiteboard and all
-            the visualization tools without an account.
+            the visualization tools in Unsaved (Local) mode.
           </span>
         </DialogDescription>
       </DialogHeader>
@@ -182,10 +182,10 @@ function SignInPrompt({ onContinueWithoutAccount }: { onContinueWithoutAccount: 
           </div>
         </div>
         <Button type="button" variant="outline" onClick={onContinueWithoutAccount} className="w-full">
-          Continue without an account
+          Continue in Unsaved (Local)
         </Button>
         <p className="text-xs text-center text-muted-foreground">
-          Without sign-in, teams and settings stay on this device only
+          Without sign-in, teams and settings stay Unsaved (Local) on this device
         </p>
         <Link href="/privacy" className="text-xs text-center text-muted-foreground hover:text-foreground">
           Privacy policy (it's short, I promise)
@@ -242,7 +242,7 @@ function CreateTeamForm({
         <DialogTitle>Create New Team</DialogTitle>
         <DialogDescription>
           {localOnly
-            ? 'This team will be saved on this device only. Sign in later to sync it across devices.'
+            ? 'This team will start as Unsaved (Local). Sign in later to move it to Saved (Cloud).'
             : 'Enter a name for your team. You can add players and customize rotations after creating the team.'}
         </DialogDescription>
       </DialogHeader>

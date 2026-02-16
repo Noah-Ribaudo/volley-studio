@@ -1,10 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAction } from 'convex/react'
 import { api } from '@/convex/_generated/api'
-import Link from 'next/link'
-import { useConvexAuth } from 'convex/react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
@@ -12,19 +10,39 @@ import { toast } from 'sonner'
 
 const MAX_LENGTH = 1000
 const SHOW_COUNT_AT = 500
+const SUGGESTION_CLIENT_ID_KEY = 'volley-suggestion-client-id'
+
+function getOrCreateSuggestionClientId(): string | undefined {
+  if (typeof window === 'undefined') return undefined
+
+  const existingId = window.localStorage.getItem(SUGGESTION_CLIENT_ID_KEY)
+  if (existingId) return existingId
+
+  const generatedId =
+    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`
+
+  window.localStorage.setItem(SUGGESTION_CLIENT_ID_KEY, generatedId)
+  return generatedId
+}
 
 export default function SuggestionBox() {
   const [text, setText] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const { isAuthenticated } = useConvexAuth()
+  const [clientId, setClientId] = useState<string | undefined>(undefined)
   const submitSuggestion = useAction(api.suggestions.submitSuggestion)
 
+  useEffect(() => {
+    setClientId(getOrCreateSuggestionClientId())
+  }, [])
+
   async function handleSubmit() {
-    if (!text.trim() || submitting || !isAuthenticated) return
+    if (!text.trim() || submitting) return
 
     setSubmitting(true)
     try {
-      await submitSuggestion({ text: text.trim() })
+      await submitSuggestion({ text: text.trim(), clientId })
       setText('')
       toast.success("Sent — thanks for the feedback!")
     } catch (error) {
@@ -44,14 +62,9 @@ export default function SuggestionBox() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        {!isAuthenticated && (
-          <p className="text-sm text-muted-foreground">
-            <Link href="/sign-in" className="underline underline-offset-2 hover:text-foreground">
-              Sign in
-            </Link>{' '}
-            to submit suggestions.
-          </p>
-        )}
+        <p className="text-sm text-muted-foreground">
+          No sign-in required. If you&apos;re already signed in, your account info is included automatically.
+        </p>
         <Textarea
           placeholder="I wish this app could..."
           value={text}
@@ -61,7 +74,7 @@ export default function SuggestionBox() {
             }
           }}
           rows={3}
-          disabled={submitting || !isAuthenticated}
+          disabled={submitting}
         />
         <div className="flex items-center justify-between">
           {text.length >= SHOW_COUNT_AT ? (
@@ -74,7 +87,7 @@ export default function SuggestionBox() {
           <Button
             size="sm"
             onClick={handleSubmit}
-            disabled={!text.trim() || submitting || !isAuthenticated}
+            disabled={!text.trim() || submitting}
           >
             {submitting ? "Sending..." : "Send it"}
           </Button>
