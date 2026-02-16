@@ -1,14 +1,21 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useMutation, useQuery } from 'convex/react'
+import type { Id } from '@/convex/_generated/dataModel'
+import { api } from '@/convex/_generated/api'
 import { VolleyballCourt } from '@/components/court'
 import {
+  MinimalTeamCard,
   MinimalAssignmentsCard,
   MinimalHeaderStrip,
   MinimalPhaseRotationCard,
   MinimalSettingsCard,
   MinimalTokenLabelsCard,
 } from '@/components/minimal'
+import { RosterManagementCard } from '@/components/roster'
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import {
   useAppStore,
   getCurrentArrows,
@@ -22,6 +29,8 @@ import {
   ROLES,
   RALLY_PHASES,
   isRallyPhase,
+  type Team,
+  type CustomLayout,
   type Role,
   type Position,
   type PositionCoordinates,
@@ -34,6 +43,8 @@ import { getPhaseInfo } from '@/lib/phaseIcons'
 import { createRotationPhaseKey, getBackRowMiddle, getRoleZone } from '@/lib/rotations'
 import { validateRotationLegality } from '@/lib/model/legality'
 import { cn } from '@/lib/utils'
+import { getLocalTeamById, listLocalTeams, upsertLocalTeam } from '@/lib/localTeams'
+import { toast } from 'sonner'
 
 const ANIMATION_MODE = 'raf' as const
 const TOKEN_SCALES = { desktop: 1.5, mobile: 1.5 }
@@ -56,7 +67,7 @@ function getServerRole(rotation: number, baseOrder: Role[]): Role {
   return 'S'
 }
 
-export default function MinimalModePage() {
+function MinimalModeContent() {
   useWhiteboardSync()
 
   const {
@@ -111,10 +122,32 @@ export default function MinimalModePage() {
     setMinimalDenseLayout,
     setAttackBallPosition,
     clearAttackBallPosition,
+    setCurrentTeam,
+    setCustomLayouts,
+    populateFromLayouts,
+    setAccessMode,
+    setTeamPasswordProvided,
     isHydrated: isAppHydrated,
   } = useAppStore()
   const isThemeHydrated = useThemeStore((state) => state.isHydrated)
   const isUiHydrated = isAppHydrated && isThemeHydrated
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const teamFromUrl = searchParams.get('team')?.trim() || ''
+  const myTeams = useQuery(api.teams.listMyTeams, {})
+  const updateLineups = useMutation(api.teams.updateLineups)
+  const selectedTeam = useQuery(
+    api.teams.getBySlugOrId,
+    teamFromUrl ? { identifier: teamFromUrl } : 'skip'
+  )
+  const selectedLayouts = useQuery(
+    api.layouts.getByTeam,
+    selectedTeam?._id ? { teamId: selectedTeam._id } : 'skip'
+  )
+  const [localTeams, setLocalTeams] = useState<Team[]>([])
+  const [isSavingLineup, setIsSavingLineup] = useState(false)
+  const [rosterSheetOpen, setRosterSheetOpen] = useState(false)
+  const loadedTeamFromUrlRef = useRef<string | null>(null)
 
   useEffect(() => {
     setUiMode('minimal')
@@ -122,6 +155,73 @@ export default function MinimalModePage() {
       setUiMode('normal')
     }
   }, [setUiMode])
+
+  useEffect(() => {
+    if (!teamFromUrl || !selectedTeam || !selectedLayouts) return
+    if (loadedTeamFromUrlRef.current === selectedTeam._id) return
+
+    const mappedTeam: Team = {
+      id: selectedTeam._id,
+      _id: selectedTeam._id,
+      name: selectedTeam.name,
+      slug: selectedTeam.slug,
+      hasPassword: selectedTeam.hasPassword,
+      archived: selectedTeam.archived,
+      roster: selectedTeam.roster.map((player) => ({
+        id: player.id,
+        name: player.name,
+        number: player.number ?? 0,
+      })),
+      lineups: (selectedTeam.lineups || []).map((lineup) => ({
+        ...lineup,
+        position_source: lineup.position_source as 'custom' | 'full-5-1' | '5-1-libero' | '6-2' | undefined,
+        starting_rotation: (lineup.starting_rotation as 1 | 2 | 3 | 4 | 5 | 6 | undefined) ?? 1,
+      })),
+      active_lineup_id: selectedTeam.activeLineupId ?? null,
+      position_assignments: selectedTeam.positionAssignments || {},
+      created_at: new Date(selectedTeam._creationTime).toISOString(),
+      updated_at: new Date(selectedTeam._creationTime).toISOString(),
+    }
+
+    const mappedLayouts: CustomLayout[] = selectedLayouts.map((layout) => ({
+      id: layout._id,
+      _id: layout._id,
+      team_id: layout.teamId,
+      teamId: layout.teamId,
+      rotation: layout.rotation as 1 | 2 | 3 | 4 | 5 | 6,
+      phase: layout.phase as RallyPhase,
+      positions: layout.positions as unknown as PositionCoordinates,
+      flags: layout.flags ?? null,
+      created_at: new Date(layout._creationTime).toISOString(),
+      updated_at: new Date(layout._creationTime).toISOString(),
+    }))
+
+    setCurrentTeam(mappedTeam)
+    setCustomLayouts(mappedLayouts)
+    populateFromLayouts(mappedLayouts)
+    setAccessMode('full')
+    setTeamPasswordProvided(true)
+    loadedTeamFromUrlRef.current = selectedTeam._id
+  }, [
+    teamFromUrl,
+    selectedTeam,
+    selectedLayouts,
+    setCurrentTeam,
+    setCustomLayouts,
+    populateFromLayouts,
+    setAccessMode,
+    setTeamPasswordProvided,
+  ])
+
+  useEffect(() => {
+    const refreshLocalTeams = () => {
+      setLocalTeams(listLocalTeams())
+    }
+
+    refreshLocalTeams()
+    window.addEventListener('storage', refreshLocalTeams)
+    return () => window.removeEventListener('storage', refreshLocalTeams)
+  }, [])
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -247,10 +347,156 @@ export default function MinimalModePage() {
     ? [currentPhase, ...orderedVisiblePhases]
     : orderedVisiblePhases
 
+  const cleanAssignments = useCallback((source: Record<string, string | undefined> | undefined) => {
+    const cleaned: Record<string, string> = {}
+    if (!source) return cleaned
+    for (const [role, playerId] of Object.entries(source)) {
+      if (typeof playerId === 'string' && playerId.trim() !== '') {
+        cleaned[role] = playerId
+      }
+    }
+    return cleaned
+  }, [])
+
+  const persistLineupsForTeam = useCallback(async (nextTeam: Team) => {
+    const normalizedLineups = (nextTeam.lineups || []).map((lineup) => ({
+      id: lineup.id,
+      name: lineup.name,
+      position_assignments: cleanAssignments(lineup.position_assignments),
+      position_source: lineup.position_source,
+      starting_rotation: lineup.starting_rotation ?? 1,
+      created_at: lineup.created_at,
+    }))
+    const normalizedActiveLineupId = nextTeam.active_lineup_id &&
+      normalizedLineups.some((lineup) => lineup.id === nextTeam.active_lineup_id)
+      ? nextTeam.active_lineup_id
+      : normalizedLineups[0]?.id
+    const activeLineup = normalizedLineups.find((lineup) => lineup.id === normalizedActiveLineupId)
+    const nextAssignments = cleanAssignments(activeLineup?.position_assignments || nextTeam.position_assignments)
+
+    if (nextTeam._id) {
+      await updateLineups({
+        id: nextTeam._id as Id<'teams'>,
+        lineups: normalizedLineups,
+        activeLineupId: normalizedActiveLineupId || undefined,
+        positionAssignments: nextAssignments,
+      })
+      return
+    }
+
+    upsertLocalTeam({
+      ...nextTeam,
+      lineups: normalizedLineups,
+      active_lineup_id: normalizedActiveLineupId ?? null,
+      position_assignments: nextAssignments,
+    })
+    setLocalTeams(listLocalTeams())
+  }, [cleanAssignments, updateLineups])
+
   const activeLineup = currentTeam ? getActiveLineup(currentTeam) : null
   const assignments = currentTeam ? getActiveAssignments(currentTeam) : {}
   const activePositionSource = getActiveLineupPositionSource(currentTeam)
   const isEditingAllowed = activePositionSource === 'custom'
+  const teamSelectValue = !currentTeam
+    ? '__none__'
+    : currentTeam._id
+      ? `cloud:${currentTeam._id}`
+      : `local:${currentTeam.id}`
+  const lineupOptions = currentTeam
+    ? (currentTeam.lineups || []).map((lineup) => ({ value: lineup.id, label: lineup.name }))
+    : []
+  const lineupSelectValue = activeLineup?.id || '__none__'
+  const teamOptions = [
+    { value: '__none__', label: 'Practice (No Team)', group: 'actions' as const },
+    ...(myTeams || []).map((team) => ({
+      value: `cloud:${team._id}`,
+      label: team.name,
+      group: 'cloud' as const,
+    })),
+    ...localTeams.map((team) => ({
+      value: `local:${team.id}`,
+      label: team.name,
+      group: 'local' as const,
+    })),
+  ]
+  const manageHref = currentTeam
+    ? `/teams/${encodeURIComponent(currentTeam._id || currentTeam.id)}`
+    : '/teams'
+
+  const handleTeamSelect = useCallback((value: string) => {
+    if (value === '__none__') {
+      loadedTeamFromUrlRef.current = null
+      setCurrentTeam(null)
+      setCustomLayouts([])
+      setAccessMode('none')
+      setTeamPasswordProvided(false)
+      router.push('/minimal')
+      return
+    }
+
+    if (value.startsWith('cloud:')) {
+      const selectedId = value.slice('cloud:'.length)
+      if (!selectedId) return
+      router.push(`/minimal?team=${encodeURIComponent(selectedId)}`)
+      return
+    }
+
+    if (value.startsWith('local:')) {
+      const localTeamId = value.slice('local:'.length)
+      const localTeam = getLocalTeamById(localTeamId)
+      if (!localTeam) return
+
+      loadedTeamFromUrlRef.current = null
+      setCurrentTeam(localTeam)
+      setCustomLayouts([])
+      setAccessMode('local')
+      setTeamPasswordProvided(true)
+      router.push('/minimal')
+    }
+  }, [router, setAccessMode, setCurrentTeam, setCustomLayouts, setTeamPasswordProvided])
+
+  const handleLineupSelect = useCallback(async (value: string) => {
+    if (!currentTeam || value === '__none__') {
+      return
+    }
+
+    const selectedLineup = currentTeam.lineups.find((lineup) => lineup.id === value)
+    if (!selectedLineup || selectedLineup.id === currentTeam.active_lineup_id) {
+      return
+    }
+
+    const nextTeam: Team = {
+      ...currentTeam,
+      active_lineup_id: selectedLineup.id,
+      position_assignments: {
+        ...selectedLineup.position_assignments,
+      },
+    }
+
+    setCurrentTeam(nextTeam)
+    setIsSavingLineup(true)
+    try {
+      await persistLineupsForTeam(nextTeam)
+    } catch (error) {
+      setCurrentTeam(currentTeam)
+      const message = error instanceof Error ? error.message : 'Could not switch lineup'
+      toast.error(message)
+    } finally {
+      setIsSavingLineup(false)
+    }
+  }, [currentTeam, persistLineupsForTeam, setCurrentTeam])
+
+  const handleAssignPlayer = useCallback(async (role: Role, playerId: string | undefined) => {
+    assignPlayerToRole(role, playerId)
+    const nextTeam = useAppStore.getState().currentTeam
+    if (!nextTeam) return
+    try {
+      await persistLineupsForTeam(nextTeam)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Could not save assignments'
+      toast.error(message)
+    }
+  }, [assignPlayerToRole, persistLineupsForTeam])
 
   const saveLabel: 'local' | 'synced' | 'pending' | 'saving' = !currentTeam
     ? 'local'
@@ -375,6 +621,20 @@ export default function MinimalModePage() {
 
           <aside className="min-h-0 overflow-auto">
             <div className={cn('grid gap-3 sm:grid-cols-2 lg:grid-cols-1', minimalDenseLayout && 'gap-2')}>
+              <MinimalTeamCard
+                teamValue={teamSelectValue}
+                teamOptions={teamOptions}
+                lineupValue={lineupSelectValue}
+                lineupOptions={lineupOptions}
+                hasTeam={Boolean(currentTeam)}
+                isLineupSaving={isSavingLineup}
+                manageHref={manageHref}
+                onTeamChange={handleTeamSelect}
+                onLineupChange={(value) => {
+                  void handleLineupSelect(value)
+                }}
+                onManageRoster={() => setRosterSheetOpen(true)}
+              />
               <MinimalPhaseRotationCard
                 currentRotation={currentRotation}
                 currentPhase={currentPhase}
@@ -405,7 +665,9 @@ export default function MinimalModePage() {
                 lineupName={activeLineup?.name || 'Current lineup'}
                 roster={currentTeam?.roster || []}
                 assignments={assignments}
-                onAssignPlayer={assignPlayerToRole}
+                onAssignPlayer={(role, playerId) => {
+                  void handleAssignPlayer(role, playerId)
+                }}
               />
               <MinimalSettingsCard
                 contrast={minimalContrast}
@@ -419,7 +681,27 @@ export default function MinimalModePage() {
             </div>
           </aside>
         </div>
+
+        <Sheet open={rosterSheetOpen} onOpenChange={setRosterSheetOpen}>
+          <SheetContent side="right" className="w-full max-w-[400px] overflow-y-auto">
+            <SheetHeader className="pb-4">
+              <SheetTitle>Roster</SheetTitle>
+              <SheetDescription>
+                Edit roster and assignments without leaving Minimal Mode.
+              </SheetDescription>
+            </SheetHeader>
+            <RosterManagementCard />
+          </SheetContent>
+        </Sheet>
       </div>
     </div>
+  )
+}
+
+export default function MinimalModePage() {
+  return (
+    <Suspense fallback={<div className="h-dvh bg-background" />}>
+      <MinimalModeContent />
+    </Suspense>
   )
 }
