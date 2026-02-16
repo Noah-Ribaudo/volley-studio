@@ -150,6 +150,7 @@ function HomePageContent() {
   )
   const [localTeams, setLocalTeams] = useState<Team[]>([])
   const [isSavingLineup, setIsSavingLineup] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
   const loadedTeamFromUrlRef = useRef<string | null>(null)
   const previousPhaseRef = useRef(currentPhase)
   const shouldShowFirstDragHint = useHintStore((state) => state.shouldShowFirstDragHint)
@@ -160,6 +161,10 @@ function HomePageContent() {
 
   // Mobile detection
   const isMobile = useIsMobile()
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   // Load team and layouts when opened from /?team=<id or slug>
   useEffect(() => {
@@ -727,8 +732,9 @@ function HomePageContent() {
     }
   }, [currentLineup, currentTeam, persistLineupsForTeam, router, setCurrentTeam])
 
-  const showFirstDragHint = shouldShowFirstDragHint()
-  const showPhaseNavigationHint = !showFirstDragHint && shouldShowPhaseNavigationHint()
+  const canShowOnboardingHint = isMounted && isUiHydrated
+  const showFirstDragHint = canShowOnboardingHint ? shouldShowFirstDragHint() : false
+  const showPhaseNavigationHint = canShowOnboardingHint && !showFirstDragHint && shouldShowPhaseNavigationHint()
   const enabledDisplayCount = Number(showPosition) + Number(showPlayer) + Number(showNumber)
   const onboardingHintMessage = showFirstDragHint
     ? 'Drag a player to reposition them'
@@ -1007,7 +1013,7 @@ function HomePageContent() {
 	              />
 
           <WhiteboardOnboardingHint
-            show={Boolean(onboardingHintMessage)}
+            show={canShowOnboardingHint && Boolean(onboardingHintMessage)}
             message={onboardingHintMessage || ''}
           />
           </div>
