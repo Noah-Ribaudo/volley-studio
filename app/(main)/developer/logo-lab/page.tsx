@@ -10,7 +10,7 @@ export default function DeveloperLogoLabPage() {
     <main className="min-h-screen bg-gradient-to-b from-background to-muted/30">
       <div className="container mx-auto px-4 py-6 pb-32 max-w-5xl space-y-4">
         <h1 className="text-xl font-semibold">Logo Lab</h1>
-        <DevLogoSection defaultOpen />
+        <DevLogoSection />
       </div>
     </main>
   )

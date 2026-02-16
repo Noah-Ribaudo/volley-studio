@@ -10,7 +10,7 @@ export default function DeveloperThemeLabPage() {
     <main className="min-h-screen bg-gradient-to-b from-background to-muted/30">
       <div className="container mx-auto px-4 py-6 pb-32 max-w-5xl space-y-4">
         <h1 className="text-xl font-semibold">Theme Lab</h1>
-        <DevThemeSection defaultOpen />
+        <DevThemeSection />
       </div>
     </main>
   )
