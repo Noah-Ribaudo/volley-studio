@@ -312,10 +312,16 @@ export function VolleyballCourt({
 
   // Sync animatedPositions with positions prop when positions change
   useEffect(() => {
+    // During play/preview, animated positions are driven by the play engine.
+    // Avoid syncing from baseline props here, or tokens will flash back and forth.
+    if (isPreviewingMovement || isBezierAnimating) {
+      return
+    }
+
     const complete = ensureCompletePositions(positions)
     // Only update if positions actually changed to avoid unnecessary re-renders
     const hasChanged = activeRoles.some(role => {
-      const current = animatedPositions[role]
+      const current = currentPositionsRef.current[role]
       const newPos = complete[role]
       // Handle undefined positions (inactive players in simulation mode)
       if (!newPos && !current) return false // Both undefined, no change
@@ -325,8 +331,9 @@ export function VolleyballCourt({
     if (hasChanged) {
       setAnimatedPositions(complete)
       currentPositionsRef.current = complete
+      animatedPositionsRef.current = complete
     }
-  }, [positions, showLibero, activeRoles, animatedPositions, ensureCompletePositions]) // Update when positions, showLibero, or activeRoles change
+  }, [positions, showLibero, activeRoles, ensureCompletePositions, isPreviewingMovement, isBezierAnimating]) // Update when base positions or active role set changes
 
   useEffect(() => {
     animatedPositionsRef.current = animatedPositions
