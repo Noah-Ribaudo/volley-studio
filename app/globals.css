@@ -22,12 +22,12 @@
      ------------------------------------------------------------------------- */
 
   /* Base colors */
-  --c-bg: oklch(96.5% 0.018 95);    /* Soft cream background */
+  --c-bg: oklch(95% 0.015 95);      /* Bone-white background */
   --c-fg: oklch(15% 0 0);           /* Near-black text */
   --c-muted: oklch(50% 0.01 95);    /* Secondary text */
-  --c-border: oklch(89% 0.01 95);   /* Subtle borders */
-  --c-surface: oklch(98% 0.012 95); /* Cards, panels (slightly lighter than bg) */
-  --c-surface-raised: oklch(99% 0.008 95); /* Elevated surfaces */
+  --c-border: oklch(87% 0.009 95);  /* Subtle borders */
+  --c-surface: oklch(96% 0.011 95); /* Cards, panels (slightly lighter than bg) */
+  --c-surface-raised: oklch(97% 0.008 95); /* Elevated surfaces */
 
   /* Role colors - colorblind-optimized accents */
   --c-setter: oklch(55% 0.22 300);      /* Purple - Setter */
@@ -54,11 +54,11 @@
   --c-accent: oklch(70% 0.18 55);       /* Orange accent */
   --primary: var(--c-accent);            /* Using orange as primary */
   --primary-foreground: oklch(98% 0 0);
-  --secondary: oklch(94% 0.012 95);
+  --secondary: oklch(92% 0.011 95);
   --secondary-foreground: var(--c-fg);
-  --muted: oklch(94% 0.012 95);
+  --muted: oklch(92% 0.011 95);
   --muted-foreground: var(--c-muted);
-  --accent: oklch(94% 0.012 95);
+  --accent: oklch(92% 0.011 95);
   --accent-foreground: var(--c-fg);
   --destructive: var(--c-destructive);
   --border: var(--c-border);
@@ -70,7 +70,7 @@
   --sidebar-foreground: var(--c-fg);
   --sidebar-primary: var(--c-accent);
   --sidebar-primary-foreground: oklch(98% 0 0);
-  --sidebar-accent: oklch(94% 0.012 95);
+  --sidebar-accent: oklch(92% 0.011 95);
   --sidebar-accent-foreground: var(--c-fg);
   --sidebar-border: var(--c-border);
   --sidebar-ring: var(--c-accent);
@@ -126,12 +126,12 @@
 
 /* Light theme (explicit, same as root defaults) */
 :root[data-theme="light"] {
-  --c-bg: oklch(96.5% 0.018 95);
+  --c-bg: oklch(95% 0.015 95);
   --c-fg: oklch(15% 0 0);
   --c-muted: oklch(50% 0.01 95);
-  --c-border: oklch(89% 0.01 95);
-  --c-surface: oklch(98% 0.012 95);
-  --c-surface-raised: oklch(99% 0.008 95);
+  --c-border: oklch(87% 0.009 95);
+  --c-surface: oklch(96% 0.011 95);
+  --c-surface-raised: oklch(97% 0.008 95);
 
   --background: var(--c-bg);
   --foreground: var(--c-fg);
@@ -140,17 +140,17 @@
   --popover: var(--c-surface);
   --popover-foreground: var(--c-fg);
   --primary-foreground: oklch(98% 0 0);
-  --secondary: oklch(94% 0.012 95);
+  --secondary: oklch(92% 0.011 95);
   --secondary-foreground: var(--c-fg);
-  --muted: oklch(94% 0.012 95);
-  --accent: oklch(94% 0.012 95);
+  --muted: oklch(92% 0.011 95);
+  --accent: oklch(92% 0.011 95);
   --accent-foreground: var(--c-fg);
   --border: var(--c-border);
   --input: var(--c-border);
 
   --sidebar: var(--c-surface);
   --sidebar-foreground: var(--c-fg);
-  --sidebar-accent: oklch(94% 0.012 95);
+  --sidebar-accent: oklch(92% 0.011 95);
   --sidebar-accent-foreground: var(--c-fg);
   --sidebar-border: var(--c-border);
 }

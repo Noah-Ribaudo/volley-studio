@@ -23,8 +23,8 @@ export const THEME_OPTIONS: ThemeOption[] = [
   {
     id: 'light',
     label: 'Light',
-    description: 'Light theme with a soft cream background',
-    swatch: ['oklch(96.5% 0.018 95)', 'oklch(15% 0 0)'],
+    description: 'Light theme with a bone-white background',
+    swatch: ['oklch(95% 0.015 95)', 'oklch(15% 0 0)'],
   },
   {
     id: 'dark',
