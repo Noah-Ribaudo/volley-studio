@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import {
   Sidebar,
   SidebarContent,
@@ -58,10 +58,21 @@ const developerNavItems = [
 
 export function VolleyballSidebar() {
   const pathname = usePathname()
+  const router = useRouter()
   const sidebarProfileInFooter = useAppStore((state) => state.sidebarProfileInFooter)
   const showMotionDebugPanel = useAppStore((state) => state.showMotionDebugPanel)
   const setShowMotionDebugPanel = useAppStore((state) => state.setShowMotionDebugPanel)
   const showMotionDebugToggle = process.env.NODE_ENV === 'development'
+  const isOnWhiteboard = pathname === '/'
+
+  const handleMotionDebugClick = () => {
+    if (isOnWhiteboard) {
+      setShowMotionDebugPanel(!showMotionDebugPanel)
+      return
+    }
+    setShowMotionDebugPanel(true)
+    router.push('/')
+  }
 
   return (
     <Sidebar collapsible="icon">
@@ -116,9 +127,9 @@ export function VolleyballSidebar() {
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       type="button"
-                      isActive={showMotionDebugPanel}
+                      isActive={showMotionDebugPanel && isOnWhiteboard}
                       tooltip="Motion Debug"
-                      onClick={() => setShowMotionDebugPanel(!showMotionDebugPanel)}
+                      onClick={handleMotionDebugClick}
                     >
                       <SlidersHorizontal />
                       <span>Motion Debug</span>

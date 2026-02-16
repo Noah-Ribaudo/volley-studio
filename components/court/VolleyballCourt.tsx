@@ -160,6 +160,12 @@ type LockedPath = {
   control: Position | null
 }
 
+type WhiteboardCollisionTuning = {
+  collisionRadius: number
+  separationStrength: number
+  maxSeparation: number
+}
+
 export function VolleyballCourt({
   positions,
   awayPositions,
@@ -412,14 +418,48 @@ export function VolleyballCourt({
   // Detect reduced motion preference
   const prefersReducedMotion = useReducedMotion()
 
-  const cfg = {
-    durationMs: prefersReducedMotion ? 0 : (animationConfig?.durationMs ?? 500),
-    easingCss: animationConfig?.easingCss ?? 'cubic-bezier(0.4, 0, 0.2, 1)',
-    easingFn: animationConfig?.easingFn ?? 'cubic',
-    collisionRadius: animationConfig?.collisionRadius ?? 0.12, // Normalized (was 12 in percentage)
-    separationStrength: animationConfig?.separationStrength ?? 6,
-    maxSeparation: animationConfig?.maxSeparation ?? 3,
-  }
+  const defaultWhiteboardCollisionTuning = useMemo<WhiteboardCollisionTuning>(
+    () => ({
+      collisionRadius: animationConfig?.collisionRadius ?? 0.12, // Normalized (was 12 in percentage)
+      separationStrength: animationConfig?.separationStrength ?? 6,
+      maxSeparation: animationConfig?.maxSeparation ?? 3,
+    }),
+    [animationConfig?.collisionRadius, animationConfig?.separationStrength, animationConfig?.maxSeparation]
+  )
+
+  const [whiteboardCollisionTuning, setWhiteboardCollisionTuning] =
+    useState<WhiteboardCollisionTuning>(defaultWhiteboardCollisionTuning)
+
+  const updateWhiteboardCollisionTuning = useCallback(
+    <K extends keyof WhiteboardCollisionTuning>(key: K, value: number) => {
+      setWhiteboardCollisionTuning((prev) => ({ ...prev, [key]: value }))
+    },
+    []
+  )
+
+  const resetWhiteboardCollisionTuning = useCallback(() => {
+    setWhiteboardCollisionTuning(defaultWhiteboardCollisionTuning)
+  }, [defaultWhiteboardCollisionTuning])
+
+  const cfg = useMemo(
+    () => ({
+      durationMs: prefersReducedMotion ? 0 : (animationConfig?.durationMs ?? 500),
+      easingCss: animationConfig?.easingCss ?? 'cubic-bezier(0.4, 0, 0.2, 1)',
+      easingFn: animationConfig?.easingFn ?? 'cubic',
+      collisionRadius: whiteboardCollisionTuning.collisionRadius,
+      separationStrength: whiteboardCollisionTuning.separationStrength,
+      maxSeparation: whiteboardCollisionTuning.maxSeparation,
+    }),
+    [
+      prefersReducedMotion,
+      animationConfig?.durationMs,
+      animationConfig?.easingCss,
+      animationConfig?.easingFn,
+      whiteboardCollisionTuning.collisionRadius,
+      whiteboardCollisionTuning.separationStrength,
+      whiteboardCollisionTuning.maxSeparation,
+    ]
+  )
 
   const [playTuning, setPlayTuning] = useState<WhiteboardMotionTuning>(() =>
     sanitizeMotionTuning(DEFAULT_WHITEBOARD_MOTION_TUNING)
@@ -431,6 +471,34 @@ export function VolleyballCourt({
     },
     []
   )
+
+  const resetPreviewTuning = useCallback(() => {
+    setPlayTuning((prev) =>
+      sanitizeMotionTuning({
+        ...prev,
+        cruiseSpeed: DEFAULT_WHITEBOARD_MOTION_TUNING.cruiseSpeed,
+        acceleration: DEFAULT_WHITEBOARD_MOTION_TUNING.acceleration,
+        braking: DEFAULT_WHITEBOARD_MOTION_TUNING.braking,
+        lookAheadTime: DEFAULT_WHITEBOARD_MOTION_TUNING.lookAheadTime,
+        maxLateralAccel: DEFAULT_WHITEBOARD_MOTION_TUNING.maxLateralAccel,
+        tokenRadius: DEFAULT_WHITEBOARD_MOTION_TUNING.tokenRadius,
+        minSpacingRadii: DEFAULT_WHITEBOARD_MOTION_TUNING.minSpacingRadii,
+        avoidanceBlend: DEFAULT_WHITEBOARD_MOTION_TUNING.avoidanceBlend,
+        deflectionStrength: DEFAULT_WHITEBOARD_MOTION_TUNING.deflectionStrength,
+        maxLateralOffsetRadii: DEFAULT_WHITEBOARD_MOTION_TUNING.maxLateralOffsetRadii,
+      })
+    )
+  }, [])
+
+  const resetSharedTuning = useCallback(() => {
+    setPlayTuning((prev) =>
+      sanitizeMotionTuning({
+        ...prev,
+        curveStrength: DEFAULT_WHITEBOARD_MOTION_TUNING.curveStrength,
+      })
+    )
+  }, [])
+
   const playTuningRef = useRef(playTuning)
 
   useEffect(() => {
@@ -1991,8 +2059,13 @@ export function VolleyballCourt({
           draggingRole={draggingRole}
           draggingArrowRole={draggingArrowRole}
           draggingCurveRole={draggingCurveRole}
+          whiteboardTuning={whiteboardCollisionTuning}
+          onWhiteboardTuningChange={updateWhiteboardCollisionTuning}
+          onResetWhiteboardTuning={resetWhiteboardCollisionTuning}
           tuning={playTuning}
           onTuningChange={updatePlayTuning}
+          onResetPreviewTuning={resetPreviewTuning}
+          onResetSharedTuning={resetSharedTuning}
           roles={activeRoles.map((role) => {
             const anim = playAnimRef.current[role]
             const locked = Boolean(playLockedPathsRef.current[role])
