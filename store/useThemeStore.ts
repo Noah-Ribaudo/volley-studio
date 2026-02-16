@@ -18,6 +18,7 @@ interface ThemeState {
   theme: ThemeId
   themePreference: ThemePreference
   autoTimeZone: string
+  isHydrated: boolean
   setTheme: (theme: ThemeId) => void
   setThemePreference: (themePreference: ThemePreference) => void
   setResolvedTheme: (theme: ThemeId) => void
@@ -49,6 +50,7 @@ export const useThemeStore = create<ThemeState>()(
       theme: resolveThemeByTimeZone(DEFAULT_AUTO_TIMEZONE),
       themePreference: DEFAULT_THEME_PREFERENCE,
       autoTimeZone: DEFAULT_AUTO_TIMEZONE,
+      isHydrated: false,
       setTheme: (theme) => set({
         theme,
         themePreference: theme,
@@ -79,6 +81,11 @@ export const useThemeStore = create<ThemeState>()(
     {
       name: THEME_STORAGE_KEY,
       storage: createSafeLocalStorage<ThemeState>(),
+      partialize: (state) => ({
+        theme: state.theme,
+        themePreference: state.themePreference,
+        autoTimeZone: state.autoTimeZone,
+      }),
       // Migrate stored state when hydrating
       onRehydrateStorage: () => (state) => {
         if (!state) return
@@ -102,6 +109,8 @@ export const useThemeStore = create<ThemeState>()(
         if (state.themePreference === 'auto') {
           state.theme = resolveThemeByTimeZone(state.autoTimeZone)
         }
+
+        state.isHydrated = true
       },
     }
   )

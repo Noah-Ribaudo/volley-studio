@@ -65,29 +65,36 @@ export const viewport: Viewport = {
 // Inline script to apply theme before React hydrates (prevents flash)
 const themeScript = `
 (function() {
-  var fallbackTheme = 'dark';
-  try {
-    var chicagoHour = Number(
-      new Intl.DateTimeFormat('en-US', {
-        hour: 'numeric',
-        hourCycle: 'h23',
-        timeZone: 'America/Chicago',
-      }).format(new Date())
-    );
-    fallbackTheme = chicagoHour >= 6 && chicagoHour < 18 ? 'light' : 'dark';
-  } catch (e) { /* Timezone parsing failed - use dark */ }
+  var resolvedTheme = 'dark';
+  var getSystemTheme = function() {
+    try {
+      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        return 'dark';
+      }
+    } catch (e) { /* Ignore media query failures */ }
+    return 'light';
+  };
 
+  resolvedTheme = getSystemTheme();
   try {
-    document.documentElement.setAttribute('data-theme', fallbackTheme);
     var stored = localStorage.getItem('volleyball-theme');
     if (stored) {
       var parsed = JSON.parse(stored);
-      var theme = parsed.state && parsed.state.theme;
-      if (theme) {
-        document.documentElement.setAttribute('data-theme', theme);
+      var state = parsed && parsed.state ? parsed.state : null;
+      var preference = state && state.themePreference;
+      var storedTheme = state && state.theme;
+
+      if (preference === 'light' || preference === 'dark') {
+        resolvedTheme = preference;
+      } else if (preference === 'auto') {
+        resolvedTheme = getSystemTheme();
+      } else if (storedTheme === 'light' || storedTheme === 'dark') {
+        resolvedTheme = storedTheme;
       }
     }
   } catch (e) { /* Theme parsing failed - use default */ }
+
+  document.documentElement.setAttribute('data-theme', resolvedTheme);
 })();
 `;
 

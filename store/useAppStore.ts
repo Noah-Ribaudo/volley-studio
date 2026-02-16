@@ -177,6 +177,7 @@ interface AppState {
 
   // Court view settings
   awayTeamHidePercent: number // Percentage of court height to hide (0-50)
+  isHydrated: boolean // True once persisted state has rehydrated
 
   // Actions
   setRotation: (rotation: Rotation) => void
@@ -485,6 +486,7 @@ export const useAppStore = create<AppState>()(
 
       // Court view settings
       awayTeamHidePercent: 40, // Default: hide 40% of court height when hiding away team
+      isHydrated: false,
 
       // Actions
       setRotation: (rotation) => set({ currentRotation: rotation }),
@@ -1239,6 +1241,9 @@ export const useAppStore = create<AppState>()(
         // Default awayTeamHidePercent if not set
         if (state && state.awayTeamHidePercent === undefined) {
           state.awayTeamHidePercent = 40
+        }
+        if (state) {
+          state.isHydrated = true
         }
       },
     }

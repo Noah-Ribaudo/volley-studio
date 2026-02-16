@@ -599,6 +599,10 @@ export function VolleyballCourt({
 
   useEffect(() => {
     if (!isPreviewingMovement) {
+      const baseline = ensureCompletePositions(collisionFreePositions)
+      setAnimatedPositions(baseline)
+      currentPositionsRef.current = baseline
+      animatedPositionsRef.current = baseline
       setPlayedPositions(null)
       playLockedPathsRef.current = {}
       playEngineRef.current = null
@@ -612,7 +616,7 @@ export function VolleyballCourt({
       playLastFrameRef.current = null
       setIsBezierAnimating(false)
     }
-  }, [isPreviewingMovement])
+  }, [isPreviewingMovement, collisionFreePositions, ensureCompletePositions])
 
   // Display positions: during animation use animatedPositions,
   // in preview mode use played positions, otherwise use collisionFreePositions
@@ -811,6 +815,7 @@ export function VolleyballCourt({
 
   // Tracks the last trigger consumed while preview mode was active.
   const consumedAnimationTriggerRef = useRef<number>(animationTrigger)
+  const wasPreviewingRef = useRef<boolean>(isPreviewingMovement)
 
   // Ref for RAF animation
   const bezierRafRef = useRef<number | null>(null)
@@ -845,12 +850,15 @@ export function VolleyballCourt({
     const FIXED_STEP_SECONDS = 1 / 120
     const MAX_SUB_STEPS_PER_FRAME = 6
     const REDUCED_MOTION_MAX_STEPS = 15_000
+    const previewJustEnabled = isPreviewingMovement && !wasPreviewingRef.current
+    wasPreviewingRef.current = isPreviewingMovement
 
     if (!isPreviewingMovement || animationTrigger === 0) {
       return
     }
 
-    if (animationTrigger === consumedAnimationTriggerRef.current) {
+    const triggerChanged = animationTrigger !== consumedAnimationTriggerRef.current
+    if (!triggerChanged && !previewJustEnabled) {
       return
     }
     consumedAnimationTriggerRef.current = animationTrigger

@@ -23,6 +23,7 @@ import { useLineupPresets } from '@/hooks/useLineupPresets'
 import { SwipeHint } from '@/components/mobile'
 import { WhiteboardOnboardingHint } from '@/components/court/WhiteboardOnboardingHint'
 import { ConflictResolutionModal } from '@/components/volleyball/ConflictResolutionModal'
+import { useThemeStore } from '@/store/useThemeStore'
 import {
   Select,
   SelectContent,
@@ -42,7 +43,7 @@ import { toast } from 'sonner'
 // Constants for court display
 const OPEN_COURT_SETUP_EVENT = 'open-court-setup'
 type OpenCourtSetupEventDetail = { anchorRect?: DOMRect }
-const ANIMATION_MODE = 'css' as const
+const ANIMATION_MODE = 'raf' as const
 const TOKEN_SCALES = { desktop: 1.5, mobile: 1.5 }
 const TOKEN_DIMENSIONS = { widthOffset: 0, heightOffset: 0 }
 const ANIMATION_CONFIG = {
@@ -121,7 +122,10 @@ function HomePageContent() {
     populateFromLayouts,
     setAccessMode,
     setTeamPasswordProvided,
+    isHydrated: isAppHydrated,
   } = useAppStore()
+  const isThemeHydrated = useThemeStore((state) => state.isHydrated)
+  const isUiHydrated = isAppHydrated && isThemeHydrated
   const searchParams = useSearchParams()
   const teamFromUrl = searchParams.get('team')?.trim() || ''
   const myTeams = useQuery(api.teams.listMyTeams, {})
@@ -755,6 +759,8 @@ function HomePageContent() {
             style={{
               ...(swipeOffset !== 0 ? { transform: `translateX(${swipeOffset}px)` } : {}),
               transition: swipeState.swiping ? 'none' : 'transform 0.2s ease-out',
+              visibility: isUiHydrated ? 'visible' : 'hidden',
+              pointerEvents: isUiHydrated ? 'auto' : 'none',
             }}
             {...(isMobile ? swipeHandlers : {})}
           >
