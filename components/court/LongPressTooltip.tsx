@@ -13,8 +13,8 @@ export function LongPressTooltip({ visible, x, y, tokenRadius }: LongPressToolti
   if (!visible) return null
 
   // Position tooltip centered above the token
-  const tooltipWidth = 160
-  const tooltipHeight = 32
+  const tooltipWidth = 240
+  const tooltipHeight = 56
   const tooltipX = x - tooltipWidth / 2
   const tooltipY = y - tokenRadius - tooltipHeight - 12 // 12px gap above token
 
@@ -44,13 +44,14 @@ export function LongPressTooltip({ visible, x, y, tokenRadius }: LongPressToolti
         <div
           className="rounded-lg border bg-popover px-3 py-1.5 text-xs text-popover-foreground shadow-lg"
           style={{
-            whiteSpace: 'nowrap',
+            whiteSpace: 'normal',
+            lineHeight: 1.25,
             fontWeight: 500,
             letterSpacing: '0.2px',
             textAlign: 'center'
           }}
         >
-          Tap where arrow should go
+          Release token, then tap to draw an arrow while the green thing is pulsing.
         </div>
       </foreignObject>
     </g>
