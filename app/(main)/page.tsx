@@ -43,7 +43,7 @@ import { toast } from 'sonner'
 
 // Constants for court display
 const OPEN_COURT_SETUP_EVENT = 'open-court-setup'
-type OpenCourtSetupEventDetail = { anchorRect?: DOMRect }
+type OpenCourtSetupEventDetail = { anchorRect?: DOMRect; triggerEl?: HTMLElement | null }
 const ANIMATION_MODE = 'raf' as const
 const TOKEN_SCALES = { desktop: 1.5, mobile: 1.5 }
 const TOKEN_DIMENSIONS = { widthOffset: 0, heightOffset: 0 }
@@ -254,6 +254,7 @@ function HomePageContent() {
   const [rosterSheetOpen, setRosterSheetOpen] = useState(false)
   const [courtSetupOpen, setCourtSetupOpen] = useState(false)
   const [courtSetupAnchorRect, setCourtSetupAnchorRect] = useState<DOMRect | null>(null)
+  const courtSetupTriggerRef = useRef<HTMLElement | null>(null)
   const [viewportWidth, setViewportWidth] = useState(0)
   const [createTeamDialogOpen, setCreateTeamDialogOpen] = useState(false)
 
@@ -271,10 +272,19 @@ function HomePageContent() {
     const openCourtSetup = (event: Event) => {
       const maybeCustomEvent = event as CustomEvent<OpenCourtSetupEventDetail>
       setCourtSetupAnchorRect(maybeCustomEvent.detail?.anchorRect ?? null)
+      courtSetupTriggerRef.current = maybeCustomEvent.detail?.triggerEl ?? null
       setCourtSetupOpen((prev) => !prev)
     }
     window.addEventListener(OPEN_COURT_SETUP_EVENT, openCourtSetup)
     return () => window.removeEventListener(OPEN_COURT_SETUP_EVENT, openCourtSetup)
+  }, [])
+
+  const handleCourtSetupInteractOutside = useCallback((event: { target: EventTarget | null; preventDefault: () => void }) => {
+    const trigger = courtSetupTriggerRef.current
+    if (!trigger) return
+    if (event.target instanceof Node && trigger.contains(event.target)) {
+      event.preventDefault()
+    }
   }, [])
 
   const desktopCourtSetupPopoverStyle = useMemo(() => {
@@ -1022,7 +1032,10 @@ function HomePageContent() {
 
       {isMobile ? (
         <Dialog open={courtSetupOpen} onOpenChange={setCourtSetupOpen}>
-          <DialogContent className="sm:max-w-[560px]">
+          <DialogContent
+            className="sm:max-w-[560px]"
+            onInteractOutside={handleCourtSetupInteractOutside}
+          >
             <DialogHeader>
               <DialogTitle>Court Setup</DialogTitle>
               <DialogDescription>
@@ -1034,7 +1047,11 @@ function HomePageContent() {
         </Dialog>
       ) : courtSetupSurfaceVariant === 'panel' ? (
         <Sheet open={courtSetupOpen} onOpenChange={setCourtSetupOpen}>
-          <SheetContent side="right" className="w-full sm:max-w-[560px] overflow-y-auto">
+          <SheetContent
+            side="right"
+            className="w-full sm:max-w-[560px] overflow-y-auto"
+            onInteractOutside={handleCourtSetupInteractOutside}
+          >
             <SheetHeader className="pb-4">
               <SheetTitle>Court Setup</SheetTitle>
               <SheetDescription>
@@ -1052,6 +1069,7 @@ function HomePageContent() {
             sideOffset={8}
             className="w-[560px] max-w-[calc(100vw-2rem)]"
             onOpenAutoFocus={(event) => event.preventDefault()}
+            onInteractOutside={handleCourtSetupInteractOutside}
             style={desktopCourtSetupPopoverStyle}
           >
             <div className="mb-4 space-y-1.5">

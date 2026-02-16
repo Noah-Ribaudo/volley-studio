@@ -45,7 +45,7 @@ const navItems = [
 
 interface DesktopHeaderNavProps {
   onOpenPrintDialog?: () => void
-  onOpenCourtSetup?: (anchorRect?: DOMRect) => void
+  onOpenCourtSetup?: (detail?: { anchorRect?: DOMRect; triggerEl?: HTMLElement | null }) => void
   showNav?: boolean
 }
 
@@ -261,7 +261,10 @@ export function DesktopHeaderNav({
             variant="ghost"
             size="sm"
             className="h-8 gap-1.5 text-muted-foreground hover:text-foreground"
-            onClick={(event) => onOpenCourtSetup?.(event.currentTarget.getBoundingClientRect())}
+            onClick={(event) => onOpenCourtSetup?.({
+              anchorRect: event.currentTarget.getBoundingClientRect(),
+              triggerEl: event.currentTarget,
+            })}
             title="Open court setup"
           >
             <span>Court Setup</span>

@@ -92,8 +92,8 @@ export default function VolleyballLayout({
         {/* Desktop header nav */}
         <DesktopHeaderNav
           onOpenPrintDialog={() => setPrintDialogOpen(true)}
-          onOpenCourtSetup={(anchorRect) => {
-            window.dispatchEvent(new CustomEvent(OPEN_COURT_SETUP_EVENT, { detail: { anchorRect } }))
+          onOpenCourtSetup={(detail) => {
+            window.dispatchEvent(new CustomEvent(OPEN_COURT_SETUP_EVENT, { detail }))
           }}
           showNav={false}
         />
@@ -119,8 +119,12 @@ export default function VolleyballLayout({
                   variant="ghost"
                   size="sm"
                   className="h-8 px-2 text-xs"
-                  onClick={() => {
-                    window.dispatchEvent(new Event(OPEN_COURT_SETUP_EVENT))
+                  onClick={(event) => {
+                    window.dispatchEvent(
+                      new CustomEvent(OPEN_COURT_SETUP_EVENT, {
+                        detail: { triggerEl: event.currentTarget as HTMLElement },
+                      })
+                    )
                   }}
                   aria-label="Open court setup"
                   title="Open court setup"
