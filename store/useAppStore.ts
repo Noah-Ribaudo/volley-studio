@@ -60,6 +60,7 @@ import { getWhiteboardPositions, getAutoArrows } from '@/lib/whiteboard'
 import { getVisibleOrderedRallyPhases } from '@/lib/rallyPhaseOrder'
 import type { LearningProgress, LearningPanelPosition } from '@/lib/learning/types'
 import type { ShaderId } from '@/lib/shaders'
+import { withLegacyAssignmentsFromActiveLineup } from '@/lib/lineups'
 
 // Internal storage uses normalized coordinates (0-1)
 // PositionCoordinates is now normalized, so this type alias is for clarity
@@ -846,19 +847,11 @@ export const useAppStore = create<AppState>()(
           }
         })
 
-        const nextTeamAssignments = { ...state.currentTeam.position_assignments }
-        if (playerId) {
-          nextTeamAssignments[role] = playerId
-        } else {
-          delete nextTeamAssignments[role]
-        }
-
         return {
-          currentTeam: {
+          currentTeam: withLegacyAssignmentsFromActiveLineup({
             ...state.currentTeam,
-            position_assignments: nextTeamAssignments,
             lineups: nextLineups,
-          },
+          }),
         }
       }),
 

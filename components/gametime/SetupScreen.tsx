@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { listLocalTeams } from '@/lib/localTeams'
+import { migrateTeamToLineups } from '@/lib/lineups'
 
 // Roles for lineup (no libero)
 const LINEUP_ROLES: Role[] = ['S', 'OH1', 'OH2', 'MB1', 'MB2', 'OPP']
@@ -42,7 +43,7 @@ export function SetupScreen() {
   const loading = convexTeams === undefined
 
   // Transform Convex teams to the Team format expected by the component
-  const cloudTeams: Team[] = (convexTeams ?? []).map(t => ({
+  const cloudTeams: Team[] = (convexTeams ?? []).map(t => migrateTeamToLineups({
     id: t._id,
     name: t.name,
     slug: t.slug,

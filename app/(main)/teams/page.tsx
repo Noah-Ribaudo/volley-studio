@@ -15,6 +15,7 @@ import type { PresetSystem } from '@/lib/presetTypes'
 import { toast } from 'sonner'
 import { listLocalTeams, upsertLocalTeam } from '@/lib/localTeams'
 import { createTeamRepository } from '@/lib/teamRepository'
+import { migrateTeamToLineups } from '@/lib/lineups'
 
 const SEARCH_MIN_TEAM_COUNT = 10
 
@@ -252,7 +253,7 @@ export default function TeamsPage() {
             {teams.map(team => (
               <TeamCard
                 key={team._id}
-                team={{
+                team={migrateTeamToLineups({
                   id: team._id,
                   name: team.name,
                   slug: team.slug,
@@ -271,7 +272,7 @@ export default function TeamsPage() {
                   position_assignments: team.positionAssignments || {},
                   created_at: new Date(team._creationTime).toISOString(),
                   updated_at: new Date(team._creationTime).toISOString(),
-                }}
+                })}
               />
             ))}
           </div>

@@ -14,7 +14,7 @@ import { PositionAssigner } from '@/components/roster/PositionAssigner'
 import type { Team, Lineup, PositionAssignments, PositionSource, Rotation } from '@/lib/types'
 import { useAppStore } from '@/store/useAppStore'
 import { getLocalTeamById } from '@/lib/localTeams'
-import { createLineup, duplicateLineup } from '@/lib/lineups'
+import { createLineup, duplicateLineup, getActiveAssignments, migrateTeamToLineups } from '@/lib/lineups'
 import { createTeamRepository } from '@/lib/teamRepository'
 
 interface TeamPageProps {
@@ -87,7 +87,7 @@ export default function TeamEditPage({ params }: TeamPageProps) {
     const positionAssignments = JSON.parse(remoteAssignmentsJson) as Record<string, string>
     const createdAtIso = new Date(remoteTeamCreationTime).toISOString()
 
-    return {
+    return migrateTeamToLineups({
       id: remoteTeamId,
       _id: remoteTeamId,
       name: remoteTeamName,
@@ -111,7 +111,7 @@ export default function TeamEditPage({ params }: TeamPageProps) {
       position_assignments: positionAssignments,
       created_at: createdAtIso,
       updated_at: createdAtIso,
-    }
+    })
   }, [
     isLocalTeam,
     remoteTeamId,
@@ -159,10 +159,11 @@ export default function TeamEditPage({ params }: TeamPageProps) {
 
   useEffect(() => {
     if (!displayTeam) return
-    const nextLineups = displayTeam.lineups.length > 0
-      ? displayTeam.lineups
-      : [createLineup('Lineup 1', displayTeam.position_assignments || {})]
-    const nextActiveLineupId = displayTeam.active_lineup_id ?? nextLineups[0]?.id ?? null
+    const teamWithLineups = migrateTeamToLineups(displayTeam)
+    const nextLineups = teamWithLineups.lineups.length > 0
+      ? teamWithLineups.lineups
+      : [createLineup('Lineup 1', getActiveAssignments(teamWithLineups))]
+    const nextActiveLineupId = teamWithLineups.active_lineup_id ?? nextLineups[0]?.id ?? null
     const nextSelectedLineupId = nextActiveLineupId ?? nextLineups[0]?.id ?? null
     const selectedLineup = nextLineups.find((lineup) => lineup.id === nextSelectedLineupId)
 

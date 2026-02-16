@@ -8,7 +8,7 @@ import { useAppStore, getCurrentPositions, getCurrentArrows, getCurrentTags, get
 import { VolleyballCourt } from '@/components/court'
 import { RosterManagementCard } from '@/components/roster'
 import { Role, ROLES, RALLY_PHASES, Position, PositionCoordinates, POSITION_SOURCE_INFO, RallyPhase, Team, CustomLayout, Lineup } from '@/lib/types'
-import { getActiveAssignments } from '@/lib/lineups'
+import { getActiveAssignments, migrateTeamToLineups } from '@/lib/lineups'
 import { getWhiteboardPositions } from '@/lib/whiteboard'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -177,7 +177,7 @@ function HomePageContent() {
     if (!teamFromUrl || !selectedTeam || !selectedLayouts) return
     if (loadedTeamFromUrlRef.current === selectedTeam._id) return
 
-    const mappedTeam: Team = {
+    const mappedTeam = migrateTeamToLineups({
       id: selectedTeam._id,
       _id: selectedTeam._id,
       name: selectedTeam.name,
@@ -195,10 +195,11 @@ function HomePageContent() {
         starting_rotation: (lineup.starting_rotation as 1 | 2 | 3 | 4 | 5 | 6 | undefined) ?? 1,
       })),
       active_lineup_id: selectedTeam.activeLineupId ?? null,
+      // Legacy field is synchronized from active lineup by the migration adapter.
       position_assignments: selectedTeam.positionAssignments || {},
       created_at: new Date(selectedTeam._creationTime).toISOString(),
       updated_at: new Date(selectedTeam._creationTime).toISOString(),
-    }
+    })
 
     const mappedLayouts: CustomLayout[] = selectedLayouts.map((layout) => ({
       id: layout._id,
