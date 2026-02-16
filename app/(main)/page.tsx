@@ -904,7 +904,7 @@ function HomePageContent() {
   )
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-gradient-to-b from-background to-muted/30">
+    <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
       {/* Main Content Area - fills available layout height */}
       <div className="flex-1 min-h-0 h-full overflow-hidden">
         {/* Court Container - scales to fit available space */}
@@ -1098,7 +1098,7 @@ function HomePageWrapper() {
 
 export default function HomePage() {
   return (
-    <Suspense fallback={<div className="h-full bg-gradient-to-b from-background to-muted/30" />}>
+    <Suspense fallback={<div className="h-full" />}>
       <HomePageWrapper />
     </Suspense>
   )
