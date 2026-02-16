@@ -1057,9 +1057,9 @@ function HomePageContent() {
       <Sheet open={rosterSheetOpen} onOpenChange={setRosterSheetOpen}>
         <SheetContent side="right" className="w-full max-w-[400px] overflow-y-auto">
           <SheetHeader className="pb-4">
-            <SheetTitle>Roster</SheetTitle>
+            <SheetTitle>Team Quick Actions</SheetTitle>
             <SheetDescription>
-              Manage your team roster and position assignments
+              Open team editor, switch contexts, and save your current setup.
             </SheetDescription>
           </SheetHeader>
           <RosterManagementCard />
