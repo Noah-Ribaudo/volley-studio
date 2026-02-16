@@ -147,19 +147,19 @@ export function DesktopHeaderNav({
       {isWhiteboardPage && (
         <div className="ml-auto flex items-center gap-2">
           {/* Phase selector */}
-          <div className="flex items-center gap-1 rounded-lg border border-border/70 bg-card/40 px-1.5 py-1 shadow-sm">
+          <div className="flex h-9 items-center gap-1 rounded-md border border-border bg-background/80 px-1">
             <div className="flex items-center gap-1 min-w-[13rem] max-w-[min(48rem,46vw)]">
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8"
+                className="h-7 w-7 text-muted-foreground hover:text-foreground"
                 onClick={prevPhase}
                 aria-label="Previous phase"
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
 
-              <div className="h-8 min-w-[8rem] rounded-md bg-background/80 px-1 max-w-[min(42rem,40vw)]">
+              <div className="h-7 min-w-[8rem] rounded-sm px-1 max-w-[min(42rem,40vw)]">
                 <div
                   ref={phaseTrackRef}
                   className="flex h-full items-center gap-1 overflow-x-auto scrollbar-hide"
@@ -190,7 +190,7 @@ export function DesktopHeaderNav({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8"
+                className="h-7 w-7 text-muted-foreground hover:text-foreground"
                 onClick={nextPhase}
                 aria-label="Next phase"
               >
