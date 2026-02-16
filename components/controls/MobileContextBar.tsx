@@ -152,10 +152,13 @@ export function MobileContextBar({
             {offsets.map(offset => {
               const phase = getPhaseAtOffset(offset)
               const info = getPhaseInfo(phase)
-              const isCurrent = offset === 0
+              const isCenterSlot = offset === 0
 
-              // Determine highlight state based on animation phase
-              const isHighlighted = isCurrent && (animationPhase === 'idle' || animationPhase === 'highlighting')
+              // Keep selected phase visibly active through the whole animation.
+              // During sliding, the centered slot also stays emphasized so the
+              // strip never appears to "lose" its active state.
+              const isSelectedPhase = phase === currentPhase
+              const isHighlighted = isSelectedPhase || (isCenterSlot && animationPhase === 'sliding')
               const isDimmed = animationPhase === 'dimming' || animationPhase === 'sliding'
 
               return (
@@ -165,7 +168,7 @@ export function MobileContextBar({
                   variant="ghost"
                   size="sm"
                   onClick={() => onPhaseChange(phase)}
-                  aria-pressed={isCurrent}
+                  aria-pressed={isSelectedPhase}
                   aria-label={info.name}
                   title={info.name}
                   className={cn(
@@ -174,11 +177,11 @@ export function MobileContextBar({
                       ? 'shadow-sm bg-muted text-foreground'
                       : 'hover:opacity-80 hover:bg-muted',
                     !isHighlighted && 'opacity-50',
-                    isDimmed && isCurrent && 'opacity-50',
-                    isCurrent && 'transition-all',
+                    isDimmed && !isHighlighted && 'opacity-50',
+                    (isCenterSlot || isSelectedPhase) && 'transition-all',
                   )}
                   style={{
-                    transitionDuration: isCurrent
+                    transitionDuration: (isCenterSlot || isSelectedPhase)
                       ? (animationPhase === 'dimming' ? `${DIM_DURATION}ms` :
                          animationPhase === 'highlighting' ? `${HIGHLIGHT_DURATION}ms` : undefined)
                       : undefined
