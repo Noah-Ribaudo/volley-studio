@@ -1295,7 +1295,7 @@ export function VolleyballCourt({
 
     // Get event coordinates
     const pos = getEventPosition(e.nativeEvent as MouseEvent | TouchEvent)
-    const normalizedPos = toNormalizedCoords(pos.x, pos.y)
+    const normalizedPos = constrainHomePosition(toNormalizedCoords(pos.x, pos.y))
 
     // Get the primed player's position
     const primedPlayerPos = displayPositions[primedRole]
@@ -1477,7 +1477,7 @@ export function VolleyballCourt({
 
     // Initialize with preview position for seamless transition (no visual jump)
     if (initialEndSvg) {
-      const normalizedEnd = toNormalizedCoords(initialEndSvg.x, initialEndSvg.y)
+      const normalizedEnd = constrainHomePosition(toNormalizedCoords(initialEndSvg.x, initialEndSvg.y))
       arrowDragPositionRef.current = normalizedEnd
       curveControlRef.current = arrowCurves[role] ?? null
       setArrowDragPosition(normalizedEnd)
@@ -1519,7 +1519,7 @@ export function VolleyballCourt({
           isDraggingOffCourtRef.current[role] = isOffCourt
         }
 
-        const normalizedPos = toNormalizedCoords(pos.x, pos.y)
+        const normalizedPos = constrainHomePosition(toNormalizedCoords(pos.x, pos.y))
 
         // Always update visual position immediately for smooth feedback
         if (!hasMeaningfulPositionDelta(arrowDragPositionRef.current, normalizedPos)) {
@@ -2080,7 +2080,7 @@ export function VolleyballCourt({
           replacedMB={replacedMB}
           isBezierAnimating={isBezierAnimating}
           arrows={arrows}
-          displayPositions={displayPositions}
+          displayPositions={legalityDisplayPositions}
           lineColor={lineColor}
         />
 
