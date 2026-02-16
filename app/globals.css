@@ -212,6 +212,21 @@
   --ring: var(--primary);
 }
 
+[data-mode="minimal"],
+[data-mode="minimal"] * {
+  font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+  font-weight: 400 !important;
+}
+
+[data-mode="minimal"] h1,
+[data-mode="minimal"] h2,
+[data-mode="minimal"] h3,
+[data-mode="minimal"] h4,
+[data-mode="minimal"] h5,
+[data-mode="minimal"] h6 {
+  letter-spacing: 0;
+}
+
 :root[data-theme="dark"] [data-mode="minimal"] {
   --background: oklch(13% 0 0);
   --foreground: oklch(92% 0 0);
