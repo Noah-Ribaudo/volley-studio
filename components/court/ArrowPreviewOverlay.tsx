@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import { MovementArrow } from './MovementArrow'
 import {
   Role,
@@ -42,7 +43,7 @@ interface ArrowPreviewOverlayProps {
   onPreviewHover: (role: Role, zone: 'token' | 'arrow', isEntering: boolean) => void
 }
 
-export function ArrowPreviewOverlay({
+function ArrowPreviewOverlayImpl({
   activeRoles,
   displayPositions,
   draggingRole,
@@ -139,3 +140,5 @@ export function ArrowPreviewOverlay({
     </g>
   )
 }
+
+export const ArrowPreviewOverlay = memo(ArrowPreviewOverlayImpl)
