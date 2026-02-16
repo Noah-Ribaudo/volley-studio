@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { action, internalMutation } from "./_generated/server";
 import { auth } from "./auth";
-import { internal } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 
 const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 const RATE_LIMIT_MAX_SUBMISSIONS = 3;
@@ -12,6 +12,7 @@ export const reserveSubmissionSlot = internalMutation({
     createdAt: v.number(),
     windowStart: v.number(),
     maxSubmissions: v.number(),
+    submitterName: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const recentSubmissions = await ctx.db
@@ -28,6 +29,7 @@ export const reserveSubmissionSlot = internalMutation({
     await ctx.db.insert("suggestionSubmissions", {
       userId: args.userId,
       createdAt: args.createdAt,
+      submitterName: args.submitterName,
     });
   },
 });
@@ -47,12 +49,15 @@ export const submitSuggestion = action({
       throw new Error("Please sign in to submit suggestions.");
     }
 
+    const user = await ctx.runQuery(api.users.viewer, {});
+
     const now = Date.now();
     await ctx.runMutation(internal.suggestions.reserveSubmissionSlot, {
       userId,
       createdAt: now,
       windowStart: now - RATE_LIMIT_WINDOW_MS,
       maxSubmissions: RATE_LIMIT_MAX_SUBMISSIONS,
+      submitterName: user?.name ?? undefined,
     });
 
     const apiKey = process.env.LINEAR_API_KEY;
@@ -74,7 +79,11 @@ export const submitSuggestion = action({
       title += "...";
     }
 
-    const description = `${trimmed}\n\n---\nSubmitted from Volley Studio on ${new Date().toISOString()}`;
+    const submittedAtIso = new Date().toISOString();
+    const submittedByLine = user?.name
+      ? `Submitted by @${user.name} from Volley Studio on ${submittedAtIso}`
+      : `Submitted from Volley Studio on ${submittedAtIso}`;
+    const description = `${trimmed}\n\n---\n${submittedByLine}`;
 
     const linearHeaders = {
       Authorization: apiKey,
