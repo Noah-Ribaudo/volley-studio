@@ -9,8 +9,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { RALLY_PHASES, RALLY_PHASE_INFO, RallyPhase } from "@/lib/types";
+import { RALLY_PHASE_INFO, RallyPhase } from "@/lib/types";
 import { PHASE_COLORS } from "@/lib/phaseIcons";
+import { getVisibleOrderedRallyPhases } from "@/lib/rallyPhaseOrder";
 
 interface PhaseControlProps {
   /** Current phase to display */
@@ -38,7 +39,6 @@ export function PhaseControl({
   const {
     currentPhase: storePhase,
     setPhase,
-    visiblePhases,
   } = useAppStore();
 
   // Use prop values or fall back to store
@@ -52,8 +52,7 @@ export function PhaseControl({
   // Create short label by abbreviating (e.g., "Serve Receive" -> "S.Recv")
   const phaseShortLabel = phaseLabel.split(" ").map(w => w.slice(0, 4)).join(" ");
 
-  // Filter to only visible phases
-  const availablePhases = RALLY_PHASES.filter((p) => visiblePhases.has(p));
+  const availablePhases = getVisibleOrderedRallyPhases(undefined, undefined);
 
   if (isManual) {
     // Interactive dropdown mode

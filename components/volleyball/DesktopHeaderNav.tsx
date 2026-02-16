@@ -16,7 +16,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useAppStore } from '@/store/useAppStore'
-import { ROTATIONS, isRallyPhase, type RallyPhase } from '@/lib/types'
+import { ROTATIONS, type RallyPhase } from '@/lib/types'
 import { getVisibleOrderedRallyPhases } from '@/lib/rallyPhaseOrder'
 import { getPhaseInfo } from '@/lib/phaseIcons'
 
@@ -77,9 +77,7 @@ export function DesktopHeaderNav({
   const phaseButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({})
 
   const orderedVisiblePhases = getVisibleOrderedRallyPhases(phaseOrder, visiblePhases)
-  const phasesToShow: RallyPhase[] = isRallyPhase(currentPhase) && !orderedVisiblePhases.includes(currentPhase)
-    ? [currentPhase, ...orderedVisiblePhases]
-    : orderedVisiblePhases
+  const phasesToShow: RallyPhase[] = orderedVisiblePhases
   const phaseSequenceKey = phasesToShow.join('|')
 
   useEffect(() => {

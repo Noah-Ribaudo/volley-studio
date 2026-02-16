@@ -2,44 +2,21 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { auth } from "./auth";
 
-const RALLY_PHASES = [
+const FIXED_WHITEBOARD_PHASES = [
   "PRE_SERVE",
-  "SERVE_IN_AIR",
-  "SERVE_RECEIVE",
-  "TRANSITION_TO_OFFENSE",
-  "SET_PHASE",
-  "ATTACK_PHASE",
-  "TRANSITION_TO_DEFENSE",
   "DEFENSE_PHASE",
-  "BALL_DEAD",
+  "SERVE_RECEIVE",
+  "ATTACK_PHASE",
 ] as const;
 
 const ROLES = ["S", "OH1", "OH2", "MB1", "MB2", "OPP", "L"] as const;
 
-function normalizePhases(phases: string[]): string[] {
-  const seen = new Set<string>();
-  const next: string[] = [];
-  for (const phase of phases) {
-    if (!RALLY_PHASES.includes(phase as (typeof RALLY_PHASES)[number])) {
-      continue;
-    }
-    if (seen.has(phase)) {
-      continue;
-    }
-    seen.add(phase);
-    next.push(phase);
-  }
-  return next;
+function normalizePhases(_phases: string[]): string[] {
+  return [...FIXED_WHITEBOARD_PHASES];
 }
 
-function normalizePhaseOrder(order: string[]): string[] {
-  const next = normalizePhases(order);
-  for (const phase of RALLY_PHASES) {
-    if (!next.includes(phase)) {
-      next.push(phase);
-    }
-  }
-  return next;
+function normalizePhaseOrder(_order: string[]): string[] {
+  return [...FIXED_WHITEBOARD_PHASES];
 }
 
 function normalizeHighlightedRole(role: string | undefined) {
@@ -86,8 +63,8 @@ export const getMine = query({
       backgroundShader: doc.backgroundShader,
       backgroundOpacity: doc.backgroundOpacity,
       awayTeamHidePercent: doc.awayTeamHidePercent,
-      visiblePhases: doc.visiblePhases,
-      phaseOrder: doc.phaseOrder,
+      visiblePhases: normalizePhases(doc.visiblePhases),
+      phaseOrder: normalizePhaseOrder(doc.phaseOrder),
       highlightedRole: doc.highlightedRole,
       learningPanelPosition: doc.learningPanelPosition,
       updatedAt: doc.updatedAt,

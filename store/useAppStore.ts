@@ -901,18 +901,16 @@ export const useAppStore = create<AppState>()(
         }
       })),
 
-      // NEW actions
-      togglePhaseVisibility: (phase) => set((state) => {
-        const newVisible = new Set(state.visiblePhases)
-        if (newVisible.has(phase)) {
-          newVisible.delete(phase)
-        } else {
-          newVisible.add(phase)
-        }
-        return { visiblePhases: newVisible }
+      // Whiteboard phases are fixed and cannot be customized.
+      togglePhaseVisibility: () => set({
+        visiblePhases: new Set(DEFAULT_VISIBLE_PHASES),
+        phaseOrder: [...DEFAULT_PHASE_ORDER],
       }),
 
-      setPhaseOrder: (order) => set({ phaseOrder: order }),
+      setPhaseOrder: () => set({
+        visiblePhases: new Set(DEFAULT_VISIBLE_PHASES),
+        phaseOrder: [...DEFAULT_PHASE_ORDER],
+      }),
 
       setIsReceivingContext: (isReceiving) => set({ isReceivingContext: isReceiving }),
 
@@ -1156,17 +1154,13 @@ export const useAppStore = create<AppState>()(
           }
           state.localPositions = normalized
         }
-        // Rehydrate visiblePhases Set
+        // Whiteboard phases are fixed and always use the default list + order.
         if (state) {
-          if (state.visiblePhases && Array.isArray(state.visiblePhases)) {
-            state.visiblePhases = new Set(state.visiblePhases as RallyPhase[])
-          } else if (!state.visiblePhases) {
-            state.visiblePhases = new Set(DEFAULT_VISIBLE_PHASES)
-          }
-        }
-        // Default phaseOrder if not set
-        if (state && !state.phaseOrder) {
+          state.visiblePhases = new Set(DEFAULT_VISIBLE_PHASES)
           state.phaseOrder = [...DEFAULT_PHASE_ORDER]
+          if (isRallyPhase(state.currentPhase) && !DEFAULT_PHASE_ORDER.includes(state.currentPhase)) {
+            state.currentPhase = DEFAULT_PHASE_ORDER[0]
+          }
         }
         // Normalize legacy arrows
         if (state && state.localArrows) {

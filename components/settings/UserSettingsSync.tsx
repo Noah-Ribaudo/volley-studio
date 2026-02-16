@@ -8,7 +8,6 @@ import { useThemeStore } from '@/store/useThemeStore'
 import {
   DEFAULT_PHASE_ORDER,
   DEFAULT_VISIBLE_PHASES,
-  RALLY_PHASES,
   type RallyPhase,
   type Role,
 } from '@/lib/types'
@@ -51,35 +50,12 @@ const VALID_ROLES: Role[] = ['S', 'OH1', 'OH2', 'MB1', 'MB2', 'OPP', 'L']
 const VALID_LEARNING_PANEL_POSITIONS: LearningPanelPosition[] = ['floating', 'bottom', 'side', 'inline']
 const VALID_SHADER_IDS = new Set(SHADER_OPTIONS.map((option) => option.id))
 
-function normalizePhases(phases: string[] | undefined): RallyPhase[] {
-  const seen = new Set<RallyPhase>()
-  const next: RallyPhase[] = []
-  for (const phase of phases ?? []) {
-    if (!RALLY_PHASES.includes(phase as RallyPhase)) continue
-    const typedPhase = phase as RallyPhase
-    if (seen.has(typedPhase)) continue
-    seen.add(typedPhase)
-    next.push(typedPhase)
-  }
-  return next
+function normalizePhaseOrder(_order: string[] | undefined): RallyPhase[] {
+  return [...DEFAULT_PHASE_ORDER]
 }
 
-function normalizePhaseOrder(order: string[] | undefined): RallyPhase[] {
-  const next = normalizePhases(order)
-  for (const phase of DEFAULT_PHASE_ORDER) {
-    if (!next.includes(phase)) {
-      next.push(phase)
-    }
-  }
-  return next
-}
-
-function normalizeVisiblePhases(phases: string[] | undefined): RallyPhase[] {
-  const next = normalizePhases(phases)
-  if (next.length === 0) {
-    return [...DEFAULT_VISIBLE_PHASES]
-  }
-  return next
+function normalizeVisiblePhases(_phases: string[] | undefined): RallyPhase[] {
+  return [...DEFAULT_VISIBLE_PHASES]
 }
 
 function normalizePayload(raw: UserSettingsInput): UserSettingsPayload {

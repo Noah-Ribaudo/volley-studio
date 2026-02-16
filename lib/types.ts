@@ -63,24 +63,16 @@ export const RALLY_PHASES: RallyPhase[] = [
   'BALL_DEAD',
 ]
 // Default visible phases (hide intermediate transitions)
-export const DEFAULT_VISIBLE_PHASES: RallyPhase[] = [
+export const FIXED_WHITEBOARD_PHASES: RallyPhase[] = [
   'PRE_SERVE',
   'DEFENSE_PHASE',
   'SERVE_RECEIVE',
   'ATTACK_PHASE',
 ]
-// Default order shown in Settings > Whiteboard Phases
-export const DEFAULT_PHASE_ORDER: RallyPhase[] = [
-  'PRE_SERVE',
-  'DEFENSE_PHASE',
-  'SERVE_RECEIVE',
-  'ATTACK_PHASE',
-  'TRANSITION_TO_OFFENSE',
-  'SERVE_IN_AIR',
-  'SET_PHASE',
-  'TRANSITION_TO_DEFENSE',
-  'BALL_DEAD',
-]
+
+// Whiteboard phases are fixed and always shown in this order.
+export const DEFAULT_VISIBLE_PHASES: RallyPhase[] = [...FIXED_WHITEBOARD_PHASES]
+export const DEFAULT_PHASE_ORDER: RallyPhase[] = [...FIXED_WHITEBOARD_PHASES]
 export const ROTATIONS = [1, 2, 3, 4, 5, 6] as const
 export type Rotation = typeof ROTATIONS[number]
 
@@ -121,8 +113,8 @@ export const PHASE_INFO: Record<string, { name: string; description: string; isI
 // Rally phase display information
 export const RALLY_PHASE_INFO: Record<RallyPhase, { name: string; description: string; isIntermediate: boolean }> = {
   'PRE_SERVE': {
-    name: 'Pre-Serve',
-    description: 'Players align in legal formation before serve',
+    name: 'Serving',
+    description: 'Your team is serving',
     isIntermediate: false,
   },
   'SERVE_IN_AIR': {
@@ -131,8 +123,8 @@ export const RALLY_PHASE_INFO: Record<RallyPhase, { name: string; description: s
     isIntermediate: true,
   },
   'SERVE_RECEIVE': {
-    name: 'Serve Receive',
-    description: 'Receiving team prepares to pass the serve',
+    name: 'Recieving',
+    description: 'Your team is receiving the serve',
     isIntermediate: false,
   },
   'TRANSITION_TO_OFFENSE': {
@@ -146,8 +138,8 @@ export const RALLY_PHASE_INFO: Record<RallyPhase, { name: string; description: s
     isIntermediate: false,
   },
   'ATTACK_PHASE': {
-    name: 'Attack Phase',
-    description: 'Attackers approach and hit the ball',
+    name: 'Offense',
+    description: 'Your team is attacking',
     isIntermediate: false,
   },
   'TRANSITION_TO_DEFENSE': {
@@ -156,8 +148,8 @@ export const RALLY_PHASE_INFO: Record<RallyPhase, { name: string; description: s
     isIntermediate: true,
   },
   'DEFENSE_PHASE': {
-    name: 'Defense Phase',
-    description: 'Team defends against opponent attack',
+    name: 'Defense',
+    description: 'Your team is defending',
     isIntermediate: false,
   },
   'BALL_DEAD': {

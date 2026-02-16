@@ -1,10 +1,11 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
-import { Phase, PHASES, RALLY_PHASES, Rotation, ROTATIONS, Role, ROLES, ROLE_INFO } from '@/lib/types'
+import { Phase, Rotation, ROTATIONS, Role, ROLES, ROLE_INFO } from '@/lib/types'
 import type { RallyPhase } from '@/lib/types'
 import { cn, getTextColorForOklch } from '@/lib/utils'
-import { getPhaseInfo, getCompactPhaseIcon, isRallyPhase as checkIsRallyPhase } from '@/lib/phaseIcons'
+import { getPhaseInfo, getCompactPhaseIcon } from '@/lib/phaseIcons'
+import { getVisibleOrderedRallyPhases } from '@/lib/rallyPhaseOrder'
 
 interface ControlRailProps {
   currentRotation: Rotation
@@ -29,11 +30,7 @@ export function ControlRail({
   onRoleSelect,
   visiblePhases
 }: ControlRailProps) {
-  // Show visible RallyPhases if current phase is a RallyPhase, otherwise show legacy phases
-  const isRallyPhase = checkIsRallyPhase(currentPhase)
-  const phasesToShow = isRallyPhase
-    ? (visiblePhases ? RALLY_PHASES.filter(p => visiblePhases.has(p)) : RALLY_PHASES)
-    : PHASES
+  const phasesToShow = getVisibleOrderedRallyPhases(undefined, visiblePhases)
 
   return (
     <div className="rounded-lg border border-border bg-card/70 backdrop-blur-sm shadow-sm p-1.5 sm:p-2.5 space-y-1.5 sm:space-y-2.5 w-full max-w-full overflow-hidden">
@@ -56,9 +53,6 @@ export function ControlRail({
           {phasesToShow.map(phase => {
             const info = getPhaseInfo(phase)
             const selected = currentPhase === phase
-            // For RallyPhases, check visibility; legacy phases are always visible
-            const isRallyPhase = RALLY_PHASES.includes(phase as RallyPhase)
-            const isVisible = !isRallyPhase || !visiblePhases || visiblePhases.has(phase as RallyPhase)
             return (
               <Button
                 key={phase}
@@ -75,8 +69,7 @@ export function ControlRail({
                   "w-11 px-0 sm:w-auto sm:px-2",
                   selected
                     ? 'shadow-md ring-1 ring-primary/40 ring-offset-1 ring-offset-background'
-                    : 'opacity-80 hover:opacity-100',
-                  !isVisible && 'opacity-40'
+                    : 'opacity-80 hover:opacity-100'
                 )}
               >
                 {getCompactPhaseIcon(phase)}
@@ -171,4 +164,3 @@ export function ControlRail({
     </div>
   )
 }
-

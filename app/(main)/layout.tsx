@@ -14,7 +14,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { PrintDialog } from '@/components/print'
 import { getActiveAssignments } from '@/lib/lineups'
 import type { Rotation, Phase, PositionCoordinates, RallyPhase } from '@/lib/types'
-import { RALLY_PHASES, isRallyPhase as checkIsRallyPhase } from '@/lib/types'
+import { getVisibleOrderedRallyPhases } from '@/lib/rallyPhaseOrder'
 import VolleyBall from '@/components/logo/VolleyBall'
 import { UserMenu } from '@/components/auth'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
@@ -57,11 +57,8 @@ export default function VolleyballLayout({
     )
   }, [localPositions, customLayouts, currentTeam, baseOrder])
 
-  // Get visible phases for print
-  const isRallyPhase = checkIsRallyPhase(currentPhase)
-  const phasesToShow = isRallyPhase
-    ? (visiblePhases ? RALLY_PHASES.filter(p => visiblePhases.has(p)) : RALLY_PHASES)
-    : RALLY_PHASES
+  // Phase list is fixed (Serving, Defense, Recieving, Offense).
+  const phasesToShow = getVisibleOrderedRallyPhases(undefined, undefined)
 
   // GameTime bypasses normal layout only when actively playing in fullscreen
   const gamePhase = useGameTimeStore((s) => s.phase)

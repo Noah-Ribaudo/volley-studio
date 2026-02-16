@@ -343,9 +343,7 @@ function MinimalModeContent() {
   }, [baseOrder, currentPhase, currentRotation, positions, showLibero])
 
   const orderedVisiblePhases = getVisibleOrderedRallyPhases(phaseOrder, visiblePhases)
-  const phasesToShow: RallyPhase[] = isRallyPhase(currentPhase) && !orderedVisiblePhases.includes(currentPhase)
-    ? [currentPhase, ...orderedVisiblePhases]
-    : orderedVisiblePhases
+  const phasesToShow: RallyPhase[] = orderedVisiblePhases
 
   const cleanAssignments = useCallback((source: Record<string, string | undefined> | undefined) => {
     const cleaned: Record<string, string> = {}
