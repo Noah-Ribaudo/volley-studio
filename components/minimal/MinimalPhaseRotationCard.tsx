@@ -28,7 +28,7 @@ export function MinimalPhaseRotationCard({
   return (
     <MinimalCard title="Phase + Rotation" description="Control the current step and rotation.">
       <div className="space-y-3">
-        <div className="grid grid-cols-[auto,1fr,auto] items-center gap-2">
+        <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2">
           <button
             type="button"
             onClick={onPrevPhase}
@@ -59,7 +59,7 @@ export function MinimalPhaseRotationCard({
           </button>
         </div>
 
-        <div className="grid grid-cols-[5.5rem,1fr] items-center gap-2">
+        <div className="grid grid-cols-[5.5rem_1fr] items-center gap-2">
           <label htmlFor="minimal-rotation" className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Rotation
           </label>

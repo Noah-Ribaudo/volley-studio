@@ -26,7 +26,7 @@ export function MinimalAssignmentsCard({
       ) : (
         <div className="space-y-2">
           {ROLES.map((role) => (
-            <div key={role} className="grid grid-cols-[3rem,1fr] items-center gap-2">
+            <div key={role} className="grid grid-cols-[3rem_1fr] items-center gap-2">
               <label htmlFor={`minimal-role-${role}`} className="text-sm font-medium text-foreground">
                 {role}
               </label>
