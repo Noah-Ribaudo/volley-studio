@@ -102,6 +102,7 @@ function HomePageContent() {
     fullStatusLabels,
     debugHitboxes,
     showMotionDebugPanel,
+    courtSetupSurfaceVariant,
     attackBallPositions,
     setAttackBallPosition,
     clearAttackBallPosition,
@@ -1011,6 +1012,18 @@ function HomePageContent() {
             {courtSetupContent}
           </DialogContent>
         </Dialog>
+      ) : courtSetupSurfaceVariant === 'panel' ? (
+        <Sheet open={courtSetupOpen} onOpenChange={setCourtSetupOpen}>
+          <SheetContent side="right" className="w-full sm:max-w-[560px] overflow-y-auto">
+            <SheetHeader className="pb-4">
+              <SheetTitle>Court Setup</SheetTitle>
+              <SheetDescription>
+                Choose team, lineup, and opponent visibility for the whiteboard.
+              </SheetDescription>
+            </SheetHeader>
+            {courtSetupContent}
+          </SheetContent>
+        </Sheet>
       ) : (
         <Popover open={courtSetupOpen} onOpenChange={setCourtSetupOpen}>
           <PopoverContent
