@@ -14,20 +14,9 @@ import type { Team } from '@/lib/types'
 import type { PresetSystem } from '@/lib/presetTypes'
 import { toast } from 'sonner'
 import { listLocalTeams, upsertLocalTeam } from '@/lib/localTeams'
+import { createTeamRepository } from '@/lib/teamRepository'
 
 const SEARCH_MIN_TEAM_COUNT = 10
-
-// Generate a URL-friendly slug from team name
-function generateSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '_')
-    .replace(/-+/g, '_')
-    .replace(/_+/g, '_')
-    .replace(/^_+|_+$/g, '')
-}
 
 export default function TeamsPage() {
   const router = useRouter()
@@ -40,6 +29,9 @@ export default function TeamsPage() {
   const teams = useQuery(api.teams.search, { query: searchQuery })
   const createTeam = useMutation(api.teams.create)
   const cloneTeam = useMutation(api.teams.clone)
+  const teamRepository = createTeamRepository({
+    createCloudTeam: createTeam,
+  })
 
   const isLoading = teams === undefined
   const isCloudTeamCountLoading = allCloudTeams === undefined
@@ -69,35 +61,15 @@ export default function TeamsPage() {
   }, [searchQuery, shouldShowSearch])
 
   // Handle team creation (cloud)
-  const handleCreateTeam = async (name: string, password?: string, presetSystem?: PresetSystem) => {
-    const slug = generateSlug(name)
-    const teamId = await createTeam({ name, slug, password, presetSystem })
+  const handleCreateTeam = async (name: string, _password?: string, presetSystem?: PresetSystem) => {
+    const teamId = await teamRepository.createCloudTeam(name, presetSystem)
     router.push(`/teams/${teamId}`)
   }
 
   // Handle local-only team creation (no account)
   const handleCreateLocalTeam = (name: string, presetSystem?: PresetSystem) => {
-    const now = new Date().toISOString()
-    const localTeam: Team = {
-      id: `local-${Date.now()}`,
-      name,
-      slug: generateSlug(name),
-      roster: [],
-      lineups: [{
-        id: 'default',
-        name: 'Default',
-        position_assignments: {},
-        position_source: presetSystem,
-        starting_rotation: 1,
-        created_at: now,
-      }],
-      active_lineup_id: 'default',
-      position_assignments: {},
-      created_at: now,
-      updated_at: now,
-    }
-    const nextLocalTeams = upsertLocalTeam(localTeam)
-    setLocalTeams(nextLocalTeams)
+    const localTeam = teamRepository.createLocalTeam(name, presetSystem)
+    setLocalTeams(listLocalTeams())
     setCurrentTeam(localTeam)
     setSearchQuery('')
     toast.success(`Created Unsaved (Local) team: ${name}`)

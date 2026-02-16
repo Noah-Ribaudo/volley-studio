@@ -4,7 +4,6 @@ import { useEffect, useState, useMemo, useRef, useCallback, Suspense } from 'rea
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
-import { Id } from '@/convex/_generated/dataModel'
 import { useAppStore, getCurrentPositions, getCurrentArrows, getCurrentTags, getActiveLineupPositionSource } from '@/store/useAppStore'
 import { VolleyballCourt } from '@/components/court'
 import { RosterManagementCard } from '@/components/roster'
@@ -37,8 +36,8 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { getLocalTeamById, listLocalTeams, upsertLocalTeam } from '@/lib/localTeams'
-import { generateSlug } from '@/lib/teamUtils'
+import { listLocalTeams } from '@/lib/localTeams'
+import { createTeamRepository } from '@/lib/teamRepository'
 import type { PresetSystem } from '@/lib/presetTypes'
 import { useHintStore } from '@/store/useHintStore'
 import { toast } from 'sonner'
@@ -161,6 +160,10 @@ function HomePageContent() {
   const hasCompletedFirstDrag = useHintStore((state) => state.hasCompletedFirstDrag)
   const hasNavigatedPhase = useHintStore((state) => state.hasNavigatedPhase)
   const markPhaseNavigated = useHintStore((state) => state.markPhaseNavigated)
+  const teamRepository = useMemo(() => createTeamRepository({
+    createCloudTeam: createTeam,
+    updateCloudLineups: updateLineups,
+  }), [createTeam, updateLineups])
 
   // Mobile detection
   const isMobile = useIsMobile()
@@ -501,53 +504,17 @@ function HomePageContent() {
     ? (legalityViolations[rotationPhaseKey] || [])
     : []
 
-  const cleanAssignments = useCallback((assignments: Record<string, string | undefined> | undefined) => {
-    const cleaned: Record<string, string> = {}
-    if (!assignments) {
-      return cleaned
-    }
-    for (const [role, playerId] of Object.entries(assignments)) {
-      if (typeof playerId === 'string' && playerId.trim() !== '') {
-        cleaned[role] = playerId
-      }
-    }
-    return cleaned
-  }, [])
-
   const persistLineupsForTeam = useCallback(async (nextTeam: Team) => {
-    const normalizedLineups = (nextTeam.lineups || []).map((lineup) => ({
-      id: lineup.id,
-      name: lineup.name,
-      position_assignments: cleanAssignments(lineup.position_assignments),
-      position_source: lineup.position_source,
-      starting_rotation: lineup.starting_rotation ?? 1,
-      created_at: lineup.created_at,
-    }))
-    const normalizedActiveLineupId = nextTeam.active_lineup_id &&
-      normalizedLineups.some((lineup) => lineup.id === nextTeam.active_lineup_id)
-      ? nextTeam.active_lineup_id
-      : normalizedLineups[0]?.id
-    const activeLineup = normalizedLineups.find((lineup) => lineup.id === normalizedActiveLineupId)
-    const nextAssignments = cleanAssignments(activeLineup?.position_assignments || nextTeam.position_assignments)
-
-    if (nextTeam._id) {
-      await updateLineups({
-        id: nextTeam._id as Id<'teams'>,
-        lineups: normalizedLineups,
-        activeLineupId: normalizedActiveLineupId || undefined,
-        positionAssignments: nextAssignments,
-      })
-      return
+    const updatedTeam = await teamRepository.saveLineups(
+      nextTeam,
+      nextTeam.lineups || [],
+      nextTeam.active_lineup_id ?? null
+    )
+    if (!updatedTeam._id) {
+      setLocalTeams(listLocalTeams())
     }
-
-    upsertLocalTeam({
-      ...nextTeam,
-      lineups: normalizedLineups,
-      active_lineup_id: normalizedActiveLineupId ?? null,
-      position_assignments: nextAssignments,
-    })
-    setLocalTeams(listLocalTeams())
-  }, [cleanAssignments, updateLineups])
+    return updatedTeam
+  }, [teamRepository])
 
   const teamSelectValue = activeContext.mode === 'practice' || !activeContext.teamId
     ? '__none__'
@@ -559,7 +526,7 @@ function HomePageContent() {
     return currentTeam.lineups.find((lineup) => lineup.id === currentTeam.active_lineup_id) || currentTeam.lineups[0]
   }, [currentTeam])
   const lineupSelectValue = currentLineup?.id || '__none__'
-  const handleTeamSelect = useCallback((value: string) => {
+  const handleTeamSelect = useCallback(async (value: string) => {
     setCourtSetupOpen(false)
     if (value === '__new__') {
       setCreateTeamDialogOpen(true)
@@ -585,7 +552,7 @@ function HomePageContent() {
 
     if (value.startsWith('local:')) {
       const localTeamId = value.slice('local:'.length)
-      const localTeam = getLocalTeamById(localTeamId)
+      const localTeam = await teamRepository.load({ mode: 'unsavedLocal', teamId: localTeamId })
       if (!localTeam) return
 
       loadedTeamFromUrlRef.current = null
@@ -595,57 +562,23 @@ function HomePageContent() {
       setTeamPasswordProvided(true)
       router.push('/')
     }
-  }, [router, setAccessMode, setCurrentTeam, setCustomLayouts, setTeamPasswordProvided])
+  }, [router, setAccessMode, setCurrentTeam, setCustomLayouts, setTeamPasswordProvided, teamRepository])
   const handleCreateCloudTeam = useCallback(async (
     name: string,
     _password?: string,
     presetSystem?: PresetSystem
   ) => {
-    const trimmedName = name.trim()
-    if (!trimmedName) {
-      throw new Error('Team name is required')
-    }
-
-    const createdTeamId = await createTeam({
-      name: trimmedName,
-      slug: generateSlug(trimmedName),
-      presetSystem,
-    })
+    const createdTeamId = await teamRepository.createCloudTeam(name, presetSystem)
 
     setCreateTeamDialogOpen(false)
     setCourtSetupOpen(false)
     router.push(`/?team=${encodeURIComponent(createdTeamId)}`)
-  }, [createTeam, router])
+  }, [router, teamRepository])
   const handleCreateLocalTeam = useCallback((name: string, presetSystem?: PresetSystem) => {
-    const trimmedName = name.trim()
-    const lineupId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-      ? crypto.randomUUID()
-      : `lineup-${Date.now()}`
-    const now = new Date().toISOString()
-    const localTeam: Team = {
-      id: `local-${Date.now()}`,
-      name: trimmedName,
-      slug: generateSlug(trimmedName),
-      hasPassword: false,
-      archived: false,
-      roster: [],
-      lineups: [{
-        id: lineupId,
-        name: 'Lineup 1',
-        position_assignments: {},
-        position_source: presetSystem,
-        starting_rotation: 1,
-        created_at: now,
-      }],
-      active_lineup_id: lineupId,
-      position_assignments: {},
-      created_at: now,
-      updated_at: now,
-    }
+    const localTeam = teamRepository.createLocalTeam(name, presetSystem)
 
     loadedTeamFromUrlRef.current = null
-    const nextLocalTeams = upsertLocalTeam(localTeam)
-    setLocalTeams(nextLocalTeams)
+    setLocalTeams(listLocalTeams())
     setCurrentTeam(localTeam)
     setCustomLayouts([])
     setAccessMode('local')
@@ -653,8 +586,8 @@ function HomePageContent() {
     setCreateTeamDialogOpen(false)
     setCourtSetupOpen(false)
     router.push('/')
-    toast.success(`Created Unsaved (Local) team: ${trimmedName}`)
-  }, [router, setAccessMode, setCurrentTeam, setCustomLayouts, setTeamPasswordProvided])
+    toast.success(`Created Unsaved (Local) team: ${localTeam.name}`)
+  }, [router, setAccessMode, setCurrentTeam, setCustomLayouts, setTeamPasswordProvided, teamRepository])
   const handleSaveAsTeamCta = useCallback(() => {
     setCourtSetupOpen(false)
     setCreateTeamDialogOpen(true)
@@ -713,7 +646,8 @@ function HomePageContent() {
       setCurrentTeam(nextTeam)
       setIsSavingLineup(true)
       try {
-        await persistLineupsForTeam(nextTeam)
+        const persistedTeam = await persistLineupsForTeam(nextTeam)
+        setCurrentTeam(persistedTeam)
         toast.success(`Created ${newLineup.name}`)
       } catch (error) {
         setCurrentTeam(currentTeam)
@@ -744,7 +678,8 @@ function HomePageContent() {
     setCurrentTeam(nextTeam)
     setIsSavingLineup(true)
     try {
-      await persistLineupsForTeam(nextTeam)
+      const persistedTeam = await persistLineupsForTeam(nextTeam)
+      setCurrentTeam(persistedTeam)
     } catch (error) {
       setCurrentTeam(currentTeam)
       const message = error instanceof Error ? error.message : 'Failed to switch lineup'
@@ -776,7 +711,7 @@ function HomePageContent() {
     <div className="space-y-4">
       <div className="space-y-2">
         <Label className="text-xs text-muted-foreground">Team</Label>
-        <Select value={teamSelectValue} onValueChange={handleTeamSelect}>
+        <Select value={teamSelectValue} onValueChange={(value) => { void handleTeamSelect(value) }}>
           <SelectTrigger className="h-9 text-sm">
             <SelectValue placeholder="Select team" />
           </SelectTrigger>

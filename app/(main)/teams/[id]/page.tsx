@@ -13,9 +13,9 @@ import { LineupSelector } from '@/components/roster/LineupSelector'
 import { PositionAssigner } from '@/components/roster/PositionAssigner'
 import type { Team, Lineup, PositionAssignments, PositionSource, Rotation } from '@/lib/types'
 import { useAppStore } from '@/store/useAppStore'
-import { generateSlug } from '@/lib/teamUtils'
-import { getLocalTeamById, removeLocalTeam, upsertLocalTeam } from '@/lib/localTeams'
-import { createLineup, duplicateLineup, ensureAtLeastOneLineup } from '@/lib/lineups'
+import { getLocalTeamById } from '@/lib/localTeams'
+import { createLineup, duplicateLineup } from '@/lib/lineups'
+import { createTeamRepository } from '@/lib/teamRepository'
 
 interface TeamPageProps {
   params: Promise<{ id: string }>
@@ -34,6 +34,12 @@ export default function TeamEditPage({ params }: TeamPageProps) {
   const updateRoster = useMutation(api.teams.updateRoster)
   const updateLineups = useMutation(api.teams.updateLineups)
   const deleteTeam = useMutation(api.teams.remove)
+  const teamRepository = useMemo(() => createTeamRepository({
+    updateCloudTeam: updateTeam,
+    updateCloudRoster: updateRoster,
+    updateCloudLineups: updateLineups,
+    deleteCloudTeam: deleteTeam,
+  }), [deleteTeam, updateLineups, updateRoster, updateTeam])
   const [localTeam, setLocalTeam] = useState<Team | null>(() => (isLocalTeam ? getLocalTeamById(id) : null))
 
   // Local state for editing
@@ -239,27 +245,15 @@ export default function TeamEditPage({ params }: TeamPageProps) {
     setIsSaving(true)
     setActionError(null)
     try {
+      const sourceTeam = displayTeam
+      if (!sourceTeam) return false
+
+      const updatedTeam = await teamRepository.saveRoster(sourceTeam, nextRoster)
       if (isLocalTeam) {
-        if (!localTeam) return false
-        const updatedTeam: Team = {
-          ...localTeam,
-          roster: nextRoster,
-        }
-        upsertLocalTeam(updatedTeam)
         setLocalTeam(updatedTeam)
+      }
+      if (currentTeam?.id === sourceTeam.id || currentTeam?._id === sourceTeam._id) {
         setCurrentTeam(updatedTeam)
-      } else {
-        if (!team) return false
-        await updateRoster({
-          id: team._id,
-          roster: nextRoster,
-        })
-        if (currentTeam?.id === team._id || currentTeam?._id === team._id) {
-          setCurrentTeam({
-            ...currentTeam,
-            roster: nextRoster,
-          })
-        }
       }
       toast.success(successMessage)
       return true
@@ -278,71 +272,30 @@ export default function TeamEditPage({ params }: TeamPageProps) {
     nextActiveLineupId: string | null,
     successMessage?: string
   ) => {
-    const cleanAssignments = (assignments: PositionAssignments): Record<string, string> => {
-      const cleaned: Record<string, string> = {}
-      for (const [key, value] of Object.entries(assignments)) {
-        if (value !== undefined) {
-          cleaned[key] = value
-        }
-      }
-      return cleaned
-    }
-    const ensured = ensureAtLeastOneLineup(nextLineups)
-    const normalizedLineups = ensured.lineups.map((lineup) => ({
-      ...lineup,
-      position_assignments: cleanAssignments(lineup.position_assignments),
-      starting_rotation: lineup.starting_rotation ?? 1,
-    }))
-    const normalizedActiveLineupId = nextActiveLineupId && normalizedLineups.some((lineup) => lineup.id === nextActiveLineupId)
-      ? nextActiveLineupId
-      : ensured.newActiveId
-    const activeLineup = normalizedLineups.find((lineup) => lineup.id === normalizedActiveLineupId)
-    const activeAssignments = cleanAssignments(activeLineup?.position_assignments || {})
-
     setIsSaving(true)
     setActionError(null)
     try {
+      const sourceTeam = displayTeam
+      if (!sourceTeam) return false
+
+      const updatedTeam = await teamRepository.saveLineups(
+        sourceTeam,
+        nextLineups,
+        nextActiveLineupId
+      )
       if (isLocalTeam) {
-        if (!localTeam) return false
-        const updatedTeam: Team = {
-          ...localTeam,
-          lineups: normalizedLineups,
-          active_lineup_id: normalizedActiveLineupId,
-          position_assignments: activeAssignments,
-        }
-        upsertLocalTeam(updatedTeam)
         setLocalTeam(updatedTeam)
+      }
+      if (currentTeam?.id === sourceTeam.id || currentTeam?._id === sourceTeam._id) {
         setCurrentTeam(updatedTeam)
-      } else {
-        if (!team) return false
-        await updateLineups({
-          id: team._id,
-          lineups: normalizedLineups.map((lineup) => ({
-            id: lineup.id,
-            name: lineup.name,
-            position_assignments: cleanAssignments(lineup.position_assignments),
-            position_source: lineup.position_source,
-            starting_rotation: lineup.starting_rotation ?? 1,
-            created_at: lineup.created_at,
-          })),
-          activeLineupId: normalizedActiveLineupId || undefined,
-          positionAssignments: activeAssignments,
-        })
-        if (currentTeam?.id === team._id || currentTeam?._id === team._id) {
-          setCurrentTeam({
-            ...currentTeam,
-            lineups: normalizedLineups,
-            active_lineup_id: normalizedActiveLineupId,
-            position_assignments: activeAssignments,
-          })
-        }
       }
 
-      setLineups(normalizedLineups)
-      setActiveLineupId(normalizedActiveLineupId)
-      if (!selectedLineupId || !normalizedLineups.some((lineup) => lineup.id === selectedLineupId)) {
-        setSelectedLineupId(normalizedActiveLineupId)
-        setLineupAssignments(activeAssignments)
+      setLineups(updatedTeam.lineups)
+      setActiveLineupId(updatedTeam.active_lineup_id)
+      if (!selectedLineupId || !updatedTeam.lineups.some((lineup) => lineup.id === selectedLineupId)) {
+        setSelectedLineupId(updatedTeam.active_lineup_id)
+        const activeLineup = updatedTeam.lineups.find((lineup) => lineup.id === updatedTeam.active_lineup_id)
+        setLineupAssignments(activeLineup?.position_assignments || {})
       }
       if (successMessage) {
         toast.success(successMessage)
@@ -364,19 +317,12 @@ export default function TeamEditPage({ params }: TeamPageProps) {
     setIsSaving(true)
     setActionError(null)
     try {
+      const updatedTeam = await teamRepository.saveTeamName(sourceTeam, teamName.trim())
       if (isLocalTeam) {
-        if (!localTeam) return
-        const updatedTeam: Team = {
-          ...localTeam,
-          name: teamName.trim(),
-          slug: generateSlug(teamName.trim()),
-        }
-        upsertLocalTeam(updatedTeam)
         setLocalTeam(updatedTeam)
+      }
+      if (currentTeam?.id === sourceTeam.id || currentTeam?._id === sourceTeam._id) {
         setCurrentTeam(updatedTeam)
-      } else {
-        if (!team) return
-        await updateTeam({ id: team._id, name: teamName.trim() })
       }
       setIsNameDirty(false)
       toast.success('Team name updated')
@@ -545,14 +491,12 @@ export default function TeamEditPage({ params }: TeamPageProps) {
     setIsDeleting(true)
     setActionError(null)
     try {
-      if (isLocalTeam) {
-        removeLocalTeam(id)
-        if (currentTeam?.id === id) {
-          setCurrentTeam(null)
-        }
-      } else {
-        if (!team) return
-        await deleteTeam({ id: team._id })
+      const sourceTeam = displayTeam
+      if (!sourceTeam) return
+
+      await teamRepository.delete(sourceTeam)
+      if (currentTeam?.id === sourceTeam.id || currentTeam?._id === sourceTeam._id) {
+        setCurrentTeam(null)
       }
       router.push('/teams')
       toast.success(isLocalTeam ? 'Unsaved (Local) team deleted' : 'Team deleted')
