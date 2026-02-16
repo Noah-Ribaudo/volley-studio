@@ -54,7 +54,10 @@ function getPendingSaveStatus(teamId: string | null, rotationPhaseKey: string): 
   return pending.status
 }
 
-export function useWhiteboardSaveState(teamId: string | null, rotationPhaseKey: string) {
+export function useWhiteboardSaveState(
+  teamId: string | null,
+  rotationPhaseKey: string
+): 'idle' | 'pending' | 'saving' {
   return useSyncExternalStore(
     subscribePendingSaveChanges,
     () => getPendingSaveStatus(teamId, rotationPhaseKey),

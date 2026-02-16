@@ -252,9 +252,11 @@ export default function MinimalModePage() {
   const activePositionSource = getActiveLineupPositionSource(currentTeam)
   const isEditingAllowed = activePositionSource === 'custom'
 
-  const saveLabel = !currentTeam
+  const saveLabel: 'local' | 'synced' | 'pending' | 'saving' = !currentTeam
     ? 'local'
-    : saveState
+    : saveState === 'idle'
+      ? 'synced'
+      : saveState
   const phaseLabel = isRallyPhase(currentPhase)
     ? getPhaseInfo(currentPhase).name
     : currentPhase
