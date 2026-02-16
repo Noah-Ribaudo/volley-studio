@@ -79,6 +79,19 @@ const themeScript = `
       }
     }
   } catch (e) { /* Theme parsing failed - use default */ }
+
+  // Prevent annotation tooling from trapping all clicks in preview sessions.
+  try {
+    var settingsKey = 'feedback-toolbar-settings';
+    var rawSettings = localStorage.getItem(settingsKey);
+    if (rawSettings) {
+      var settings = JSON.parse(rawSettings);
+      if (settings && typeof settings === 'object' && settings.blockInteractions !== false) {
+        settings.blockInteractions = false;
+        localStorage.setItem(settingsKey, JSON.stringify(settings));
+      }
+    }
+  } catch (e) { /* Annotation settings parsing failed */ }
 })();
 `;
 
