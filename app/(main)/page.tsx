@@ -51,9 +51,9 @@ const ANIMATION_CONFIG = {
   durationMs: 500,
   easingCss: 'cubic-bezier(0.4, 0, 0.2, 1)',
   easingFn: 'cubic' as 'cubic' | 'quad',
-  collisionRadius: 0.12,
-  separationStrength: 6,
-  maxSeparation: 3,
+  collisionRadius: 0.07,
+  separationStrength: 3.45,
+  maxSeparation: 0.4,
 }
 const COURT_SETUP_POPOVER_WIDTH = 560
 const COURT_SETUP_VIEWPORT_MARGIN = 16
@@ -92,6 +92,7 @@ function HomePageContent() {
     legalityViolations,
     isReceivingContext,
     showLibero,
+    setShowLibero,
     showPosition,
     showPlayer,
     showNumber,
@@ -836,6 +837,18 @@ function HomePageContent() {
           id="court-setup-hide-opponent"
           checked={hideAwayTeam}
           onCheckedChange={setHideAwayTeam}
+        />
+      </div>
+
+      <div className="flex items-center justify-between rounded-lg border border-border bg-muted/40 px-3 py-2">
+        <div className="space-y-0.5">
+          <Label htmlFor="court-setup-show-libero" className="text-sm font-medium">Show Libero</Label>
+          <p className="text-xs text-muted-foreground">Display libero substitutions in the lineup.</p>
+        </div>
+        <Switch
+          id="court-setup-show-libero"
+          checked={showLibero}
+          onCheckedChange={setShowLibero}
         />
       </div>
 

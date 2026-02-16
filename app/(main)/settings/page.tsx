@@ -53,8 +53,6 @@ export default function SettingsPage() {
     setShowPosition,
     setShowPlayer,
     setShowNumber,
-    showLibero,
-    setShowLibero,
     circleTokens,
     setCircleTokens,
     hideAwayTeam,
@@ -214,13 +212,6 @@ export default function SettingsPage() {
                 />
               </>
             )}
-            <SettingsToggle
-              id="show-libero"
-              label="Show Libero"
-              description="Display libero substitutions"
-              checked={showLibero}
-              onCheckedChange={setShowLibero}
-            />
             <SettingsToggle
               id="circle-tokens"
               label="Circle Tokens"
