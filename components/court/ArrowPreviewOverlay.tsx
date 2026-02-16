@@ -81,6 +81,10 @@ export function ArrowPreviewOverlay({
 
         const rolePreviewVisible = previewVisible[role] === true
         const hasArrow = Boolean(arrows[role])
+        const isDraggingNewPreviewArrow = draggingArrowRole === role && !hasArrow && Boolean(arrowDragPosition)
+        if (hasArrow && !isDraggingNewPreviewArrow) {
+          return null
+        }
         const canShowPreview = !hasArrow
         const isPreviewActive = canShowPreview && (
           rolePreviewVisible ||
@@ -92,7 +96,6 @@ export function ArrowPreviewOverlay({
         const previewCurveHeight = 25
         const edgeInset = Math.max(10, actualTokenRadius - 6)
         const direction = isLeftSide ? -1 : 1
-        const isDraggingNewPreviewArrow = draggingArrowRole === role && !arrows[role] && Boolean(arrowDragPosition)
 
         const previewStartSvg = {
           x: homeSvgPos.x,

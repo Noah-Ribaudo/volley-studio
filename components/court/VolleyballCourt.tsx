@@ -512,6 +512,39 @@ export function VolleyballCourt({
     // else: leaving one zone while another is still hovered → do nothing, arrow stays
   }, [incrementNextStepHintHoverCount, shouldShowNextStepHint])
 
+  const clearPreviewStateForRole = useCallback((role: Role) => {
+    const pendingTimeout = hoverDelayRef.current[role]
+    if (pendingTimeout) {
+      clearTimeout(pendingTimeout)
+      delete hoverDelayRef.current[role]
+    }
+
+    if (hoveredZonesRef.current[role]) {
+      hoveredZonesRef.current[role]!.clear()
+      delete hoveredZonesRef.current[role]
+    }
+
+    setHoveredRole(current => (current === role ? null : current))
+    setNextStepTooltipRole(current => (current === role ? null : current))
+    setPreviewVisible(prev => {
+      if (!prev[role]) return prev
+      const next = { ...prev }
+      delete next[role]
+      return next
+    })
+  }, [])
+
+  const clearAllPreviewState = useCallback(() => {
+    Object.values(hoverDelayRef.current).forEach((timeout) => {
+      if (timeout) clearTimeout(timeout)
+    })
+    hoverDelayRef.current = {}
+    hoveredZonesRef.current = {}
+    setHoveredRole(null)
+    setNextStepTooltipRole(null)
+    setPreviewVisible({})
+  }, [])
+
   // Cleanup animation refs on unmount
   useEffect(() => {
     const hoverTimeouts = hoverDelayRef.current
@@ -1352,9 +1385,7 @@ export function VolleyballCourt({
     setDraggingRole(role)
 
     // Immediately hide any arrow preview when drag starts
-    setHoveredRole(null)
-    setNextStepTooltipRole(null)
-    setPreviewVisible({})
+    clearAllPreviewState()
 
     dragOffsetRef.current = {
       x: currentPos.x - pos.x,
@@ -1410,7 +1441,7 @@ export function VolleyballCourt({
     document.addEventListener('mouseup', handleEnd)
       document.addEventListener('touchmove', handleMove, { passive: false })
       document.addEventListener('touchend', handleEnd)
-    }, [isEditable, isPreviewingMovement, positions, getEventPosition, handleDragEnd, toSvgCoords, toNormalizedCoords])
+    }, [isEditable, isPreviewingMovement, positions, getEventPosition, handleDragEnd, toSvgCoords, toNormalizedCoords, clearAllPreviewState])
 
   // Handle arrow drag (create, reposition, or delete movement arrows)
   const handleArrowDragStart = useCallback((
@@ -1428,6 +1459,7 @@ export function VolleyballCourt({
     }
     e.stopPropagation()
     setDraggingArrowRole(role)
+    clearPreviewStateForRole(role)
 
     // Track drag count for hint dismissal
     incrementDragCount()
@@ -1536,6 +1568,8 @@ export function VolleyballCourt({
         setTappedRole(role)
       }
 
+      clearPreviewStateForRole(role)
+
       arrowDragPositionRef.current = null
       curveControlRef.current = null
       setDraggingArrowRole(null)
@@ -1553,7 +1587,7 @@ export function VolleyballCourt({
     document.addEventListener('mouseup', handleEnd)
       document.addEventListener('touchmove', handleMove, { passive: false })
       document.addEventListener('touchend', handleEnd)
-  }, [onArrowChange, onArrowCurveChange, getEventPosition, toNormalizedCoords, incrementDragCount, markNextStepDragLearned, isMobile, arrows, arrowCurves, isPreviewingMovement, displayPositions, positions, toSvgCoords])
+  }, [onArrowChange, onArrowCurveChange, getEventPosition, toNormalizedCoords, incrementDragCount, markNextStepDragLearned, isMobile, arrows, arrowCurves, isPreviewingMovement, displayPositions, positions, toSvgCoords, clearPreviewStateForRole])
 
   // Handle curve drag - dragging the curve handle adjusts direction and intensity
   const handleCurveDragStart = useCallback((role: Role, e: React.MouseEvent | React.TouchEvent) => {
