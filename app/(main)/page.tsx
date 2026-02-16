@@ -982,12 +982,12 @@ function HomePageContent() {
                 }
               : undefined}
           >
-            <DialogHeader>
-              <DialogTitle>Court Setup</DialogTitle>
-              <DialogDescription>
+            <div className="mb-4 space-y-1.5">
+              <h2 className="text-lg font-semibold leading-none tracking-tight">Court Setup</h2>
+              <p className="text-sm text-muted-foreground">
                 Choose team, lineup, and opponent visibility for the whiteboard.
-              </DialogDescription>
-            </DialogHeader>
+              </p>
+            </div>
             {courtSetupContent}
           </PopoverContent>
         </Popover>
