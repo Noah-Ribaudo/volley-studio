@@ -14,7 +14,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { PrintDialog } from '@/components/print'
 import { getActiveAssignments } from '@/lib/lineups'
 import type { Rotation, Phase, PositionCoordinates, RallyPhase } from '@/lib/types'
-import { RALLY_PHASES, isRallyPhase as checkIsRallyPhase } from '@/lib/types'
+import { getVisibleOrderedRallyPhases } from '@/lib/rallyPhaseOrder'
 import VolleyBall from '@/components/logo/VolleyBall'
 import { UserMenu } from '@/components/auth'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
@@ -57,11 +57,8 @@ export default function VolleyballLayout({
     )
   }, [localPositions, customLayouts, currentTeam, baseOrder])
 
-  // Get visible phases for print
-  const isRallyPhase = checkIsRallyPhase(currentPhase)
-  const phasesToShow = isRallyPhase
-    ? (visiblePhases ? RALLY_PHASES.filter(p => visiblePhases.has(p)) : RALLY_PHASES)
-    : RALLY_PHASES
+  // Phase list is fixed (Serving, Defense, Recieving, Offense).
+  const phasesToShow = getVisibleOrderedRallyPhases(undefined, undefined)
 
   // GameTime bypasses normal layout only when actively playing in fullscreen
   const gamePhase = useGameTimeStore((s) => s.phase)
@@ -76,7 +73,6 @@ export default function VolleyballLayout({
   // Only show on whiteboard page
   const isWhiteboardPage = pathname === '/'
   const showContextBar = isWhiteboardPage
-  const contentBackgroundColor = 'var(--background)'
 
   // Always reserve space for context bar to prevent layout jump
   // This keeps the layout stable when navigating between pages
@@ -89,15 +85,12 @@ export default function VolleyballLayout({
     <div className="h-dvh relative overflow-hidden bg-background">
       <SidebarProvider defaultOpen className="h-dvh w-full">
         <VolleyballSidebar />
-        <SidebarInset
-          className="relative h-dvh flex flex-col"
-          style={{ backgroundColor: contentBackgroundColor }}
-        >
+        <SidebarInset className="relative h-dvh flex flex-col bg-gradient-to-b from-background to-muted/30">
         {/* Desktop header nav */}
         <DesktopHeaderNav
           onOpenPrintDialog={() => setPrintDialogOpen(true)}
-          onOpenCourtSetup={(anchorRect) => {
-            window.dispatchEvent(new CustomEvent(OPEN_COURT_SETUP_EVENT, { detail: { anchorRect } }))
+          onOpenCourtSetup={(detail) => {
+            window.dispatchEvent(new CustomEvent(OPEN_COURT_SETUP_EVENT, { detail }))
           }}
           showNav={false}
         />
@@ -120,11 +113,15 @@ export default function VolleyballLayout({
             {isWhiteboardPage && (
               <>
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
-                  className="h-8 px-2 text-xs"
-                  onClick={() => {
-                    window.dispatchEvent(new Event(OPEN_COURT_SETUP_EVENT))
+                  className="h-8 px-2.5 bg-background/70 text-sm font-medium text-foreground hover:bg-accent"
+                  onClick={(event) => {
+                    window.dispatchEvent(
+                      new CustomEvent(OPEN_COURT_SETUP_EVENT, {
+                        detail: { triggerEl: event.currentTarget as HTMLElement },
+                      })
+                    )
                   }}
                   aria-label="Open court setup"
                   title="Open court setup"

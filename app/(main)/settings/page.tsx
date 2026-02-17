@@ -18,29 +18,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { RALLY_PHASE_INFO, RallyPhase } from '@/lib/types'
-import { cn } from '@/lib/utils'
 import ThemePicker from '@/components/ThemePicker'
 import SuggestionBox from '@/components/SuggestionBox'
-import { DragDropVerticalIcon } from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from '@dnd-kit/core'
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
 
 export default function SettingsPage() {
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth()
@@ -57,11 +36,6 @@ export default function SettingsPage() {
     setCircleTokens,
     hideAwayTeam,
     setHideAwayTeam,
-    // Phase visibility and order
-    visiblePhases,
-    togglePhaseVisibility,
-    phaseOrder,
-    setPhaseOrder,
     // Team (for conditional UI)
     currentTeam,
     // Court view
@@ -80,31 +54,8 @@ export default function SettingsPage() {
   const viewer = useQuery(api.users.viewer, isAuthenticated ? {} : 'skip')
   const [isSigningOut, setIsSigningOut] = useState(false)
 
-  // DnD sensors for phase reordering
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  )
-
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event
-
-    if (over && active.id !== over.id) {
-      const oldIndex = phaseOrder.indexOf(active.id as RallyPhase)
-      const newIndex = phaseOrder.indexOf(over.id as RallyPhase)
-      setPhaseOrder(arrayMove(phaseOrder, oldIndex, newIndex))
-    }
-  }
-
   const hasTeam = Boolean(currentTeam)
   const enabledDisplayCount = Number(showPosition) + Number(showPlayer) + Number(showNumber)
-  const [whiteboardPhasesOpen, setWhiteboardPhasesOpen] = useState(false)
   const handleSignOut = async () => {
     if (isSigningOut) return
     setIsSigningOut(true)
@@ -116,7 +67,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
+    <div className="min-h-screen">
       <div className="container mx-auto px-4 py-6 pb-32 max-w-2xl space-y-6">
         {/* Account */}
         <Card>
@@ -301,54 +252,6 @@ export default function SettingsPage() {
           </Card>
         )}
 
-        {/* Whiteboard Phases */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-start justify-between gap-3">
-              <div className="space-y-1">
-                <CardTitle className="text-base">Whiteboard Phases</CardTitle>
-                <CardDescription>Drag to reorder, toggle to show/hide in the whiteboard cycle</CardDescription>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setWhiteboardPhasesOpen((prev) => !prev)}
-              >
-                {whiteboardPhasesOpen ? 'Hide' : 'Show'}
-              </Button>
-            </div>
-          </CardHeader>
-          {whiteboardPhasesOpen && (
-            <CardContent>
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
-              >
-                <SortableContext items={phaseOrder} strategy={verticalListSortingStrategy}>
-                  <div className="space-y-2">
-                    {phaseOrder.map(phase => {
-                      const info = RALLY_PHASE_INFO[phase]
-                      const isVisible = visiblePhases.has(phase)
-                      return (
-                        <SortablePhaseItem
-                          key={phase}
-                          phase={phase}
-                          label={info.name}
-                          description={info.description}
-                          checked={isVisible}
-                          onCheckedChange={() => togglePhaseVisibility(phase)}
-                        />
-                      )
-                    })}
-                  </div>
-                </SortableContext>
-              </DndContext>
-            </CardContent>
-          )}
-        </Card>
-
         {/* Suggestion Box */}
         <SuggestionBox />
 
@@ -383,64 +286,6 @@ function SettingsToggle({
         )}
       </div>
       <Switch id={id} checked={checked} onCheckedChange={onCheckedChange} />
-    </div>
-  )
-}
-
-interface SortablePhaseItemProps {
-  phase: RallyPhase
-  label: string
-  description?: string
-  checked: boolean
-  onCheckedChange: () => void
-}
-
-function SortablePhaseItem({
-  phase,
-  label,
-  description,
-  checked,
-  onCheckedChange,
-}: SortablePhaseItemProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: phase })
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  }
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={cn(
-        "flex items-center gap-3 p-3 rounded-lg border bg-card",
-        isDragging && "opacity-50 shadow-lg z-10"
-      )}
-    >
-      <button
-        type="button"
-        className="touch-none cursor-grab active:cursor-grabbing p-1 -m-1 text-muted-foreground hover:text-foreground"
-        aria-label={`Drag to reorder ${label}`}
-        {...attributes}
-        {...listeners}
-      >
-        <HugeiconsIcon icon={DragDropVerticalIcon} className="h-5 w-5" />
-      </button>
-      <div className="flex-1 space-y-0.5">
-        <Label htmlFor={phase} className="text-sm font-medium">{label}</Label>
-        {description && (
-          <p className="text-xs text-muted-foreground">{description}</p>
-        )}
-      </div>
-      <Switch id={phase} checked={checked} onCheckedChange={onCheckedChange} />
     </div>
   )
 }

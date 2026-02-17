@@ -1,11 +1,37 @@
 import { test, expect } from '@playwright/test'
 
+const CLIENT_ERROR_PATTERN = /hydration failed|server rendered html didn't match|didn't match the client|cannot read properties of undefined \(reading 'call'\)/i
+
+function captureClientErrors(page: import('@playwright/test').Page) {
+  const messages: string[] = []
+
+  page.on('console', (message) => {
+    const text = message.text()
+    if (CLIENT_ERROR_PATTERN.test(text)) {
+      messages.push(`console:${text}`)
+    }
+  })
+
+  page.on('pageerror', (error) => {
+    const text = error.message
+    if (CLIENT_ERROR_PATTERN.test(text)) {
+      messages.push(`pageerror:${text}`)
+    }
+  })
+
+  return messages
+}
+
 test.describe('Whiteboard', () => {
   test('loads the main whiteboard page', async ({ page }) => {
+    const clientErrors = captureClientErrors(page)
     await page.goto('/')
+    await page.waitForLoadState('networkidle')
+    await page.waitForTimeout(250)
 
     // Page should have loaded without errors
     await expect(page).toHaveTitle(/Volley Studio/i)
+    expect(clientErrors, clientErrors.join('\n')).toEqual([])
 
     // Should have SVG elements on the page (court and/or icons)
     const svgCount = await page.locator('svg').count()
@@ -51,5 +77,22 @@ test.describe('Whiteboard', () => {
     // Player tokens include circles (court lines/icons are separate)
     const circleCount = await court.locator('circle').count()
     expect(circleCount).toBeGreaterThanOrEqual(6)
+  })
+
+  test('court setup button toggles open and close', async ({ page }) => {
+    await page.goto('/')
+    await page.waitForLoadState('networkidle')
+
+    const courtSetupButton = page.getByRole('button', { name: /^Court Setup$/i }).first()
+    const setupDescription = page.getByText('Choose team, lineup, and opponent visibility for the whiteboard.').first()
+
+    await expect(courtSetupButton).toBeVisible()
+    await expect(setupDescription).not.toBeVisible()
+
+    await courtSetupButton.click()
+    await expect(setupDescription).toBeVisible()
+
+    await courtSetupButton.click()
+    await expect(setupDescription).not.toBeVisible()
   })
 })

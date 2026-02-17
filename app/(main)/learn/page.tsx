@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 
 export default function LearnPage() {
   return (
-    <main className="min-h-screen bg-gradient-to-b from-background to-muted/30">
+    <main className="min-h-screen">
       <div className="container mx-auto px-4 py-8 max-w-2xl space-y-4">
         <Card>
           <CardHeader>

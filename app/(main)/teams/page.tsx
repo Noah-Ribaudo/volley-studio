@@ -129,7 +129,7 @@ export default function TeamsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-background to-muted/30">
+    <main className="min-h-screen">
       <div className="container mx-auto px-4 py-6 max-w-2xl space-y-4">
         <h1 className="text-xl font-bold">Teams</h1>
         {/* Search (only after team list is large enough) */}

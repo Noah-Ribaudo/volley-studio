@@ -168,7 +168,7 @@ export default function TeamEditPage({ params }: TeamPageProps) {
 
   if (!isLocalTeam && team === undefined) {
     return (
-      <main className="min-h-screen bg-gradient-to-b from-background to-muted/30">
+      <main className="min-h-screen">
         <div className="container mx-auto px-4 py-6 max-w-2xl space-y-6">
           <div className="flex items-center justify-between gap-2">
             <Skeleton className="h-7 w-28" />
@@ -225,7 +225,7 @@ export default function TeamEditPage({ params }: TeamPageProps) {
 
   if ((isLocalTeam && localTeam === null) || (!isLocalTeam && team === null)) {
     return (
-      <main className="min-h-screen bg-gradient-to-b from-background to-muted/30">
+      <main className="min-h-screen">
         <div className="container mx-auto px-4 py-8 text-center space-y-2">
           <h1 className="text-xl font-bold">Team Not Found</h1>
           <p className="text-muted-foreground">This team doesn't exist or has been deleted.</p>
@@ -580,7 +580,7 @@ export default function TeamEditPage({ params }: TeamPageProps) {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-background to-muted/30">
+    <main className="min-h-screen">
       <div className="container mx-auto px-4 py-6 max-w-2xl space-y-6">
         <div className="flex items-center justify-between gap-2">
           <h1 className="text-xl font-bold">Edit Team</h1>

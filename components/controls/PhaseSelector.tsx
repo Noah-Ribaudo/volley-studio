@@ -1,34 +1,22 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
-import { Phase, RALLY_PHASES } from '@/lib/types'
+import { Phase } from '@/lib/types'
 import type { RallyPhase } from '@/lib/types'
 import { cn } from '@/lib/utils'
-import { Eye, EyeOff } from 'lucide-react'
-import { getPhaseInfo, getPhaseIcon, isRallyPhase as checkIsRallyPhase } from '@/lib/phaseIcons'
+import { getPhaseInfo, getPhaseIcon } from '@/lib/phaseIcons'
+import { getVisibleOrderedRallyPhases } from '@/lib/rallyPhaseOrder'
 
 interface PhaseSelectorProps {
   currentPhase: Phase
-  visiblePhases: Set<RallyPhase>
   onPhaseChange: (phase: Phase) => void
-  onToggleVisibility?: (phase: RallyPhase) => void
 }
 
 export function PhaseSelector({ 
   currentPhase, 
-  visiblePhases, 
   onPhaseChange, 
-  onToggleVisibility 
 }: PhaseSelectorProps) {
-  // Get phases to display - only show visible phases
-  const phasesToShow = RALLY_PHASES.filter(p => visiblePhases.has(p))
-
-  const isPhaseVisible = (phase: Phase) => {
-    if (checkIsRallyPhase(phase)) {
-      return visiblePhases.has(phase)
-    }
-    return true // Legacy phases always visible
-  }
+  const phasesToShow = getVisibleOrderedRallyPhases(undefined, undefined)
 
   // Calculate next/prev phase navigation
   const handleNext = () => {
@@ -73,7 +61,6 @@ export function PhaseSelector({
           {phasesToShow.map(phase => {
             const info = getPhaseInfo(phase)
             const isSelected = currentPhase === phase
-            const isVisible = isPhaseVisible(phase)
             
             return (
               <div key={phase} className="relative flex-shrink-0">
@@ -87,8 +74,7 @@ export function PhaseSelector({
                     'flex flex-col items-center gap-1 h-auto py-2 px-3 transition-all min-h-[72px] min-w-[136px] sm:min-w-[120px]',
                     isSelected 
                       ? 'shadow-md ring-1 ring-primary/40 ring-offset-2 ring-offset-background' 
-                      : 'opacity-80 hover:opacity-100',
-                    !isVisible && 'opacity-40'
+                      : 'opacity-80 hover:opacity-100'
                   )}
                 >
                   {getPhaseIcon(phase)}
@@ -99,22 +85,6 @@ export function PhaseSelector({
                     <span className="text-[10px] text-muted-foreground">(transition)</span>
                   )}
                 </Button>
-                {onToggleVisibility && RALLY_PHASES.includes(phase as RallyPhase) && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onToggleVisibility(phase as RallyPhase)
-                    }}
-                    className="absolute top-1 right-1 p-1 rounded hover:bg-background/80 transition-colors"
-                    aria-label={isVisible ? 'Hide phase' : 'Show phase'}
-                  >
-                    {isVisible ? (
-                      <Eye className="h-3 w-3 text-muted-foreground" />
-                    ) : (
-                      <EyeOff className="h-3 w-3 text-muted-foreground" />
-                    )}
-                  </button>
-                )}
               </div>
             )
           })}

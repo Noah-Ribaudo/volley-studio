@@ -15,7 +15,7 @@ import {
   SidebarMenuItem,
   SidebarSeparator,
 } from '@/components/ui/sidebar'
-import { Layout, Users, Timer, Settings, SlidersHorizontal, Palette, Paintbrush } from 'lucide-react'
+import { Layout, Users, Timer, Settings, SlidersHorizontal, Palette, Paintbrush, RectangleEllipsis } from 'lucide-react'
 import VolleyBall from '@/components/logo/VolleyBall'
 import { SidebarUserMenu } from '@/components/auth'
 import { useAppStore } from '@/store/useAppStore'
@@ -44,6 +44,11 @@ const navItems = [
 ]
 
 const developerNavItems = [
+  {
+    title: 'Open Minimal Mode',
+    url: '/minimal',
+    icon: RectangleEllipsis,
+  },
   {
     title: 'Theme Lab',
     url: '/developer/theme-lab',
@@ -91,7 +96,7 @@ export function VolleyballSidebar() {
         </Link>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="overflow-x-hidden">
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>

@@ -43,7 +43,7 @@ import { toast } from 'sonner'
 
 // Constants for court display
 const OPEN_COURT_SETUP_EVENT = 'open-court-setup'
-type OpenCourtSetupEventDetail = { anchorRect?: DOMRect }
+type OpenCourtSetupEventDetail = { anchorRect?: DOMRect; triggerEl?: HTMLElement | null }
 const ANIMATION_MODE = 'raf' as const
 const TOKEN_SCALES = { desktop: 1.5, mobile: 1.5 }
 const TOKEN_DIMENSIONS = { widthOffset: 0, heightOffset: 0 }
@@ -150,6 +150,7 @@ function HomePageContent() {
   )
   const [localTeams, setLocalTeams] = useState<Team[]>([])
   const [isSavingLineup, setIsSavingLineup] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
   const loadedTeamFromUrlRef = useRef<string | null>(null)
   const previousPhaseRef = useRef(currentPhase)
   const shouldShowFirstDragHint = useHintStore((state) => state.shouldShowFirstDragHint)
@@ -160,6 +161,10 @@ function HomePageContent() {
 
   // Mobile detection
   const isMobile = useIsMobile()
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   // Load team and layouts when opened from /?team=<id or slug>
   useEffect(() => {
@@ -240,7 +245,7 @@ function HomePageContent() {
   )
 
   // Determine if editing is allowed (not when using presets)
-  const isEditingAllowed = !isUsingPreset
+  const isEditingAllowed = true
   const activePositionSource = getActiveLineupPositionSource(currentTeam)
 
   // Auto-save whiteboard changes to Convex (team mode)
@@ -249,6 +254,7 @@ function HomePageContent() {
   const [rosterSheetOpen, setRosterSheetOpen] = useState(false)
   const [courtSetupOpen, setCourtSetupOpen] = useState(false)
   const [courtSetupAnchorRect, setCourtSetupAnchorRect] = useState<DOMRect | null>(null)
+  const courtSetupTriggerRef = useRef<HTMLElement | null>(null)
   const [viewportWidth, setViewportWidth] = useState(0)
   const [createTeamDialogOpen, setCreateTeamDialogOpen] = useState(false)
 
@@ -266,10 +272,19 @@ function HomePageContent() {
     const openCourtSetup = (event: Event) => {
       const maybeCustomEvent = event as CustomEvent<OpenCourtSetupEventDetail>
       setCourtSetupAnchorRect(maybeCustomEvent.detail?.anchorRect ?? null)
-      setCourtSetupOpen(true)
+      courtSetupTriggerRef.current = maybeCustomEvent.detail?.triggerEl ?? null
+      setCourtSetupOpen((prev) => !prev)
     }
     window.addEventListener(OPEN_COURT_SETUP_EVENT, openCourtSetup)
     return () => window.removeEventListener(OPEN_COURT_SETUP_EVENT, openCourtSetup)
+  }, [])
+
+  const handleCourtSetupInteractOutside = useCallback((event: { target: EventTarget | null; preventDefault: () => void }) => {
+    const trigger = courtSetupTriggerRef.current
+    if (!trigger) return
+    if (event.target instanceof Node && trigger.contains(event.target)) {
+      event.preventDefault()
+    }
   }, [])
 
   const desktopCourtSetupPopoverStyle = useMemo(() => {
@@ -727,8 +742,9 @@ function HomePageContent() {
     }
   }, [currentLineup, currentTeam, persistLineupsForTeam, router, setCurrentTeam])
 
-  const showFirstDragHint = shouldShowFirstDragHint()
-  const showPhaseNavigationHint = !showFirstDragHint && shouldShowPhaseNavigationHint()
+  const canShowOnboardingHint = isMounted && isUiHydrated
+  const showFirstDragHint = canShowOnboardingHint ? shouldShowFirstDragHint() : false
+  const showPhaseNavigationHint = canShowOnboardingHint && !showFirstDragHint && shouldShowPhaseNavigationHint()
   const enabledDisplayCount = Number(showPosition) + Number(showPlayer) + Number(showNumber)
   const onboardingHintMessage = showFirstDragHint
     ? 'Drag a player to reposition them'
@@ -898,7 +914,7 @@ function HomePageContent() {
   )
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-gradient-to-b from-background to-muted/30">
+    <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
       {/* Main Content Area - fills available layout height */}
       <div className="flex-1 min-h-0 h-full overflow-hidden">
         {/* Court Container - scales to fit available space */}
@@ -910,7 +926,7 @@ function HomePageContent() {
                 <span className="text-xs text-muted-foreground">
                   Viewing: <span className="font-medium text-foreground">{POSITION_SOURCE_INFO[activePositionSource].name}</span>
                 </span>
-                <span className="text-xs text-muted-foreground/70">(read-only)</span>
+                <span className="text-xs text-muted-foreground/70">(preset base)</span>
               </div>
             </div>
           )}
@@ -1007,7 +1023,7 @@ function HomePageContent() {
 	              />
 
           <WhiteboardOnboardingHint
-            show={Boolean(onboardingHintMessage)}
+            show={canShowOnboardingHint && Boolean(onboardingHintMessage)}
             message={onboardingHintMessage || ''}
           />
           </div>
@@ -1016,7 +1032,10 @@ function HomePageContent() {
 
       {isMobile ? (
         <Dialog open={courtSetupOpen} onOpenChange={setCourtSetupOpen}>
-          <DialogContent className="sm:max-w-[560px]">
+          <DialogContent
+            className="sm:max-w-[560px]"
+            onInteractOutside={handleCourtSetupInteractOutside}
+          >
             <DialogHeader>
               <DialogTitle>Court Setup</DialogTitle>
               <DialogDescription>
@@ -1028,7 +1047,11 @@ function HomePageContent() {
         </Dialog>
       ) : courtSetupSurfaceVariant === 'panel' ? (
         <Sheet open={courtSetupOpen} onOpenChange={setCourtSetupOpen}>
-          <SheetContent side="right" className="w-full sm:max-w-[560px] overflow-y-auto">
+          <SheetContent
+            side="right"
+            className="w-full sm:max-w-[560px] overflow-y-auto"
+            onInteractOutside={handleCourtSetupInteractOutside}
+          >
             <SheetHeader className="pb-4">
               <SheetTitle>Court Setup</SheetTitle>
               <SheetDescription>
@@ -1046,6 +1069,7 @@ function HomePageContent() {
             sideOffset={8}
             className="w-[560px] max-w-[calc(100vw-2rem)]"
             onOpenAutoFocus={(event) => event.preventDefault()}
+            onInteractOutside={handleCourtSetupInteractOutside}
             style={desktopCourtSetupPopoverStyle}
           >
             <div className="mb-4 space-y-1.5">
@@ -1092,7 +1116,7 @@ function HomePageWrapper() {
 
 export default function HomePage() {
   return (
-    <Suspense fallback={<div className="h-full bg-gradient-to-b from-background to-muted/30" />}>
+    <Suspense fallback={<div className="h-full" />}>
       <HomePageWrapper />
     </Suspense>
   )
