@@ -150,14 +150,14 @@ export function DesktopHeaderNav({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                className="h-8 w-8 text-muted-foreground hover:text-foreground"
                 onClick={prevPhase}
                 aria-label="Previous phase"
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
 
-              <div className="h-7 min-w-[8rem] rounded-sm px-1 max-w-[min(42rem,40vw)]">
+              <div className="h-8 min-w-[8rem] rounded-sm px-1 max-w-[min(42rem,40vw)]">
                 <div
                   ref={phaseTrackRef}
                   className="flex h-full items-center gap-1 overflow-x-auto scrollbar-hide"
@@ -171,10 +171,10 @@ export function DesktopHeaderNav({
                       variant="ghost"
                       size="sm"
                       className={cn(
-                        'h-7 w-auto max-w-[11.5rem] shrink-0 justify-center px-2.5 text-xs font-medium border border-transparent active:scale-100 !transition-colors',
+                        'h-8 w-auto max-w-[11.5rem] shrink-0 justify-center px-2.5 text-sm font-medium border border-transparent active:scale-100 !transition-colors',
                         phase === currentPhase
-                          ? 'bg-primary text-primary-foreground border-primary/70 shadow-sm hover:bg-primary/90 hover:text-primary-foreground'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-accent hover:border-border/50'
+                          ? 'bg-accent text-foreground border-border shadow-sm hover:bg-accent hover:text-foreground'
+                          : 'text-foreground hover:text-foreground hover:bg-accent/80 hover:border-border/50'
                       )}
                       onClick={() => setPhase(phase)}
                       aria-pressed={phase === currentPhase}
@@ -188,7 +188,7 @@ export function DesktopHeaderNav({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                className="h-8 w-8 text-muted-foreground hover:text-foreground"
                 onClick={nextPhase}
                 aria-label="Next phase"
               >
@@ -256,9 +256,9 @@ export function DesktopHeaderNav({
 
           {/* Court setup trigger */}
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
-            className="h-8 gap-1.5 text-muted-foreground hover:text-foreground"
+            className="h-8 gap-1.5 bg-background/70 text-sm font-medium text-foreground hover:bg-accent"
             onClick={(event) => onOpenCourtSetup?.({
               anchorRect: event.currentTarget.getBoundingClientRect(),
               triggerEl: event.currentTarget,

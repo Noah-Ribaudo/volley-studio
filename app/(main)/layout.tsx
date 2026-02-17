@@ -113,9 +113,9 @@ export default function VolleyballLayout({
             {isWhiteboardPage && (
               <>
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
-                  className="h-8 px-2 text-xs"
+                  className="h-8 px-2.5 bg-background/70 text-sm font-medium text-foreground hover:bg-accent"
                   onClick={(event) => {
                     window.dispatchEvent(
                       new CustomEvent(OPEN_COURT_SETUP_EVENT, {
