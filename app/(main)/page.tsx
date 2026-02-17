@@ -245,7 +245,7 @@ function HomePageContent() {
   )
 
   // Determine if editing is allowed (not when using presets)
-  const isEditingAllowed = !isUsingPreset
+  const isEditingAllowed = true
   const activePositionSource = getActiveLineupPositionSource(currentTeam)
 
   // Auto-save whiteboard changes to Convex (team mode)
@@ -926,7 +926,7 @@ function HomePageContent() {
                 <span className="text-xs text-muted-foreground">
                   Viewing: <span className="font-medium text-foreground">{POSITION_SOURCE_INFO[activePositionSource].name}</span>
                 </span>
-                <span className="text-xs text-muted-foreground/70">(read-only)</span>
+                <span className="text-xs text-muted-foreground/70">(preset base)</span>
               </div>
             </div>
           )}

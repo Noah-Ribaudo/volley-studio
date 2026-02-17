@@ -90,7 +90,10 @@ export const useThemeStore = create<ThemeState>()(
       }),
       // Migrate stored state when hydrating
       onRehydrateStorage: () => (state) => {
-        if (!state) return
+        if (!state) {
+          useThemeStore.setState({ isHydrated: true })
+          return
+        }
 
         if (state.theme) {
           state.theme = migrateTheme(state.theme)

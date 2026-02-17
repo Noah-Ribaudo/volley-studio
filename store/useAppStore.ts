@@ -306,8 +306,12 @@ export function getCurrentPositions(
   const positionSource = getActiveLineupPositionSource(currentTeam)
   const isUsingPreset = positionSource !== 'custom'
 
+  // Local overrides always win, regardless of source.
+  if (localPositions[key]) {
+    return localPositions[key]
+  }
+
   // If using preset source and preset layouts are provided, use them
-  // NOTE: When using presets, we DON'T use local overrides (presets are read-only)
   if (isUsingPreset && presetLayouts && presetLayouts.length > 0) {
     const presetLayout = presetLayouts.find(
       l => l.rotation === rotation && l.phase === phase
@@ -316,11 +320,6 @@ export function getCurrentPositions(
       return presetLayout.positions
     }
     // Fall through to whiteboard defaults if no preset found
-  }
-
-  // If NOT using presets, check for local overrides first
-  if (!isUsingPreset && localPositions[key]) {
-    return localPositions[key]
   }
 
   // If in team mode with custom source, check for custom layout (already normalized)
@@ -391,6 +390,8 @@ export function getCurrentArrows(
   // Check if we're using preset source
   const positionSource = currentTeam ? getActiveLineupPositionSource(currentTeam) : 'custom'
   const isUsingPreset = positionSource !== 'custom'
+  const manualArrows = localArrows[key] || {}
+  let presetArrows: ArrowPositions = {}
 
   // If using preset source and preset layouts are provided, use preset arrows
   if (isUsingPreset && presetLayouts && presetLayouts.length > 0) {
@@ -398,20 +399,15 @@ export function getCurrentArrows(
       l => l.rotation === rotation && l.phase === phase
     )
     if (presetLayout?.flags?.arrows) {
-      return presetLayout.flags.arrows
+      presetArrows = presetLayout.flags.arrows
     }
-    // Fall through to auto-generated if no preset arrows found
   }
 
-  // Manual arrows override auto-generated (null means explicitly deleted)
-  // Only use manual arrows when NOT using presets
-  const manualArrows = isUsingPreset ? {} : (localArrows[key] || {})
-
-  // Check if phase is a RallyPhase, use auto-generated arrows
+  // Check if phase is a RallyPhase, merge auto + preset + local.
+  // null in manualArrows means explicitly deleted.
   if (isRallyPhase(phase)) {
     const autoArrows = getAutoArrows(rotation, phase, isReceiving, baseOrder, undefined, showLibero, attackBallPosition)
-    // Merge: manual overrides auto, but filter out null values (deleted arrows)
-    const merged = { ...autoArrows, ...manualArrows }
+    const merged = { ...autoArrows, ...presetArrows, ...manualArrows }
 
     // Filter out explicitly deleted arrows (null values)
     const result: ArrowPositions = {}
@@ -424,7 +420,14 @@ export function getCurrentArrows(
   }
 
   // Fallback for legacy phases (shouldn't happen in normal use)
-  return manualArrows || {}
+  const merged = { ...presetArrows, ...manualArrows }
+  const result: ArrowPositions = {}
+  for (const [role, pos] of Object.entries(merged)) {
+    if (pos !== null) {
+      result[role as keyof ArrowPositions] = pos
+    }
+  }
+  return result
 }
 
 // Get current tags for a rotation/phase
@@ -1146,8 +1149,12 @@ export const useAppStore = create<AppState>()(
       },
       // On rehydration, normalize any legacy percentage positions (0-100) to normalized (0-1)
       onRehydrateStorage: () => (state) => {
+        if (!state) {
+          useAppStore.setState({ isHydrated: true })
+          return
+        }
         // Legacy migration: convert any old 0-100 format positions to 0-1
-        if (state?.localPositions) {
+        if (state.localPositions) {
           const normalized: Record<string, NormalizedPositionCoordinates> = {}
           for (const [key, pos] of Object.entries(state.localPositions)) {
             normalized[key] = normalizePositions(pos as PositionCoordinates)
@@ -1155,15 +1162,13 @@ export const useAppStore = create<AppState>()(
           state.localPositions = normalized
         }
         // Whiteboard phases are fixed and always use the default list + order.
-        if (state) {
-          state.visiblePhases = new Set(DEFAULT_VISIBLE_PHASES)
-          state.phaseOrder = [...DEFAULT_PHASE_ORDER]
-          if (isRallyPhase(state.currentPhase) && !DEFAULT_PHASE_ORDER.includes(state.currentPhase)) {
-            state.currentPhase = DEFAULT_PHASE_ORDER[0]
-          }
+        state.visiblePhases = new Set(DEFAULT_VISIBLE_PHASES)
+        state.phaseOrder = [...DEFAULT_PHASE_ORDER]
+        if (isRallyPhase(state.currentPhase) && !DEFAULT_PHASE_ORDER.includes(state.currentPhase)) {
+          state.currentPhase = DEFAULT_PHASE_ORDER[0]
         }
         // Normalize legacy arrows
-        if (state && state.localArrows) {
+        if (state.localArrows) {
           const normalized: Record<string, ArrowPositions> = {}
           for (const [key, arrows] of Object.entries(state.localArrows)) {
             normalized[key] = normalizeArrows(arrows)
@@ -1171,7 +1176,7 @@ export const useAppStore = create<AppState>()(
           state.localArrows = normalized
         }
         // Set default for arrowCurves if missing
-        if (state && state.arrowCurves === undefined) {
+        if (state.arrowCurves === undefined) {
           state.arrowCurves = {}
           // Clean up any legacy arrowFlips (can't migrate to control points without positions)
           const stateAny = state as unknown as Record<string, unknown>
@@ -1180,100 +1185,94 @@ export const useAppStore = create<AppState>()(
           }
         }
         // Set defaults for new fields if missing
-        if (state && state.isReceivingContext === undefined) {
+        if (state.isReceivingContext === undefined) {
           state.isReceivingContext = true
         }
-        if (state && state.showLibero === undefined) {
+        if (state.showLibero === undefined) {
           state.showLibero = false
         }
-        if (state && state.showPosition === undefined) {
+        if (state.showPosition === undefined) {
           state.showPosition = true
         }
-        if (state && state.showPlayer === undefined) {
+        if (state.showPlayer === undefined) {
           state.showPlayer = false
         }
-        if (state && state.showNumber === undefined) {
+        if (state.showNumber === undefined) {
           state.showNumber = true
         }
-        if (state && state.circleTokens === undefined) {
+        if (state.circleTokens === undefined) {
           state.circleTokens = true
         }
-        if (state && state.fullStatusLabels === undefined) {
+        if (state.fullStatusLabels === undefined) {
           state.fullStatusLabels = true
         }
-        if (state && state.debugHitboxes === undefined) {
+        if (state.debugHitboxes === undefined) {
           state.debugHitboxes = false
         }
-        if (state && state.tokenSize === undefined) {
+        if (state.tokenSize === undefined) {
           state.tokenSize = 'big'
         }
         // Set default for hideAwayTeam if missing
-        if (state && state.hideAwayTeam === undefined) {
+        if (state.hideAwayTeam === undefined) {
           state.hideAwayTeam = true
         }
         // Set default for motion debug panel toggle if missing
-        if (state && state.showMotionDebugPanel === undefined) {
+        if (state.showMotionDebugPanel === undefined) {
           state.showMotionDebugPanel = false
         }
         // Set default for print feature toggle if missing
-        if (state && state.showPrintFeature === undefined) {
+        if (state.showPrintFeature === undefined) {
           state.showPrintFeature = false
         }
         // Set default for sidebar profile placement toggle if missing
-        if (state && state.sidebarProfileInFooter === undefined) {
+        if (state.sidebarProfileInFooter === undefined) {
           state.sidebarProfileInFooter = false
         }
         // Set default for court setup surface variant if missing
-        if (state && state.courtSetupSurfaceVariant === undefined) {
+        if (state.courtSetupSurfaceVariant === undefined) {
           state.courtSetupSurfaceVariant = 'popover'
         }
         // Set defaults for minimal mode preferences if missing
-        if (state && state.uiMode === undefined) {
+        if (state.uiMode === undefined) {
           state.uiMode = 'normal'
         }
-        if (state && state.minimalContrast === undefined) {
+        if (state.minimalContrast === undefined) {
           state.minimalContrast = 'soft'
         }
-        if (state && state.minimalAllowAccent === undefined) {
+        if (state.minimalAllowAccent === undefined) {
           state.minimalAllowAccent = true
         }
-        if (state && state.minimalDenseLayout === undefined) {
+        if (state.minimalDenseLayout === undefined) {
           state.minimalDenseLayout = false
         }
         // Set default for attackBallPositions if missing
-        if (state && state.attackBallPositions === undefined) {
+        if (state.attackBallPositions === undefined) {
           state.attackBallPositions = {}
         }
         // Set default for localStatusFlags if missing
-        if (state && state.localStatusFlags === undefined) {
+        if (state.localStatusFlags === undefined) {
           state.localStatusFlags = {}
         }
         // Set default for localTagFlags if missing
-        if (state && state.localTagFlags === undefined) {
+        if (state.localTagFlags === undefined) {
           state.localTagFlags = {}
         }
         // Conflict state is transient - always clear on rehydrate
-        if (state) {
-          state.layoutLoadedTimestamps = {}
-          state.layoutConflict = null
-          state.teamLoadedTimestamp = null
-          state.teamConflict = null
-        }
+        state.layoutLoadedTimestamps = {}
+        state.layoutConflict = null
+        state.teamLoadedTimestamp = null
+        state.teamConflict = null
         // Learning mode - never start in learning mode on load
-        if (state) {
-          state.learningMode = false
-        }
+        state.learningMode = false
         // Default learning panel position if not set
-        if (state && !state.learningPanelPosition) {
+        if (!state.learningPanelPosition) {
           state.learningPanelPosition = 'floating'
         }
         // Default awayTeamHidePercent if not set
-        if (state && state.awayTeamHidePercent === undefined) {
+        if (state.awayTeamHidePercent === undefined) {
           state.awayTeamHidePercent = 40
         }
-        if (state) {
-          state.isHydrated = true
-        }
+        state.isHydrated = true
       },
     }
   )
