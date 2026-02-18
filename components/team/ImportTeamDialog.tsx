@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/dialog'
 
 interface ImportTeamDialogProps {
-  onImportTeam: (teamCode: string, password?: string) => Promise<void>
+  onImportTeam: (teamCode: string) => Promise<void>
   isLoading?: boolean
 }
 
@@ -66,7 +66,7 @@ function SignInPrompt({ onClose }: { onClose: () => void }) {
         <DialogTitle>Quick sign-in to import a team</DialogTitle>
         <DialogDescription className="space-y-2 pt-2">
           <span className="block">
-            This is <strong>only</strong> so imported teams and your settings can be saved to your account.
+            This is <strong>only</strong> so the imported team can be saved to your account.
             I don't want your data for anything else — no tracking, no marketing, no selling to anyone.
           </span>
           <span className="block text-xs">
@@ -121,7 +121,6 @@ function SignInPrompt({ onClose }: { onClose: () => void }) {
           <input
             type="email"
             name="email"
-            aria-label="Email"
             placeholder="Email"
             required
             className="w-full px-3 py-2 bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -129,7 +128,6 @@ function SignInPrompt({ onClose }: { onClose: () => void }) {
           <input
             type="password"
             name="password"
-            aria-label="Password"
             placeholder="Password (8+ characters)"
             required
             minLength={8}
@@ -181,12 +179,11 @@ function ImportTeamForm({
   isLoading,
   onClose,
 }: {
-  onImportTeam: (teamCode: string, password?: string) => Promise<void>
+  onImportTeam: (teamCode: string) => Promise<void>
   isLoading?: boolean
   onClose: () => void
 }) {
   const [teamCode, setTeamCode] = useState('')
-  const [teamPassword, setTeamPassword] = useState('')
   const [error, setError] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -199,9 +196,8 @@ function ImportTeamForm({
     }
 
     try {
-      await onImportTeam(teamCode.trim(), teamPassword.trim() || undefined)
+      await onImportTeam(teamCode.trim())
       setTeamCode('')
-      setTeamPassword('')
       onClose()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Invalid team code')
@@ -223,19 +219,8 @@ function ImportTeamForm({
             setTeamCode(e.target.value)
             setError('')
           }}
-          aria-label="Team code"
           placeholder="Paste team code"
           autoFocus
-        />
-        <Input
-          value={teamPassword}
-          onChange={(e) => {
-            setTeamPassword(e.target.value)
-            setError('')
-          }}
-          type="password"
-          aria-label="Team password (optional)"
-          placeholder="Team password (if required)"
         />
         {error && (
           <p className="text-sm text-destructive">{error}</p>

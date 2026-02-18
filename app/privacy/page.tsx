@@ -7,8 +7,8 @@ export default function PrivacyPage() {
   return (
     <main className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-12 max-w-2xl">
-        <Button asChild variant="ghost" size="sm" className="mb-8">
-          <Link href="/">
+        <Link href="/">
+          <Button variant="ghost" size="sm" className="mb-8">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="16"
@@ -24,8 +24,8 @@ export default function PrivacyPage() {
               <path d="m15 18-6-6 6-6"/>
             </svg>
             Back
-          </Link>
-        </Button>
+          </Button>
+        </Link>
 
         <h1 className="text-3xl font-bold mb-8">Privacy Policy</h1>
 
@@ -34,8 +34,8 @@ export default function PrivacyPage() {
             <h2 className="text-xl font-semibold mb-3">The short version</h2>
             <p className="text-muted-foreground">
               I don't want your data. Seriously. Volley Studio exists to help coaches and players
-              visualize rotations. The only reason accounts exist is so your teams and settings
-              can persist between sessions.
+              visualize rotations. The only reason accounts exist is so your teams can persist
+              between sessions.
             </p>
           </section>
 
@@ -47,8 +47,8 @@ export default function PrivacyPage() {
                 who owns which teams. That's it.
               </li>
               <li>
-                <strong className="text-foreground">Your team/settings data</strong> — Roster names,
-                jersey numbers, custom rotation layouts, and app settings. This is the whole point.
+                <strong className="text-foreground">Your team data</strong> — Roster names, jersey
+                numbers, and custom rotation layouts. This is the whole point.
               </li>
             </ul>
           </section>
@@ -77,7 +77,7 @@ export default function PrivacyPage() {
             <h2 className="text-xl font-semibold mb-3">No account required</h2>
             <p className="text-muted-foreground">
               You can use the whiteboard and visualization tools without creating an account at
-              all. Accounts are only needed if you want teams/settings to persist.
+              all. Accounts are only needed if you want to save teams so they persist.
             </p>
           </section>
 

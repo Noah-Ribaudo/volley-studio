@@ -5,6 +5,7 @@ import { persist } from 'zustand/middleware'
 import { Role, Rotation, RosterPlayer, Team } from '@/lib/types'
 import { getBackRowMiddle } from '@/lib/rotations'
 import { createSafeLocalStorage } from '@/store/safeStorage'
+import { getActiveAssignments, migrateTeamToLineups } from '@/lib/lineups'
 import {
   GamePhase,
   ServingTeam,
@@ -148,8 +149,9 @@ export const useGameTimeStore = create<GameTimeState>()(
 
       // Setup actions
       selectTeam: (team: Team) => {
-        const activeLineup = team.lineups.find((lineup) => lineup.id === team.active_lineup_id) || team.lineups[0]
-        const sourceAssignments = activeLineup?.position_assignments || team.position_assignments || {}
+        const normalizedTeam = migrateTeamToLineups(team)
+        const activeLineup = normalizedTeam.lineups.find((lineup) => lineup.id === normalizedTeam.active_lineup_id) || normalizedTeam.lineups[0]
+        const sourceAssignments = getActiveAssignments(normalizedTeam)
 
         const seededLineup: Lineup = {}
         const assignedPlayerIds = new Set<string>()
@@ -157,7 +159,7 @@ export const useGameTimeStore = create<GameTimeState>()(
         for (const role of LINEUP_ROLES) {
           const playerId = sourceAssignments[role]
           if (!playerId) continue
-          const player = team.roster.find((entry) => entry.id === playerId)
+          const player = normalizedTeam.roster.find((entry) => entry.id === playerId)
           if (!player) continue
           seededLineup[role] = player
           assignedPlayerIds.add(playerId)
@@ -166,7 +168,7 @@ export const useGameTimeStore = create<GameTimeState>()(
         let seededLibero: RosterPlayer | null = null
         const liberoId = sourceAssignments.L
         if (liberoId) {
-          const liberoPlayer = team.roster.find((entry) => entry.id === liberoId)
+          const liberoPlayer = normalizedTeam.roster.find((entry) => entry.id === liberoId)
           if (liberoPlayer) {
             for (const role of LINEUP_ROLES) {
               if (seededLineup[role]?.id === liberoPlayer.id) {
@@ -178,11 +180,11 @@ export const useGameTimeStore = create<GameTimeState>()(
           }
         }
 
-        const seededBench = team.roster.filter((player) => !assignedPlayerIds.has(player.id))
+        const seededBench = normalizedTeam.roster.filter((player) => !assignedPlayerIds.has(player.id))
 
         set({
-          team,
-          teamName: team.name,
+          team: normalizedTeam,
+          teamName: normalizedTeam.name,
           isQuickStart: false,
           lineup: seededLineup,
           libero: seededLibero,

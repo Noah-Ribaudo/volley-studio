@@ -1,320 +1,66 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
-import { useMutation } from 'convex/react'
-import { api } from '@/convex/_generated/api'
-import type { Id } from '@/convex/_generated/dataModel'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { RosterEditor, PositionAssigner } from '@/components/roster'
-import { useAppStore } from '@/store/useAppStore'
-import { generateSlug } from '@/lib/teamUtils'
-import { PositionAssignments, RosterPlayer, Team } from '@/lib/types'
-import { toast } from 'sonner'
-import { getRandomTeamName } from '@/lib/teamNames'
 import Link from 'next/link'
-import { upsertLocalTeam } from '@/lib/localTeams'
-import { createLineup } from '@/lib/lineups'
-
-// Default placeholder used for SSR to avoid hydration mismatch
-const DEFAULT_TEAM_NAME = 'New Team'
+import { useRouter } from 'next/navigation'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { useAppStore } from '@/store/useAppStore'
 
 export function RosterManagementCard() {
-  const {
-    currentTeam,
-    setCurrentTeam,
-    setAccessMode,
-    setTeamPasswordProvided,
-    showLibero,
-  } = useAppStore()
+  const router = useRouter()
+  const currentTeam = useAppStore((state) => state.currentTeam)
+  const activeContext = useAppStore((state) => state.activeContext)
 
-  const [activeTab, setActiveTab] = useState<'roster' | 'positions'>('roster')
-  const [isSaving, setIsSaving] = useState(false)
-  const [localTeamId, setLocalTeamId] = useState<string | null>(null)
-  const [localTeamName, setLocalTeamName] = useState<string>(DEFAULT_TEAM_NAME)
-  const [localRoster, setLocalRoster] = useState<RosterPlayer[]>([])
-  const [localAssignments, setLocalAssignments] = useState<PositionAssignments>({})
+  const modeLabel = activeContext.mode === 'savedCloud'
+    ? 'Saved (Cloud)'
+    : activeContext.mode === 'unsavedLocal'
+      ? 'Unsaved (Local)'
+      : 'Practice (No Team)'
 
-  const [teamError, setTeamError] = useState('')
-  const [defaultTeamName, setDefaultTeamName] = useState(DEFAULT_TEAM_NAME)
-  const [isHydrated, setIsHydrated] = useState(false)
-  const updateRoster = useMutation(api.teams.updateRoster)
-  const updateLineups = useMutation(api.teams.updateLineups)
-
-  // Set random names only after hydration to avoid mismatch
-  useEffect(() => {
-    if (!isHydrated) {
-      const randomName = getRandomTeamName()
-      setDefaultTeamName(randomName)
-      if (!currentTeam) {
-        setLocalTeamName(randomName)
-      }
-      setIsHydrated(true)
-    }
-  }, [isHydrated, currentTeam])
-
-  // Initialize from current team or default blank
-  useEffect(() => {
-    if (currentTeam) {
-      setLocalTeamId(currentTeam.id || null)
-      const teamName = currentTeam.name || getRandomTeamName()
-      setLocalTeamName(teamName)
-      setLocalRoster(currentTeam.roster || [])
-      setLocalAssignments(currentTeam.position_assignments || {})
-    } else {
-      // Start with empty roster and default name
-      setLocalTeamId(null)
-      setLocalRoster([])
-      setLocalAssignments({})
-    }
-  }, [currentTeam])
-
-  const handleRosterChange = (next: RosterPlayer[]) => {
-    setLocalRoster(next)
-    if (!currentTeam || localTeamId === null) {
-      return
-    }
-    const validRosterIds = new Set(next.map((player) => player.id))
-    const prunedAssignments = Object.fromEntries(
-      Object.entries(localAssignments).filter(([, playerId]) => playerId && validRosterIds.has(playerId))
-    ) as PositionAssignments
-    setLocalAssignments(prunedAssignments)
-    void persistTeamChanges(next, prunedAssignments)
-  }
-
-  const handleAssignmentsChange = (next: PositionAssignments) => {
-    setLocalAssignments(next)
-    if (!currentTeam || localTeamId === null) {
-      return
-    }
-    void persistTeamChanges(localRoster, next)
-  }
-
-  const cleanAssignments = useCallback((assignments: PositionAssignments, validRosterIds: Set<string>) => {
-    const cleaned: PositionAssignments = {}
-    for (const [role, playerId] of Object.entries(assignments)) {
-      if (typeof playerId === 'string' && playerId.trim() !== '' && validRosterIds.has(playerId)) {
-        cleaned[role] = playerId
-      }
-    }
-    return cleaned
-  }, [])
-
-  const persistTeamChanges = useCallback(async (nextRoster: RosterPlayer[], nextAssignments: PositionAssignments) => {
-    if (!currentTeam || localTeamId === null) {
-      return
-    }
-
-    setIsSaving(true)
-    setTeamError('')
-
-    const validRosterIds = new Set(nextRoster.map((player) => player.id))
-    const cleanedAssignments = cleanAssignments(nextAssignments, validRosterIds)
-    const existingLineups = currentTeam.lineups.length > 0
-      ? currentTeam.lineups
-      : [createLineup('Lineup 1', cleanedAssignments)]
-    const activeLineupId = currentTeam.active_lineup_id ?? existingLineups[0]?.id ?? null
-    const normalizedActiveLineupId = activeLineupId && existingLineups.some((lineup) => lineup.id === activeLineupId)
-      ? activeLineupId
-      : existingLineups[0]?.id ?? null
-
-    const normalizedLineups = existingLineups.map((lineup) => {
-      const sourceAssignments = lineup.id === normalizedActiveLineupId
-        ? cleanedAssignments
-        : lineup.position_assignments
-      return {
-        ...lineup,
-        position_assignments: cleanAssignments(sourceAssignments, validRosterIds),
-        starting_rotation: lineup.starting_rotation ?? 1,
-      }
-    })
-
-    const activeAssignments = normalizedLineups.find(
-      (lineup) => lineup.id === normalizedActiveLineupId
-    )?.position_assignments || cleanedAssignments
-
-    const updatedTeam: Team = {
-      ...currentTeam,
-      roster: nextRoster,
-      lineups: normalizedLineups,
-      active_lineup_id: normalizedActiveLineupId,
-      position_assignments: activeAssignments,
-      updated_at: new Date().toISOString(),
-    }
-
-    setCurrentTeam(updatedTeam)
-
-    try {
-      if (updatedTeam._id) {
-        await updateRoster({
-          id: updatedTeam._id as Id<'teams'>,
-          roster: nextRoster,
-        })
-        await updateLineups({
-          id: updatedTeam._id as Id<'teams'>,
-          lineups: normalizedLineups.map((lineup) => ({
-            id: lineup.id,
-            name: lineup.name,
-            position_assignments: lineup.position_assignments as Record<string, string>,
-            position_source: lineup.position_source,
-            starting_rotation: lineup.starting_rotation ?? 1,
-            created_at: lineup.created_at,
-          })),
-          activeLineupId: normalizedActiveLineupId || undefined,
-          positionAssignments: activeAssignments as Record<string, string>,
-        })
-      } else {
-        upsertLocalTeam(updatedTeam)
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to save team updates'
-      setTeamError(message)
-      toast.error(message)
-    } finally {
-      setIsSaving(false)
-    }
-  }, [cleanAssignments, currentTeam, localTeamId, setCurrentTeam, updateLineups, updateRoster])
-
-  // Create a new team (only used when localTeamId is null)
-  const handleCreateTeam = async () => {
-    const name = localTeamName.trim() || getRandomTeamName()
-    setIsSaving(true)
-    setTeamError('')
-    try {
-      const localId = `local-${Date.now()}`
-      const now = new Date().toISOString()
-      const defaultLineup = createLineup('Lineup 1', localAssignments)
-      const tempTeam: Team = {
-        id: localId,
-        name,
-        slug: generateSlug(name),
-        roster: localRoster,
-        lineups: [defaultLineup],
-        active_lineup_id: defaultLineup.id,
-        position_assignments: localAssignments,
-        hasPassword: false,
-        archived: false,
-        created_at: now,
-        updated_at: now
-      }
-
-      setCurrentTeam(tempTeam)
-      setAccessMode('local')
-      setTeamPasswordProvided(true)
-      setLocalTeamId(localId)
-      upsertLocalTeam(tempTeam)
-      toast.success('Team saved on this device')
-      return tempTeam
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to create team'
-      setTeamError(msg)
-      toast.error(msg)
-      return null
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
-  // Determine if we're in "Practice Mode" (no saved team) or "Team Mode"
-  const isTeamMode = localTeamId !== null
-  const isPracticeMode = !isTeamMode
-  const manageHref = currentTeam
+  const teamEditorHref = currentTeam
     ? `/teams/${encodeURIComponent(currentTeam._id || currentTeam.id)}`
     : '/teams'
 
   return (
-    <>
-      <Card className="bg-card/80 backdrop-blur">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between gap-2">
-            {/* Mode indicator */}
-            {isPracticeMode ? (
-              <div>
-                <CardTitle className="text-base text-muted-foreground">Practice Session</CardTitle>
-                <p className="text-xs text-muted-foreground mt-0.5">Changes won't be saved</p>
-              </div>
-            ) : (
-              <div className="min-w-0 flex-1">
-                <CardTitle className="text-base truncate">{localTeamName}</CardTitle>
-                <p className="text-xs text-muted-foreground mt-0.5">Auto-saving</p>
-              </div>
-            )}
+    <Card className="bg-card/80 backdrop-blur">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">Team Quick Actions</CardTitle>
+        <CardDescription>{modeLabel}</CardDescription>
+      </CardHeader>
 
-            {/* Team actions */}
-            {isTeamMode && (
-              <Link href={manageHref} className="shrink-0">
-                <Button variant="ghost" size="sm" className="text-xs">
-                  Manage
-                </Button>
-              </Link>
-            )}
+      <CardContent className="space-y-4">
+        {currentTeam ? (
+          <div className="rounded-lg border border-border bg-muted/40 px-3 py-2">
+            <p className="text-sm font-medium">{currentTeam.name}</p>
+            <p className="text-xs text-muted-foreground">
+              {currentTeam.roster.length} players • {currentTeam.lineups.length} lineups
+            </p>
           </div>
-        </CardHeader>
+        ) : (
+          <div className="rounded-lg border border-border bg-muted/40 px-3 py-2">
+            <p className="text-sm font-medium">No team selected</p>
+            <p className="text-xs text-muted-foreground">
+              The whiteboard stays editable right away. Use Save as Team to keep this setup.
+            </p>
+          </div>
+        )}
 
-        <CardContent className="flex flex-col gap-4">
-          {/* Practice mode: show team name input and save option */}
-          {isPracticeMode && (
-            <div className="space-y-2">
-              <Label htmlFor="team-name" className="text-xs">Team Name</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  id="team-name"
-                  value={localTeamName}
-                  onChange={(e) => setLocalTeamName(e.target.value)}
-                  placeholder={defaultTeamName}
-                  className="h-9 flex-1"
-                />
-                <Button
-                  size="sm"
-                  onClick={handleCreateTeam}
-                  disabled={isSaving}
-                >
-                  {isSaving ? 'Saving...' : 'Save as Team'}
-                </Button>
-              </div>
-              {teamError && <p className="text-xs text-destructive">{teamError}</p>}
-            </div>
-          )}
-
-          {/* Tabs - just roster and positions, no settings */}
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'roster' | 'positions')}>
-            <TabsList className="grid w-full h-11 grid-cols-2">
-              <TabsTrigger value="roster" className="text-sm">Roster</TabsTrigger>
-              <TabsTrigger value="positions" className="text-sm">Positions</TabsTrigger>
-            </TabsList>
-            <TabsContent value="roster" className="mt-4">
-              <RosterEditor
-                roster={localRoster}
-                onChange={handleRosterChange}
-                isLoading={isSaving}
-              />
-            </TabsContent>
-            <TabsContent value="positions" className="mt-4">
-              <PositionAssigner
-                roster={localRoster}
-                assignments={localAssignments}
-                onChange={handleAssignmentsChange}
-                isLoading={isSaving}
-                showLibero={showLibero}
-              />
-            </TabsContent>
-          </Tabs>
-
-          {/* Team mode: link to full roster page for settings and team switching */}
-          {isTeamMode && (
-            <div className="pt-2 border-t">
-              <Link href={manageHref} className="w-full">
-                <Button variant="outline" size="sm" className="w-full text-xs">
-                  Settings & Team Admin
-                </Button>
-              </Link>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </>
+        <div className="space-y-2">
+          <Link href={teamEditorHref} className="block w-full">
+            <Button variant="outline" size="sm" className="w-full text-xs">
+              {currentTeam ? 'Open Team Editor' : 'Open Teams'}
+            </Button>
+          </Link>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full text-xs"
+            onClick={() => router.push('/teams')}
+          >
+            Browse Teams
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   )
 }

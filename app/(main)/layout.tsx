@@ -2,25 +2,27 @@
 
 import { useCallback, useState } from 'react'
 import { usePathname } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import { MobileBottomNav } from '@/components/volleyball/MobileBottomNav'
 import { DesktopHeaderNav } from '@/components/volleyball/DesktopHeaderNav'
-import { VolleyballSidebar } from '@/components/volleyball/VolleyballSidebar'
 import { MobileContextBar } from '@/components/controls'
 import { useAppStore, getCurrentPositions } from '@/store/useAppStore'
 import { useGameTimeStore } from '@/store/useGameTimeStore'
 import { Button } from '@/components/ui/button'
 import { PrinterIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
+import { Eye, EyeOff } from 'lucide-react'
 import { PrintDialog } from '@/components/print'
 import { getActiveAssignments } from '@/lib/lineups'
 import type { Rotation, Phase, PositionCoordinates, RallyPhase } from '@/lib/types'
-import { getVisibleOrderedRallyPhases } from '@/lib/rallyPhaseOrder'
+import { RALLY_PHASES, isRallyPhase as checkIsRallyPhase } from '@/lib/types'
 import VolleyBall from '@/components/logo/VolleyBall'
-import { UserMenu } from '@/components/auth'
-import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import Link from 'next/link'
 
-const OPEN_COURT_SETUP_EVENT = 'open-court-setup'
+const BackgroundShader = dynamic(
+  () => import('@/components/BackgroundShader').then((mod) => mod.BackgroundShader),
+  { ssr: false }
+)
 
 export default function VolleyballLayout({
   children,
@@ -36,6 +38,9 @@ export default function VolleyballLayout({
   const setPhase = useAppStore((state) => state.setPhase)
   const nextPhase = useAppStore((state) => state.nextPhase)
   const prevPhase = useAppStore((state) => state.prevPhase)
+  const backgroundOpacity = useAppStore((state) => state.backgroundOpacity)
+  const hideAwayTeam = useAppStore((state) => state.hideAwayTeam)
+  const setHideAwayTeam = useAppStore((state) => state.setHideAwayTeam)
   const showPrintFeature = useAppStore((state) => state.showPrintFeature)
 
   // Data for print dialog
@@ -57,8 +62,11 @@ export default function VolleyballLayout({
     )
   }, [localPositions, customLayouts, currentTeam, baseOrder])
 
-  // Phase list is fixed (Serving, Defense, Recieving, Offense).
-  const phasesToShow = getVisibleOrderedRallyPhases(undefined, undefined)
+  // Get visible phases for print
+  const isRallyPhase = checkIsRallyPhase(currentPhase)
+  const phasesToShow = isRallyPhase
+    ? (visiblePhases ? RALLY_PHASES.filter(p => visiblePhases.has(p)) : RALLY_PHASES)
+    : RALLY_PHASES
 
   // GameTime bypasses normal layout only when actively playing in fullscreen
   const gamePhase = useGameTimeStore((s) => s.phase)
@@ -73,27 +81,24 @@ export default function VolleyballLayout({
   // Only show on whiteboard page
   const isWhiteboardPage = pathname === '/'
   const showContextBar = isWhiteboardPage
+  const contentBackgroundColor = isWhiteboardPage
+    ? 'var(--background)'
+    : `color-mix(in oklch, var(--background) ${backgroundOpacity}%, transparent)`
 
   // Always reserve space for context bar to prevent layout jump
   // This keeps the layout stable when navigating between pages
   const paddingClass = '[padding-bottom:calc(6rem+env(safe-area-inset-bottom,0px))]'
-  const contentShellClass = isWhiteboardPage
-    ? 'mx-auto w-full max-w-[1200px] flex flex-col flex-1 min-h-0'
-    : 'w-full flex flex-col flex-1 min-h-0'
 
   return (
     <div className="h-dvh relative overflow-hidden bg-background">
-      <SidebarProvider defaultOpen className="h-dvh w-full">
-        <VolleyballSidebar />
-        <SidebarInset className="relative h-dvh flex flex-col bg-gradient-to-b from-background to-muted/30">
+      {!isWhiteboardPage && <BackgroundShader />}
+
+      <div
+        className="relative h-dvh flex flex-col"
+        style={{ backgroundColor: contentBackgroundColor }}
+      >
         {/* Desktop header nav */}
-        <DesktopHeaderNav
-          onOpenPrintDialog={() => setPrintDialogOpen(true)}
-          onOpenCourtSetup={(detail) => {
-            window.dispatchEvent(new CustomEvent(OPEN_COURT_SETUP_EVENT, { detail }))
-          }}
-          showNav={false}
-        />
+        <DesktopHeaderNav onOpenPrintDialog={() => setPrintDialogOpen(true)} />
 
         {/* Mobile top header - minimal, just for context */}
         <header
@@ -109,47 +114,38 @@ export default function VolleyballLayout({
             <VolleyBall size={18} fillColor="#f97316" />
             Volley Studio
           </span>
-          <div className="flex items-center gap-1">
-            {isWhiteboardPage && (
-              <>
+          {isWhiteboardPage && (
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setHideAwayTeam(!hideAwayTeam)}
+                aria-label={hideAwayTeam ? 'Show opponent' : 'Hide opponent'}
+                title={hideAwayTeam ? 'Show opponent' : 'Hide opponent'}
+              >
+                {hideAwayTeam ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+              {showPrintFeature && (
                 <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 px-2.5 bg-background/70 text-sm font-medium text-foreground hover:bg-accent"
-                  onClick={(event) => {
-                    window.dispatchEvent(
-                      new CustomEvent(OPEN_COURT_SETUP_EVENT, {
-                        detail: { triggerEl: event.currentTarget as HTMLElement },
-                      })
-                    )
-                  }}
-                  aria-label="Open court setup"
-                  title="Open court setup"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setPrintDialogOpen(true)}
+                  aria-label="Print rotations"
                 >
-                  Court Setup
+                  <HugeiconsIcon icon={PrinterIcon} className="h-4 w-4" />
                 </Button>
-                {showPrintFeature && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => setPrintDialogOpen(true)}
-                    aria-label="Print rotations"
-                  >
-                    <HugeiconsIcon icon={PrinterIcon} className="h-4 w-4" />
-                  </Button>
-                )}
-              </>
-            )}
-            <UserMenu />
-          </div>
+              )}
+            </div>
+          )}
         </header>
 
         {/* Main content with bottom padding for mobile nav + context bar */}
         <main
           className={`flex flex-col flex-1 min-h-0 md:pb-0 ${isWhiteboardPage ? 'overflow-hidden overscroll-none' : 'overflow-auto'} ${paddingClass}`}
         >
-          <div className={contentShellClass}>
+          <div className="mx-auto w-full max-w-[1200px] flex flex-col flex-1 min-h-0">
             {children}
           </div>
         </main>
@@ -191,8 +187,7 @@ export default function VolleyballLayout({
           teamName={currentTeam?.name}
           visiblePhases={phasesToShow as RallyPhase[]}
         />
-        </SidebarInset>
-      </SidebarProvider>
+      </div>
     </div>
   )
 }

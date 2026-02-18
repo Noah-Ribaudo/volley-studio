@@ -1,21 +1,4 @@
-import { test, expect, type Page } from '@playwright/test'
-
-test.describe.configure({ timeout: 60_000 })
-
-async function clickVisibleButtonByName(page: Page, name: RegExp) {
-  const buttons = page.getByRole('button', { name })
-  const count = await buttons.count()
-
-  for (let i = 0; i < count; i++) {
-    const candidate = buttons.nth(i)
-    if (await candidate.isVisible()) {
-      await candidate.click()
-      return
-    }
-  }
-
-  throw new Error(`No visible button found for pattern: ${String(name)}`)
-}
+import { test, expect, devices } from '@playwright/test'
 
 // Only run these tests on mobile devices
 test.describe('Mobile Experience', () => {
@@ -42,24 +25,9 @@ test.describe('Mobile Experience', () => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
 
-    // Check that a visible Teams nav link exists with the expected destination.
-    const teamsLinks = page.locator('a[href="/teams"]')
-    const linkCount = await teamsLinks.count()
-    let teamsLinkFound = false
-
-    for (let i = 0; i < linkCount; i++) {
-      const candidate = teamsLinks.nth(i)
-      if (await candidate.isVisible()) {
-        await expect(candidate).toHaveAttribute('href', '/teams')
-        teamsLinkFound = true
-        break
-      }
-    }
-
-    expect(teamsLinkFound).toBeTruthy()
-
-    // Navigate and confirm route is reachable on mobile/tablet.
-    await page.goto('/teams')
+    // Find and tap the teams link/button
+    const teamsLink = page.getByRole('link', { name: /teams/i })
+    await teamsLink.tap()
 
     // Should navigate to teams page
     await expect(page).toHaveURL(/\/teams/)
@@ -71,10 +39,20 @@ test.describe('Mobile Experience', () => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
 
-    // The court should respond to touch.
-    const court = page.getByRole('img', { name: /volleyball court/i }).first()
-    await expect(court).toBeVisible()
-    await court.tap()
+    // The court should respond to touch
+    // Find a large SVG (the court)
+    const svgElements = page.locator('svg')
+    const count = await svgElements.count()
+
+    for (let i = 0; i < count; i++) {
+      const svg = svgElements.nth(i)
+      const box = await svg.boundingBox()
+      if (box && box.width > 200 && box.height > 200) {
+        // Found the court - try tapping it
+        await svg.tap()
+        break
+      }
+    }
 
     // Page should still be functional after tap
     await expect(page).toHaveURL('/')
@@ -90,10 +68,11 @@ test.describe('Mobile Experience', () => {
     await expect(page.getByText(/create new team/i)).toBeVisible()
 
     // Create team button should be tappable
-    await clickVisibleButtonByName(page, /new team/i)
+    const newTeamButton = page.getByRole('button', { name: /new team/i })
+    await newTeamButton.tap()
 
     // Dialog should open
-    await expect(page.getByRole('dialog')).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByRole('dialog')).toBeVisible()
   })
 
   test('dialogs are usable on mobile', async ({ page, isMobile }) => {
@@ -102,22 +81,19 @@ test.describe('Mobile Experience', () => {
     await page.goto('/teams')
 
     // Open create team dialog
-    await clickVisibleButtonByName(page, /new team/i)
+    const newTeamButton = page.getByRole('button', { name: /new team/i })
+    await newTeamButton.tap()
 
     // Dialog should be visible and contain expected content
-    await expect(page.getByRole('dialog')).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByRole('dialog')).toBeVisible()
 
-    const continueButton = page.getByRole('button', { name: /continue without an account/i })
-    if (await continueButton.isVisible()) {
-      // Sign-in prompt path: continue to local-only form.
-      await continueButton.click({ noWaitAfter: true })
-    }
+    // Should be able to dismiss with the cancel button
+    const dismissButton = page.getByRole('button', { name: /whiteboard/i })
+    await expect(dismissButton).toBeVisible()
+    await dismissButton.tap()
 
-    // Dialog should remain usable with either prompt or team-creation content.
-    const dialogContent = page
-      .getByRole('heading', { name: /create new team/i })
-      .or(page.getByText(/quick sign-in/i))
-    await expect(dialogContent).toBeVisible({ timeout: 10_000 })
+    // Dialog should close
+    await expect(page.getByRole('dialog')).not.toBeVisible()
   })
 
   test('privacy page is readable on mobile', async ({ page, isMobile }) => {
@@ -134,7 +110,7 @@ test.describe('Mobile Experience', () => {
     await expect(page.getByText(/what we don't do/i)).toBeVisible()
   })
 
-  test('viewport is properly sized for mobile', async ({ page, isMobile }, testInfo) => {
+  test('viewport is properly sized for mobile', async ({ page, isMobile, browserName }, testInfo) => {
     // Only run on mobile project, not tablet
     test.skip(!isMobile || testInfo.project.name === 'tablet', 'This test only runs on mobile phones')
 
@@ -164,22 +140,25 @@ test.describe('Cross-device compatibility', () => {
 
   test('privacy page loads', async ({ page }) => {
     await page.goto('/privacy')
-    await page.waitForLoadState('networkidle')
-    await expect(page.getByRole('heading', { name: /privacy policy/i })).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByRole('heading', { name: /privacy policy/i })).toBeVisible()
   })
 
   test('create team dialog opens', async ({ page }) => {
     await page.goto('/teams')
-    await clickVisibleButtonByName(page, /new team/i)
 
-    await expect(page.getByRole('dialog')).toBeVisible({ timeout: 10_000 })
+    const newTeamButton = page.getByRole('button', { name: /new team/i })
+    await newTeamButton.click()
+
+    await expect(page.getByRole('dialog')).toBeVisible()
   })
 
   test('auth prompt appears for unauthenticated users', async ({ page }) => {
     await page.goto('/teams')
-    await clickVisibleButtonByName(page, /new team/i)
+
+    const newTeamButton = page.getByRole('button', { name: /new team/i })
+    await newTeamButton.click()
 
     // Should see the "I don't want your data" message
-    await expect(page.getByText(/I don't want your data/i)).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByText(/I don't want your data/i)).toBeVisible()
   })
 })

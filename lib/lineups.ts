@@ -48,6 +48,18 @@ export function getActiveAssignments(team: Team): PositionAssignments {
 }
 
 /**
+ * Keep the legacy team-level position_assignments field aligned to the active lineup.
+ * This is a compatibility adapter for older storage/server paths.
+ */
+export function withLegacyAssignmentsFromActiveLineup(team: Team): Team {
+  const activeAssignments = getActiveAssignments(team)
+  return {
+    ...team,
+    position_assignments: activeAssignments,
+  }
+}
+
+/**
  * Migrate a team that uses the old single position_assignments field
  * to the new lineups array format.
  *
@@ -58,7 +70,7 @@ export function getActiveAssignments(team: Team): PositionAssignments {
 export function migrateTeamToLineups(team: Team): Team {
   // Already has lineups - no migration needed
   if (team.lineups && team.lineups.length > 0) {
-    return team
+    return withLegacyAssignmentsFromActiveLineup(team)
   }
 
   // Check if there are any existing position assignments
@@ -71,11 +83,11 @@ export function migrateTeamToLineups(team: Team): Team {
     hasAssignments ? team.position_assignments : {}
   )
 
-  return {
+  return withLegacyAssignmentsFromActiveLineup({
     ...team,
     lineups: [initialLineup],
     active_lineup_id: initialLineup.id,
-  }
+  })
 }
 
 /**

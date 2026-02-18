@@ -1,29 +1,26 @@
 import type { Team } from '@/lib/types'
+import { migrateTeamToLineups } from '@/lib/lineups'
 
 const LOCAL_TEAMS_STORAGE_KEY = 'volley-local-teams'
 
 function normalizeTeam(raw: Team): Team {
   const now = new Date().toISOString()
-  const lineups = Array.isArray(raw.lineups) && raw.lineups.length > 0
-    ? raw.lineups
-    : [{
-        id: 'default',
-        name: 'Default',
-        position_assignments: {},
-        created_at: now,
-      }]
+  const migrated = migrateTeamToLineups(raw)
+  const normalizedLineups = migrated.lineups.map((lineup) => ({
+    ...lineup,
+    starting_rotation: lineup.starting_rotation ?? 1,
+  }))
+  const activeLineupId = migrated.active_lineup_id ?? normalizedLineups[0]?.id ?? 'default'
+  const activeLineup = normalizedLineups.find((lineup) => lineup.id === activeLineupId)
 
-  const activeLineupId = raw.active_lineup_id ?? lineups[0]?.id ?? 'default'
-  const activeLineup = lineups.find((lineup) => lineup.id === activeLineupId)
-
-  return {
+  return migrateTeamToLineups({
     ...raw,
-    lineups,
+    lineups: normalizedLineups,
     active_lineup_id: activeLineupId,
-    position_assignments: activeLineup?.position_assignments ?? raw.position_assignments ?? {},
+    position_assignments: activeLineup?.position_assignments ?? {},
     created_at: raw.created_at ?? now,
     updated_at: raw.updated_at ?? now,
-  }
+  })
 }
 
 function canUseStorage() {
