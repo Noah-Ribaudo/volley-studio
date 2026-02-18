@@ -1,705 +1,167 @@
 'use client'
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { useMutation, useQuery } from 'convex/react'
-import type { Id } from '@/convex/_generated/dataModel'
-import { api } from '@/convex/_generated/api'
-import { VolleyballCourt } from '@/components/court'
-import {
-  MinimalTeamCard,
-  MinimalAssignmentsCard,
-  MinimalHeaderStrip,
-  MinimalPhaseRotationCard,
-  MinimalSettingsCard,
-  MinimalTokenLabelsCard,
-} from '@/components/minimal'
-import { RosterManagementCard } from '@/components/roster'
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
-import {
-  useAppStore,
-  getCurrentArrows,
-  getCurrentPositions,
-  getCurrentTags,
-  getActiveLineupPositionSource,
-} from '@/store/useAppStore'
-import { useThemeStore } from '@/store/useThemeStore'
-import { useWhiteboardSaveState, useWhiteboardSync } from '@/hooks/useWhiteboardSync'
-import {
-  ROLES,
-  RALLY_PHASES,
-  isRallyPhase,
-  type Team,
-  type CustomLayout,
-  type Role,
-  type Position,
-  type PositionCoordinates,
-  type RallyPhase,
-} from '@/lib/types'
-import { getActiveAssignments, getActiveLineup } from '@/lib/lineups'
+import { useMemo } from 'react'
 import { getWhiteboardPositions } from '@/lib/whiteboard'
-import { getVisibleOrderedRallyPhases } from '@/lib/rallyPhaseOrder'
-import { getPhaseInfo } from '@/lib/phaseIcons'
-import { createRotationPhaseKey, getBackRowMiddle, getRoleZone } from '@/lib/rotations'
-import { validateRotationLegality } from '@/lib/model/legality'
-import { cn } from '@/lib/utils'
-import { getLocalTeamById, listLocalTeams, upsertLocalTeam } from '@/lib/localTeams'
-import { toast } from 'sonner'
+import { DEFAULT_BASE_ORDER } from '@/lib/rotations'
+import {
+  PositionCoordinates,
+  RallyPhase,
+  Role,
+  Rotation,
+  RALLY_PHASE_INFO,
+  ROLE_INFO,
+} from '@/lib/types'
 
-const ANIMATION_MODE = 'raf' as const
-const TOKEN_SCALES = { desktop: 1.5, mobile: 1.5 }
-const TOKEN_DIMENSIONS = { widthOffset: 0, heightOffset: 0 }
-const ANIMATION_CONFIG = {
-  durationMs: 500,
-  easingCss: 'cubic-bezier(0.4, 0, 0.2, 1)',
-  easingFn: 'cubic' as 'cubic' | 'quad',
-  collisionRadius: 0.07,
-  separationStrength: 3.45,
-  maxSeparation: 0.4,
+const canvasPhase: RallyPhase = 'ATTACK_PHASE'
+const canvasRotation: Rotation = 1
+const featuredPhases: RallyPhase[] = ['PRE_SERVE', 'SERVE_RECEIVE', 'ATTACK_PHASE', 'DEFENSE_PHASE']
+const phaseEntryLines = featuredPhases.map(
+  (phase) => `${RALLY_PHASE_INFO[phase].name} — ${RALLY_PHASE_INFO[phase].description}`
+)
+
+const moduleData: Array<{ title: string; descriptionLines: string[] }> = [
+  {
+    title: 'Single page focus',
+    descriptionLines: [
+      'Everything sits inside one scroll so a coach never has to hunt through tabs.',
+      'Cards wrap from wide layouts down to a single column for phones and tablets.',
+    ],
+  },
+  {
+    title: 'Context anchors',
+    descriptionLines: [
+      'Each block leads with a clear reason why it is here—setup, story, reminder.',
+      'No hidden controls; the language describes what the coach should do next.',
+    ],
+  },
+  {
+    title: 'Prompted reflection',
+    descriptionLines: [
+      'Short sentences keep the narrative crisp and visible at all times.',
+      'Keep expanding notes from these cards but start with plain words.',
+    ],
+  },
+  {
+    title: 'Visible phases',
+    descriptionLines: phaseEntryLines,
+  },
+]
+
+const clampNormalized = (value: number) => Math.min(1, Math.max(0, value))
+
+type SimpleWhiteboardProps = {
+  positions: PositionCoordinates
+  phase: RallyPhase
 }
 
-function getServerRole(rotation: number, baseOrder: Role[]): Role {
-  for (const role of baseOrder) {
-    if (getRoleZone(rotation as 1 | 2 | 3 | 4 | 5 | 6, role, baseOrder) === 1) {
-      return role
-    }
-  }
-  return 'S'
-}
-
-function MinimalModeContent() {
-  useWhiteboardSync()
-
-  const {
-    currentRotation,
-    currentPhase,
-    localPositions,
-    localArrows,
-    arrowCurves,
-    localStatusFlags,
-    localTagFlags,
-    attackBallPositions,
-    customLayouts,
-    currentTeam,
-    baseOrder,
-    isReceivingContext,
-    showLibero,
-    showPosition,
-    showPlayer,
-    showNumber,
-    circleTokens,
-    fullStatusLabels,
-    hideAwayTeam,
-    awayTeamHidePercent,
-    contextPlayer,
-    isPreviewingMovement,
-    playAnimationTrigger,
-    visiblePhases,
-    phaseOrder,
-    minimalContrast,
-    minimalAllowAccent,
-    minimalDenseLayout,
-    setUiMode,
-    setRotation,
-    setPhase,
-    nextPhase,
-    prevPhase,
-    updateLocalPosition,
-    updateArrow,
-    clearArrow,
-    setArrowCurve,
-    setContextPlayer,
-    togglePlayerStatus,
-    setTokenTags,
-    assignPlayerToRole,
-    setShowPosition,
-    setShowPlayer,
-    setShowNumber,
-    setPreviewingMovement,
-    triggerPlayAnimation,
-    setMinimalContrast,
-    setMinimalAllowAccent,
-    setMinimalDenseLayout,
-    setAttackBallPosition,
-    clearAttackBallPosition,
-    setCurrentTeam,
-    setCustomLayouts,
-    populateFromLayouts,
-    setAccessMode,
-    setTeamPasswordProvided,
-    isHydrated: isAppHydrated,
-  } = useAppStore()
-  const isThemeHydrated = useThemeStore((state) => state.isHydrated)
-  const isUiHydrated = isAppHydrated && isThemeHydrated
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const teamFromUrl = searchParams.get('team')?.trim() || ''
-  const myTeams = useQuery(api.teams.listMyTeams, {})
-  const updateLineups = useMutation(api.teams.updateLineups)
-  const selectedTeam = useQuery(
-    api.teams.getBySlugOrId,
-    teamFromUrl ? { identifier: teamFromUrl } : 'skip'
-  )
-  const selectedLayouts = useQuery(
-    api.layouts.getByTeam,
-    selectedTeam?._id ? { teamId: selectedTeam._id } : 'skip'
-  )
-  const [localTeams, setLocalTeams] = useState<Team[]>([])
-  const [isSavingLineup, setIsSavingLineup] = useState(false)
-  const [rosterSheetOpen, setRosterSheetOpen] = useState(false)
-  const loadedTeamFromUrlRef = useRef<string | null>(null)
-
-  useEffect(() => {
-    setUiMode('minimal')
-    return () => {
-      setUiMode('normal')
-    }
-  }, [setUiMode])
-
-  useEffect(() => {
-    if (!teamFromUrl || !selectedTeam || !selectedLayouts) return
-    if (loadedTeamFromUrlRef.current === selectedTeam._id) return
-
-    const mappedTeam: Team = {
-      id: selectedTeam._id,
-      _id: selectedTeam._id,
-      name: selectedTeam.name,
-      slug: selectedTeam.slug,
-      hasPassword: selectedTeam.hasPassword,
-      archived: selectedTeam.archived,
-      roster: selectedTeam.roster.map((player) => ({
-        id: player.id,
-        name: player.name,
-        number: player.number ?? 0,
-      })),
-      lineups: (selectedTeam.lineups || []).map((lineup) => ({
-        ...lineup,
-        position_source: lineup.position_source as 'custom' | 'full-5-1' | '5-1-libero' | '6-2' | undefined,
-        starting_rotation: (lineup.starting_rotation as 1 | 2 | 3 | 4 | 5 | 6 | undefined) ?? 1,
-      })),
-      active_lineup_id: selectedTeam.activeLineupId ?? null,
-      position_assignments: selectedTeam.positionAssignments || {},
-      created_at: new Date(selectedTeam._creationTime).toISOString(),
-      updated_at: new Date(selectedTeam._creationTime).toISOString(),
-    }
-
-    const mappedLayouts: CustomLayout[] = selectedLayouts.map((layout) => ({
-      id: layout._id,
-      _id: layout._id,
-      team_id: layout.teamId,
-      teamId: layout.teamId,
-      rotation: layout.rotation as 1 | 2 | 3 | 4 | 5 | 6,
-      phase: layout.phase as RallyPhase,
-      positions: layout.positions as unknown as PositionCoordinates,
-      flags: layout.flags ?? null,
-      created_at: new Date(layout._creationTime).toISOString(),
-      updated_at: new Date(layout._creationTime).toISOString(),
-    }))
-
-    setCurrentTeam(mappedTeam)
-    setCustomLayouts(mappedLayouts)
-    populateFromLayouts(mappedLayouts)
-    setAccessMode('full')
-    setTeamPasswordProvided(true)
-    loadedTeamFromUrlRef.current = selectedTeam._id
-  }, [
-    teamFromUrl,
-    selectedTeam,
-    selectedLayouts,
-    setCurrentTeam,
-    setCustomLayouts,
-    populateFromLayouts,
-    setAccessMode,
-    setTeamPasswordProvided,
-  ])
-
-  useEffect(() => {
-    const refreshLocalTeams = () => {
-      setLocalTeams(listLocalTeams())
-    }
-
-    refreshLocalTeams()
-    window.addEventListener('storage', refreshLocalTeams)
-    return () => window.removeEventListener('storage', refreshLocalTeams)
-  }, [])
-
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (
-        event.target instanceof HTMLInputElement ||
-        event.target instanceof HTMLTextAreaElement ||
-        (event.target as HTMLElement).isContentEditable
-      ) {
-        return
-      }
-
-      if (event.key === 'ArrowRight') {
-        event.preventDefault()
-        nextPhase()
-      } else if (event.key === 'ArrowLeft') {
-        event.preventDefault()
-        prevPhase()
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [nextPhase, prevPhase])
-
-  const rotationPhaseKey = createRotationPhaseKey(currentRotation, currentPhase)
-  const teamId = currentTeam?._id || null
-  const saveState = useWhiteboardSaveState(teamId, rotationPhaseKey)
-
-  const currentAttackBallPosition = currentPhase === 'DEFENSE_PHASE'
-    ? attackBallPositions[rotationPhaseKey] || null
-    : null
-
-  const whiteboardResult = RALLY_PHASES.includes(currentPhase as RallyPhase)
-    ? getWhiteboardPositions({
-      rotation: currentRotation,
-      phase: currentPhase as RallyPhase,
-      isReceiving: isReceivingContext,
-      showBothSides: true,
-      baseOrder,
-      showLibero,
-      attackBallPosition: currentAttackBallPosition,
-    })
-    : null
-
-  const positions = getCurrentPositions(
-    currentRotation,
-    currentPhase,
-    localPositions,
-    customLayouts,
-    currentTeam,
-    isReceivingContext,
-    baseOrder,
-    showLibero,
-    currentAttackBallPosition
-  )
-
-  const awayPositionKey = `${currentRotation}-${currentPhase}-${isReceivingContext}`
-  const [awayOverrides, setAwayOverrides] = useState<{ key: string; positions: PositionCoordinates | null }>({
-    key: awayPositionKey,
-    positions: null,
-  })
-  const localAwayPositions = awayOverrides.key === awayPositionKey ? awayOverrides.positions : null
-
-  const awayPositions = useMemo(() => {
-    const awayDefault = whiteboardResult?.away
-    if (!awayDefault) {
-      return undefined
-    }
-    if (!localAwayPositions) {
-      return awayDefault
-    }
-    return { ...awayDefault, ...localAwayPositions }
-  }, [whiteboardResult, localAwayPositions])
-
-  const handleAwayPositionChange = useCallback((role: Role, position: Position) => {
-    setAwayOverrides((previous) => ({
-      key: awayPositionKey,
-      positions: {
-        ...(previous.key === awayPositionKey ? previous.positions || {} : {}),
-        [role]: position,
-      } as PositionCoordinates,
-    }))
-  }, [awayPositionKey])
-
-  const currentArrows = getCurrentArrows(
-    currentRotation,
-    currentPhase,
-    localArrows,
-    isReceivingContext,
-    baseOrder,
-    showLibero,
-    currentAttackBallPosition,
-    currentTeam
-  )
-
-  const currentArrowCurves = arrowCurves[rotationPhaseKey] || {}
-  const currentStatusFlags = localStatusFlags[rotationPhaseKey] || {}
-  const currentTagFlags = getCurrentTags(currentRotation, currentPhase, localTagFlags)
-
-  const violations = useMemo(() => {
-    if (currentPhase !== 'PRE_SERVE' && currentPhase !== 'SERVE_RECEIVE') {
-      return []
-    }
-
-    const replacedMB = showLibero ? getBackRowMiddle(currentRotation, baseOrder) : null
-    const validPositions: Record<Role, Position> = {} as Record<Role, Position>
-
-    for (const role of ROLES) {
-      if (role === 'L' && !showLibero) {
-        validPositions[role] = { x: 0.5, y: 0.5 }
-      } else if (showLibero && role === replacedMB) {
-        validPositions[role] = positions['L'] || positions[replacedMB] || { x: 0.5, y: 0.5 }
-      } else {
-        validPositions[role] = positions[role] || { x: 0.5, y: 0.5 }
-      }
-    }
-
-    return validateRotationLegality(currentRotation, validPositions, undefined, baseOrder)
-  }, [baseOrder, currentPhase, currentRotation, positions, showLibero])
-
-  const orderedVisiblePhases = getVisibleOrderedRallyPhases(phaseOrder, visiblePhases)
-  const phasesToShow: RallyPhase[] = orderedVisiblePhases
-
-  const cleanAssignments = useCallback((source: Record<string, string | undefined> | undefined) => {
-    const cleaned: Record<string, string> = {}
-    if (!source) return cleaned
-    for (const [role, playerId] of Object.entries(source)) {
-      if (typeof playerId === 'string' && playerId.trim() !== '') {
-        cleaned[role] = playerId
-      }
-    }
-    return cleaned
-  }, [])
-
-  const persistLineupsForTeam = useCallback(async (nextTeam: Team) => {
-    const normalizedLineups = (nextTeam.lineups || []).map((lineup) => ({
-      id: lineup.id,
-      name: lineup.name,
-      position_assignments: cleanAssignments(lineup.position_assignments),
-      position_source: lineup.position_source,
-      starting_rotation: lineup.starting_rotation ?? 1,
-      created_at: lineup.created_at,
-    }))
-    const normalizedActiveLineupId = nextTeam.active_lineup_id &&
-      normalizedLineups.some((lineup) => lineup.id === nextTeam.active_lineup_id)
-      ? nextTeam.active_lineup_id
-      : normalizedLineups[0]?.id
-    const activeLineup = normalizedLineups.find((lineup) => lineup.id === normalizedActiveLineupId)
-    const nextAssignments = cleanAssignments(activeLineup?.position_assignments || nextTeam.position_assignments)
-
-    if (nextTeam._id) {
-      await updateLineups({
-        id: nextTeam._id as Id<'teams'>,
-        lineups: normalizedLineups,
-        activeLineupId: normalizedActiveLineupId || undefined,
-        positionAssignments: nextAssignments,
+const SimpleWhiteboard = ({ positions, phase }: SimpleWhiteboardProps) => {
+  const tokens = useMemo(() => {
+    return (Object.entries(positions) as Array<[Role, { x: number; y: number } | undefined]>).reduce<
+      Array<{ role: Role; cx: number; cy: number; color: string }>
+    >((acc, [role, point]) => {
+      if (!point) return acc
+      acc.push({
+        role,
+        cx: clampNormalized(point.x) * 100,
+        cy: clampNormalized(point.y) * 60,
+        color: ROLE_INFO[role].color,
       })
-      return
-    }
-
-    upsertLocalTeam({
-      ...nextTeam,
-      lineups: normalizedLineups,
-      active_lineup_id: normalizedActiveLineupId ?? null,
-      position_assignments: nextAssignments,
-    })
-    setLocalTeams(listLocalTeams())
-  }, [cleanAssignments, updateLineups])
-
-  const activeLineup = currentTeam ? getActiveLineup(currentTeam) : null
-  const assignments = currentTeam ? getActiveAssignments(currentTeam) : {}
-  const activePositionSource = getActiveLineupPositionSource(currentTeam)
-  const isEditingAllowed = activePositionSource === 'custom'
-  const teamSelectValue = !currentTeam
-    ? '__none__'
-    : currentTeam._id
-      ? `cloud:${currentTeam._id}`
-      : `local:${currentTeam.id}`
-  const lineupOptions = currentTeam
-    ? (currentTeam.lineups || []).map((lineup) => ({ value: lineup.id, label: lineup.name }))
-    : []
-  const lineupSelectValue = activeLineup?.id || '__none__'
-  const teamOptions = [
-    { value: '__none__', label: 'Practice (No Team)', group: 'actions' as const },
-    ...(myTeams || []).map((team) => ({
-      value: `cloud:${team._id}`,
-      label: team.name,
-      group: 'cloud' as const,
-    })),
-    ...localTeams.map((team) => ({
-      value: `local:${team.id}`,
-      label: team.name,
-      group: 'local' as const,
-    })),
-  ]
-  const manageHref = currentTeam
-    ? `/teams/${encodeURIComponent(currentTeam._id || currentTeam.id)}`
-    : '/teams'
-
-  const handleTeamSelect = useCallback((value: string) => {
-    if (value === '__none__') {
-      loadedTeamFromUrlRef.current = null
-      setCurrentTeam(null)
-      setCustomLayouts([])
-      setAccessMode('none')
-      setTeamPasswordProvided(false)
-      router.push('/minimal')
-      return
-    }
-
-    if (value.startsWith('cloud:')) {
-      const selectedId = value.slice('cloud:'.length)
-      if (!selectedId) return
-      router.push(`/minimal?team=${encodeURIComponent(selectedId)}`)
-      return
-    }
-
-    if (value.startsWith('local:')) {
-      const localTeamId = value.slice('local:'.length)
-      const localTeam = getLocalTeamById(localTeamId)
-      if (!localTeam) return
-
-      loadedTeamFromUrlRef.current = null
-      setCurrentTeam(localTeam)
-      setCustomLayouts([])
-      setAccessMode('local')
-      setTeamPasswordProvided(true)
-      router.push('/minimal')
-    }
-  }, [router, setAccessMode, setCurrentTeam, setCustomLayouts, setTeamPasswordProvided])
-
-  const handleLineupSelect = useCallback(async (value: string) => {
-    if (!currentTeam || value === '__none__') {
-      return
-    }
-
-    const selectedLineup = currentTeam.lineups.find((lineup) => lineup.id === value)
-    if (!selectedLineup || selectedLineup.id === currentTeam.active_lineup_id) {
-      return
-    }
-
-    const nextTeam: Team = {
-      ...currentTeam,
-      active_lineup_id: selectedLineup.id,
-      position_assignments: {
-        ...selectedLineup.position_assignments,
-      },
-    }
-
-    setCurrentTeam(nextTeam)
-    setIsSavingLineup(true)
-    try {
-      await persistLineupsForTeam(nextTeam)
-    } catch (error) {
-      setCurrentTeam(currentTeam)
-      const message = error instanceof Error ? error.message : 'Could not switch lineup'
-      toast.error(message)
-    } finally {
-      setIsSavingLineup(false)
-    }
-  }, [currentTeam, persistLineupsForTeam, setCurrentTeam])
-
-  const handleAssignPlayer = useCallback(async (role: Role, playerId: string | undefined) => {
-    assignPlayerToRole(role, playerId)
-    const nextTeam = useAppStore.getState().currentTeam
-    if (!nextTeam) return
-    try {
-      await persistLineupsForTeam(nextTeam)
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Could not save assignments'
-      toast.error(message)
-    }
-  }, [assignPlayerToRole, persistLineupsForTeam])
-
-  const saveLabel: 'local' | 'synced' | 'pending' | 'saving' = !currentTeam
-    ? 'local'
-    : saveState === 'idle'
-      ? 'synced'
-      : saveState
-  const phaseLabel = isRallyPhase(currentPhase)
-    ? getPhaseInfo(currentPhase).name
-    : currentPhase
+      return acc
+    }, [])
+  }, [positions])
 
   return (
-    <div
-      data-mode="minimal"
-      data-minimal-contrast={minimalContrast}
-      data-minimal-accent={minimalAllowAccent ? 'on' : 'off'}
-      className="h-dvh overflow-hidden bg-background text-foreground"
-    >
-      <div
-        className={cn(
-          'mx-auto flex h-full max-w-[1400px] flex-col gap-3 p-3 md:p-4',
-          minimalDenseLayout && 'gap-2 p-2.5 md:p-3'
-        )}
-      >
-        <MinimalHeaderStrip
-          teamName={currentTeam?.name || 'Practice'}
-          lineupName={activeLineup?.name || 'No lineup'}
-          rotationLabel={`R${currentRotation}`}
-          phaseLabel={phaseLabel}
-          saveState={saveLabel}
-          allowAccent={minimalAllowAccent}
-        />
-
-        <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_22rem]">
-          <section className="min-h-0">
-            <div className="h-[54dvh] min-h-[320px] rounded-md border border-border bg-card p-2 lg:h-full lg:min-h-0">
-              <div
-                className="h-full w-full"
-                style={{
-                  visibility: isUiHydrated ? 'visible' : 'hidden',
-                  pointerEvents: isUiHydrated ? 'auto' : 'none',
-                }}
+    <figure className="m-0">
+      <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-white/10 bg-slate-950/80 shadow-inner">
+        <svg
+          viewBox="0 0 100 60"
+          role="img"
+          aria-label="Minimal volleyball court with seven tokens"
+          className="h-full w-full"
+          preserveAspectRatio="xMidYMid meet"
+        >
+          <rect x="2" y="2" width="96" height="56" rx="4" fill="none" stroke="rgba(148,163,184,0.2)" strokeWidth="0.6" />
+          <line x1="50" y1="2" x2="50" y2="58" stroke="rgba(148,163,184,0.2)" strokeWidth="0.5" />
+          <line x1="0" y1="30" x2="100" y2="30" stroke="rgba(248,250,252,0.12)" strokeWidth="0.8" />
+          <line x1="0" y1="2" x2="0" y2="58" stroke="rgba(148,163,184,0.1)" strokeWidth="0.6" />
+          <line x1="100" y1="2" x2="100" y2="58" stroke="rgba(148,163,184,0.1)" strokeWidth="0.6" />
+          {tokens.map(({ role, cx, cy, color }) => (
+            <g key={role}>
+              <circle cx={cx} cy={cy} r="3.6" fill={color} stroke="rgba(15,23,42,0.8)" strokeWidth="0.8" />
+              <text
+                x={cx}
+                y={cy + 7}
+                textAnchor="middle"
+                fontSize="5"
+                fontWeight="600"
+                fill="#f8fafc"
+                className="pointer-events-none"
               >
-                <VolleyballCourt
-                  mode="whiteboard"
-                  positions={positions}
-                  awayPositions={awayPositions}
-                  hideAwayTeam={hideAwayTeam}
-                  awayTeamHidePercent={awayTeamHidePercent}
-                  rotation={currentRotation}
-                  baseOrder={baseOrder}
-                  roster={currentTeam?.roster || []}
-                  assignments={assignments}
-                  contextPlayer={contextPlayer}
-                  onContextPlayerChange={setContextPlayer}
-                  editable={isEditingAllowed}
-                  animationMode={ANIMATION_MODE}
-                  animationConfig={ANIMATION_CONFIG}
-                  onPositionChange={(role, position) => {
-                    updateLocalPosition(currentRotation, currentPhase, role, position)
-                  }}
-                  onAwayPositionChange={handleAwayPositionChange}
-                  arrows={currentArrows}
-                  onArrowChange={isEditingAllowed ? (role, position) => {
-                    if (!position) {
-                      clearArrow(currentRotation, currentPhase, role)
-                      return
-                    }
-                    updateArrow(currentRotation, currentPhase, role, position)
-                  } : undefined}
-                  arrowCurves={currentArrowCurves}
-                  onArrowCurveChange={isEditingAllowed ? (role, curve) => {
-                    setArrowCurve(currentRotation, currentPhase, role, curve)
-                  } : undefined}
-                  showPosition={showPosition}
-                  showPlayer={showPlayer}
-                  showNumber={showNumber}
-                  circleTokens={circleTokens}
-                  tokenScaleDesktop={TOKEN_SCALES.desktop}
-                  tokenScaleMobile={TOKEN_SCALES.mobile}
-                  tokenWidthOffset={TOKEN_DIMENSIONS.widthOffset}
-                  tokenHeightOffset={TOKEN_DIMENSIONS.heightOffset}
-                  legalityViolations={violations}
-                  showLibero={showLibero}
-                  currentPhase={currentPhase}
-                  attackBallPosition={currentAttackBallPosition}
-                  onAttackBallChange={isEditingAllowed ? (position) => {
-                    if (!position) {
-                      clearAttackBallPosition(currentRotation, currentPhase)
-                      return
-                    }
-                    setAttackBallPosition(currentRotation, currentPhase, position)
-                  } : undefined}
-                  ballPosition={currentPhase === 'PRE_SERVE' ? (() => {
-                    const serverRole = getServerRole(currentRotation, baseOrder)
-                    const serverPos = positions[serverRole]
-                    if (!serverPos) return undefined
-                    return {
-                      x: serverPos.x + 0.04,
-                      y: serverPos.y - 0.03,
-                    }
-                  })() : undefined}
-                  ballHeight={currentPhase === 'PRE_SERVE' ? 0.15 : undefined}
-                  statusFlags={currentStatusFlags}
-                  onStatusToggle={isEditingAllowed ? (role, status) => {
-                    togglePlayerStatus(currentRotation, currentPhase, role, status)
-                  } : undefined}
-                  fullStatusLabels={fullStatusLabels}
-                  hasTeam={Boolean(currentTeam)}
-                  animationTrigger={playAnimationTrigger}
-                  isPreviewingMovement={isPreviewingMovement}
-                  tagFlags={currentTagFlags}
-                  onTagsChange={isEditingAllowed ? (role, tags) => {
-                    setTokenTags(currentRotation, currentPhase, role, tags)
-                  } : undefined}
-                  onPlayerAssign={isEditingAllowed ? (role, playerId) => {
-                    assignPlayerToRole(role, playerId)
-                  } : undefined}
-                />
-              </div>
-            </div>
-          </section>
-
-          <aside className="min-h-0 overflow-auto">
-            <div className={cn('grid gap-3 sm:grid-cols-2 lg:grid-cols-1', minimalDenseLayout && 'gap-2')}>
-              <MinimalTeamCard
-                teamValue={teamSelectValue}
-                teamOptions={teamOptions}
-                lineupValue={lineupSelectValue}
-                lineupOptions={lineupOptions}
-                hasTeam={Boolean(currentTeam)}
-                isLineupSaving={isSavingLineup}
-                manageHref={manageHref}
-                onTeamChange={handleTeamSelect}
-                onLineupChange={(value) => {
-                  void handleLineupSelect(value)
-                }}
-                onManageRoster={() => setRosterSheetOpen(true)}
-              />
-              <MinimalPhaseRotationCard
-                currentRotation={currentRotation}
-                currentPhase={currentPhase}
-                visiblePhases={phasesToShow}
-                onRotationChange={setRotation}
-                onPhaseChange={setPhase}
-                onNextPhase={nextPhase}
-                onPrevPhase={prevPhase}
-                isPreviewingMovement={isPreviewingMovement}
-                onPlayToggle={() => {
-                  if (isPreviewingMovement) {
-                    setPreviewingMovement(false)
-                    return
-                  }
-                  triggerPlayAnimation()
-                  setPreviewingMovement(true)
-                }}
-              />
-              <MinimalTokenLabelsCard
-                showPosition={showPosition}
-                showPlayer={showPlayer}
-                showNumber={showNumber}
-                onShowPositionChange={setShowPosition}
-                onShowPlayerChange={setShowPlayer}
-                onShowNumberChange={setShowNumber}
-              />
-              <MinimalAssignmentsCard
-                lineupName={activeLineup?.name || 'Current lineup'}
-                roster={currentTeam?.roster || []}
-                assignments={assignments}
-                onAssignPlayer={(role, playerId) => {
-                  void handleAssignPlayer(role, playerId)
-                }}
-              />
-              <MinimalSettingsCard
-                contrast={minimalContrast}
-                allowAccent={minimalAllowAccent}
-                denseLayout={minimalDenseLayout}
-                onContrastChange={setMinimalContrast}
-                onAllowAccentChange={setMinimalAllowAccent}
-                onDenseLayoutChange={setMinimalDenseLayout}
-                onExit={() => setUiMode('normal')}
-              />
-            </div>
-          </aside>
-        </div>
-
-        <Sheet open={rosterSheetOpen} onOpenChange={setRosterSheetOpen}>
-          <SheetContent side="right" className="w-full max-w-[400px] overflow-y-auto">
-            <SheetHeader className="pb-4">
-              <SheetTitle>Roster</SheetTitle>
-              <SheetDescription>
-                Edit roster and assignments without leaving Minimal Mode.
-              </SheetDescription>
-            </SheetHeader>
-            <RosterManagementCard />
-          </SheetContent>
-        </Sheet>
+                {role}
+              </text>
+            </g>
+          ))}
+        </svg>
       </div>
-    </div>
+      <figcaption className="mt-3 text-xs uppercase tracking-[0.3em] text-slate-500">
+        Phase: <span className="font-semibold text-white">{RALLY_PHASE_INFO[phase].name}</span>
+      </figcaption>
+    </figure>
   )
 }
 
-export default function MinimalModePage() {
+export default function MinimalSinglePage() {
+  const positions = useMemo(() => {
+    const layout = getWhiteboardPositions({
+      rotation: canvasRotation,
+      phase: canvasPhase,
+      isReceiving: true,
+      showLibero: true,
+      baseOrder: DEFAULT_BASE_ORDER,
+    })
+    return layout.home
+  }, [])
+
   return (
-    <Suspense fallback={<div className="h-dvh bg-background" />}>
-      <MinimalModeContent />
-    </Suspense>
+    <main className="bg-slate-950 text-slate-50">
+      <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-10 px-5 py-10 md:px-8">
+        <header className="space-y-3">
+          <p className="text-xs uppercase tracking-[0.4em] text-slate-500">Minimal single page</p>
+          <h1 className="text-4xl font-semibold leading-tight text-white md:text-5xl">A stripped-back view of Volley Studio</h1>
+          <p className="max-w-3xl text-base text-slate-300">
+            This landing pad keeps every thought and action on one scroll. The cards below explain the intent, and the whiteboard sits in the only place a coach really needs to look.
+          </p>
+        </header>
+
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {moduleData.map((module) => (
+            <article
+              key={module.title}
+              className="flex flex-col rounded-2xl border border-white/10 bg-white/5 p-5 shadow-sm shadow-black/40"
+            >
+              <h3 className="text-lg font-semibold text-white">{module.title}</h3>
+              <div className="mt-3 flex flex-col gap-2 text-sm text-slate-300">
+                {module.descriptionLines.map((line) => (
+                  <p key={line}>{line}</p>
+                ))}
+              </div>
+            </article>
+          ))}
+        </section>
+
+        <section className="space-y-4">
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Whiteboard canvas</p>
+              <h2 className="text-2xl font-semibold text-white">Rotation snapshot</h2>
+            </div>
+            <p className="text-sm text-slate-400">Attack Phase · Rotation {canvasRotation}</p>
+          </div>
+          <div className="rounded-3xl border border-white/10 bg-slate-900/60 p-6 shadow-2xl shadow-black/40">
+            <SimpleWhiteboard positions={positions} phase={canvasPhase} />
+          </div>
+        </section>
+      </div>
+    </main>
   )
 }
