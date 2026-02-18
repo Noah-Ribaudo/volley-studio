@@ -19,7 +19,6 @@ import { Layout, Users, Timer, Settings, SlidersHorizontal, Palette, Paintbrush,
 import VolleyBall from '@/components/logo/VolleyBall'
 import { SidebarUserMenu } from '@/components/auth'
 import { useAppStore } from '@/store/useAppStore'
-import { useHintStore } from '@/store/useHintStore'
 
 const navItems = [
   {
@@ -82,8 +81,7 @@ export function VolleyballSidebar() {
 
   const handleResetTooltips = () => {
     localStorage.removeItem('volleyball-hints')
-    useHintStore.persist.rehydrate()
-    if (!isOnWhiteboard) router.push('/')
+    window.location.href = '/'
   }
 
   return (
