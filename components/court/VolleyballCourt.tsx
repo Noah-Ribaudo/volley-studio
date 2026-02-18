@@ -559,7 +559,8 @@ export function VolleyballCourt({
           if ((hoveredZonesRef.current[role]?.size ?? 0) === 0) return
           setHoveredRole(role)
           setPreviewVisible(prev => (prev[role] ? prev : { ...prev, [role]: true }))
-          if (shouldShowNextStepHint()) {
+          // Show arrow drag hint only for players without an existing arrow
+          if (shouldShowNextStepHint() && !useHintStore.getState().hasLearnedArrowDrag) {
             setNextStepTooltipRole(role)
             incrementNextStepHintHoverCount()
           } else {
@@ -568,7 +569,7 @@ export function VolleyballCourt({
         }, 60)
       }
     } else if (!anyZoneHovered) {
-      // All zones left — retract after a short grace period
+      // All zones left — retract after a grace period
       // (covers the gap when cursor moves between token and arrow)
       hoverDelayRef.current[role] = setTimeout(() => {
         delete hoverDelayRef.current[role]
@@ -581,7 +582,7 @@ export function VolleyballCourt({
           delete next[role]
           return next
         })
-      }, 90)
+      }, 200)
     }
     // else: leaving one zone while another is still hovered → do nothing, arrow stays
   }, [incrementNextStepHintHoverCount, shouldShowNextStepHint])
