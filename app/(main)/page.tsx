@@ -19,7 +19,7 @@ import { validateRotationLegality } from '@/lib/model/legality'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { useWhiteboardSync } from '@/hooks/useWhiteboardSync'
 import { useLineupPresets } from '@/hooks/useLineupPresets'
-import { WhiteboardOnboardingHint } from '@/components/court/WhiteboardOnboardingHint'
+import { SpotlightOverlay } from '@/components/court/SpotlightOverlay'
 import { ConflictResolutionModal } from '@/components/volleyball/ConflictResolutionModal'
 import { useThemeStore } from '@/store/useThemeStore'
 import { CreateTeamDialog } from '@/components/team'
@@ -767,6 +767,12 @@ function HomePageContent() {
         ? 3
         : undefined
 
+  const onboardingTargetSelector = showFirstDragHint || showArrowDragHint
+    ? '[data-onboarding="player-token"]'
+    : showPhaseNavigationHint
+      ? '[data-onboarding="phase-selector"]'
+      : ''
+
   useEffect(() => {
     if (previousPhaseRef.current === currentPhase) return
     previousPhaseRef.current = currentPhase
@@ -1017,6 +1023,7 @@ function HomePageContent() {
                 debugOverlay={showMotionDebugPanel}
                 animationTrigger={playAnimationTrigger}
                 isPreviewingMovement={isPreviewingMovement}
+                forceHoveredRole={showArrowDragHint ? 'S' : null}
                 tagFlags={currentTagFlags}
                 onTagsChange={isEditingAllowed ? (role, tags) => {
                   setTokenTags(currentRotation, currentPhase, role, tags)
@@ -1026,11 +1033,12 @@ function HomePageContent() {
                 } : undefined}
 	              />
 
-          <WhiteboardOnboardingHint
+          <SpotlightOverlay
             show={canShowOnboardingHint && Boolean(onboardingHintMessage)}
             message={onboardingHintMessage || ''}
             step={onboardingStep}
             totalSteps={onboardingStep != null ? GUIDED_TOTAL : undefined}
+            targetSelector={onboardingTargetSelector}
           />
           </div>
         </div>

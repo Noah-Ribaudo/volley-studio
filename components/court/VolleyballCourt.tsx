@@ -142,6 +142,8 @@ interface VolleyballCourtProps {
   onTagsChange?: (role: Role, tags: TokenTag[]) => void
   // Callback to assign a player to a role (for radial menu player picker)
   onPlayerAssign?: (role: Role, playerId: string) => void
+  // Force a role into hover state (shows arrow preview) regardless of actual mouse hover
+  forceHoveredRole?: Role | null
 }
 
 type PlayAnimState = {
@@ -226,6 +228,7 @@ export function VolleyballCourt({
   tagFlags = {},
   onTagsChange,
   onPlayerAssign,
+  forceHoveredRole,
 }: VolleyballCourtProps) {
   // In simulation mode, disable editing
   const isEditable = mode === 'whiteboard' && editable
@@ -370,6 +373,14 @@ export function VolleyballCourt({
   const arrowTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const suppressNextArrowFadeRef = useRef<boolean>(false)
   const suppressArrowFadeTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Compute effective hover state: merge internal hoveredRole with forced prop
+  const effectiveHoveredRole = forceHoveredRole ?? hoveredRole
+  const effectivePreviewVisible = useMemo(() => {
+    if (!forceHoveredRole) return previewVisible
+    if (previewVisible[forceHoveredRole]) return previewVisible
+    return { ...previewVisible, [forceHoveredRole]: true }
+  }, [forceHoveredRole, previewVisible])
 
   const POSITION_EPSILON = 0.00075
   const hasMeaningfulPositionDelta = (previous: Position | null, next: Position) => {
@@ -2274,7 +2285,7 @@ export function VolleyballCourt({
           draggingArrowRole={draggingArrowRole}
           arrowDragPosition={arrowDragPosition}
           arrows={arrows}
-          previewVisible={previewVisible}
+          previewVisible={effectivePreviewVisible}
           tappedRole={tappedRole}
           isMobile={isMobile}
           showPosition={showPosition}
@@ -2311,7 +2322,10 @@ export function VolleyballCourt({
           // Arrow handle positioning (for next-step mode)
           // Render HOME player
           const homePlayerNode = (
-            <g key={`home-${role}`}>
+            <g
+              key={`home-${role}`}
+              {...(role === activeRoles[0] ? { 'data-onboarding': 'player-token' } : {})}
+            >
               <g
                 transform={`translate(${homeSvgPos.x}, ${homeSvgPos.y})`}
                 style={{
@@ -2443,7 +2457,7 @@ export function VolleyballCourt({
                     playerName={playerInfo.name}
                     playerNumber={playerInfo.number}
                     isDragging={isDragging}
-                    isHovered={hoveredRole === role}
+                    isHovered={effectiveHoveredRole === role}
                     showPosition={showPosition}
                     showPlayer={showPlayer}
                     showNumber={showNumber}

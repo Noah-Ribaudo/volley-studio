@@ -109,7 +109,7 @@ export function MobileContextBar({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <div className="flex min-w-0 flex-1 items-center gap-1">
+        <div data-onboarding="phase-selector" className="flex min-w-0 flex-1 items-center gap-1">
           <Button
             variant="ghost"
             size="icon"

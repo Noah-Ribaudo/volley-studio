@@ -145,7 +145,7 @@ export function DesktopHeaderNav({
       {isWhiteboardPage && (
         <div className="ml-auto flex items-center gap-2">
           {/* Phase selector */}
-          <div className="flex h-9 items-center gap-1 rounded-md border border-border bg-background/80 px-1">
+          <div data-onboarding="phase-selector" className="flex h-9 items-center gap-1 rounded-md border border-border bg-background/80 px-1">
             <div className="flex items-center gap-1 min-w-[13rem] max-w-[min(48rem,46vw)]">
               <Button
                 variant="ghost"
