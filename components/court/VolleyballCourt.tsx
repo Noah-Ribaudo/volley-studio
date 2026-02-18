@@ -2614,7 +2614,7 @@ export function VolleyballCourt({
               x={tooltipPos.x}
               y={tooltipPos.y}
               anchorRadius={tokenRadius}
-              message="Drag me to show next step"
+              message="Drag the arrow tip to show a player's next movement"
             />
           )
         })()}
