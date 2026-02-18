@@ -15,10 +15,11 @@ import {
   SidebarMenuItem,
   SidebarSeparator,
 } from '@/components/ui/sidebar'
-import { Layout, Users, Timer, Settings, SlidersHorizontal, Palette, Paintbrush, RectangleEllipsis } from 'lucide-react'
+import { Layout, Users, Timer, Settings, SlidersHorizontal, Palette, Paintbrush, RectangleEllipsis, RotateCcw } from 'lucide-react'
 import VolleyBall from '@/components/logo/VolleyBall'
 import { SidebarUserMenu } from '@/components/auth'
 import { useAppStore } from '@/store/useAppStore'
+import { useHintStore } from '@/store/useHintStore'
 
 const navItems = [
   {
@@ -77,6 +78,12 @@ export function VolleyballSidebar() {
     }
     setShowMotionDebugPanel(true)
     router.push('/')
+  }
+
+  const handleResetTooltips = () => {
+    localStorage.removeItem('volleyball-hints')
+    useHintStore.persist.rehydrate()
+    if (!isOnWhiteboard) router.push('/')
   }
 
   return (
@@ -138,6 +145,16 @@ export function VolleyballSidebar() {
                     >
                       <SlidersHorizontal />
                       <span>Motion Debug</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      type="button"
+                      tooltip="Reset Tooltips"
+                      onClick={handleResetTooltips}
+                    >
+                      <RotateCcw />
+                      <span>Reset Tooltips</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   {developerNavItems.map((item) => (
