@@ -919,17 +919,6 @@ function HomePageContent() {
       <div className="flex-1 min-h-0 h-full overflow-hidden">
         {/* Court Container - scales to fit available space */}
         <div className="w-full h-full sm:max-w-3xl mx-auto px-0 sm:px-2 relative">
-          {/* Preset mode indicator - shown when viewing preset positions */}
-          {isUsingPreset && (
-            <div className="absolute top-16 left-1/2 -translate-x-1/2 z-30">
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/90 backdrop-blur-sm rounded-full border border-border shadow-sm">
-                <span className="text-xs text-muted-foreground">
-                  Viewing: <span className="font-medium text-foreground">{POSITION_SOURCE_INFO[activePositionSource].name}</span>
-                </span>
-                <span className="text-xs text-muted-foreground/70">(preset base)</span>
-              </div>
-            </div>
-          )}
 
           {/* Court */}
           <div
