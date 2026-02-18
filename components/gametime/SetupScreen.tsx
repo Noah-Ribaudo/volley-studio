@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { listLocalTeams } from '@/lib/localTeams'
+import { migrateTeamToLineups } from '@/lib/lineups'
 
 // Roles for lineup (no libero)
 const LINEUP_ROLES: Role[] = ['S', 'OH1', 'OH2', 'MB1', 'MB2', 'OPP']
@@ -42,7 +43,7 @@ export function SetupScreen() {
   const loading = convexTeams === undefined
 
   // Transform Convex teams to the Team format expected by the component
-  const cloudTeams: Team[] = (convexTeams ?? []).map(t => ({
+  const cloudTeams: Team[] = (convexTeams ?? []).map(t => migrateTeamToLineups({
     id: t._id,
     name: t.name,
     slug: t.slug,
@@ -306,11 +307,11 @@ export function SetupScreen() {
             {localTeams.length > 0 && (
               <div>
                 <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-3">
-                  Local Teams
+                  Unsaved (Local)
                 </h2>
                 <div className="mb-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2">
                   <p className="text-xs text-amber-200">
-                    Reminder: local teams are device-only and can be lost. Sign in to save teams to your account.
+                    Reminder: Unsaved (Local) teams stay on this device and can be lost. Sign in to move them to Saved (Cloud).
                   </p>
                 </div>
                 <div className="space-y-2">
@@ -335,14 +336,14 @@ export function SetupScreen() {
 
             <div>
               <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-3">
-                Saved Teams
+                Saved (Cloud)
               </h2>
 
               {loading ? (
                 <div className="text-muted-foreground text-center py-8">Loading teams...</div>
               ) : cloudTeams.length === 0 ? (
                 <div className="text-muted-foreground text-center py-8">
-                  No saved teams yet
+                  No Saved (Cloud) teams yet
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -392,7 +393,7 @@ export function SetupScreen() {
           {isLocalTeamSelected && (
             <div className="mb-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2">
               <p className="text-xs text-amber-200">
-                Reminder: this local team is not saved to your account. Sign in to keep it across devices.
+                Reminder: this team is currently Unsaved (Local). Sign in to keep it as Saved (Cloud) across devices.
               </p>
             </div>
           )}
