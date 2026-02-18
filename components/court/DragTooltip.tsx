@@ -11,12 +11,13 @@ interface DragTooltipProps {
 export function DragTooltip({ visible, x, y, message, anchorRadius = 0 }: DragTooltipProps) {
   if (!visible) return null
 
-  // Keep the hint above the interaction target (token/arrow), not on top of it.
-  const width = 200
-  const height = 32
+  // foreignObject needs a generous width/height so the content isn't clipped,
+  // but the inner div uses fit-content to hug the text.
+  const foWidth = 300
+  const foHeight = 40
   const gap = 12
-  const tooltipX = x - width / 2
-  const tooltipY = y - anchorRadius - height - gap
+  const tooltipX = x - foWidth / 2
+  const tooltipY = y - anchorRadius - foHeight - gap
 
   return (
     <g
@@ -37,26 +38,28 @@ export function DragTooltip({ visible, x, y, message, anchorRadius = 0 }: DragTo
       <foreignObject
         x={tooltipX}
         y={tooltipY}
-        width={width}
-        height={height}
+        width={foWidth}
+        height={foHeight}
         style={{ overflow: 'visible' }}
       >
-        <div
-          className="flex items-stretch rounded-lg bg-foreground shadow-xl overflow-hidden"
-        >
-          {/* Orange accent bar */}
-          <div className="w-1 shrink-0 bg-orange-500" />
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <div
+            className="inline-flex items-stretch rounded-lg bg-gray-900 dark:bg-gray-800 shadow-xl overflow-hidden"
+          >
+            {/* Orange accent bar */}
+            <div className="w-1 shrink-0 bg-orange-500" />
 
-          <div className="px-2.5 py-1.5">
-            <span
-              className="text-xs font-medium text-background"
-              style={{
-                whiteSpace: 'nowrap',
-                letterSpacing: '0.2px',
-              }}
-            >
-              {message}
-            </span>
+            <div className="px-2.5 py-1.5">
+              <span
+                className="text-xs font-medium text-gray-50"
+                style={{
+                  whiteSpace: 'nowrap',
+                  letterSpacing: '0.2px',
+                }}
+              >
+                {message}
+              </span>
+            </div>
           </div>
         </div>
       </foreignObject>

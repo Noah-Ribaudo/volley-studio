@@ -12,11 +12,11 @@ interface LongPressTooltipProps {
 export function LongPressTooltip({ visible, x, y, tokenRadius }: LongPressTooltipProps) {
   if (!visible) return null
 
-  // Position tooltip centered above the token
-  const tooltipWidth = 220
-  const tooltipHeight = 44
-  const tooltipX = x - tooltipWidth / 2
-  const tooltipY = y - tokenRadius - tooltipHeight - 12 // 12px gap above token
+  // foreignObject is generous; inner div hugs content
+  const foWidth = 300
+  const foHeight = 50
+  const tooltipX = x - foWidth / 2
+  const tooltipY = y - tokenRadius - foHeight - 12 // 12px gap above token
 
   return (
     <g
@@ -37,26 +37,28 @@ export function LongPressTooltip({ visible, x, y, tokenRadius }: LongPressToolti
       <foreignObject
         x={tooltipX}
         y={tooltipY}
-        width={tooltipWidth}
-        height={tooltipHeight}
+        width={foWidth}
+        height={foHeight}
         style={{ overflow: 'visible' }}
       >
-        <div
-          className="flex items-stretch rounded-lg bg-foreground shadow-xl overflow-hidden"
-        >
-          {/* Orange accent bar */}
-          <div className="w-1 shrink-0 bg-orange-500" />
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <div
+            className="inline-flex items-stretch rounded-lg bg-gray-900 dark:bg-gray-800 shadow-xl overflow-hidden"
+          >
+            {/* Orange accent bar */}
+            <div className="w-1 shrink-0 bg-orange-500" />
 
-          <div className="px-2.5 py-2">
-            <span
-              className="text-xs font-medium text-background leading-snug"
-              style={{
-                whiteSpace: 'normal',
-                letterSpacing: '0.2px',
-              }}
-            >
-              Tap anywhere on the court to draw an arrow
-            </span>
+            <div className="px-2.5 py-2">
+              <span
+                className="text-xs font-medium text-gray-50 leading-snug"
+                style={{
+                  whiteSpace: 'normal',
+                  letterSpacing: '0.2px',
+                }}
+              >
+                Tap anywhere on the court to draw an arrow
+              </span>
+            </div>
           </div>
         </div>
       </foreignObject>

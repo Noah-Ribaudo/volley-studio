@@ -29,7 +29,7 @@ export function WhiteboardOnboardingHint({
       )}
     >
       <div
-        className="flex items-stretch rounded-lg bg-foreground shadow-xl overflow-hidden"
+        className="flex items-stretch rounded-lg bg-gray-900 dark:bg-gray-800 shadow-xl overflow-hidden"
         style={{
           animation: 'onboardingHintIn 250ms ease-out both',
         }}
@@ -38,7 +38,7 @@ export function WhiteboardOnboardingHint({
         <div className="w-1 shrink-0 bg-orange-500" />
 
         <div className="flex items-center gap-3 px-3.5 py-2.5">
-          <span className="text-sm font-medium text-background leading-snug">
+          <span className="text-sm font-medium text-gray-50 leading-snug">
             {message}
           </span>
 
