@@ -11,15 +11,38 @@ import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { RALLY_PHASE_INFO, RallyPhase } from '@/lib/types'
+import { cn } from '@/lib/utils'
 import ThemePicker from '@/components/ThemePicker'
 import SuggestionBox from '@/components/SuggestionBox'
+import { DragDropVerticalIcon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
+import dynamic from 'next/dynamic'
+
+const DevThemeSection = process.env.NODE_ENV === 'development'
+  ? dynamic(() => import('@/components/dev/DevThemeSection'), { ssr: false })
+  : () => null
+
+const DevLogoSection = process.env.NODE_ENV === 'development'
+  ? dynamic(() => import('@/components/dev/DevLogoSection'), { ssr: false })
+  : () => null
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 export default function SettingsPage() {
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth()
@@ -28,14 +51,19 @@ export default function SettingsPage() {
     // Display toggles
     showPosition,
     showPlayer,
-    showNumber,
     setShowPosition,
     setShowPlayer,
-    setShowNumber,
+    showLibero,
+    setShowLibero,
     circleTokens,
     setCircleTokens,
     hideAwayTeam,
     setHideAwayTeam,
+    // Phase visibility and order
+    visiblePhases,
+    togglePhaseVisibility,
+    phaseOrder,
+    setPhaseOrder,
     // Team (for conditional UI)
     currentTeam,
     // Court view
@@ -46,16 +74,34 @@ export default function SettingsPage() {
     setDebugHitboxes,
     showPrintFeature,
     setShowPrintFeature,
-    sidebarProfileInFooter,
-    setSidebarProfileInFooter,
-    courtSetupSurfaceVariant,
-    setCourtSetupSurfaceVariant,
   } = useAppStore()
   const viewer = useQuery(api.users.viewer, isAuthenticated ? {} : 'skip')
   const [isSigningOut, setIsSigningOut] = useState(false)
 
+  // DnD sensors for phase reordering
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+
+    if (over && active.id !== over.id) {
+      const oldIndex = phaseOrder.indexOf(active.id as RallyPhase)
+      const newIndex = phaseOrder.indexOf(over.id as RallyPhase)
+      setPhaseOrder(arrayMove(phaseOrder, oldIndex, newIndex))
+    }
+  }
+
   const hasTeam = Boolean(currentTeam)
-  const enabledDisplayCount = Number(showPosition) + Number(showPlayer) + Number(showNumber)
+  const [whiteboardPhasesOpen, setWhiteboardPhasesOpen] = useState(false)
   const handleSignOut = async () => {
     if (isSigningOut) return
     setIsSigningOut(true)
@@ -67,8 +113,11 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
       <div className="container mx-auto px-4 py-6 pb-32 max-w-2xl space-y-6">
+        {process.env.NODE_ENV === 'development' && <DevThemeSection />}
+        {process.env.NODE_ENV === 'development' && <DevLogoSection />}
+
         {/* Account */}
         <Card>
           <CardHeader>
@@ -114,7 +163,7 @@ export default function SettingsPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label className="text-sm font-medium">Theme</Label>
-                <p className="text-xs text-muted-foreground">Choose light, dark, or follow your device setting</p>
+                <p className="text-xs text-muted-foreground">Choose light or dark</p>
               </div>
               <ThemePicker />
             </div>
@@ -137,7 +186,7 @@ export default function SettingsPage() {
                   description="Display position labels on players"
                   checked={showPosition}
                   onCheckedChange={(checked) => {
-                    if (!checked && enabledDisplayCount <= 1) return
+                    if (!checked && !showPlayer) return
                     setShowPosition(checked)
                   }}
                 />
@@ -147,22 +196,19 @@ export default function SettingsPage() {
                   description="Display player names on tokens"
                   checked={showPlayer}
                   onCheckedChange={(checked) => {
-                    if (!checked && enabledDisplayCount <= 1) return
+                    if (!checked && !showPosition) return
                     setShowPlayer(checked)
-                  }}
-                />
-                <SettingsToggle
-                  id="show-numbers"
-                  label="Show Player Numbers"
-                  description="Display player numbers on tokens"
-                  checked={showNumber}
-                  onCheckedChange={(checked) => {
-                    if (!checked && enabledDisplayCount <= 1) return
-                    setShowNumber(checked)
                   }}
                 />
               </>
             )}
+            <SettingsToggle
+              id="show-libero"
+              label="Show Libero"
+              description="Display libero substitutions"
+              checked={showLibero}
+              onCheckedChange={setShowLibero}
+            />
             <SettingsToggle
               id="circle-tokens"
               label="Circle Tokens"
@@ -221,36 +267,57 @@ export default function SettingsPage() {
                 checked={showPrintFeature}
                 onCheckedChange={setShowPrintFeature}
               />
-              <SettingsToggle
-                id="sidebar-profile-footer"
-                label="Sidebar Footer Profile"
-                description="Move the account control to the bottom of the desktop sidebar"
-                checked={sidebarProfileInFooter}
-                onCheckedChange={setSidebarProfileInFooter}
-              />
-              <div className="space-y-2">
-                <Label htmlFor="court-setup-surface" className="text-sm font-medium">
-                  Court Setup Surface
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  Choose which desktop court setup UI to evaluate.
-                </p>
-                <Select
-                  value={courtSetupSurfaceVariant}
-                  onValueChange={(value) => setCourtSetupSurfaceVariant(value as 'popover' | 'panel')}
-                >
-                  <SelectTrigger id="court-setup-surface" className="h-9 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="popover">Popover</SelectItem>
-                    <SelectItem value="panel">Right Panel</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
             </CardContent>
           </Card>
         )}
+
+        {/* Whiteboard Phases */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-1">
+                <CardTitle className="text-base">Whiteboard Phases</CardTitle>
+                <CardDescription>Drag to reorder, toggle to show/hide in the whiteboard cycle</CardDescription>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setWhiteboardPhasesOpen((prev) => !prev)}
+              >
+                {whiteboardPhasesOpen ? 'Hide' : 'Show'}
+              </Button>
+            </div>
+          </CardHeader>
+          {whiteboardPhasesOpen && (
+            <CardContent>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext items={phaseOrder} strategy={verticalListSortingStrategy}>
+                  <div className="space-y-2">
+                    {phaseOrder.map(phase => {
+                      const info = RALLY_PHASE_INFO[phase]
+                      const isVisible = visiblePhases.has(phase)
+                      return (
+                        <SortablePhaseItem
+                          key={phase}
+                          phase={phase}
+                          label={info.name}
+                          description={info.description}
+                          checked={isVisible}
+                          onCheckedChange={() => togglePhaseVisibility(phase)}
+                        />
+                      )
+                    })}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            </CardContent>
+          )}
+        </Card>
 
         {/* Suggestion Box */}
         <SuggestionBox />
@@ -286,6 +353,64 @@ function SettingsToggle({
         )}
       </div>
       <Switch id={id} checked={checked} onCheckedChange={onCheckedChange} />
+    </div>
+  )
+}
+
+interface SortablePhaseItemProps {
+  phase: RallyPhase
+  label: string
+  description?: string
+  checked: boolean
+  onCheckedChange: () => void
+}
+
+function SortablePhaseItem({
+  phase,
+  label,
+  description,
+  checked,
+  onCheckedChange,
+}: SortablePhaseItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: phase })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "flex items-center gap-3 p-3 rounded-lg border bg-card",
+        isDragging && "opacity-50 shadow-lg z-10"
+      )}
+    >
+      <button
+        type="button"
+        className="touch-none cursor-grab active:cursor-grabbing p-1 -m-1 text-muted-foreground hover:text-foreground"
+        aria-label={`Drag to reorder ${label}`}
+        {...attributes}
+        {...listeners}
+      >
+        <HugeiconsIcon icon={DragDropVerticalIcon} className="h-5 w-5" />
+      </button>
+      <div className="flex-1 space-y-0.5">
+        <Label htmlFor={phase} className="text-sm font-medium">{label}</Label>
+        {description && (
+          <p className="text-xs text-muted-foreground">{description}</p>
+        )}
+      </div>
+      <Switch id={phase} checked={checked} onCheckedChange={onCheckedChange} />
     </div>
   )
 }

@@ -11,7 +11,9 @@ import {
   PositionCoordinates,
   Team,
   CustomLayout,
+  ROTATIONS,
   PHASES,
+  RALLY_PHASES,
   DEFAULT_VISIBLE_PHASES,
   DEFAULT_PHASE_ORDER,
   ArrowPositions,
@@ -57,71 +59,13 @@ import {
 } from '@/lib/rotations'
 import { ROLES, COURT_ZONES } from '@/lib/types'
 import { getWhiteboardPositions, getAutoArrows } from '@/lib/whiteboard'
-import { getVisibleOrderedRallyPhases } from '@/lib/rallyPhaseOrder'
+import { getNextPhaseInFlow, getPrevPhaseInFlow } from '@/lib/phaseFlow'
 import type { LearningProgress, LearningPanelPosition } from '@/lib/learning/types'
 import type { ShaderId } from '@/lib/shaders'
-import { withLegacyAssignmentsFromActiveLineup } from '@/lib/lineups'
 
 // Internal storage uses normalized coordinates (0-1)
 // PositionCoordinates is now normalized, so this type alias is for clarity
 type NormalizedPositionCoordinates = PositionCoordinates
-
-export type ActiveContextMode = 'practice' | 'unsavedLocal' | 'savedCloud'
-
-export interface ActiveContext {
-  mode: ActiveContextMode
-  teamId?: string
-  lineupId?: string
-}
-
-function contextModeFromAccessMode(mode: 'none' | 'local' | 'full'): ActiveContextMode {
-  if (mode === 'full') return 'savedCloud'
-  if (mode === 'local') return 'unsavedLocal'
-  return 'practice'
-}
-
-function accessModeFromContextMode(mode: ActiveContextMode): 'none' | 'local' | 'full' {
-  if (mode === 'savedCloud') return 'full'
-  if (mode === 'unsavedLocal') return 'local'
-  return 'none'
-}
-
-function buildActiveContext(
-  mode: ActiveContextMode,
-  teamId?: string,
-  lineupId?: string
-): ActiveContext {
-  if (mode === 'practice') {
-    return { mode: 'practice' }
-  }
-  const nextContext: ActiveContext = { mode }
-  if (teamId) nextContext.teamId = teamId
-  if (lineupId) nextContext.lineupId = lineupId
-  return nextContext
-}
-
-function deriveActiveContextFromTeam(team: Team | null): ActiveContext {
-  if (!team) return { mode: 'practice' }
-  const teamId = team._id ?? team.id
-  const lineupId = team.active_lineup_id ?? team.lineups?.[0]?.id
-  const isUnsavedLocal = typeof teamId === 'string' && teamId.startsWith('local-')
-  return buildActiveContext(isUnsavedLocal ? 'unsavedLocal' : 'savedCloud', teamId, lineupId ?? undefined)
-}
-
-function deriveActiveContextFromLegacyState(
-  team: Team | null,
-  accessMode: 'none' | 'local' | 'full'
-): ActiveContext {
-  const fromTeam = deriveActiveContextFromTeam(team)
-  if (fromTeam.mode !== 'practice') {
-    return fromTeam
-  }
-  return buildActiveContext(contextModeFromAccessMode(accessMode))
-}
-
-function isActiveContextMode(value: unknown): value is ActiveContextMode {
-  return value === 'practice' || value === 'unsavedLocal' || value === 'savedCloud'
-}
 
 // Normalize/denormalize functions for backward compatibility
 // Handles 0-100 percentage values from older versions
@@ -182,7 +126,6 @@ interface AppState {
   showLibero: boolean // Show libero in visualizations (default: false)
   showPosition: boolean // Show position labels on tokens (default: true)
   showPlayer: boolean // Show player names on tokens (default: false)
-  showNumber: boolean // Show player numbers on tokens (default: true)
   circleTokens: boolean // Use circular tokens instead of rounded rectangles (default: true)
   tokenSize: 'big' | 'small' // Token size (big = current, small = circular)
   hideAwayTeam: boolean // Hide the away team on the whiteboard (default: true)
@@ -191,13 +134,7 @@ interface AppState {
   debugHitboxes: boolean // Show touch target hitboxes with green highlight (default: false)
   showMotionDebugPanel: boolean // Show motion tuning/debug panel on whiteboard (default: false)
   showPrintFeature: boolean // Show print feature (dev toggle, default: false)
-  sidebarProfileInFooter: boolean // Show account profile in sidebar footer (debug toggle, default: false)
-  courtSetupSurfaceVariant: 'popover' | 'panel' // Desktop court setup presentation variant (default: 'popover')
   navMode: 'sidebar' | 'header' // Desktop navigation mode (default: 'header')
-  uiMode: 'normal' | 'minimal' // Current UI mode (default: 'normal')
-  minimalContrast: 'soft' | 'high' // Minimal mode contrast level (default: 'soft')
-  minimalAllowAccent: boolean // Allow restrained accent usage in minimal mode (default: true)
-  minimalDenseLayout: boolean // Dense module spacing in minimal mode (default: false)
   backgroundShader: ShaderId // Background shader choice (default: grain-gradient)
   backgroundOpacity: number // Background content opacity 0-100 (default: 95)
   isPreviewingMovement: boolean // Preview mode: show players at arrow endpoints (default: false, not persisted)
@@ -217,7 +154,6 @@ interface AppState {
   attackBallPositions: Record<string, Position>
 
   // Team mode
-  activeContext: ActiveContext
   currentTeam: Team | null
   customLayouts: CustomLayout[]
   accessMode: 'none' | 'local' | 'full'
@@ -241,7 +177,6 @@ interface AppState {
 
   // Court view settings
   awayTeamHidePercent: number // Percentage of court height to hide (0-50)
-  isHydrated: boolean // True once persisted state has rehydrated
 
   // Actions
   setRotation: (rotation: Rotation) => void
@@ -264,7 +199,7 @@ interface AppState {
   togglePlayerStatus: (rotation: Rotation, phase: Phase, role: Role, status: PlayerStatus) => void
   setTokenTags: (rotation: Rotation, phase: Phase, role: Role, tags: TokenTag[]) => void
   setCurrentTeam: (team: Team | null) => void
-  assignPlayerToRole: (role: Role, playerId: string | undefined) => void
+  assignPlayerToRole: (role: Role, playerId: string) => void
   setCustomLayouts: (layouts: CustomLayout[]) => void
   populateFromLayouts: (layouts: CustomLayout[]) => void
   setAccessMode: (mode: 'none' | 'local' | 'full') => void
@@ -279,7 +214,6 @@ interface AppState {
   setShowLibero: (show: boolean) => void
   setShowPosition: (show: boolean) => void
   setShowPlayer: (show: boolean) => void
-  setShowNumber: (show: boolean) => void
   setCircleTokens: (circle: boolean) => void
   setTokenSize: (size: 'big' | 'small') => void
   setHideAwayTeam: (hide: boolean) => void
@@ -288,13 +222,7 @@ interface AppState {
   setDebugHitboxes: (show: boolean) => void
   setShowMotionDebugPanel: (show: boolean) => void
   setShowPrintFeature: (show: boolean) => void
-  setSidebarProfileInFooter: (show: boolean) => void
-  setCourtSetupSurfaceVariant: (variant: 'popover' | 'panel') => void
   setNavMode: (mode: 'sidebar' | 'header') => void
-  setUiMode: (mode: 'normal' | 'minimal') => void
-  setMinimalContrast: (contrast: 'soft' | 'high') => void
-  setMinimalAllowAccent: (allow: boolean) => void
-  setMinimalDenseLayout: (dense: boolean) => void
   setBackgroundShader: (shader: ShaderId) => void
   setBackgroundOpacity: (opacity: number) => void
   setPreviewingMovement: (preview: boolean) => void
@@ -365,12 +293,8 @@ export function getCurrentPositions(
   const positionSource = getActiveLineupPositionSource(currentTeam)
   const isUsingPreset = positionSource !== 'custom'
 
-  // Local overrides always win, regardless of source.
-  if (localPositions[key]) {
-    return localPositions[key]
-  }
-
   // If using preset source and preset layouts are provided, use them
+  // NOTE: When using presets, we DON'T use local overrides (presets are read-only)
   if (isUsingPreset && presetLayouts && presetLayouts.length > 0) {
     const presetLayout = presetLayouts.find(
       l => l.rotation === rotation && l.phase === phase
@@ -381,11 +305,15 @@ export function getCurrentPositions(
     // Fall through to whiteboard defaults if no preset found
   }
 
+  // If NOT using presets, check for local overrides first
+  if (!isUsingPreset && localPositions[key]) {
+    return localPositions[key]
+  }
+
   // If in team mode with custom source, check for custom layout (already normalized)
   if (currentTeam && !isUsingPreset) {
-    const currentTeamId = currentTeam.id ?? currentTeam._id
     const customLayout = customLayouts.find(
-      l => (l.team_id === currentTeamId || l.teamId === currentTeamId) && l.rotation === rotation && l.phase === phase
+      l => l.team_id === currentTeam.id && l.rotation === rotation && l.phase === phase
     )
     if (customLayout) {
       return customLayout.positions
@@ -449,8 +377,6 @@ export function getCurrentArrows(
   // Check if we're using preset source
   const positionSource = currentTeam ? getActiveLineupPositionSource(currentTeam) : 'custom'
   const isUsingPreset = positionSource !== 'custom'
-  const manualArrows = localArrows[key] || {}
-  let presetArrows: ArrowPositions = {}
 
   // If using preset source and preset layouts are provided, use preset arrows
   if (isUsingPreset && presetLayouts && presetLayouts.length > 0) {
@@ -458,15 +384,20 @@ export function getCurrentArrows(
       l => l.rotation === rotation && l.phase === phase
     )
     if (presetLayout?.flags?.arrows) {
-      presetArrows = presetLayout.flags.arrows
+      return presetLayout.flags.arrows
     }
+    // Fall through to auto-generated if no preset arrows found
   }
 
-  // Check if phase is a RallyPhase, merge auto + preset + local.
-  // null in manualArrows means explicitly deleted.
+  // Manual arrows override auto-generated (null means explicitly deleted)
+  // Only use manual arrows when NOT using presets
+  const manualArrows = isUsingPreset ? {} : (localArrows[key] || {})
+
+  // Check if phase is a RallyPhase, use auto-generated arrows
   if (isRallyPhase(phase)) {
     const autoArrows = getAutoArrows(rotation, phase, isReceiving, baseOrder, undefined, showLibero, attackBallPosition)
-    const merged = { ...autoArrows, ...presetArrows, ...manualArrows }
+    // Merge: manual overrides auto, but filter out null values (deleted arrows)
+    const merged = { ...autoArrows, ...manualArrows }
 
     // Filter out explicitly deleted arrows (null values)
     const result: ArrowPositions = {}
@@ -479,14 +410,7 @@ export function getCurrentArrows(
   }
 
   // Fallback for legacy phases (shouldn't happen in normal use)
-  const merged = { ...presetArrows, ...manualArrows }
-  const result: ArrowPositions = {}
-  for (const [role, pos] of Object.entries(merged)) {
-    if (pos !== null) {
-      result[role as keyof ArrowPositions] = pos
-    }
-  }
-  return result
+  return manualArrows || {}
 }
 
 // Get current tags for a rotation/phase
@@ -515,7 +439,6 @@ export const useAppStore = create<AppState>()(
       showLibero: false, // Default to off
       showPosition: true, // Default to showing position labels
       showPlayer: false, // Default to hiding player names
-      showNumber: true, // Default to showing player numbers
       circleTokens: true, // Default to circular tokens
       tokenSize: 'big' as const, // Default to big tokens
       hideAwayTeam: true, // Default to hiding away team
@@ -524,13 +447,7 @@ export const useAppStore = create<AppState>()(
       debugHitboxes: false, // Default to hiding hitbox debug overlay
       showMotionDebugPanel: false, // Default to hidden motion debug panel
       showPrintFeature: false, // Default to hidden print feature
-      sidebarProfileInFooter: false, // Default to profile in top header
-      courtSetupSurfaceVariant: 'popover', // Default to anchored popover on desktop
       navMode: 'header' as const, // Default to header nav (no sidebar)
-      uiMode: 'normal' as const, // Default to normal UI mode
-      minimalContrast: 'soft' as const, // Default minimal contrast profile
-      minimalAllowAccent: true, // Default to allowing restrained accent in minimal mode
-      minimalDenseLayout: false, // Default to regular spacing in minimal mode
       backgroundShader: 'none' as ShaderId, // Default background shader (off by default)
       backgroundOpacity: 95, // Default background content opacity
       isPreviewingMovement: false, // Default to not previewing (not persisted)
@@ -542,7 +459,6 @@ export const useAppStore = create<AppState>()(
       localTagFlags: {},
       legalityViolations: {},
       attackBallPositions: {},
-      activeContext: { mode: 'practice' },
       currentTeam: null,
       customLayouts: [],
       accessMode: 'none',
@@ -566,7 +482,6 @@ export const useAppStore = create<AppState>()(
 
       // Court view settings
       awayTeamHidePercent: 40, // Default: hide 40% of court height when hiding away team
-      isHydrated: false,
 
       // Actions
       setRotation: (rotation) => set({ currentRotation: rotation }),
@@ -590,28 +505,39 @@ export const useAppStore = create<AppState>()(
       })),
 
       nextPhase: () => set((state) => {
-        // If current phase is a RallyPhase, use user-defined order + visibility.
+        // If current phase is a RallyPhase, use flow
         if (isRallyPhase(state.currentPhase)) {
-          const orderedVisiblePhases = getVisibleOrderedRallyPhases(state.phaseOrder, state.visiblePhases)
-          if (orderedVisiblePhases.length === 0) return {}
+          let currentPhase = state.currentPhase
+          let nextPhase = getNextPhaseInFlow(currentPhase)
+          let loopedBack = false
+          let iterations = 0
+          const maxIterations = RALLY_PHASES.length // Safety limit
 
-          const currentIndex = orderedVisiblePhases.indexOf(state.currentPhase)
-          if (currentIndex === -1) {
-            return { currentPhase: orderedVisiblePhases[0] as Phase }
-          }
+          // Skip hidden phases - keep going until we find a visible one
+          while (!state.visiblePhases.has(nextPhase) && iterations < maxIterations) {
+            iterations++
+            // If we loop back to PRE_SERVE, mark it and advance rotation
+            if (nextPhase === 'PRE_SERVE' && currentPhase !== 'PRE_SERVE') {
+              loopedBack = true
+              break
+            }
+            currentPhase = nextPhase
+            nextPhase = getNextPhaseInFlow(currentPhase)
 
-          const nextIndex = (currentIndex + 1) % orderedVisiblePhases.length
-          const didWrap = nextIndex === 0 && orderedVisiblePhases.length > 1
-          const nextVisiblePhase = orderedVisiblePhases[nextIndex]
-
-          if (didWrap) {
-            return {
-              currentPhase: nextVisiblePhase as Phase,
-              currentRotation: state.currentRotation === 6 ? 1 : (state.currentRotation + 1) as Rotation
+            // Safety check: if we've checked all phases and none are visible, just use the next one
+            if (nextPhase === state.currentPhase) {
+              break
             }
           }
 
-          return { currentPhase: nextVisiblePhase as Phase }
+          // If looping back to PRE_SERVE, advance rotation
+          if (loopedBack || (nextPhase === 'PRE_SERVE' && state.currentPhase !== 'PRE_SERVE')) {
+            return {
+              currentPhase: nextPhase as Phase,
+              currentRotation: state.currentRotation === 6 ? 1 : (state.currentRotation + 1) as Rotation
+            }
+          }
+          return { currentPhase: nextPhase as Phase }
         }
 
         // Legacy phase handling
@@ -629,28 +555,39 @@ export const useAppStore = create<AppState>()(
       }),
 
       prevPhase: () => set((state) => {
-        // If current phase is a RallyPhase, use user-defined order + visibility.
+        // If current phase is a RallyPhase, use flow
         if (isRallyPhase(state.currentPhase)) {
-          const orderedVisiblePhases = getVisibleOrderedRallyPhases(state.phaseOrder, state.visiblePhases)
-          if (orderedVisiblePhases.length === 0) return {}
+          let currentPhase = state.currentPhase
+          let prevPhase = getPrevPhaseInFlow(currentPhase)
+          let loopedBack = false
+          let iterations = 0
+          const maxIterations = RALLY_PHASES.length // Safety limit
 
-          const currentIndex = orderedVisiblePhases.indexOf(state.currentPhase)
-          if (currentIndex === -1) {
-            return { currentPhase: orderedVisiblePhases[orderedVisiblePhases.length - 1] as Phase }
-          }
+          // Skip hidden phases - keep going until we find a visible one
+          while (!state.visiblePhases.has(prevPhase) && iterations < maxIterations) {
+            iterations++
+            // If we loop from PRE_SERVE to DEFENSE_PHASE, mark it and go to previous rotation
+            if (prevPhase === 'DEFENSE_PHASE' && currentPhase === 'PRE_SERVE') {
+              loopedBack = true
+              break
+            }
+            currentPhase = prevPhase
+            prevPhase = getPrevPhaseInFlow(currentPhase)
 
-          const prevIndex = (currentIndex - 1 + orderedVisiblePhases.length) % orderedVisiblePhases.length
-          const didWrap = currentIndex === 0 && orderedVisiblePhases.length > 1
-          const prevVisiblePhase = orderedVisiblePhases[prevIndex]
-
-          if (didWrap) {
-            return {
-              currentPhase: prevVisiblePhase as Phase,
-              currentRotation: state.currentRotation === 1 ? 6 : (state.currentRotation - 1) as Rotation
+            // Safety check: if we've checked all phases and none are visible, just use the previous one
+            if (prevPhase === state.currentPhase) {
+              break
             }
           }
 
-          return { currentPhase: prevVisiblePhase as Phase }
+          // If looping from PRE_SERVE, go to previous rotation
+          if (loopedBack || (prevPhase === 'DEFENSE_PHASE' && state.currentPhase === 'PRE_SERVE')) {
+            return {
+              currentPhase: prevPhase as Phase,
+              currentRotation: state.currentRotation === 1 ? 6 : (state.currentRotation - 1) as Rotation
+            }
+          }
+          return { currentPhase: prevPhase as Phase }
         }
 
         // Legacy phase handling
@@ -827,17 +764,12 @@ export const useAppStore = create<AppState>()(
         }
       }),
 
-      setCurrentTeam: (team) => set(() => {
-        const activeContext = deriveActiveContextFromTeam(team)
-        return {
-          currentTeam: team,
-          activeContext,
-          accessMode: accessModeFromContextMode(activeContext.mode),
-          // Track when we loaded this team for conflict detection
-          teamLoadedTimestamp: team?.updated_at || null,
-          // Clear any existing team conflict when switching teams
-          teamConflict: null,
-        }
+      setCurrentTeam: (team) => set({
+        currentTeam: team,
+        // Track when we loaded this team for conflict detection
+        teamLoadedTimestamp: team?.updated_at || null,
+        // Clear any existing team conflict when switching teams
+        teamConflict: null,
       }),
 
       assignPlayerToRole: (role, playerId) => set((state) => {
@@ -850,29 +782,30 @@ export const useAppStore = create<AppState>()(
           if (lineup.id !== activeLineupId) {
             return lineup
           }
-          const nextAssignments = { ...lineup.position_assignments }
-          if (playerId) {
-            nextAssignments[role] = playerId
-          } else {
-            delete nextAssignments[role]
-          }
           return {
             ...lineup,
-            position_assignments: nextAssignments,
+            position_assignments: {
+              ...lineup.position_assignments,
+              [role]: playerId,
+            },
           }
         })
 
         return {
-          currentTeam: withLegacyAssignmentsFromActiveLineup({
+          currentTeam: {
             ...state.currentTeam,
+            position_assignments: {
+              ...state.currentTeam.position_assignments,
+              [role]: playerId,
+            },
             lineups: nextLineups,
-          }),
+          },
         }
       }),
 
       setCustomLayouts: (layouts) => set({ customLayouts: layouts }),
 
-      populateFromLayouts: (layouts) => set(() => {
+      populateFromLayouts: (layouts) => set((state) => {
         // Extract positions, arrows, status flags, etc. from loaded layouts
         const newLocalPositions: Record<string, NormalizedPositionCoordinates> = {}
         const newLocalArrows: Record<string, ArrowPositions> = {}
@@ -929,19 +862,7 @@ export const useAppStore = create<AppState>()(
         }
       }),
 
-      setAccessMode: (mode) => set((state) => {
-        const nextMode = contextModeFromAccessMode(mode)
-        const teamContext = deriveActiveContextFromTeam(state.currentTeam)
-
-        return {
-          accessMode: mode,
-          activeContext: buildActiveContext(
-            nextMode,
-            teamContext.teamId,
-            teamContext.lineupId
-          ),
-        }
-      }),
+      setAccessMode: (mode) => set({ accessMode: mode }),
 
       setTeamPasswordProvided: (val) => set({ teamPasswordProvided: val }),
 
@@ -973,16 +894,18 @@ export const useAppStore = create<AppState>()(
         }
       })),
 
-      // Whiteboard phases are fixed and cannot be customized.
-      togglePhaseVisibility: () => set({
-        visiblePhases: new Set(DEFAULT_VISIBLE_PHASES),
-        phaseOrder: [...DEFAULT_PHASE_ORDER],
+      // NEW actions
+      togglePhaseVisibility: (phase) => set((state) => {
+        const newVisible = new Set(state.visiblePhases)
+        if (newVisible.has(phase)) {
+          newVisible.delete(phase)
+        } else {
+          newVisible.add(phase)
+        }
+        return { visiblePhases: newVisible }
       }),
 
-      setPhaseOrder: () => set({
-        visiblePhases: new Set(DEFAULT_VISIBLE_PHASES),
-        phaseOrder: [...DEFAULT_PHASE_ORDER],
-      }),
+      setPhaseOrder: (order) => set({ phaseOrder: order }),
 
       setIsReceivingContext: (isReceiving) => set({ isReceivingContext: isReceiving }),
 
@@ -991,8 +914,6 @@ export const useAppStore = create<AppState>()(
       setShowPosition: (show) => set({ showPosition: show }),
 
       setShowPlayer: (show) => set({ showPlayer: show }),
-
-      setShowNumber: (show) => set({ showNumber: show }),
 
       setCircleTokens: (circle) => set({ circleTokens: circle }),
 
@@ -1007,14 +928,8 @@ export const useAppStore = create<AppState>()(
       setDebugHitboxes: (show) => set({ debugHitboxes: show }),
       setShowMotionDebugPanel: (show) => set({ showMotionDebugPanel: show }),
       setShowPrintFeature: (show) => set({ showPrintFeature: show }),
-      setSidebarProfileInFooter: (show) => set({ sidebarProfileInFooter: show }),
-      setCourtSetupSurfaceVariant: (variant) => set({ courtSetupSurfaceVariant: variant }),
 
       setNavMode: (mode) => set({ navMode: mode }),
-      setUiMode: (mode) => set({ uiMode: mode }),
-      setMinimalContrast: (contrast) => set({ minimalContrast: contrast }),
-      setMinimalAllowAccent: (allow) => set({ minimalAllowAccent: allow }),
-      setMinimalDenseLayout: (dense) => set({ minimalDenseLayout: dense }),
 
       setBackgroundShader: (shader) => set({ backgroundShader: shader }),
       setBackgroundOpacity: (opacity) => set({ backgroundOpacity: opacity }),
@@ -1157,7 +1072,7 @@ export const useAppStore = create<AppState>()(
         set({ teamConflict: null })
       },
 
-      resolveTeamConflictLoadTheirs: () => set(() => {
+      resolveTeamConflictLoadTheirs: () => set((state) => {
         // User chose to discard local changes and load server version
         // Clear the conflict - the caller will reload team data
         return {
@@ -1177,7 +1092,6 @@ export const useAppStore = create<AppState>()(
           arrowCurves: state.arrowCurves,
           localStatusFlags: state.localStatusFlags,
           localTagFlags: state.localTagFlags,
-          activeContext: state.activeContext,
           currentTeam: state.currentTeam,
           accessMode: state.accessMode,
           teamPasswordProvided: state.teamPasswordProvided,
@@ -1188,7 +1102,6 @@ export const useAppStore = create<AppState>()(
           showLibero: state.showLibero,
           showPosition: state.showPosition,
           showPlayer: state.showPlayer,
-          showNumber: state.showNumber,
           circleTokens: state.circleTokens,
           fullStatusLabels: state.fullStatusLabels,
           debugHitboxes: state.debugHitboxes,
@@ -1197,13 +1110,7 @@ export const useAppStore = create<AppState>()(
           showLearnTab: state.showLearnTab,
           showMotionDebugPanel: state.showMotionDebugPanel,
           showPrintFeature: state.showPrintFeature,
-          sidebarProfileInFooter: state.sidebarProfileInFooter,
-          courtSetupSurfaceVariant: state.courtSetupSurfaceVariant,
           navMode: state.navMode,
-          uiMode: state.uiMode,
-          minimalContrast: state.minimalContrast,
-          minimalAllowAccent: state.minimalAllowAccent,
-          minimalDenseLayout: state.minimalDenseLayout,
           backgroundShader: state.backgroundShader,
           backgroundOpacity: state.backgroundOpacity,
           attackBallPositions: state.attackBallPositions,
@@ -1219,58 +1126,28 @@ export const useAppStore = create<AppState>()(
       },
       // On rehydration, normalize any legacy percentage positions (0-100) to normalized (0-1)
       onRehydrateStorage: () => (state) => {
-        if (!state) {
-          useAppStore.setState({ isHydrated: true })
-          return
-        }
         // Legacy migration: convert any old 0-100 format positions to 0-1
-        if (state.localPositions) {
+        if (state?.localPositions) {
           const normalized: Record<string, NormalizedPositionCoordinates> = {}
           for (const [key, pos] of Object.entries(state.localPositions)) {
             normalized[key] = normalizePositions(pos as PositionCoordinates)
           }
           state.localPositions = normalized
         }
-        // Whiteboard phases are fixed and always use the default list + order.
-        state.visiblePhases = new Set(DEFAULT_VISIBLE_PHASES)
-        state.phaseOrder = [...DEFAULT_PHASE_ORDER]
-        if (isRallyPhase(state.currentPhase) && !DEFAULT_PHASE_ORDER.includes(state.currentPhase)) {
-          state.currentPhase = DEFAULT_PHASE_ORDER[0]
-        }
-        // Active context migration + normalization
+        // Rehydrate visiblePhases Set
         if (state) {
-          const legacyAccessMode: 'none' | 'local' | 'full' =
-            state.accessMode === 'full' || state.accessMode === 'local' || state.accessMode === 'none'
-              ? state.accessMode
-              : 'none'
-          const stateAny = state as unknown as {
-            activeContext?: {
-              mode?: unknown
-              teamId?: unknown
-              lineupId?: unknown
-            }
+          if (state.visiblePhases && Array.isArray(state.visiblePhases)) {
+            state.visiblePhases = new Set(state.visiblePhases as RallyPhase[])
+          } else if (!state.visiblePhases) {
+            state.visiblePhases = new Set(DEFAULT_VISIBLE_PHASES)
           }
-          const rawActiveContext = stateAny.activeContext
-
-          if (state.currentTeam) {
-            state.activeContext = deriveActiveContextFromTeam(state.currentTeam)
-          } else if (rawActiveContext && typeof rawActiveContext === 'object' && isActiveContextMode(rawActiveContext.mode)) {
-            const teamId = typeof rawActiveContext.teamId === 'string' && rawActiveContext.teamId.trim()
-              ? rawActiveContext.teamId
-              : undefined
-            const lineupId = typeof rawActiveContext.lineupId === 'string' && rawActiveContext.lineupId.trim()
-              ? rawActiveContext.lineupId
-              : undefined
-            state.activeContext = buildActiveContext(rawActiveContext.mode, teamId, lineupId)
-          } else {
-            state.activeContext = deriveActiveContextFromLegacyState(state.currentTeam ?? null, legacyAccessMode)
-          }
-
-          // Keep legacy accessMode synchronized for compatibility.
-          state.accessMode = accessModeFromContextMode(state.activeContext.mode)
+        }
+        // Default phaseOrder if not set
+        if (state && !state.phaseOrder) {
+          state.phaseOrder = [...DEFAULT_PHASE_ORDER]
         }
         // Normalize legacy arrows
-        if (state.localArrows) {
+        if (state && state.localArrows) {
           const normalized: Record<string, ArrowPositions> = {}
           for (const [key, arrows] of Object.entries(state.localArrows)) {
             normalized[key] = normalizeArrows(arrows)
@@ -1278,7 +1155,7 @@ export const useAppStore = create<AppState>()(
           state.localArrows = normalized
         }
         // Set default for arrowCurves if missing
-        if (state.arrowCurves === undefined) {
+        if (state && state.arrowCurves === undefined) {
           state.arrowCurves = {}
           // Clean up any legacy arrowFlips (can't migrate to control points without positions)
           const stateAny = state as unknown as Record<string, unknown>
@@ -1287,94 +1164,73 @@ export const useAppStore = create<AppState>()(
           }
         }
         // Set defaults for new fields if missing
-        if (state.isReceivingContext === undefined) {
+        if (state && state.isReceivingContext === undefined) {
           state.isReceivingContext = true
         }
-        if (state.showLibero === undefined) {
+        if (state && state.showLibero === undefined) {
           state.showLibero = false
         }
-        if (state.showPosition === undefined) {
+        if (state && state.showPosition === undefined) {
           state.showPosition = true
         }
-        if (state.showPlayer === undefined) {
+        if (state && state.showPlayer === undefined) {
           state.showPlayer = false
         }
-        if (state.showNumber === undefined) {
-          state.showNumber = true
-        }
-        if (state.circleTokens === undefined) {
+        if (state && state.circleTokens === undefined) {
           state.circleTokens = true
         }
-        if (state.fullStatusLabels === undefined) {
+        if (state && state.fullStatusLabels === undefined) {
           state.fullStatusLabels = true
         }
-        if (state.debugHitboxes === undefined) {
+        if (state && state.debugHitboxes === undefined) {
           state.debugHitboxes = false
         }
-        if (state.tokenSize === undefined) {
+        if (state && state.tokenSize === undefined) {
           state.tokenSize = 'big'
         }
         // Set default for hideAwayTeam if missing
-        if (state.hideAwayTeam === undefined) {
+        if (state && state.hideAwayTeam === undefined) {
           state.hideAwayTeam = true
         }
         // Set default for motion debug panel toggle if missing
-        if (state.showMotionDebugPanel === undefined) {
+        if (state && state.showMotionDebugPanel === undefined) {
           state.showMotionDebugPanel = false
         }
         // Set default for print feature toggle if missing
-        if (state.showPrintFeature === undefined) {
+        if (state && state.showPrintFeature === undefined) {
           state.showPrintFeature = false
         }
-        // Set default for sidebar profile placement toggle if missing
-        if (state.sidebarProfileInFooter === undefined) {
-          state.sidebarProfileInFooter = false
-        }
-        // Set default for court setup surface variant if missing
-        if (state.courtSetupSurfaceVariant === undefined) {
-          state.courtSetupSurfaceVariant = 'popover'
-        }
-        // Set defaults for minimal mode preferences if missing
-        if (state.uiMode === undefined) {
-          state.uiMode = 'normal'
-        }
-        if (state.minimalContrast === undefined) {
-          state.minimalContrast = 'soft'
-        }
-        if (state.minimalAllowAccent === undefined) {
-          state.minimalAllowAccent = true
-        }
-        if (state.minimalDenseLayout === undefined) {
-          state.minimalDenseLayout = false
-        }
         // Set default for attackBallPositions if missing
-        if (state.attackBallPositions === undefined) {
+        if (state && state.attackBallPositions === undefined) {
           state.attackBallPositions = {}
         }
         // Set default for localStatusFlags if missing
-        if (state.localStatusFlags === undefined) {
+        if (state && state.localStatusFlags === undefined) {
           state.localStatusFlags = {}
         }
         // Set default for localTagFlags if missing
-        if (state.localTagFlags === undefined) {
+        if (state && state.localTagFlags === undefined) {
           state.localTagFlags = {}
         }
         // Conflict state is transient - always clear on rehydrate
-        state.layoutLoadedTimestamps = {}
-        state.layoutConflict = null
-        state.teamLoadedTimestamp = null
-        state.teamConflict = null
+        if (state) {
+          state.layoutLoadedTimestamps = {}
+          state.layoutConflict = null
+          state.teamLoadedTimestamp = null
+          state.teamConflict = null
+        }
         // Learning mode - never start in learning mode on load
-        state.learningMode = false
+        if (state) {
+          state.learningMode = false
+        }
         // Default learning panel position if not set
-        if (!state.learningPanelPosition) {
+        if (state && !state.learningPanelPosition) {
           state.learningPanelPosition = 'floating'
         }
         // Default awayTeamHidePercent if not set
-        if (state.awayTeamHidePercent === undefined) {
+        if (state && state.awayTeamHidePercent === undefined) {
           state.awayTeamHidePercent = 40
         }
-        state.isHydrated = true
       },
     }
   )

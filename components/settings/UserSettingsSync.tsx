@@ -4,25 +4,22 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useConvexAuth, useMutation, useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { useAppStore } from '@/store/useAppStore'
-import { useThemeStore } from '@/store/useThemeStore'
 import {
   DEFAULT_PHASE_ORDER,
   DEFAULT_VISIBLE_PHASES,
+  RALLY_PHASES,
   type RallyPhase,
   type Role,
 } from '@/lib/types'
 import type { LearningPanelPosition } from '@/lib/learning/types'
 import { SHADER_OPTIONS, type ShaderId } from '@/lib/shaders'
-import type { ThemePreference } from '@/lib/themes'
 
 type NavMode = 'sidebar' | 'header'
 type TokenSize = 'big' | 'small'
 
 type UserSettingsPayload = {
-  themePreference: ThemePreference
   showPosition: boolean
   showPlayer: boolean
-  showNumber: boolean
   showLibero: boolean
   circleTokens: boolean
   hideAwayTeam: boolean
@@ -50,12 +47,35 @@ const VALID_ROLES: Role[] = ['S', 'OH1', 'OH2', 'MB1', 'MB2', 'OPP', 'L']
 const VALID_LEARNING_PANEL_POSITIONS: LearningPanelPosition[] = ['floating', 'bottom', 'side', 'inline']
 const VALID_SHADER_IDS = new Set(SHADER_OPTIONS.map((option) => option.id))
 
-function normalizePhaseOrder(_order: string[] | undefined): RallyPhase[] {
-  return [...DEFAULT_PHASE_ORDER]
+function normalizePhases(phases: string[] | undefined): RallyPhase[] {
+  const seen = new Set<RallyPhase>()
+  const next: RallyPhase[] = []
+  for (const phase of phases ?? []) {
+    if (!RALLY_PHASES.includes(phase as RallyPhase)) continue
+    const typedPhase = phase as RallyPhase
+    if (seen.has(typedPhase)) continue
+    seen.add(typedPhase)
+    next.push(typedPhase)
+  }
+  return next
 }
 
-function normalizeVisiblePhases(_phases: string[] | undefined): RallyPhase[] {
-  return [...DEFAULT_VISIBLE_PHASES]
+function normalizePhaseOrder(order: string[] | undefined): RallyPhase[] {
+  const next = normalizePhases(order)
+  for (const phase of DEFAULT_PHASE_ORDER) {
+    if (!next.includes(phase)) {
+      next.push(phase)
+    }
+  }
+  return next
+}
+
+function normalizeVisiblePhases(phases: string[] | undefined): RallyPhase[] {
+  const next = normalizePhases(phases)
+  if (next.length === 0) {
+    return [...DEFAULT_VISIBLE_PHASES]
+  }
+  return next
 }
 
 function normalizePayload(raw: UserSettingsInput): UserSettingsPayload {
@@ -70,15 +90,10 @@ function normalizePayload(raw: UserSettingsInput): UserSettingsPayload {
   const backgroundShader = raw.backgroundShader && VALID_SHADER_IDS.has(raw.backgroundShader)
     ? raw.backgroundShader
     : 'grain-gradient'
-  const themePreference: ThemePreference = raw.themePreference === 'light' || raw.themePreference === 'dark' || raw.themePreference === 'auto'
-    ? raw.themePreference
-    : 'auto'
 
   return {
-    themePreference,
     showPosition: raw.showPosition ?? true,
     showPlayer: raw.showPlayer ?? false,
-    showNumber: raw.showNumber ?? true,
     showLibero: raw.showLibero ?? false,
     circleTokens: raw.circleTokens ?? true,
     hideAwayTeam: raw.hideAwayTeam ?? true,
@@ -113,7 +128,6 @@ export function UserSettingsSync() {
 
   const showPosition = useAppStore((state) => state.showPosition)
   const showPlayer = useAppStore((state) => state.showPlayer)
-  const showNumber = useAppStore((state) => state.showNumber)
   const showLibero = useAppStore((state) => state.showLibero)
   const circleTokens = useAppStore((state) => state.circleTokens)
   const hideAwayTeam = useAppStore((state) => state.hideAwayTeam)
@@ -130,7 +144,6 @@ export function UserSettingsSync() {
   const phaseOrder = useAppStore((state) => state.phaseOrder)
   const highlightedRole = useAppStore((state) => state.highlightedRole)
   const learningPanelPosition = useAppStore((state) => state.learningPanelPosition)
-  const themePreference = useThemeStore((state) => state.themePreference)
 
   const [isReadyToPersist, setIsReadyToPersist] = useState(false)
   const lastSyncedSignatureRef = useRef<string | null>(null)
@@ -143,7 +156,6 @@ export function UserSettingsSync() {
     const normalized = normalizePayload({
       showPosition,
       showPlayer,
-      showNumber,
       showLibero,
       circleTokens,
       hideAwayTeam,
@@ -160,13 +172,11 @@ export function UserSettingsSync() {
       phaseOrder,
       highlightedRole: highlightedRole ?? undefined,
       learningPanelPosition,
-      themePreference,
     })
     return normalized
   }, [
     showPosition,
     showPlayer,
-    showNumber,
     showLibero,
     circleTokens,
     hideAwayTeam,
@@ -183,7 +193,6 @@ export function UserSettingsSync() {
     phaseOrder,
     highlightedRole,
     learningPanelPosition,
-    themePreference,
   ])
 
   const localSignature = useMemo(() => payloadSignature(localPayload), [localPayload])
@@ -200,10 +209,8 @@ export function UserSettingsSync() {
     if (remoteSettings === undefined) return 'loading'
     if (remoteSettings === null) return 'empty'
     return normalizePayload({
-      themePreference: remoteSettings.themePreference as ThemePreference | undefined,
       showPosition: remoteSettings.showPosition,
       showPlayer: remoteSettings.showPlayer,
-      showNumber: remoteSettings.showNumber,
       showLibero: remoteSettings.showLibero,
       circleTokens: remoteSettings.circleTokens,
       hideAwayTeam: remoteSettings.hideAwayTeam,
@@ -270,7 +277,6 @@ export function UserSettingsSync() {
         ...state,
         showPosition: serverPayload.showPosition,
         showPlayer: serverPayload.showPlayer,
-        showNumber: serverPayload.showNumber,
         showLibero: serverPayload.showLibero,
         circleTokens: serverPayload.circleTokens,
         hideAwayTeam: serverPayload.hideAwayTeam,
@@ -287,13 +293,6 @@ export function UserSettingsSync() {
         phaseOrder: serverPayload.phaseOrder,
         highlightedRole: serverPayload.highlightedRole ?? null,
         learningPanelPosition: serverPayload.learningPanelPosition,
-      }))
-      useThemeStore.setState((state) => ({
-        ...state,
-        themePreference: serverPayload.themePreference,
-        theme: serverPayload.themePreference === 'auto'
-          ? state.theme
-          : serverPayload.themePreference,
       }))
     }
 
