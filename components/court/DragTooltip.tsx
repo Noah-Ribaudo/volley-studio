@@ -12,8 +12,8 @@ export function DragTooltip({ visible, x, y, message, anchorRadius = 0 }: DragTo
   if (!visible) return null
 
   // Keep the hint above the interaction target (token/arrow), not on top of it.
-  const width = 176
-  const height = 28
+  const width = 200
+  const height = 32
   const gap = 12
   const tooltipX = x - width / 2
   const tooltipY = y - anchorRadius - height - gap
@@ -23,14 +23,14 @@ export function DragTooltip({ visible, x, y, message, anchorRadius = 0 }: DragTo
       className="drag-tooltip"
       style={{
         opacity: 0,
-        animation: 'tooltipFadeIn 200ms ease forwards',
+        animation: 'dragTooltipIn 250ms ease-out forwards',
         pointerEvents: 'none'
       }}
     >
       <style>{`
-        @keyframes tooltipFadeIn {
-          from { opacity: 0; transform: translateY(4px); }
-          to { opacity: 1; transform: translateY(0); }
+        @keyframes dragTooltipIn {
+          from { opacity: 0; transform: scale(0.95); }
+          to { opacity: 1; transform: scale(1); }
         }
       `}</style>
 
@@ -42,14 +42,22 @@ export function DragTooltip({ visible, x, y, message, anchorRadius = 0 }: DragTo
         style={{ overflow: 'visible' }}
       >
         <div
-          className="rounded-md border bg-popover px-2.5 py-1 text-xs text-popover-foreground shadow-md"
-          style={{
-            whiteSpace: 'nowrap',
-            fontWeight: 500,
-            letterSpacing: '0.25px'
-          }}
+          className="flex items-stretch rounded-lg bg-foreground shadow-xl overflow-hidden"
         >
-          {message}
+          {/* Orange accent bar */}
+          <div className="w-1 shrink-0 bg-orange-500" />
+
+          <div className="px-2.5 py-1.5">
+            <span
+              className="text-xs font-medium text-background"
+              style={{
+                whiteSpace: 'nowrap',
+                letterSpacing: '0.2px',
+              }}
+            >
+              {message}
+            </span>
+          </div>
         </div>
       </foreignObject>
     </g>

@@ -238,6 +238,7 @@ export function VolleyballCourt({
   const shouldShowNextStepHint = useHintStore((state) => state.shouldShowNextStepHint)
   const markNextStepDragLearned = useHintStore((state) => state.markNextStepDragLearned)
   const markFirstDragCompleted = useHintStore((state) => state.markFirstDragCompleted)
+  const markArrowDragLearned = useHintStore((state) => state.markArrowDragLearned)
 
   const svgRef = useRef<SVGSVGElement>(null)
   const [draggingRole, setDraggingRole] = useState<Role | null>(null)
@@ -1575,6 +1576,7 @@ export function VolleyballCourt({
     // Track drag count for hint dismissal
     incrementDragCount()
     markNextStepDragLearned()
+    markArrowDragLearned()
     setNextStepTooltipRole(null)
 
     const isCreatingNewArrow = !arrows[role]
@@ -1706,7 +1708,7 @@ export function VolleyballCourt({
     document.addEventListener('mouseup', handleEnd)
       document.addEventListener('touchmove', handleMove, { passive: false })
       document.addEventListener('touchend', handleEnd)
-  }, [onArrowChange, onArrowCurveChange, getClientPoint, clientToSvgCoords, toNormalizedCoords, incrementDragCount, markNextStepDragLearned, isMobile, arrows, arrowCurves, isPreviewingMovement, displayPositions, positions, toSvgCoords, clearPreviewStateForRole])
+  }, [onArrowChange, onArrowCurveChange, getClientPoint, clientToSvgCoords, toNormalizedCoords, incrementDragCount, markNextStepDragLearned, markArrowDragLearned, isMobile, arrows, arrowCurves, isPreviewingMovement, displayPositions, positions, toSvgCoords, clearPreviewStateForRole])
 
   // Handle curve drag - dragging the curve handle adjusts direction and intensity
   const handleCurveDragStart = useCallback((role: Role, e: React.MouseEvent | React.TouchEvent) => {

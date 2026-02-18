@@ -11,6 +11,7 @@ interface HintState {
   hasLearnedNextStepDrag: boolean
   hasSeenGameTimeOnboarding: boolean
   hasCompletedFirstDrag: boolean
+  hasLearnedArrowDrag: boolean
   hasNavigatedPhase: boolean
 
   // Actions
@@ -20,12 +21,14 @@ interface HintState {
   markNextStepDragLearned: () => void
   markGameTimeOnboardingSeen: () => void
   markFirstDragCompleted: () => void
+  markArrowDragLearned: () => void
   markPhaseNavigated: () => void
 
   // Computed helper
   shouldShowDeleteHint: () => boolean
   shouldShowNextStepHint: () => boolean
   shouldShowFirstDragHint: () => boolean
+  shouldShowArrowDragHint: () => boolean
   shouldShowPhaseNavigationHint: () => boolean
 }
 
@@ -38,6 +41,7 @@ export const useHintStore = create<HintState>()(
       hasLearnedNextStepDrag: false,
       hasSeenGameTimeOnboarding: false,
       hasCompletedFirstDrag: false,
+      hasLearnedArrowDrag: false,
       hasNavigatedPhase: false,
 
       incrementDragCount: () => set((state) => ({
@@ -56,6 +60,8 @@ export const useHintStore = create<HintState>()(
 
       markFirstDragCompleted: () => set({ hasCompletedFirstDrag: true }),
 
+      markArrowDragLearned: () => set({ hasLearnedArrowDrag: true }),
+
       markPhaseNavigated: () => set({ hasNavigatedPhase: true }),
 
       shouldShowDeleteHint: () => {
@@ -73,9 +79,14 @@ export const useHintStore = create<HintState>()(
         return !hasCompletedFirstDrag
       },
 
+      shouldShowArrowDragHint: () => {
+        const { hasCompletedFirstDrag, hasLearnedArrowDrag } = get()
+        return hasCompletedFirstDrag && !hasLearnedArrowDrag
+      },
+
       shouldShowPhaseNavigationHint: () => {
-        const { hasCompletedFirstDrag, hasNavigatedPhase } = get()
-        return hasCompletedFirstDrag && !hasNavigatedPhase
+        const { hasCompletedFirstDrag, hasLearnedArrowDrag, hasNavigatedPhase } = get()
+        return hasCompletedFirstDrag && hasLearnedArrowDrag && !hasNavigatedPhase
       },
     }),
     {

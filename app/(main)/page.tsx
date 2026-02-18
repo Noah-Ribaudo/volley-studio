@@ -154,8 +154,10 @@ function HomePageContent() {
   const loadedTeamFromUrlRef = useRef<string | null>(null)
   const previousPhaseRef = useRef(currentPhase)
   const shouldShowFirstDragHint = useHintStore((state) => state.shouldShowFirstDragHint)
+  const shouldShowArrowDragHint = useHintStore((state) => state.shouldShowArrowDragHint)
   const shouldShowPhaseNavigationHint = useHintStore((state) => state.shouldShowPhaseNavigationHint)
   const hasCompletedFirstDrag = useHintStore((state) => state.hasCompletedFirstDrag)
+  const hasLearnedArrowDrag = useHintStore((state) => state.hasLearnedArrowDrag)
   const hasNavigatedPhase = useHintStore((state) => state.hasNavigatedPhase)
   const markPhaseNavigated = useHintStore((state) => state.markPhaseNavigated)
 
@@ -744,21 +746,34 @@ function HomePageContent() {
 
   const canShowOnboardingHint = isMounted && isUiHydrated
   const showFirstDragHint = canShowOnboardingHint ? shouldShowFirstDragHint() : false
-  const showPhaseNavigationHint = canShowOnboardingHint && !showFirstDragHint && shouldShowPhaseNavigationHint()
+  const showArrowDragHint = canShowOnboardingHint && !showFirstDragHint && shouldShowArrowDragHint()
+  const showPhaseNavigationHint = canShowOnboardingHint && !showFirstDragHint && !showArrowDragHint && shouldShowPhaseNavigationHint()
   const enabledDisplayCount = Number(showPosition) + Number(showPlayer) + Number(showNumber)
+
+  // Guided tour: 3 numbered steps
+  const GUIDED_TOTAL = 3
   const onboardingHintMessage = showFirstDragHint
-    ? 'Drag a player to reposition them'
-    : showPhaseNavigationHint
-      ? 'Tap a phase to change steps'
-      : null
+    ? 'Drag players to set your formation'
+    : showArrowDragHint
+      ? 'Hover and drag the arrow to show movement'
+      : showPhaseNavigationHint
+        ? 'Switch phases to plan each rally step'
+        : null
+  const onboardingStep = showFirstDragHint
+    ? 1
+    : showArrowDragHint
+      ? 2
+      : showPhaseNavigationHint
+        ? 3
+        : undefined
 
   useEffect(() => {
     if (previousPhaseRef.current === currentPhase) return
     previousPhaseRef.current = currentPhase
-    if (hasCompletedFirstDrag && !hasNavigatedPhase) {
+    if (hasCompletedFirstDrag && hasLearnedArrowDrag && !hasNavigatedPhase) {
       markPhaseNavigated()
     }
-  }, [currentPhase, hasCompletedFirstDrag, hasNavigatedPhase, markPhaseNavigated])
+  }, [currentPhase, hasCompletedFirstDrag, hasLearnedArrowDrag, hasNavigatedPhase, markPhaseNavigated])
 
   const courtSetupContent = (
     <div className="space-y-4">
@@ -1014,6 +1029,8 @@ function HomePageContent() {
           <WhiteboardOnboardingHint
             show={canShowOnboardingHint && Boolean(onboardingHintMessage)}
             message={onboardingHintMessage || ''}
+            step={onboardingStep}
+            totalSteps={onboardingStep != null ? GUIDED_TOTAL : undefined}
           />
           </div>
         </div>
