@@ -149,6 +149,7 @@ function HomePageContent() {
   const isUiHydrated = isAppHydrated && isThemeHydrated
   const searchParams = useSearchParams()
   const teamFromUrl = searchParams.get('team')?.trim() || ''
+  const lineupFromUrl = searchParams.get('lineup')?.trim() || ''
   const myTeams = useQuery(api.teams.listMyTeams, {})
   const updateLineups = useMutation(api.teams.updateLineups)
   const createTeam = useMutation(api.teams.create)
@@ -262,7 +263,14 @@ function HomePageContent() {
         position_source: lineup.position_source as 'custom' | 'full-5-1' | '5-1-libero' | '6-2' | undefined,
         starting_rotation: (lineup.starting_rotation as 1 | 2 | 3 | 4 | 5 | 6 | undefined) ?? 1,
       })),
-      active_lineup_id: selectedTeam.activeLineupId ?? null,
+      active_lineup_id: (() => {
+        // If a specific lineup was requested via URL, use it (if it exists on this team)
+        if (lineupFromUrl) {
+          const matchingLineup = (selectedTeam.lineups || []).find((l) => l.id === lineupFromUrl)
+          if (matchingLineup) return matchingLineup.id
+        }
+        return selectedTeam.activeLineupId ?? null
+      })(),
       position_assignments: selectedTeam.positionAssignments || {},
       created_at: new Date(selectedTeam._creationTime).toISOString(),
       updated_at: new Date(selectedTeam._creationTime).toISOString(),
@@ -289,6 +297,7 @@ function HomePageContent() {
     loadedTeamFromUrlRef.current = selectedTeam._id
   }, [
     teamFromUrl,
+    lineupFromUrl,
     selectedTeam,
     selectedLayouts,
     setCurrentTeam,
