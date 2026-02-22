@@ -4,12 +4,12 @@ const baseURL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3100'
 const useExternalServer = Boolean(process.env.PLAYWRIGHT_BASE_URL)
 
 export default defineConfig({
-  testDir: './tests/e2e',
-  fullyParallel: true,
+  testDir: './tests/e2e/blocking',
+  fullyParallel: false,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
-  reporter: 'list',
+  retries: process.env.CI ? 1 : 0,
+  workers: 1,
+  reporter: process.env.CI ? 'github' : 'list',
 
   use: {
     baseURL,
@@ -19,30 +19,11 @@ export default defineConfig({
 
   projects: [
     {
-      name: 'desktop',
+      name: 'desktop-blocking',
       use: { ...devices['Desktop Chrome'] },
-    },
-    {
-      name: 'mobile',
-      use: {
-        ...devices['Desktop Chrome'],
-        viewport: { width: 390, height: 844 }, // iPhone 14 size
-        isMobile: true,
-        hasTouch: true,
-      },
-    },
-    {
-      name: 'tablet',
-      use: {
-        ...devices['Desktop Chrome'],
-        viewport: { width: 834, height: 1194 }, // iPad Pro 11" size
-        isMobile: true,
-        hasTouch: true,
-      },
     },
   ],
 
-  // Run local dev server before starting tests
   webServer: useExternalServer
     ? undefined
     : {

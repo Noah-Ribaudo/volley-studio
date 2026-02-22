@@ -10,7 +10,9 @@
     "build:prod": "convex deploy --cmd 'next build'",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
     "test": "playwright test",
+    "test:blocking": "playwright test --config=playwright.blocking.config.ts",
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed"
   },
