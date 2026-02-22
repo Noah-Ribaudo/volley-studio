@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Team, Lineup } from '@/lib/types'
+import { Team } from '@/lib/types'
 import Link from 'next/link'
 import { ChevronRight } from 'lucide-react'
 
@@ -53,54 +53,15 @@ export function TeamCard({ team }: TeamCardProps) {
             <p className="text-sm text-muted-foreground">
               {rosterCount} player{rosterCount !== 1 ? 's' : ''}{updatedDate && <> &bull; Updated {updatedDate}</>}
             </p>
+            <button
+              onClick={handleCopyCode}
+              className="text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors mt-0.5"
+            >
+              {copied ? 'Copied!' : 'Copy share code'}
+            </button>
           </div>
 
           <div className="flex gap-2 sm:flex-wrap sm:justify-end">
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={handleCopyCode}
-              className="text-muted-foreground min-w-0"
-            >
-              {copied ? (
-                <>
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="mr-1"
-                  >
-                    <path d="M20 6 9 17l-5-5"/>
-                  </svg>
-                  Copied
-                </>
-              ) : (
-                <>
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="mr-1"
-                  >
-                    <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
-                    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
-                  </svg>
-                  Code
-                </>
-              )}
-            </Button>
             <Link href={`/teams/${team.id}`}>
               <Button size="sm" variant="outline" className="w-full sm:w-auto">
                 Edit
