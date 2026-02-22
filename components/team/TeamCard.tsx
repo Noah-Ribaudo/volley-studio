@@ -18,15 +18,14 @@ export function TeamCard({ team }: TeamCardProps) {
 
   // Build the list of lineups to display.
   // Teams with no lineups get a synthetic "Default" entry.
-  const displayLineups: { id: string | null; name: string; isActive: boolean }[] =
+  const displayLineups: { id: string | null; name: string }[] =
     team.lineups.length > 0
       ? team.lineups.map((l) => ({
           id: l.id,
           name: l.name,
-          isActive: l.id === team.active_lineup_id,
         }))
       : rosterCount > 0
-        ? [{ id: null, name: 'Default', isActive: true }]
+        ? [{ id: null, name: 'Default' }]
         : []
 
   const MAX_VISIBLE = 5
@@ -119,12 +118,7 @@ export function TeamCard({ team }: TeamCardProps) {
                 href={whiteboardUrl(lineup.id)}
                 className="flex items-center justify-between rounded-lg px-3 py-2 -mx-1 hover:bg-accent active:bg-accent/80 transition-colors group/lineup"
               >
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-sm font-medium truncate">{lineup.name}</span>
-                  {lineup.isActive && displayLineups.length > 1 && (
-                    <span className="text-[11px] text-primary font-medium shrink-0">Active</span>
-                  )}
-                </div>
+                <span className="text-sm font-medium truncate">{lineup.name}</span>
                 <div className="flex items-center gap-1 text-xs text-muted-foreground group-hover/lineup:text-foreground transition-colors shrink-0">
                   <span>Whiteboard</span>
                   <ChevronRight className="w-3.5 h-3.5" />
