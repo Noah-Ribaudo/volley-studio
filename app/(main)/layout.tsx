@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { MobileBottomNav } from '@/components/volleyball/MobileBottomNav'
 import { DesktopHeaderNav } from '@/components/volleyball/DesktopHeaderNav'
@@ -15,6 +15,8 @@ import { useGameTimeStore } from '@/store/useGameTimeStore'
 import { Button } from '@/components/ui/button'
 import { PrinterIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
+import { useConvexAuth, useQuery } from 'convex/react'
+import { api } from '@/convex/_generated/api'
 import { getActiveAssignments } from '@/lib/lineups'
 import { recordBreadcrumb, getRouteLabel } from '@/lib/session-breadcrumbs'
 import type { Rotation, Phase, PositionCoordinates, RallyPhase } from '@/lib/types'
@@ -31,6 +33,33 @@ const PrintDialog = dynamic(
 )
 
 const OPEN_COURT_SETUP_EVENT = 'open-court-setup'
+const MAIN_NAV_PREFETCH_KEY = 'volley-main-nav-prefetched-v1'
+const MAIN_NAV_ROUTES = ['/', '/teams', '/gametime', '/settings'] as const
+
+function MainPageWarmup({ pathname }: { pathname: string }) {
+  const router = useRouter()
+  const { isAuthenticated } = useConvexAuth()
+
+  // Warm background data used by the 4 primary tabs.
+  useQuery(api.teams.search, { query: '' })
+  useQuery(api.teams.list, {})
+  useQuery(api.users.viewer, isAuthenticated ? {} : 'skip')
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (window.sessionStorage.getItem(MAIN_NAV_PREFETCH_KEY) === 'true') return
+
+    for (const route of MAIN_NAV_ROUTES) {
+      if (route !== pathname) {
+        router.prefetch(route)
+      }
+    }
+
+    window.sessionStorage.setItem(MAIN_NAV_PREFETCH_KEY, 'true')
+  }, [pathname, router])
+
+  return null
+}
 
 export default function VolleyballLayout({
   children,
@@ -105,6 +134,7 @@ export default function VolleyballLayout({
 
   return (
     <div className="h-dvh relative overflow-hidden bg-background">
+      <MainPageWarmup pathname={pathname ?? '/'} />
       <SidebarProvider defaultOpen className="h-dvh w-full">
         <VolleyballSidebar />
         <SidebarInset className="relative h-dvh flex flex-col bg-gradient-to-b from-background to-muted/30">
