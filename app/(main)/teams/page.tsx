@@ -3,15 +3,15 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery, useMutation } from 'convex/react'
+import { useConvexAuth } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { Id } from '@/convex/_generated/dataModel'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { TeamCard, CreateTeamDialog, ImportTeamDialog, TeamSearchBar } from '@/components/team'
+import { TeamCard, ImportTeamDialog, TeamSearchBar } from '@/components/team'
 import { useAppStore } from '@/store/useAppStore'
 import type { Team } from '@/lib/types'
-import type { PresetSystem } from '@/lib/presetTypes'
 import { toast } from 'sonner'
 import { listLocalTeams, upsertLocalTeam } from '@/lib/localTeams'
 
@@ -68,40 +68,45 @@ export default function TeamsPage() {
     }
   }, [searchQuery, shouldShowSearch])
 
-  // Handle team creation (cloud)
-  const handleCreateTeam = async (name: string, password?: string, presetSystem?: PresetSystem) => {
-    const slug = generateSlug(name)
-    const teamId = await createTeam({ name, slug, password, presetSystem })
-    router.push(`/teams/${teamId}`)
-  }
+  const { isAuthenticated } = useConvexAuth()
 
-  // Handle local-only team creation (no account)
-  const handleCreateLocalTeam = (name: string, presetSystem?: PresetSystem) => {
+  // Create a team instantly and navigate to the detail page
+  const handleNewTeam = async () => {
+    const defaultName = 'Untitled Team'
     const now = new Date().toISOString()
-    const localTeam: Team = {
-      id: `local-${Date.now()}`,
-      name,
-      slug: generateSlug(name),
-      roster: [],
-      lineups: [{
-        id: 'default',
-        name: 'Default',
+
+    if (isAuthenticated) {
+      try {
+        const slug = `${generateSlug(defaultName)}_${Date.now()}`
+        const teamId = await createTeam({ name: defaultName, slug })
+        router.push(`/teams/${teamId}`)
+      } catch {
+        toast.error('Failed to create team')
+      }
+    } else {
+      const localTeam: Team = {
+        id: `local-${Date.now()}`,
+        name: defaultName,
+        slug: generateSlug(defaultName),
+        roster: [],
+        lineups: [{
+          id: 'default',
+          name: 'Lineup 1',
+          position_assignments: {},
+          starting_rotation: 1,
+          created_at: now,
+        }],
+        active_lineup_id: 'default',
         position_assignments: {},
-        position_source: presetSystem,
-        starting_rotation: 1,
         created_at: now,
-      }],
-      active_lineup_id: 'default',
-      position_assignments: {},
-      created_at: now,
-      updated_at: now,
+        updated_at: now,
+      }
+      const nextLocalTeams = upsertLocalTeam(localTeam)
+      setLocalTeams(nextLocalTeams)
+      setCurrentTeam(localTeam)
+      setSearchQuery('')
+      router.push(`/teams/${localTeam.id}`)
     }
-    const nextLocalTeams = upsertLocalTeam(localTeam)
-    setLocalTeams(nextLocalTeams)
-    setCurrentTeam(localTeam)
-    setSearchQuery('')
-    toast.success(`Created local team: ${name}`)
-    router.push(`/teams/${localTeam.id}`)
   }
 
   const openLocalTeamWhiteboard = (team: Team) => {
@@ -175,7 +180,10 @@ export default function TeamsPage() {
                 </p>
               </div>
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                <CreateTeamDialog onCreateTeam={handleCreateTeam} onCreateLocalTeam={handleCreateLocalTeam} />
+                <Button onClick={handleNewTeam}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                  New Team
+                </Button>
                 <ImportTeamDialog onImportTeam={handleImportTeam} isLoading={isImporting} />
               </div>
             </CardContent>
@@ -192,7 +200,10 @@ export default function TeamsPage() {
                 <p className="text-sm text-muted-foreground mb-3">
                   Start fresh with a new team
                 </p>
-                <CreateTeamDialog onCreateTeam={handleCreateTeam} onCreateLocalTeam={handleCreateLocalTeam} />
+                <Button onClick={handleNewTeam}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                  New Team
+                </Button>
               </CardContent>
             </Card>
 

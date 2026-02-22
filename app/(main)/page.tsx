@@ -22,7 +22,7 @@ import { useLineupPresets } from '@/hooks/useLineupPresets'
 import { SpotlightOverlay } from '@/components/court/SpotlightOverlay'
 import { ConflictResolutionModal } from '@/components/volleyball/ConflictResolutionModal'
 import { useThemeStore } from '@/store/useThemeStore'
-import { CreateTeamDialog } from '@/components/team'
+import { useConvexAuth } from 'convex/react'
 import {
   Select,
   SelectContent,
@@ -37,7 +37,6 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { getLocalTeamById, listLocalTeams, upsertLocalTeam } from '@/lib/localTeams'
 import { generateSlug } from '@/lib/teamUtils'
-import type { PresetSystem } from '@/lib/presetTypes'
 import { useHintStore } from '@/store/useHintStore'
 import { toast } from 'sonner'
 
@@ -339,7 +338,7 @@ function HomePageContent() {
   const [courtSetupAnchorRect, setCourtSetupAnchorRect] = useState<DOMRect | null>(null)
   const courtSetupTriggerRef = useRef<HTMLElement | null>(null)
   const [viewportWidth, setViewportWidth] = useState(0)
-  const [createTeamDialogOpen, setCreateTeamDialogOpen] = useState(false)
+  const { isAuthenticated } = useConvexAuth()
 
   useEffect(() => {
     const updateViewportWidth = () => {
@@ -637,7 +636,7 @@ function HomePageContent() {
   const handleTeamSelect = useCallback((value: string) => {
     setCourtSetupOpen(false)
     if (value === '__new__') {
-      setCreateTeamDialogOpen(true)
+      void handleNewTeamFromWhiteboard()
       return
     }
 
@@ -671,65 +670,51 @@ function HomePageContent() {
       router.push('/')
     }
   }, [router, setAccessMode, setCurrentTeam, setCustomLayouts, setTeamPasswordProvided])
-  const handleCreateCloudTeam = useCallback(async (
-    name: string,
-    _password?: string,
-    presetSystem?: PresetSystem
-  ) => {
-    const trimmedName = name.trim()
-    if (!trimmedName) {
-      throw new Error('Team name is required')
-    }
-
-    const createdTeamId = await createTeam({
-      name: trimmedName,
-      slug: generateSlug(trimmedName),
-      presetSystem,
-    })
-
-    setCreateTeamDialogOpen(false)
+  const handleNewTeamFromWhiteboard = useCallback(async () => {
+    const defaultName = 'Untitled Team'
     setCourtSetupOpen(false)
-    router.push(`/?team=${encodeURIComponent(createdTeamId)}`)
-  }, [createTeam, router])
-  const handleCreateLocalTeam = useCallback((name: string, presetSystem?: PresetSystem) => {
-    const trimmedName = name.trim()
-    const lineupId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-      ? crypto.randomUUID()
-      : `lineup-${Date.now()}`
-    const now = new Date().toISOString()
-    const localTeam: Team = {
-      id: `local-${Date.now()}`,
-      name: trimmedName,
-      slug: generateSlug(trimmedName),
-      hasPassword: false,
-      archived: false,
-      roster: [],
-      lineups: [{
-        id: lineupId,
-        name: 'Lineup 1',
+
+    if (isAuthenticated) {
+      try {
+        const teamId = await createTeam({
+          name: defaultName,
+          slug: `${generateSlug(defaultName)}_${Date.now()}`,
+        })
+        router.push(`/teams/${teamId}`)
+      } catch {
+        toast.error('Failed to create team')
+      }
+    } else {
+      const lineupId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : `lineup-${Date.now()}`
+      const now = new Date().toISOString()
+      const localTeam: Team = {
+        id: `local-${Date.now()}`,
+        name: defaultName,
+        slug: generateSlug(defaultName),
+        hasPassword: false,
+        archived: false,
+        roster: [],
+        lineups: [{
+          id: lineupId,
+          name: 'Lineup 1',
+          position_assignments: {},
+          starting_rotation: 1,
+          created_at: now,
+        }],
+        active_lineup_id: lineupId,
         position_assignments: {},
-        position_source: presetSystem,
-        starting_rotation: 1,
         created_at: now,
-      }],
-      active_lineup_id: lineupId,
-      position_assignments: {},
-      created_at: now,
-      updated_at: now,
-    }
+        updated_at: now,
+      }
 
-    loadedTeamFromUrlRef.current = null
-    const nextLocalTeams = upsertLocalTeam(localTeam)
-    setLocalTeams(nextLocalTeams)
-    setCurrentTeam(localTeam)
-    setCustomLayouts([])
-    setAccessMode('local')
-    setTeamPasswordProvided(true)
-    setCreateTeamDialogOpen(false)
-    setCourtSetupOpen(false)
-    router.push('/')
-    toast.success(`Created local team: ${trimmedName}`)
-  }, [router, setAccessMode, setCurrentTeam, setCustomLayouts, setTeamPasswordProvided])
+      const nextLocalTeams = upsertLocalTeam(localTeam)
+      setLocalTeams(nextLocalTeams)
+      setCurrentTeam(localTeam)
+      router.push(`/teams/${localTeam.id}`)
+    }
+  }, [isAuthenticated, createTeam, router, setCurrentTeam])
   const handleLineupSelect = useCallback(async (value: string) => {
     setCourtSetupOpen(false)
     if (value === '__none__') {
@@ -1194,13 +1179,6 @@ function HomePageContent() {
       {/* Conflict Resolution Modal - shown when save conflict is detected */}
       <ConflictResolutionModal />
 
-      <CreateTeamDialog
-        open={createTeamDialogOpen}
-        onOpenChange={setCreateTeamDialogOpen}
-        hideTrigger
-        onCreateTeam={handleCreateCloudTeam}
-        onCreateLocalTeam={handleCreateLocalTeam}
-      />
     </div>
   )
 }
