@@ -57,6 +57,18 @@ const ANIMATION_CONFIG = {
 }
 const COURT_SETUP_POPOVER_WIDTH = 560
 const COURT_SETUP_VIEWPORT_MARGIN = 16
+const WHITEBOARD_PREFETCH_SESSION_KEY = 'whiteboard-prefetch-complete-v1'
+const WHITEBOARD_PREFETCH_ROUTES = [
+  '/teams',
+  '/gametime',
+  '/settings',
+  '/learn',
+  '/privacy',
+  '/roster',
+  '/sign-in',
+  '/developer/theme-lab',
+  '/developer/logo-lab',
+] as const
 
 // Helper to get server role from rotation
 function getServerRole(rotation: number, baseOrder: Role[]): Role {
@@ -167,6 +179,66 @@ function HomePageContent() {
   useEffect(() => {
     setIsMounted(true)
   }, [])
+
+  // Prefetch core routes once per session so navigation feels instant
+  useEffect(() => {
+    if (!isUiHydrated || typeof window === 'undefined') return
+
+    if (window.sessionStorage.getItem(WHITEBOARD_PREFETCH_SESSION_KEY) === 'true') {
+      return
+    }
+
+    let cancelled = false
+    let timeoutId: number | null = null
+    let idleId: number | null = null
+
+    const prefetchRoutes = async () => {
+      for (const route of WHITEBOARD_PREFETCH_ROUTES) {
+        if (cancelled) return
+        try {
+          router.prefetch(route)
+        } catch {
+          // Ignore prefetch errors and continue warming the rest of the routes.
+        }
+        await new Promise((resolve) => window.setTimeout(resolve, 40))
+      }
+
+      if (!cancelled) {
+        window.sessionStorage.setItem(WHITEBOARD_PREFETCH_SESSION_KEY, 'true')
+      }
+    }
+
+    const schedulePrefetch = () => {
+      void prefetchRoutes()
+    }
+
+    const requestIdle = (
+      window as Window & {
+        requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number
+      }
+    ).requestIdleCallback
+    const cancelIdle = (
+      window as Window & {
+        cancelIdleCallback?: (handle: number) => void
+      }
+    ).cancelIdleCallback
+
+    if (typeof requestIdle === 'function') {
+      idleId = requestIdle(schedulePrefetch, { timeout: 1500 })
+    } else {
+      timeoutId = window.setTimeout(schedulePrefetch, 300)
+    }
+
+    return () => {
+      cancelled = true
+      if (idleId !== null && typeof cancelIdle === 'function') {
+        cancelIdle(idleId)
+      }
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId)
+      }
+    }
+  }, [isUiHydrated, router])
 
   // Load team and layouts when opened from /?team=<id or slug>
   useEffect(() => {
