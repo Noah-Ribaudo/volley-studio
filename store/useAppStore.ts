@@ -135,6 +135,7 @@ interface AppState {
   showPrintFeature: boolean // Show print feature (dev toggle, default: false)
   sidebarProfileInFooter: boolean // Show account profile in sidebar footer (debug toggle, default: false)
   courtSetupSurfaceVariant: 'popover' | 'panel' // Desktop court setup presentation variant (default: 'popover')
+  useUnifiedTeamAssignment: boolean // Use new unified team assignment UI (default: false)
   navMode: 'sidebar' | 'header' // Desktop navigation mode (default: 'header')
   uiMode: 'normal' | 'minimal' // Current UI mode (default: 'normal')
   minimalContrast: 'soft' | 'high' // Minimal mode contrast level (default: 'soft')
@@ -231,6 +232,7 @@ interface AppState {
   setShowPrintFeature: (show: boolean) => void
   setSidebarProfileInFooter: (show: boolean) => void
   setCourtSetupSurfaceVariant: (variant: 'popover' | 'panel') => void
+  setUseUnifiedTeamAssignment: (use: boolean) => void
   setNavMode: (mode: 'sidebar' | 'header') => void
   setUiMode: (mode: 'normal' | 'minimal') => void
   setMinimalContrast: (contrast: 'soft' | 'high') => void
@@ -467,6 +469,7 @@ export const useAppStore = create<AppState>()(
       showPrintFeature: false, // Default to hidden print feature
       sidebarProfileInFooter: false, // Default to profile in top header
       courtSetupSurfaceVariant: 'popover', // Default to anchored popover on desktop
+      useUnifiedTeamAssignment: false, // Default to old PositionCourt UI
       navMode: 'header' as const, // Default to header nav (no sidebar)
       uiMode: 'normal' as const, // Default to normal UI mode
       minimalContrast: 'soft' as const, // Default minimal contrast profile
@@ -940,6 +943,7 @@ export const useAppStore = create<AppState>()(
       setShowPrintFeature: (show) => set({ showPrintFeature: show }),
       setSidebarProfileInFooter: (show) => set({ sidebarProfileInFooter: show }),
       setCourtSetupSurfaceVariant: (variant) => set({ courtSetupSurfaceVariant: variant }),
+      setUseUnifiedTeamAssignment: (use) => set({ useUnifiedTeamAssignment: use }),
 
       setNavMode: (mode) => set({ navMode: mode }),
       setUiMode: (mode) => set({ uiMode: mode }),
@@ -1129,6 +1133,7 @@ export const useAppStore = create<AppState>()(
           showPrintFeature: state.showPrintFeature,
           sidebarProfileInFooter: state.sidebarProfileInFooter,
           courtSetupSurfaceVariant: state.courtSetupSurfaceVariant,
+          useUnifiedTeamAssignment: state.useUnifiedTeamAssignment,
           navMode: state.navMode,
           uiMode: state.uiMode,
           minimalContrast: state.minimalContrast,
@@ -1231,6 +1236,10 @@ export const useAppStore = create<AppState>()(
         // Set default for court setup surface variant if missing
         if (state.courtSetupSurfaceVariant === undefined) {
           state.courtSetupSurfaceVariant = 'popover'
+        }
+        // Set default for unified team assignment toggle if missing
+        if (state.useUnifiedTeamAssignment === undefined) {
+          state.useUnifiedTeamAssignment = false
         }
         // Set defaults for minimal mode preferences if missing
         if (state.uiMode === undefined) {

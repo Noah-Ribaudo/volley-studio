@@ -27,6 +27,8 @@ export default function DeveloperSettingsPage() {
     setSidebarProfileInFooter,
     courtSetupSurfaceVariant,
     setCourtSetupSurfaceVariant,
+    useUnifiedTeamAssignment,
+    setUseUnifiedTeamAssignment,
   } = useAppStore()
 
   return (
@@ -58,6 +60,13 @@ export default function DeveloperSettingsPage() {
               description="Move the account control to the bottom of the desktop sidebar"
               checked={sidebarProfileInFooter}
               onCheckedChange={setSidebarProfileInFooter}
+            />
+            <SettingsToggle
+              id="unified-team-assignment"
+              label="Unified Team Assignment"
+              description="New court + roster UI with drag-and-drop for assigning players"
+              checked={useUnifiedTeamAssignment}
+              onCheckedChange={setUseUnifiedTeamAssignment}
             />
             <div className="space-y-2">
               <Label htmlFor="court-setup-surface" className="text-sm font-medium">

@@ -1,7 +1,8 @@
 'use client'
 
 import { RosterPlayer, PositionAssignments, Rotation } from '@/lib/types'
-import { PositionCourt } from '@/components/team'
+import { PositionCourt, UnifiedTeamAssignment } from '@/components/team'
+import { useAppStore } from '@/store/useAppStore'
 
 interface PositionAssignerProps {
   roster: RosterPlayer[]
@@ -22,8 +23,12 @@ export function PositionAssigner({
   rotation = 1,
   onRotationChange,
 }: PositionAssignerProps) {
+  const useUnified = useAppStore((s) => s.useUnifiedTeamAssignment)
+
+  const Component = useUnified ? UnifiedTeamAssignment : PositionCourt
+
   return (
-    <PositionCourt
+    <Component
       roster={roster}
       assignments={assignments}
       onChange={onChange}
