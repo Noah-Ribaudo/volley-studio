@@ -261,3 +261,252 @@ export const seedFromSupabase = internalMutation({
     };
   },
 });
+
+// Seed diverse test teams for a specific user (by email)
+// Run from Convex Dashboard: { "email": "your@email.com" }
+export const seedTestTeams = internalMutation({
+  args: {
+    email: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .filter((q) => q.eq(q.field("email"), args.email))
+      .first();
+
+    if (!user) {
+      throw new Error(`User with email ${args.email} not found`);
+    }
+
+    const now = new Date().toISOString();
+    const created: string[] = [];
+
+    // ─── Team 1: Full roster, 3 lineups (tests multi-lineup picker) ───
+    await ctx.db.insert("teams", {
+      userId: user._id,
+      name: "Northside VBC",
+      slug: "northside_vbc_test",
+      archived: false,
+      roster: [
+        { id: "ns-p1", name: "Marcus", number: 1 },
+        { id: "ns-p2", name: "Jordan", number: 4 },
+        { id: "ns-p3", name: "Eli", number: 6 },
+        { id: "ns-p4", name: "Darius", number: 8 },
+        { id: "ns-p5", name: "Kai", number: 10 },
+        { id: "ns-p6", name: "Devon", number: 12 },
+        { id: "ns-p7", name: "Ty", number: 14 },
+        { id: "ns-p8", name: "Andre", number: 15 },
+        { id: "ns-p9", name: "Jalen", number: 17 },
+        { id: "ns-p10", name: "Ricky", number: 22 },
+      ],
+      lineups: [
+        {
+          id: "ns-lineup-1",
+          name: "Starting 6",
+          position_assignments: {
+            S: "ns-p1",
+            OH1: "ns-p2",
+            OH2: "ns-p3",
+            MB1: "ns-p4",
+            MB2: "ns-p5",
+            OPP: "ns-p6",
+            L: "ns-p7",
+          },
+          position_source: "full-5-1",
+          starting_rotation: 1,
+          created_at: now,
+        },
+        {
+          id: "ns-lineup-2",
+          name: "Bench Rotation",
+          position_assignments: {
+            S: "ns-p8",
+            OH1: "ns-p9",
+            OH2: "ns-p3",
+            MB1: "ns-p10",
+            MB2: "ns-p5",
+            OPP: "ns-p2",
+            L: "ns-p7",
+          },
+          position_source: "full-5-1",
+          starting_rotation: 3,
+          created_at: now,
+        },
+        {
+          id: "ns-lineup-3",
+          name: "Set 3 Closer",
+          position_assignments: {
+            S: "ns-p1",
+            OH1: "ns-p9",
+            OH2: "ns-p2",
+            MB1: "ns-p4",
+            MB2: "ns-p10",
+            OPP: "ns-p6",
+            L: "ns-p7",
+          },
+          position_source: "full-5-1",
+          starting_rotation: 5,
+          created_at: now,
+        },
+      ],
+      activeLineupId: "ns-lineup-1",
+      positionAssignments: {},
+    });
+    created.push("Northside VBC (10 players, 3 lineups)");
+
+    // ─── Team 2: Big roster, 1 lineup (should skip picker) ───
+    await ctx.db.insert("teams", {
+      userId: user._id,
+      name: "Eastside Heat",
+      slug: "eastside_heat_test",
+      archived: false,
+      roster: [
+        { id: "eh-p1", name: "Leo", number: 2 },
+        { id: "eh-p2", name: "Sam", number: 5 },
+        { id: "eh-p3", name: "Omar", number: 7 },
+        { id: "eh-p4", name: "Trey", number: 9 },
+        { id: "eh-p5", name: "Miles", number: 11 },
+        { id: "eh-p6", name: "Blake", number: 13 },
+        { id: "eh-p7", name: "Milo", number: 16 },
+        { id: "eh-p8", name: "Finn", number: 18 },
+        { id: "eh-p9", name: "Chase", number: 20 },
+        { id: "eh-p10", name: "Zane", number: 24 },
+        { id: "eh-p11", name: "Mateo", number: 25 },
+        { id: "eh-p12", name: "Rowan", number: 30 },
+      ],
+      lineups: [
+        {
+          id: "eh-lineup-1",
+          name: "Lineup 1",
+          position_assignments: {
+            S: "eh-p1",
+            OH1: "eh-p2",
+            OH2: "eh-p3",
+            MB1: "eh-p4",
+            MB2: "eh-p5",
+            OPP: "eh-p6",
+            L: "eh-p7",
+          },
+          position_source: "full-5-1",
+          starting_rotation: 1,
+          created_at: now,
+        },
+      ],
+      activeLineupId: "eh-lineup-1",
+      positionAssignments: {},
+    });
+    created.push("Eastside Heat (12 players, 1 lineup)");
+
+    // ─── Team 3: Roster but NO lineups (tests legacy position_assignments fallback) ───
+    await ctx.db.insert("teams", {
+      userId: user._id,
+      name: "Westview Wolves",
+      slug: "westview_wolves_test",
+      archived: false,
+      roster: [
+        { id: "ww-p1", name: "Nico", number: 3 },
+        { id: "ww-p2", name: "Caleb", number: 6 },
+        { id: "ww-p3", name: "Jamal", number: 8 },
+        { id: "ww-p4", name: "Reese", number: 10 },
+        { id: "ww-p5", name: "Luca", number: 14 },
+        { id: "ww-p6", name: "Dante", number: 19 },
+        { id: "ww-p7", name: "Isaiah", number: 21 },
+      ],
+      lineups: [],
+      positionAssignments: {
+        S: "ww-p1",
+        OH1: "ww-p2",
+        OH2: "ww-p3",
+        MB1: "ww-p4",
+        MB2: "ww-p5",
+        OPP: "ww-p6",
+      },
+    });
+    created.push("Westview Wolves (7 players, 0 lineups — legacy assignments)");
+
+    // ─── Team 4: Roster only, no lineups, no position assignments (blank slate) ───
+    await ctx.db.insert("teams", {
+      userId: user._id,
+      name: "Southbay Setters",
+      slug: "southbay_setters_test",
+      archived: false,
+      roster: [
+        { id: "ss-p1", name: "Emilio", number: 1 },
+        { id: "ss-p2", name: "Xavier", number: 4 },
+        { id: "ss-p3", name: "Keith", number: 7 },
+        { id: "ss-p4", name: "Roman", number: 11 },
+        { id: "ss-p5", name: "Nash", number: 15 },
+        { id: "ss-p6", name: "Colton", number: 23 },
+      ],
+      lineups: [],
+      positionAssignments: {},
+    });
+    created.push("Southbay Setters (6 players, 0 lineups, no assignments — blank slate)");
+
+    // ─── Team 5: Small roster, 2 lineups (tests lineup picker with minimal bench) ───
+    await ctx.db.insert("teams", {
+      userId: user._id,
+      name: "Downtown 6",
+      slug: "downtown_6_test",
+      archived: false,
+      roster: [
+        { id: "d6-p1", name: "Ace", number: 1 },
+        { id: "d6-p2", name: "Banks", number: 2 },
+        { id: "d6-p3", name: "Cruz", number: 3 },
+        { id: "d6-p4", name: "Duke", number: 4 },
+        { id: "d6-p5", name: "Ellis", number: 5 },
+        { id: "d6-p6", name: "Fox", number: 6 },
+      ],
+      lineups: [
+        {
+          id: "d6-lineup-1",
+          name: "Standard",
+          position_assignments: {
+            S: "d6-p1",
+            OH1: "d6-p2",
+            OH2: "d6-p3",
+            MB1: "d6-p4",
+            MB2: "d6-p5",
+            OPP: "d6-p6",
+          },
+          starting_rotation: 1,
+          created_at: now,
+        },
+        {
+          id: "d6-lineup-2",
+          name: "Scramble",
+          position_assignments: {
+            S: "d6-p6",
+            OH1: "d6-p5",
+            OH2: "d6-p4",
+            MB1: "d6-p3",
+            MB2: "d6-p2",
+            OPP: "d6-p1",
+          },
+          starting_rotation: 4,
+          created_at: now,
+        },
+      ],
+      activeLineupId: "d6-lineup-2",
+      positionAssignments: {},
+    });
+    created.push("Downtown 6 (6 players, 2 lineups — no bench)");
+
+    // ─── Team 6: Empty roster (edge case) ───
+    await ctx.db.insert("teams", {
+      userId: user._id,
+      name: "Ghost Squad",
+      slug: "ghost_squad_test",
+      archived: false,
+      roster: [],
+      lineups: [],
+      positionAssignments: {},
+    });
+    created.push("Ghost Squad (0 players, 0 lineups — empty team)");
+
+    return {
+      message: `Created ${created.length} test teams for ${args.email}`,
+      teams: created,
+    };
+  },
+});
