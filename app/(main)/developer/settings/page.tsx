@@ -1,6 +1,5 @@
 'use client'
 
-import { notFound } from 'next/navigation'
 import { useAppStore } from '@/store/useAppStore'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
@@ -14,22 +13,21 @@ import {
 } from '@/components/ui/select'
 
 export default function DeveloperSettingsPage() {
-  if (process.env.NODE_ENV !== 'development') {
-    notFound()
-  }
+  const isHydrated = useAppStore((s) => s.isHydrated)
+  const debugHitboxes = useAppStore((s) => s.debugHitboxes)
+  const setDebugHitboxes = useAppStore((s) => s.setDebugHitboxes)
+  const showPrintFeature = useAppStore((s) => s.showPrintFeature)
+  const setShowPrintFeature = useAppStore((s) => s.setShowPrintFeature)
+  const sidebarProfileInFooter = useAppStore((s) => s.sidebarProfileInFooter)
+  const setSidebarProfileInFooter = useAppStore((s) => s.setSidebarProfileInFooter)
+  const courtSetupSurfaceVariant = useAppStore((s) => s.courtSetupSurfaceVariant)
+  const setCourtSetupSurfaceVariant = useAppStore((s) => s.setCourtSetupSurfaceVariant)
+  const useUnifiedTeamAssignment = useAppStore((s) => s.useUnifiedTeamAssignment)
+  const setUseUnifiedTeamAssignment = useAppStore((s) => s.setUseUnifiedTeamAssignment)
 
-  const {
-    debugHitboxes,
-    setDebugHitboxes,
-    showPrintFeature,
-    setShowPrintFeature,
-    sidebarProfileInFooter,
-    setSidebarProfileInFooter,
-    courtSetupSurfaceVariant,
-    setCourtSetupSurfaceVariant,
-    useUnifiedTeamAssignment,
-    setUseUnifiedTeamAssignment,
-  } = useAppStore()
+  if (!isHydrated) {
+    return null
+  }
 
   return (
     <main className="min-h-screen">
