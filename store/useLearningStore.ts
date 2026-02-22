@@ -36,7 +36,7 @@ interface LearningState {
 
 export const useLearningStore = create<LearningState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       learningMode: false,
       learningLessonId: null,
       learningStepIndex: 0,

@@ -5,10 +5,10 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { Id } from '@/convex/_generated/dataModel'
-import { useAppStore, getCurrentPositions, getCurrentArrows, getCurrentTags, getActiveLineupPositionSource } from '@/store/useAppStore'
+import { getCurrentPositions, getCurrentArrows, getCurrentTags } from '@/lib/whiteboardHelpers'
 import { VolleyballCourt } from '@/components/court'
 import { RosterManagementCard } from '@/components/roster'
-import { Role, ROLES, RALLY_PHASES, Position, PositionCoordinates, POSITION_SOURCE_INFO, RallyPhase, Team, CustomLayout, Lineup } from '@/lib/types'
+import { Role, ROLES, RALLY_PHASES, Position, PositionCoordinates, RallyPhase, Team, CustomLayout, Lineup } from '@/lib/types'
 import { getActiveAssignments } from '@/lib/lineups'
 import { getWhiteboardPositions } from '@/lib/whiteboard'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
@@ -21,7 +21,6 @@ import { useWhiteboardSync } from '@/hooks/useWhiteboardSync'
 import { useLineupPresets } from '@/hooks/useLineupPresets'
 import { SpotlightOverlay } from '@/components/court/SpotlightOverlay'
 import { ConflictResolutionModal } from '@/components/volleyball/ConflictResolutionModal'
-import { useThemeStore } from '@/store/useThemeStore'
 import { useConvexAuth } from 'convex/react'
 import {
   Select,
@@ -38,6 +37,12 @@ import { Switch } from '@/components/ui/switch'
 import { getLocalTeamById, listLocalTeams, upsertLocalTeam } from '@/lib/localTeams'
 import { generateSlug } from '@/lib/teamUtils'
 import { useHintStore } from '@/store/useHintStore'
+import { useStoresHydrated } from '@/store/hydration'
+import { useNavigationStore } from '@/store/useNavigationStore'
+import { useWhiteboardStore } from '@/store/useWhiteboardStore'
+import { useTeamStore } from '@/store/useTeamStore'
+import { useDisplayPrefsStore } from '@/store/useDisplayPrefsStore'
+import { useUIPrefsStore } from '@/store/useUIPrefsStore'
 import { toast } from 'sonner'
 
 // Constants for court display
@@ -82,70 +87,64 @@ function getServerRole(rotation: number, baseOrder: Role[]): Role {
 
 function HomePageContent() {
   const router = useRouter()
-  const {
-    currentRotation,
-    currentPhase,
-    highlightedRole,
-    localPositions,
-    localArrows,
-    arrowCurves,
-    setArrowCurve,
-    customLayouts,
-    currentTeam,
-    baseOrder,
-    nextPhase,
-    prevPhase,
-    setHighlightedRole,
-    updateLocalPosition,
-    updateArrow,
-    clearArrow,
-    setLegalityViolations,
-    legalityViolations,
-    isReceivingContext,
-    showLibero,
-    setShowLibero,
-    showPosition,
-    showPlayer,
-    showNumber,
-    setShowPosition,
-    setShowPlayer,
-    setShowNumber,
-    circleTokens,
-    fullStatusLabels,
-    debugHitboxes,
-    showMotionDebugPanel,
-    courtSetupSurfaceVariant,
-    attackBallPositions,
-    setAttackBallPosition,
-    clearAttackBallPosition,
-    // Context UI
-    contextPlayer,
-    setContextPlayer,
-    // Away team visibility
-    hideAwayTeam,
-    setHideAwayTeam,
-    awayTeamHidePercent,
-    // Player status flags
-    localStatusFlags,
-    togglePlayerStatus,
-    // Token tags
-    localTagFlags,
-    setTokenTags,
-    assignPlayerToRole,
-    // Preview mode
-    isPreviewingMovement,
-    // Animation trigger
-    playAnimationTrigger,
-    // Team loading
-    setCurrentTeam,
-    setCustomLayouts,
-    populateFromLayouts,
-    setAccessMode,
-    setTeamPasswordProvided,
-    isHydrated: isAppHydrated,
-  } = useAppStore()
-  const isThemeHydrated = useThemeStore((state) => state.isHydrated)
-  const isUiHydrated = isAppHydrated && isThemeHydrated
+  const currentRotation = useNavigationStore((state) => state.currentRotation)
+  const currentPhase = useNavigationStore((state) => state.currentPhase)
+  const highlightedRole = useNavigationStore((state) => state.highlightedRole)
+  const baseOrder = useNavigationStore((state) => state.baseOrder)
+  const nextPhase = useNavigationStore((state) => state.nextPhase)
+  const prevPhase = useNavigationStore((state) => state.prevPhase)
+  const setHighlightedRole = useNavigationStore((state) => state.setHighlightedRole)
+  const isPreviewingMovement = useNavigationStore((state) => state.isPreviewingMovement)
+  const playAnimationTrigger = useNavigationStore((state) => state.playAnimationTrigger)
+
+  const localPositions = useWhiteboardStore((state) => state.localPositions)
+  const localArrows = useWhiteboardStore((state) => state.localArrows)
+  const arrowCurves = useWhiteboardStore((state) => state.arrowCurves)
+  const setArrowCurve = useWhiteboardStore((state) => state.setArrowCurve)
+  const updateLocalPosition = useWhiteboardStore((state) => state.updateLocalPosition)
+  const updateArrow = useWhiteboardStore((state) => state.updateArrow)
+  const clearArrow = useWhiteboardStore((state) => state.clearArrow)
+  const setLegalityViolations = useWhiteboardStore((state) => state.setLegalityViolations)
+  const legalityViolations = useWhiteboardStore((state) => state.legalityViolations)
+  const attackBallPositions = useWhiteboardStore((state) => state.attackBallPositions)
+  const setAttackBallPosition = useWhiteboardStore((state) => state.setAttackBallPosition)
+  const clearAttackBallPosition = useWhiteboardStore((state) => state.clearAttackBallPosition)
+  const contextPlayer = useWhiteboardStore((state) => state.contextPlayer)
+  const setContextPlayer = useWhiteboardStore((state) => state.setContextPlayer)
+  const localStatusFlags = useWhiteboardStore((state) => state.localStatusFlags)
+  const togglePlayerStatus = useWhiteboardStore((state) => state.togglePlayerStatus)
+  const localTagFlags = useWhiteboardStore((state) => state.localTagFlags)
+  const setTokenTags = useWhiteboardStore((state) => state.setTokenTags)
+  const populateFromLayouts = useWhiteboardStore((state) => state.populateFromLayouts)
+
+  const currentTeam = useTeamStore((state) => state.currentTeam)
+  const customLayouts = useTeamStore((state) => state.customLayouts)
+  const assignPlayerToRole = useTeamStore((state) => state.assignPlayerToRole)
+  const setCurrentTeam = useTeamStore((state) => state.setCurrentTeam)
+  const setCustomLayouts = useTeamStore((state) => state.setCustomLayouts)
+  const setAccessMode = useTeamStore((state) => state.setAccessMode)
+  const setTeamPasswordProvided = useTeamStore((state) => state.setTeamPasswordProvided)
+
+  const isReceivingContext = useDisplayPrefsStore((state) => state.isReceivingContext)
+  const showLibero = useDisplayPrefsStore((state) => state.showLibero)
+  const setShowLibero = useDisplayPrefsStore((state) => state.setShowLibero)
+  const showPosition = useDisplayPrefsStore((state) => state.showPosition)
+  const showPlayer = useDisplayPrefsStore((state) => state.showPlayer)
+  const showNumber = useDisplayPrefsStore((state) => state.showNumber)
+  const setShowPosition = useDisplayPrefsStore((state) => state.setShowPosition)
+  const setShowPlayer = useDisplayPrefsStore((state) => state.setShowPlayer)
+  const setShowNumber = useDisplayPrefsStore((state) => state.setShowNumber)
+  const circleTokens = useDisplayPrefsStore((state) => state.circleTokens)
+  const fullStatusLabels = useDisplayPrefsStore((state) => state.fullStatusLabels)
+  const hideAwayTeam = useDisplayPrefsStore((state) => state.hideAwayTeam)
+  const setHideAwayTeam = useDisplayPrefsStore((state) => state.setHideAwayTeam)
+  const awayTeamHidePercent = useDisplayPrefsStore((state) => state.awayTeamHidePercent)
+
+  const debugHitboxes = useUIPrefsStore((state) => state.debugHitboxes)
+  const showMotionDebugPanel = useUIPrefsStore((state) => state.showMotionDebugPanel)
+  const courtSetupSurfaceVariant = useUIPrefsStore((state) => state.courtSetupSurfaceVariant)
+
+  const isUiHydrated = useStoresHydrated()
   const searchParams = useSearchParams()
   const teamFromUrl = searchParams.get('team')?.trim() || ''
   const lineupFromUrl = searchParams.get('lineup')?.trim() || ''
@@ -326,7 +325,6 @@ function HomePageContent() {
 
   // Determine if editing is allowed (not when using presets)
   const isEditingAllowed = true
-  const activePositionSource = getActiveLineupPositionSource(currentTeam)
 
   // Auto-save whiteboard changes to Convex (team mode)
   useWhiteboardSync()
