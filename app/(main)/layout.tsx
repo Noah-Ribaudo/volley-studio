@@ -7,7 +7,10 @@ import { MobileBottomNav } from '@/components/volleyball/MobileBottomNav'
 import { DesktopHeaderNav } from '@/components/volleyball/DesktopHeaderNav'
 import { VolleyballSidebar } from '@/components/volleyball/VolleyballSidebar'
 import { MobileContextBar } from '@/components/controls'
-import { useAppStore, getCurrentPositions } from '@/store/useAppStore'
+import { useNavigationStore } from '@/store/useNavigationStore'
+import { useUIPrefsStore } from '@/store/useUIPrefsStore'
+import { useTeamStore } from '@/store/useTeamStore'
+import { useWhiteboardStore } from '@/store/useWhiteboardStore'
 import { useGameTimeStore } from '@/store/useGameTimeStore'
 import { Button } from '@/components/ui/button'
 import { PrinterIcon } from "@hugeicons/core-free-icons"
@@ -16,6 +19,7 @@ import { getActiveAssignments } from '@/lib/lineups'
 import { recordBreadcrumb, getRouteLabel } from '@/lib/session-breadcrumbs'
 import type { Rotation, Phase, PositionCoordinates, RallyPhase } from '@/lib/types'
 import { getVisibleOrderedRallyPhases } from '@/lib/rallyPhaseOrder'
+import { getCurrentPositions } from '@/lib/whiteboardHelpers'
 import VolleyBall from '@/components/logo/VolleyBall'
 import { UserMenu } from '@/components/auth'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
@@ -35,20 +39,20 @@ export default function VolleyballLayout({
 }) {
   const pathname = usePathname()
   const [printDialogOpen, setPrintDialogOpen] = useState(false)
-  const currentRotation = useAppStore((state) => state.currentRotation)
-  const currentPhase = useAppStore((state) => state.currentPhase)
-  const visiblePhases = useAppStore((state) => state.visiblePhases)
-  const setRotation = useAppStore((state) => state.setRotation)
-  const setPhase = useAppStore((state) => state.setPhase)
-  const nextPhase = useAppStore((state) => state.nextPhase)
-  const prevPhase = useAppStore((state) => state.prevPhase)
-  const showPrintFeature = useAppStore((state) => state.showPrintFeature)
+  const currentRotation = useNavigationStore((state) => state.currentRotation)
+  const currentPhase = useNavigationStore((state) => state.currentPhase)
+  const visiblePhases = useNavigationStore((state) => state.visiblePhases)
+  const setRotation = useNavigationStore((state) => state.setRotation)
+  const setPhase = useNavigationStore((state) => state.setPhase)
+  const nextPhase = useNavigationStore((state) => state.nextPhase)
+  const prevPhase = useNavigationStore((state) => state.prevPhase)
+  const showPrintFeature = useUIPrefsStore((state) => state.showPrintFeature)
 
   // Data for print dialog
-  const currentTeam = useAppStore((state) => state.currentTeam)
-  const baseOrder = useAppStore((state) => state.baseOrder)
-  const localPositions = useAppStore((state) => state.localPositions)
-  const customLayouts = useAppStore((state) => state.customLayouts)
+  const currentTeam = useTeamStore((state) => state.currentTeam)
+  const baseOrder = useNavigationStore((state) => state.baseOrder)
+  const localPositions = useWhiteboardStore((state) => state.localPositions)
+  const customLayouts = useTeamStore((state) => state.customLayouts)
 
   // Record breadcrumbs for contextual 404 / error page
   useEffect(() => {

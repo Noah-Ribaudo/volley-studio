@@ -1,6 +1,6 @@
 "use client";
 
-import { useAppStore } from "@/store/useAppStore";
+import { useNavigationStore } from "@/store/useNavigationStore";
 import { cn } from "@/lib/utils";
 import {
   Select,
@@ -39,7 +39,7 @@ export function PhaseControl({
   const {
     currentPhase: storePhase,
     setPhase,
-  } = useAppStore();
+  } = useNavigationStore();
 
   // Use prop values or fall back to store
   const currentPhase = (propPhase ?? storePhase) as RallyPhase;

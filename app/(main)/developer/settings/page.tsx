@@ -1,6 +1,7 @@
 'use client'
 
-import { useAppStore } from '@/store/useAppStore'
+import { useUIPrefsStore } from '@/store/useUIPrefsStore'
+import { useSettingsStoresHydrated } from '@/store/hydration'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -13,17 +14,17 @@ import {
 } from '@/components/ui/select'
 
 export default function DeveloperSettingsPage() {
-  const isHydrated = useAppStore((s) => s.isHydrated)
-  const debugHitboxes = useAppStore((s) => s.debugHitboxes)
-  const setDebugHitboxes = useAppStore((s) => s.setDebugHitboxes)
-  const showPrintFeature = useAppStore((s) => s.showPrintFeature)
-  const setShowPrintFeature = useAppStore((s) => s.setShowPrintFeature)
-  const sidebarProfileInFooter = useAppStore((s) => s.sidebarProfileInFooter)
-  const setSidebarProfileInFooter = useAppStore((s) => s.setSidebarProfileInFooter)
-  const courtSetupSurfaceVariant = useAppStore((s) => s.courtSetupSurfaceVariant)
-  const setCourtSetupSurfaceVariant = useAppStore((s) => s.setCourtSetupSurfaceVariant)
-  const useUnifiedTeamAssignment = useAppStore((s) => s.useUnifiedTeamAssignment)
-  const setUseUnifiedTeamAssignment = useAppStore((s) => s.setUseUnifiedTeamAssignment)
+  const isHydrated = useSettingsStoresHydrated()
+  const debugHitboxes = useUIPrefsStore((s) => s.debugHitboxes)
+  const setDebugHitboxes = useUIPrefsStore((s) => s.setDebugHitboxes)
+  const showPrintFeature = useUIPrefsStore((s) => s.showPrintFeature)
+  const setShowPrintFeature = useUIPrefsStore((s) => s.setShowPrintFeature)
+  const sidebarProfileInFooter = useUIPrefsStore((s) => s.sidebarProfileInFooter)
+  const setSidebarProfileInFooter = useUIPrefsStore((s) => s.setSidebarProfileInFooter)
+  const courtSetupSurfaceVariant = useUIPrefsStore((s) => s.courtSetupSurfaceVariant)
+  const setCourtSetupSurfaceVariant = useUIPrefsStore((s) => s.setCourtSetupSurfaceVariant)
+  const useUnifiedTeamAssignment = useUIPrefsStore((s) => s.useUnifiedTeamAssignment)
+  const setUseUnifiedTeamAssignment = useUIPrefsStore((s) => s.setUseUnifiedTeamAssignment)
 
   if (!isHydrated) {
     return null

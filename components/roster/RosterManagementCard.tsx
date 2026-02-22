@@ -10,7 +10,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RosterEditor, PositionAssigner } from '@/components/roster'
-import { useAppStore } from '@/store/useAppStore'
+import { useTeamStore } from '@/store/useTeamStore'
+import { useDisplayPrefsStore } from '@/store/useDisplayPrefsStore'
 import { generateSlug } from '@/lib/teamUtils'
 import { PositionAssignments, RosterPlayer, Team } from '@/lib/types'
 import { toast } from 'sonner'
@@ -23,13 +24,11 @@ import { createLineup } from '@/lib/lineups'
 const DEFAULT_TEAM_NAME = 'New Team'
 
 export function RosterManagementCard() {
-  const {
-    currentTeam,
-    setCurrentTeam,
-    setAccessMode,
-    setTeamPasswordProvided,
-    showLibero,
-  } = useAppStore()
+  const currentTeam = useTeamStore((state) => state.currentTeam)
+  const setCurrentTeam = useTeamStore((state) => state.setCurrentTeam)
+  const setAccessMode = useTeamStore((state) => state.setAccessMode)
+  const setTeamPasswordProvided = useTeamStore((state) => state.setTeamPasswordProvided)
+  const showLibero = useDisplayPrefsStore((state) => state.showLibero)
 
   const [activeTab, setActiveTab] = useState<'roster' | 'positions'>('roster')
   const [isSaving, setIsSaving] = useState(false)

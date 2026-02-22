@@ -10,7 +10,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { TeamCard, ImportTeamDialog, TeamSearchBar } from '@/components/team'
-import { useAppStore } from '@/store/useAppStore'
+import { useTeamStore } from '@/store/useTeamStore'
 import type { Team } from '@/lib/types'
 import { toast } from 'sonner'
 import { listLocalTeams, upsertLocalTeam } from '@/lib/localTeams'
@@ -48,8 +48,8 @@ export default function TeamsPage() {
     cloudCountRef.current = teams.length
   }
 
-  const setCurrentTeam = useAppStore((state) => state.setCurrentTeam)
-  const currentTeam = useAppStore((state) => state.currentTeam)
+  const setCurrentTeam = useTeamStore((state) => state.setCurrentTeam)
+  const currentTeam = useTeamStore((state) => state.currentTeam)
 
   useEffect(() => {
     const storedTeams = listLocalTeams()

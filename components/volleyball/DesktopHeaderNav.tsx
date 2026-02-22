@@ -15,7 +15,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { useAppStore } from '@/store/useAppStore'
+import { useNavigationStore } from '@/store/useNavigationStore'
+import { useUIPrefsStore } from '@/store/useUIPrefsStore'
 import { ROTATIONS, type RallyPhase } from '@/lib/types'
 import { getVisibleOrderedRallyPhases } from '@/lib/rallyPhaseOrder'
 import { getPhaseInfo } from '@/lib/phaseIcons'
@@ -60,19 +61,19 @@ export function DesktopHeaderNav({
   const hasActiveGame = gamePhase === 'playing'
 
   // Only pull from store if on whiteboard page
-  const currentRotation = useAppStore((state) => state.currentRotation)
-  const currentPhase = useAppStore((state) => state.currentPhase)
-  const visiblePhases = useAppStore((state) => state.visiblePhases)
-  const phaseOrder = useAppStore((state) => state.phaseOrder)
-  const setRotation = useAppStore((state) => state.setRotation)
-  const setPhase = useAppStore((state) => state.setPhase)
-  const nextPhase = useAppStore((state) => state.nextPhase)
-  const prevPhase = useAppStore((state) => state.prevPhase)
-  const isPreviewingMovement = useAppStore((state) => state.isPreviewingMovement)
-  const setPreviewingMovement = useAppStore((state) => state.setPreviewingMovement)
-  const triggerPlayAnimation = useAppStore((state) => state.triggerPlayAnimation)
-  const showPrintFeature = useAppStore((state) => state.showPrintFeature)
-  const sidebarProfileInFooter = useAppStore((state) => state.sidebarProfileInFooter)
+  const currentRotation = useNavigationStore((state) => state.currentRotation)
+  const currentPhase = useNavigationStore((state) => state.currentPhase)
+  const visiblePhases = useNavigationStore((state) => state.visiblePhases)
+  const phaseOrder = useNavigationStore((state) => state.phaseOrder)
+  const setRotation = useNavigationStore((state) => state.setRotation)
+  const setPhase = useNavigationStore((state) => state.setPhase)
+  const nextPhase = useNavigationStore((state) => state.nextPhase)
+  const prevPhase = useNavigationStore((state) => state.prevPhase)
+  const isPreviewingMovement = useNavigationStore((state) => state.isPreviewingMovement)
+  const setPreviewingMovement = useNavigationStore((state) => state.setPreviewingMovement)
+  const triggerPlayAnimation = useNavigationStore((state) => state.triggerPlayAnimation)
+  const showPrintFeature = useUIPrefsStore((state) => state.showPrintFeature)
+  const sidebarProfileInFooter = useUIPrefsStore((state) => state.sidebarProfileInFooter)
   const phaseTrackRef = useRef<HTMLDivElement | null>(null)
   const phaseButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({})
 

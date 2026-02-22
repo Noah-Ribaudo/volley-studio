@@ -18,7 +18,7 @@ import {
 import { Layout, Users, Timer, Settings, SlidersHorizontal, Palette, Paintbrush, RectangleEllipsis, RotateCcw } from 'lucide-react'
 import VolleyBall from '@/components/logo/VolleyBall'
 import { SidebarUserMenu } from '@/components/auth'
-import { useAppStore } from '@/store/useAppStore'
+import { useUIPrefsStore } from '@/store/useUIPrefsStore'
 
 const navItems = [
   {
@@ -69,9 +69,9 @@ const developerNavItems = [
 export function VolleyballSidebar() {
   const pathname = usePathname()
   const router = useRouter()
-  const sidebarProfileInFooter = useAppStore((state) => state.sidebarProfileInFooter)
-  const showMotionDebugPanel = useAppStore((state) => state.showMotionDebugPanel)
-  const setShowMotionDebugPanel = useAppStore((state) => state.setShowMotionDebugPanel)
+  const sidebarProfileInFooter = useUIPrefsStore((state) => state.sidebarProfileInFooter)
+  const showMotionDebugPanel = useUIPrefsStore((state) => state.showMotionDebugPanel)
+  const setShowMotionDebugPanel = useUIPrefsStore((state) => state.setShowMotionDebugPanel)
   const showMotionDebugToggle = process.env.NODE_ENV === 'development'
   const isOnWhiteboard = pathname === '/'
 

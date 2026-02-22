@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type ComponentType } from 'react'
 import dynamic from 'next/dynamic'
-import { useAppStore } from '@/store/useAppStore'
+import { useUIPrefsStore } from '@/store/useUIPrefsStore'
 import { useThemeStore } from '@/store/useThemeStore'
 import { SHADER_OPTIONS, type ShaderId } from '@/lib/shaders'
 import { useDevThemeStore } from '@/store/useDevThemeStore'
@@ -246,7 +246,7 @@ function renderShader(shaderId: ShaderId, palette: ReturnType<typeof useThemeSha
 }
 
 export function BackgroundShader() {
-  const shaderId = useAppStore((state) => state.backgroundShader)
+  const shaderId = useUIPrefsStore((state) => state.backgroundShader)
   const palette = useThemeShaderColors()
   const devShaderParams = useDevThemeStore((s) => s.shaderParams)
   const devParams = process.env.NODE_ENV === 'development'

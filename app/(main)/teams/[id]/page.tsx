@@ -12,7 +12,7 @@ import { toast } from 'sonner'
 import { LineupSelector } from '@/components/roster/LineupSelector'
 import { PositionAssigner } from '@/components/roster/PositionAssigner'
 import type { Team, Lineup, PositionAssignments, PositionSource, Rotation } from '@/lib/types'
-import { useAppStore } from '@/store/useAppStore'
+import { useTeamStore } from '@/store/useTeamStore'
 import { generateSlug } from '@/lib/teamUtils'
 import { getLocalTeamById, removeLocalTeam, upsertLocalTeam } from '@/lib/localTeams'
 import { createLineup, duplicateLineup, ensureAtLeastOneLineup } from '@/lib/lineups'
@@ -25,8 +25,8 @@ export default function TeamEditPage({ params }: TeamPageProps) {
   const { id } = use(params)
   const router = useRouter()
   const isLocalTeam = id.startsWith('local-')
-  const setCurrentTeam = useAppStore((state) => state.setCurrentTeam)
-  const currentTeam = useAppStore((state) => state.currentTeam)
+  const setCurrentTeam = useTeamStore((state) => state.setCurrentTeam)
+  const currentTeam = useTeamStore((state) => state.currentTeam)
 
   // Fetch team data by ID
   const team = useQuery(api.teams.getBySlugOrId, isLocalTeam ? 'skip' : { identifier: id })

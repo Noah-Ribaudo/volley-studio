@@ -2,11 +2,11 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAppStore } from '@/store/useAppStore'
+import { useTeamStore } from '@/store/useTeamStore'
 
 export default function RosterPage() {
   const router = useRouter()
-  const currentTeam = useAppStore((state) => state.currentTeam)
+  const currentTeam = useTeamStore((state) => state.currentTeam)
 
   useEffect(() => {
     const teamId = currentTeam?._id || currentTeam?.id

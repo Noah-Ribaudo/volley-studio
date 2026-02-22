@@ -83,6 +83,7 @@ export const useThemeStore = create<ThemeState>()(
     {
       name: THEME_STORAGE_KEY,
       storage: createSafeLocalStorage<PersistedThemeState>(),
+      skipHydration: true,
       partialize: (state) => ({
         theme: state.theme,
         themePreference: state.themePreference,

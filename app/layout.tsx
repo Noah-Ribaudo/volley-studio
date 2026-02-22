@@ -16,6 +16,7 @@ import { ConvexClientProvider } from "@/components/ConvexClientProvider";
 import { UserSettingsSync } from "@/components/settings/UserSettingsSync";
 import { Toaster } from "sonner";
 import { Agentation } from "agentation";
+import { StoreProvider } from "@/store/StoreProvider";
 
 const barlow = localFont({
   src: [
@@ -116,20 +117,22 @@ export default function RootLayout({
         className="antialiased min-h-screen bg-background text-foreground"
       >
         <ConvexClientProvider>
-          <ThemeInitializer />
-          <TextureModeLoader />
-          <UserSettingsSync />
-          <Toaster
-            richColors
-            position="top-center"
-            toastOptions={{
-              style: {
-                marginTop: 'env(safe-area-inset-top, 0px)',
-              },
-            }}
-          />
-          {children}
-          {process.env.NODE_ENV === "development" && <Agentation />}
+          <StoreProvider>
+            <ThemeInitializer />
+            <TextureModeLoader />
+            <UserSettingsSync />
+            <Toaster
+              richColors
+              position="top-center"
+              toastOptions={{
+                style: {
+                  marginTop: 'env(safe-area-inset-top, 0px)',
+                },
+              }}
+            />
+            {children}
+            {process.env.NODE_ENV === "development" && <Agentation />}
+          </StoreProvider>
         </ConvexClientProvider>
       </body>
     </html>

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { useGameTimeStore } from '@/store/useGameTimeStore'
-import { useAppStore } from '@/store/useAppStore'
+import { useTeamStore } from '@/store/useTeamStore'
 import { Team, Role, RosterPlayer, Rotation, ROLE_INFO } from '@/lib/types'
 import { getRoleZone, isInFrontRow } from '@/lib/rotations'
 import { ChevronLeft, ChevronRight, ChevronDown, Zap, Check, X } from 'lucide-react'
@@ -36,7 +36,7 @@ export function SetupScreen() {
   const [localTeams, setLocalTeams] = useState<Team[]>([])
   const [expandedTeamId, setExpandedTeamId] = useState<string | null>(null)
   const isMobile = useIsMobile()
-  const currentTeam = useAppStore((state) => state.currentTeam)
+  const currentTeam = useTeamStore((state) => state.currentTeam)
 
   // Fetch teams from Convex
   const convexTeams = useQuery(api.teams.list)
