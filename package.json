@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "npm-run-all --parallel dev:convex dev:next",
     "dev:convex": "convex dev",
-    "dev:next": "next dev",
+    "dev:next": "rm -rf .next && next dev",
     "build": "next build",
     "build:prod": "convex deploy --cmd 'next build'",
     "start": "next start",
