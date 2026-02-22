@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery, useMutation } from 'convex/react'
 import { useConvexAuth } from 'convex/react'
@@ -36,13 +36,17 @@ export default function TeamsPage() {
   const [localTeams, setLocalTeams] = useState<Team[]>([])
 
   // Convex queries - automatically reactive
-  const allCloudTeams = useQuery(api.teams.search, { query: '' })
   const teams = useQuery(api.teams.search, { query: searchQuery })
   const createTeam = useMutation(api.teams.create)
   const cloneTeam = useMutation(api.teams.clone)
 
   const isLoading = teams === undefined
-  const isCloudTeamCountLoading = allCloudTeams === undefined
+
+  // Track total cloud count from the unfiltered query result
+  const cloudCountRef = useRef(0)
+  if (!searchQuery && teams !== undefined) {
+    cloudCountRef.current = teams.length
+  }
 
   const setCurrentTeam = useAppStore((state) => state.setCurrentTeam)
   const currentTeam = useAppStore((state) => state.currentTeam)
@@ -57,7 +61,7 @@ export default function TeamsPage() {
     setLocalTeams(storedTeams)
   }, [currentTeam])
 
-  const cloudTeamCount = allCloudTeams?.length ?? 0
+  const cloudTeamCount = !searchQuery ? (teams?.length ?? 0) : cloudCountRef.current
   const totalTeamCount = cloudTeamCount + localTeams.length
   const shouldShowSearch = totalTeamCount >= SEARCH_MIN_TEAM_COUNT
   const hasAnyTeams = totalTeamCount > 0
@@ -152,7 +156,7 @@ export default function TeamsPage() {
         )}
 
         {/* Empty first-run state */}
-        {!isLoading && !isCloudTeamCountLoading && !searchQuery && !hasAnyTeams && (
+        {!isLoading && !searchQuery && !hasAnyTeams && (
           <Card className="border-dashed border-border/70 bg-card/60">
             <CardContent className="pt-8 pb-8">
               <div className="mx-auto max-w-md text-center space-y-3">

@@ -152,14 +152,12 @@ function HomePageContent() {
   const myTeams = useQuery(api.teams.listMyTeams, {})
   const updateLineups = useMutation(api.teams.updateLineups)
   const createTeam = useMutation(api.teams.create)
-  const selectedTeam = useQuery(
-    api.teams.getBySlugOrId,
+  const teamWithLayouts = useQuery(
+    api.teams.getTeamWithLayouts,
     teamFromUrl ? { identifier: teamFromUrl } : 'skip'
   )
-  const selectedLayouts = useQuery(
-    api.layouts.getByTeam,
-    selectedTeam?._id ? { teamId: selectedTeam._id } : 'skip'
-  )
+  const selectedTeam = teamWithLayouts?.team ?? undefined
+  const selectedLayouts = teamWithLayouts?.layouts ?? undefined
   const [localTeams, setLocalTeams] = useState<Team[]>([])
   const [isSavingLineup, setIsSavingLineup] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
@@ -182,7 +180,7 @@ function HomePageContent() {
 
   // Prefetch core routes once per session so navigation feels instant
   useEffect(() => {
-    if (!isUiHydrated || typeof window === 'undefined') return
+    if (!isMounted) return
 
     if (window.sessionStorage.getItem(WHITEBOARD_PREFETCH_SESSION_KEY) === 'true') {
       return
@@ -238,7 +236,7 @@ function HomePageContent() {
         window.clearTimeout(timeoutId)
       }
     }
-  }, [isUiHydrated, router])
+  }, [isMounted, router])
 
   // Load team and layouts when opened from /?team=<id or slug>
   useEffect(() => {

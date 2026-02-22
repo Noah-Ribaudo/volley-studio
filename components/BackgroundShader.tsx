@@ -1,32 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import {
-  ColorPanels,
-  Dithering,
-  DotGrid,
-  DotOrbit,
-  FlutedGlass,
-  GodRays,
-  GrainGradient,
-  LiquidMetal,
-  MeshGradient,
-  Metaballs,
-  NeuroNoise,
-  PaperTexture,
-  PerlinNoise,
-  PulsingBorder,
-  SimplexNoise,
-  SmokeRing,
-  Spiral,
-  StaticMeshGradient,
-  StaticRadialGradient,
-  Swirl,
-  Voronoi,
-  Warp,
-  Water,
-  Waves,
-} from '@paper-design/shaders-react'
+import { useEffect, useMemo, useState, type ComponentType } from 'react'
+import dynamic from 'next/dynamic'
 import { useAppStore } from '@/store/useAppStore'
 import { useThemeStore } from '@/store/useThemeStore'
 import { SHADER_OPTIONS, type ShaderId } from '@/lib/shaders'
@@ -141,6 +116,40 @@ function useThemeShaderColors() {
   return colors
 }
 
+// Lazy-load each shader individually so only the active one downloads
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function lazyShader(name: string): ComponentType<any> {
+  return dynamic(
+    () => import('@paper-design/shaders-react').then((m) => ({ default: (m as unknown as Record<string, ComponentType<any>>)[name] })),
+    { ssr: false }
+  )
+}
+
+const LazyMeshGradient = lazyShader('MeshGradient')
+const LazyStaticMeshGradient = lazyShader('StaticMeshGradient')
+const LazyStaticRadialGradient = lazyShader('StaticRadialGradient')
+const LazySmokeRing = lazyShader('SmokeRing')
+const LazyNeuroNoise = lazyShader('NeuroNoise')
+const LazyDotOrbit = lazyShader('DotOrbit')
+const LazyDotGrid = lazyShader('DotGrid')
+const LazySimplexNoise = lazyShader('SimplexNoise')
+const LazyPerlinNoise = lazyShader('PerlinNoise')
+const LazyMetaballs = lazyShader('Metaballs')
+const LazyWaves = lazyShader('Waves')
+const LazyVoronoi = lazyShader('Voronoi')
+const LazyWarp = lazyShader('Warp')
+const LazyGodRays = lazyShader('GodRays')
+const LazySpiral = lazyShader('Spiral')
+const LazySwirl = lazyShader('Swirl')
+const LazyDithering = lazyShader('Dithering')
+const LazyPulsingBorder = lazyShader('PulsingBorder')
+const LazyColorPanels = lazyShader('ColorPanels')
+const LazyPaperTexture = lazyShader('PaperTexture')
+const LazyFlutedGlass = lazyShader('FlutedGlass')
+const LazyWater = lazyShader('Water')
+const LazyLiquidMetal = lazyShader('LiquidMetal')
+const LazyGrainGradient = lazyShader('GrainGradient')
+
 function renderShader(shaderId: ShaderId, palette: ReturnType<typeof useThemeShaderColors>, devParams: Record<string, number> = {}) {
   const sharedProps = {
     className: 'h-full w-full',
@@ -150,16 +159,16 @@ function renderShader(shaderId: ShaderId, palette: ReturnType<typeof useThemeSha
 
   switch (shaderId) {
     case 'mesh-gradient':
-      return <MeshGradient {...sharedProps} colors={colors} {...devParams} />
+      return <LazyMeshGradient {...sharedProps} colors={colors} {...devParams} />
     case 'static-mesh-gradient':
-      return <StaticMeshGradient {...sharedProps} colors={colors} {...devParams} />
+      return <LazyStaticMeshGradient {...sharedProps} colors={colors} {...devParams} />
     case 'static-radial-gradient':
-      return <StaticRadialGradient {...sharedProps} colors={colors} colorBack={palette.background} {...devParams} />
+      return <LazyStaticRadialGradient {...sharedProps} colors={colors} colorBack={palette.background} {...devParams} />
     case 'smoke-ring':
-      return <SmokeRing {...sharedProps} colors={[palette.accent]} colorBack={palette.background} {...devParams} />
+      return <LazySmokeRing {...sharedProps} colors={[palette.accent]} colorBack={palette.background} {...devParams} />
     case 'neuro-noise':
       return (
-        <NeuroNoise
+        <LazyNeuroNoise
           {...sharedProps}
           colorFront={palette.accentStrong}
           colorMid={palette.accent}
@@ -168,10 +177,10 @@ function renderShader(shaderId: ShaderId, palette: ReturnType<typeof useThemeSha
         />
       )
     case 'dot-orbit':
-      return <DotOrbit {...sharedProps} colors={colors} colorBack={palette.background} {...devParams} />
+      return <LazyDotOrbit {...sharedProps} colors={colors} colorBack={palette.background} {...devParams} />
     case 'dot-grid':
       return (
-        <DotGrid
+        <LazyDotGrid
           {...sharedProps}
           colorBack={palette.background}
           colorFill={palette.accent}
@@ -180,10 +189,10 @@ function renderShader(shaderId: ShaderId, palette: ReturnType<typeof useThemeSha
         />
       )
     case 'simplex-noise':
-      return <SimplexNoise {...sharedProps} colors={colors} {...devParams} />
+      return <LazySimplexNoise {...sharedProps} colors={colors} {...devParams} />
     case 'perlin-noise':
       return (
-        <PerlinNoise
+        <LazyPerlinNoise
           {...sharedProps}
           colorFront={palette.accentStrong}
           colorBack={palette.background}
@@ -191,37 +200,37 @@ function renderShader(shaderId: ShaderId, palette: ReturnType<typeof useThemeSha
         />
       )
     case 'metaballs':
-      return <Metaballs {...sharedProps} colors={colors} colorBack={palette.background} {...devParams} />
+      return <LazyMetaballs {...sharedProps} colors={colors} colorBack={palette.background} {...devParams} />
     case 'waves':
-      return <Waves {...sharedProps} colorFront={palette.accentStrong} colorBack={palette.background} {...devParams} />
+      return <LazyWaves {...sharedProps} colorFront={palette.accentStrong} colorBack={palette.background} {...devParams} />
     case 'voronoi':
-      return <Voronoi {...sharedProps} colors={colors} colorGap={palette.background} colorGlow={palette.accentStrong} {...devParams} />
+      return <LazyVoronoi {...sharedProps} colors={colors} colorGap={palette.background} colorGlow={palette.accentStrong} {...devParams} />
     case 'warp':
-      return <Warp {...sharedProps} colors={colors} {...devParams} />
+      return <LazyWarp {...sharedProps} colors={colors} {...devParams} />
     case 'god-rays':
-      return <GodRays {...sharedProps} colors={colors} colorBack={palette.background} colorBloom={palette.accentStrong} {...devParams} />
+      return <LazyGodRays {...sharedProps} colors={colors} colorBack={palette.background} colorBloom={palette.accentStrong} {...devParams} />
     case 'spiral':
-      return <Spiral {...sharedProps} colorFront={palette.accentStrong} colorBack={palette.background} {...devParams} />
+      return <LazySpiral {...sharedProps} colorFront={palette.accentStrong} colorBack={palette.background} {...devParams} />
     case 'swirl':
-      return <Swirl {...sharedProps} colors={colors} colorBack={palette.background} {...devParams} />
+      return <LazySwirl {...sharedProps} colors={colors} colorBack={palette.background} {...devParams} />
     case 'dithering':
-      return <Dithering {...sharedProps} colorFront={palette.accent} colorBack={palette.background} {...devParams} />
+      return <LazyDithering {...sharedProps} colorFront={palette.accent} colorBack={palette.background} {...devParams} />
     case 'pulsing-border':
-      return <PulsingBorder {...sharedProps} colors={colors} colorBack={palette.background} {...devParams} />
+      return <LazyPulsingBorder {...sharedProps} colors={colors} colorBack={palette.background} {...devParams} />
     case 'color-panels':
-      return <ColorPanels {...sharedProps} colors={colors} colorBack={palette.background} {...devParams} />
+      return <LazyColorPanels {...sharedProps} colors={colors} colorBack={palette.background} {...devParams} />
     case 'paper-texture':
-      return <PaperTexture {...sharedProps} colorFront={palette.accentStrong} colorBack={palette.background} {...devParams} />
+      return <LazyPaperTexture {...sharedProps} colorFront={palette.accentStrong} colorBack={palette.background} {...devParams} />
     case 'fluted-glass':
-      return <FlutedGlass {...sharedProps} colorHighlight={palette.accentStrong} colorShadow={palette.background} {...devParams} />
+      return <LazyFlutedGlass {...sharedProps} colorHighlight={palette.accentStrong} colorShadow={palette.background} {...devParams} />
     case 'water':
-      return <Water {...sharedProps} colorHighlight={palette.accentStrong} colorBack={palette.background} {...devParams} />
+      return <LazyWater {...sharedProps} colorHighlight={palette.accentStrong} colorBack={palette.background} {...devParams} />
     case 'liquid-metal':
-      return <LiquidMetal {...sharedProps} colorTint={palette.accentStrong} colorBack={palette.background} {...devParams} />
+      return <LazyLiquidMetal {...sharedProps} colorTint={palette.accentStrong} colorBack={palette.background} {...devParams} />
     case 'grain-gradient':
     default:
       return (
-        <GrainGradient
+        <LazyGrainGradient
           {...sharedProps}
           colorBack={palette.background}
           colors={[palette.accentSoft, palette.accent, palette.accentStrong]}

@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from 'react'
 import { usePathname } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import { MobileBottomNav } from '@/components/volleyball/MobileBottomNav'
 import { DesktopHeaderNav } from '@/components/volleyball/DesktopHeaderNav'
 import { VolleyballSidebar } from '@/components/volleyball/VolleyballSidebar'
@@ -11,7 +12,6 @@ import { useGameTimeStore } from '@/store/useGameTimeStore'
 import { Button } from '@/components/ui/button'
 import { PrinterIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { PrintDialog } from '@/components/print'
 import { getActiveAssignments } from '@/lib/lineups'
 import type { Rotation, Phase, PositionCoordinates, RallyPhase } from '@/lib/types'
 import { getVisibleOrderedRallyPhases } from '@/lib/rallyPhaseOrder'
@@ -19,6 +19,11 @@ import VolleyBall from '@/components/logo/VolleyBall'
 import { UserMenu } from '@/components/auth'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import Link from 'next/link'
+
+const PrintDialog = dynamic(
+  () => import('@/components/print').then((m) => ({ default: m.PrintDialog })),
+  { ssr: false }
+)
 
 const OPEN_COURT_SETUP_EVENT = 'open-court-setup'
 
