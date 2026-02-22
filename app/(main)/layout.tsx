@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { MobileBottomNav } from '@/components/volleyball/MobileBottomNav'
@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { PrinterIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { getActiveAssignments } from '@/lib/lineups'
+import { recordBreadcrumb, getRouteLabel } from '@/lib/session-breadcrumbs'
 import type { Rotation, Phase, PositionCoordinates, RallyPhase } from '@/lib/types'
 import { getVisibleOrderedRallyPhases } from '@/lib/rallyPhaseOrder'
 import VolleyBall from '@/components/logo/VolleyBall'
@@ -48,6 +49,18 @@ export default function VolleyballLayout({
   const baseOrder = useAppStore((state) => state.baseOrder)
   const localPositions = useAppStore((state) => state.localPositions)
   const customLayouts = useAppStore((state) => state.customLayouts)
+
+  // Record breadcrumbs for contextual 404 / error page
+  useEffect(() => {
+    try {
+      if (!pathname) return
+      let label = getRouteLabel(pathname)
+      if (pathname.startsWith('/teams/') && currentTeam?.name) {
+        label = `Team – ${currentTeam.name}`
+      }
+      recordBreadcrumb(pathname, label)
+    } catch { /* never break the layout */ }
+  }, [pathname, currentTeam?.name])
 
   // Function to get positions for any rotation/phase (used by print dialog)
   const getPositionsForRotation = useCallback((rotation: Rotation, phase: Phase): PositionCoordinates => {
