@@ -135,7 +135,7 @@ export default function VolleyballLayout({
   return (
     <div className="h-dvh relative overflow-hidden bg-background">
       <MainPageWarmup pathname={pathname ?? '/'} />
-      <SidebarProvider defaultOpen className="h-dvh w-full">
+      <SidebarProvider defaultOpen={false} className="h-dvh w-full">
         <VolleyballSidebar />
         <SidebarInset className="relative h-dvh flex flex-col bg-gradient-to-b from-background to-muted/30">
         {/* Desktop header nav */}
