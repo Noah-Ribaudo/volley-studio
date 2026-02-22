@@ -45,7 +45,7 @@ const navItems = [
 
 const developerNavItems = [
   {
-    title: 'Settings',
+    title: 'Dev Toggles',
     url: '/developer/settings',
     icon: Settings,
   },
