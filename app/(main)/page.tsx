@@ -19,7 +19,7 @@ import { validateRotationLegality } from '@/lib/model/legality'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { useWhiteboardSync } from '@/hooks/useWhiteboardSync'
 import { useLineupPresets } from '@/hooks/useLineupPresets'
-import { WhiteboardOnboardingHint } from '@/components/court/WhiteboardOnboardingHint'
+import { SpotlightOverlay } from '@/components/court/SpotlightOverlay'
 import { ConflictResolutionModal } from '@/components/volleyball/ConflictResolutionModal'
 import { useThemeStore } from '@/store/useThemeStore'
 import { CreateTeamDialog } from '@/components/team'
@@ -57,6 +57,18 @@ const ANIMATION_CONFIG = {
 }
 const COURT_SETUP_POPOVER_WIDTH = 560
 const COURT_SETUP_VIEWPORT_MARGIN = 16
+const WHITEBOARD_PREFETCH_SESSION_KEY = 'whiteboard-prefetch-complete-v1'
+const WHITEBOARD_PREFETCH_ROUTES = [
+  '/teams',
+  '/gametime',
+  '/settings',
+  '/learn',
+  '/privacy',
+  '/roster',
+  '/sign-in',
+  '/developer/theme-lab',
+  '/developer/logo-lab',
+] as const
 
 // Helper to get server role from rotation
 function getServerRole(rotation: number, baseOrder: Role[]): Role {
@@ -154,8 +166,10 @@ function HomePageContent() {
   const loadedTeamFromUrlRef = useRef<string | null>(null)
   const previousPhaseRef = useRef(currentPhase)
   const shouldShowFirstDragHint = useHintStore((state) => state.shouldShowFirstDragHint)
+  const shouldShowArrowDragHint = useHintStore((state) => state.shouldShowArrowDragHint)
   const shouldShowPhaseNavigationHint = useHintStore((state) => state.shouldShowPhaseNavigationHint)
   const hasCompletedFirstDrag = useHintStore((state) => state.hasCompletedFirstDrag)
+  const hasLearnedArrowDrag = useHintStore((state) => state.hasLearnedArrowDrag)
   const hasNavigatedPhase = useHintStore((state) => state.hasNavigatedPhase)
   const markPhaseNavigated = useHintStore((state) => state.markPhaseNavigated)
 
@@ -165,6 +179,66 @@ function HomePageContent() {
   useEffect(() => {
     setIsMounted(true)
   }, [])
+
+  // Prefetch core routes once per session so navigation feels instant
+  useEffect(() => {
+    if (!isUiHydrated || typeof window === 'undefined') return
+
+    if (window.sessionStorage.getItem(WHITEBOARD_PREFETCH_SESSION_KEY) === 'true') {
+      return
+    }
+
+    let cancelled = false
+    let timeoutId: number | null = null
+    let idleId: number | null = null
+
+    const prefetchRoutes = async () => {
+      for (const route of WHITEBOARD_PREFETCH_ROUTES) {
+        if (cancelled) return
+        try {
+          router.prefetch(route)
+        } catch {
+          // Ignore prefetch errors and continue warming the rest of the routes.
+        }
+        await new Promise((resolve) => window.setTimeout(resolve, 40))
+      }
+
+      if (!cancelled) {
+        window.sessionStorage.setItem(WHITEBOARD_PREFETCH_SESSION_KEY, 'true')
+      }
+    }
+
+    const schedulePrefetch = () => {
+      void prefetchRoutes()
+    }
+
+    const requestIdle = (
+      window as Window & {
+        requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number
+      }
+    ).requestIdleCallback
+    const cancelIdle = (
+      window as Window & {
+        cancelIdleCallback?: (handle: number) => void
+      }
+    ).cancelIdleCallback
+
+    if (typeof requestIdle === 'function') {
+      idleId = requestIdle(schedulePrefetch, { timeout: 1500 })
+    } else {
+      timeoutId = window.setTimeout(schedulePrefetch, 300)
+    }
+
+    return () => {
+      cancelled = true
+      if (idleId !== null && typeof cancelIdle === 'function') {
+        cancelIdle(idleId)
+      }
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId)
+      }
+    }
+  }, [isUiHydrated, router])
 
   // Load team and layouts when opened from /?team=<id or slug>
   useEffect(() => {
@@ -744,21 +818,40 @@ function HomePageContent() {
 
   const canShowOnboardingHint = isMounted && isUiHydrated
   const showFirstDragHint = canShowOnboardingHint ? shouldShowFirstDragHint() : false
-  const showPhaseNavigationHint = canShowOnboardingHint && !showFirstDragHint && shouldShowPhaseNavigationHint()
+  const showArrowDragHint = canShowOnboardingHint && !showFirstDragHint && shouldShowArrowDragHint()
+  const showPhaseNavigationHint = canShowOnboardingHint && !showFirstDragHint && !showArrowDragHint && shouldShowPhaseNavigationHint()
   const enabledDisplayCount = Number(showPosition) + Number(showPlayer) + Number(showNumber)
+
+  // Guided tour: 3 numbered steps
+  const GUIDED_TOTAL = 3
   const onboardingHintMessage = showFirstDragHint
-    ? 'Drag a player to reposition them'
+    ? 'Drag players to set your formation'
+    : showArrowDragHint
+      ? 'Hover and drag the arrow to show movement'
+      : showPhaseNavigationHint
+        ? 'Switch phases to plan each rally step'
+        : null
+  const onboardingStep = showFirstDragHint
+    ? 1
+    : showArrowDragHint
+      ? 2
+      : showPhaseNavigationHint
+        ? 3
+        : undefined
+
+  const onboardingTargetSelector = showFirstDragHint || showArrowDragHint
+    ? '[data-onboarding="player-token"]'
     : showPhaseNavigationHint
-      ? 'Tap a phase to change steps'
-      : null
+      ? '[data-onboarding="phase-selector"]'
+      : ''
 
   useEffect(() => {
     if (previousPhaseRef.current === currentPhase) return
     previousPhaseRef.current = currentPhase
-    if (hasCompletedFirstDrag && !hasNavigatedPhase) {
+    if (hasCompletedFirstDrag && hasLearnedArrowDrag && !hasNavigatedPhase) {
       markPhaseNavigated()
     }
-  }, [currentPhase, hasCompletedFirstDrag, hasNavigatedPhase, markPhaseNavigated])
+  }, [currentPhase, hasCompletedFirstDrag, hasLearnedArrowDrag, hasNavigatedPhase, markPhaseNavigated])
 
   const courtSetupContent = (
     <div className="space-y-4">
@@ -919,17 +1012,6 @@ function HomePageContent() {
       <div className="flex-1 min-h-0 h-full overflow-hidden">
         {/* Court Container - scales to fit available space */}
         <div className="w-full h-full sm:max-w-3xl mx-auto px-0 sm:px-2 relative">
-          {/* Preset mode indicator - shown when viewing preset positions */}
-          {isUsingPreset && (
-            <div className="absolute top-16 left-1/2 -translate-x-1/2 z-30">
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/90 backdrop-blur-sm rounded-full border border-border shadow-sm">
-                <span className="text-xs text-muted-foreground">
-                  Viewing: <span className="font-medium text-foreground">{POSITION_SOURCE_INFO[activePositionSource].name}</span>
-                </span>
-                <span className="text-xs text-muted-foreground/70">(preset base)</span>
-              </div>
-            </div>
-          )}
 
           {/* Court */}
           <div
@@ -1013,6 +1095,7 @@ function HomePageContent() {
                 debugOverlay={showMotionDebugPanel}
                 animationTrigger={playAnimationTrigger}
                 isPreviewingMovement={isPreviewingMovement}
+                forceHoveredRole={showArrowDragHint ? 'S' : null}
                 tagFlags={currentTagFlags}
                 onTagsChange={isEditingAllowed ? (role, tags) => {
                   setTokenTags(currentRotation, currentPhase, role, tags)
@@ -1022,9 +1105,12 @@ function HomePageContent() {
                 } : undefined}
 	              />
 
-          <WhiteboardOnboardingHint
+          <SpotlightOverlay
             show={canShowOnboardingHint && Boolean(onboardingHintMessage)}
             message={onboardingHintMessage || ''}
+            step={onboardingStep}
+            totalSteps={onboardingStep != null ? GUIDED_TOTAL : undefined}
+            targetSelector={onboardingTargetSelector}
           />
           </div>
         </div>

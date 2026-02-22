@@ -142,6 +142,8 @@ interface VolleyballCourtProps {
   onTagsChange?: (role: Role, tags: TokenTag[]) => void
   // Callback to assign a player to a role (for radial menu player picker)
   onPlayerAssign?: (role: Role, playerId: string) => void
+  // Force a role into hover state (shows arrow preview) regardless of actual mouse hover
+  forceHoveredRole?: Role | null
 }
 
 type PlayAnimState = {
@@ -226,6 +228,7 @@ export function VolleyballCourt({
   tagFlags = {},
   onTagsChange,
   onPlayerAssign,
+  forceHoveredRole,
 }: VolleyballCourtProps) {
   // In simulation mode, disable editing
   const isEditable = mode === 'whiteboard' && editable
@@ -238,6 +241,7 @@ export function VolleyballCourt({
   const shouldShowNextStepHint = useHintStore((state) => state.shouldShowNextStepHint)
   const markNextStepDragLearned = useHintStore((state) => state.markNextStepDragLearned)
   const markFirstDragCompleted = useHintStore((state) => state.markFirstDragCompleted)
+  const markArrowDragLearned = useHintStore((state) => state.markArrowDragLearned)
 
   const svgRef = useRef<SVGSVGElement>(null)
   const [draggingRole, setDraggingRole] = useState<Role | null>(null)
@@ -369,6 +373,14 @@ export function VolleyballCourt({
   const arrowTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const suppressNextArrowFadeRef = useRef<boolean>(false)
   const suppressArrowFadeTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Compute effective hover state: merge internal hoveredRole with forced prop
+  const effectiveHoveredRole = forceHoveredRole ?? hoveredRole
+  const effectivePreviewVisible = useMemo(() => {
+    if (!forceHoveredRole) return previewVisible
+    if (previewVisible[forceHoveredRole]) return previewVisible
+    return { ...previewVisible, [forceHoveredRole]: true }
+  }, [forceHoveredRole, previewVisible])
 
   const POSITION_EPSILON = 0.00075
   const hasMeaningfulPositionDelta = (previous: Position | null, next: Position) => {
@@ -558,7 +570,8 @@ export function VolleyballCourt({
           if ((hoveredZonesRef.current[role]?.size ?? 0) === 0) return
           setHoveredRole(role)
           setPreviewVisible(prev => (prev[role] ? prev : { ...prev, [role]: true }))
-          if (shouldShowNextStepHint()) {
+          // Show arrow drag hint only for players without an existing arrow
+          if (shouldShowNextStepHint() && !useHintStore.getState().hasLearnedArrowDrag) {
             setNextStepTooltipRole(role)
             incrementNextStepHintHoverCount()
           } else {
@@ -567,7 +580,7 @@ export function VolleyballCourt({
         }, 60)
       }
     } else if (!anyZoneHovered) {
-      // All zones left — retract after a short grace period
+      // All zones left — retract after a grace period
       // (covers the gap when cursor moves between token and arrow)
       hoverDelayRef.current[role] = setTimeout(() => {
         delete hoverDelayRef.current[role]
@@ -580,7 +593,7 @@ export function VolleyballCourt({
           delete next[role]
           return next
         })
-      }, 90)
+      }, 200)
     }
     // else: leaving one zone while another is still hovered → do nothing, arrow stays
   }, [incrementNextStepHintHoverCount, shouldShowNextStepHint])
@@ -1575,6 +1588,7 @@ export function VolleyballCourt({
     // Track drag count for hint dismissal
     incrementDragCount()
     markNextStepDragLearned()
+    markArrowDragLearned()
     setNextStepTooltipRole(null)
 
     const isCreatingNewArrow = !arrows[role]
@@ -1706,7 +1720,7 @@ export function VolleyballCourt({
     document.addEventListener('mouseup', handleEnd)
       document.addEventListener('touchmove', handleMove, { passive: false })
       document.addEventListener('touchend', handleEnd)
-  }, [onArrowChange, onArrowCurveChange, getClientPoint, clientToSvgCoords, toNormalizedCoords, incrementDragCount, markNextStepDragLearned, isMobile, arrows, arrowCurves, isPreviewingMovement, displayPositions, positions, toSvgCoords, clearPreviewStateForRole])
+  }, [onArrowChange, onArrowCurveChange, getClientPoint, clientToSvgCoords, toNormalizedCoords, incrementDragCount, markNextStepDragLearned, markArrowDragLearned, isMobile, arrows, arrowCurves, isPreviewingMovement, displayPositions, positions, toSvgCoords, clearPreviewStateForRole])
 
   // Handle curve drag - dragging the curve handle adjusts direction and intensity
   const handleCurveDragStart = useCallback((role: Role, e: React.MouseEvent | React.TouchEvent) => {
@@ -2271,7 +2285,7 @@ export function VolleyballCourt({
           draggingArrowRole={draggingArrowRole}
           arrowDragPosition={arrowDragPosition}
           arrows={arrows}
-          previewVisible={previewVisible}
+          previewVisible={effectivePreviewVisible}
           tappedRole={tappedRole}
           isMobile={isMobile}
           showPosition={showPosition}
@@ -2308,7 +2322,10 @@ export function VolleyballCourt({
           // Arrow handle positioning (for next-step mode)
           // Render HOME player
           const homePlayerNode = (
-            <g key={`home-${role}`}>
+            <g
+              key={`home-${role}`}
+              {...(role === activeRoles[0] ? { 'data-onboarding': 'player-token' } : {})}
+            >
               <g
                 transform={`translate(${homeSvgPos.x}, ${homeSvgPos.y})`}
                 style={{
@@ -2440,7 +2457,7 @@ export function VolleyballCourt({
                     playerName={playerInfo.name}
                     playerNumber={playerInfo.number}
                     isDragging={isDragging}
-                    isHovered={hoveredRole === role}
+                    isHovered={effectiveHoveredRole === role}
                     showPosition={showPosition}
                     showPlayer={showPlayer}
                     showNumber={showNumber}
@@ -2612,7 +2629,7 @@ export function VolleyballCourt({
               x={tooltipPos.x}
               y={tooltipPos.y}
               anchorRadius={tokenRadius}
-              message="Drag me to show next step"
+              message="Drag the arrow tip to show a player's next movement"
             />
           )
         })()}

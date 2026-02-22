@@ -11,45 +11,56 @@ interface DragTooltipProps {
 export function DragTooltip({ visible, x, y, message, anchorRadius = 0 }: DragTooltipProps) {
   if (!visible) return null
 
-  // Keep the hint above the interaction target (token/arrow), not on top of it.
-  const width = 176
-  const height = 28
+  // foreignObject needs a generous width/height so the content isn't clipped,
+  // but the inner div uses fit-content to hug the text.
+  const foWidth = 300
+  const foHeight = 40
   const gap = 12
-  const tooltipX = x - width / 2
-  const tooltipY = y - anchorRadius - height - gap
+  const tooltipX = x - foWidth / 2
+  const tooltipY = y - anchorRadius - foHeight - gap
 
   return (
     <g
       className="drag-tooltip"
       style={{
         opacity: 0,
-        animation: 'tooltipFadeIn 200ms ease forwards',
+        animation: 'dragTooltipIn 250ms ease-out forwards',
         pointerEvents: 'none'
       }}
     >
       <style>{`
-        @keyframes tooltipFadeIn {
-          from { opacity: 0; transform: translateY(4px); }
-          to { opacity: 1; transform: translateY(0); }
+        @keyframes dragTooltipIn {
+          from { opacity: 0; transform: scale(0.95); }
+          to { opacity: 1; transform: scale(1); }
         }
       `}</style>
 
       <foreignObject
         x={tooltipX}
         y={tooltipY}
-        width={width}
-        height={height}
+        width={foWidth}
+        height={foHeight}
         style={{ overflow: 'visible' }}
       >
-        <div
-          className="rounded-md border bg-popover px-2.5 py-1 text-xs text-popover-foreground shadow-md"
-          style={{
-            whiteSpace: 'nowrap',
-            fontWeight: 500,
-            letterSpacing: '0.25px'
-          }}
-        >
-          {message}
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <div
+            className="inline-flex items-stretch rounded-lg bg-gray-900 dark:bg-gray-800 shadow-xl overflow-hidden"
+          >
+            {/* Orange accent bar */}
+            <div className="w-1 shrink-0 bg-orange-500" />
+
+            <div className="px-2.5 py-1.5">
+              <span
+                className="text-xs font-medium text-gray-50"
+                style={{
+                  whiteSpace: 'nowrap',
+                  letterSpacing: '0.2px',
+                }}
+              >
+                {message}
+              </span>
+            </div>
+          </div>
         </div>
       </foreignObject>
     </g>

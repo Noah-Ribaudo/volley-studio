@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useCallback, useSyncExternalStore } from 'react'
-import { useMutation } from 'convex/react'
+import { useConvexAuth, useMutation } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { useAppStore, getCurrentPositions } from '@/store/useAppStore'
 import { createRotationPhaseKey } from '@/lib/rotations'
@@ -99,6 +99,7 @@ export function useWhiteboardSync() {
     attackBallPositions,
   } = useAppStore()
 
+  const { isAuthenticated } = useConvexAuth()
   const saveLayout = useMutation(api.layouts.save)
 
   // Track previous values to detect changes
@@ -202,8 +203,8 @@ export function useWhiteboardSync() {
 
   // Handle state changes and queue saves
   useEffect(() => {
-    // Skip if no team selected or team doesn't have a Convex ID
-    if (!currentTeam?._id) {
+    // Skip if no team selected, team doesn't have a Convex ID, or user isn't authenticated
+    if (!currentTeam?._id || !isAuthenticated) {
       return
     }
 
@@ -376,6 +377,7 @@ export function useWhiteboardSync() {
     localTagFlags,
     attackBallPositions,
     executeSave,
+    isAuthenticated,
   ])
 
   // Flush pending saves before page unload

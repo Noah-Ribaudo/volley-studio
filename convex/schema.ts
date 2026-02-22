@@ -92,8 +92,12 @@ export default defineSchema({
   }).index("by_user", ["userId"]),
 
   suggestionSubmissions: defineTable({
-    userId: v.id("users"),
+    userId: v.optional(v.id("users")),
+    clientId: v.optional(v.string()),
     submitterName: v.optional(v.string()),
+    submitterEmail: v.optional(v.string()),
     createdAt: v.number(),
-  }).index("by_user_createdAt", ["userId", "createdAt"]),
+  })
+    .index("by_user_createdAt", ["userId", "createdAt"])
+    .index("by_client_createdAt", ["clientId", "createdAt"]),
 });

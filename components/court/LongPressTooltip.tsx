@@ -12,46 +12,54 @@ interface LongPressTooltipProps {
 export function LongPressTooltip({ visible, x, y, tokenRadius }: LongPressTooltipProps) {
   if (!visible) return null
 
-  // Position tooltip centered above the token
-  const tooltipWidth = 240
-  const tooltipHeight = 56
-  const tooltipX = x - tooltipWidth / 2
-  const tooltipY = y - tokenRadius - tooltipHeight - 12 // 12px gap above token
+  // foreignObject is generous; inner div hugs content
+  const foWidth = 300
+  const foHeight = 50
+  const tooltipX = x - foWidth / 2
+  const tooltipY = y - tokenRadius - foHeight - 12 // 12px gap above token
 
   return (
     <g
       className="long-press-tooltip"
       style={{
         opacity: 0,
-        animation: 'longPressTooltipIn 150ms ease forwards',
+        animation: 'longPressTooltipIn 250ms ease-out forwards',
         pointerEvents: 'none'
       }}
     >
       <style>{`
         @keyframes longPressTooltipIn {
-          from { opacity: 0; transform: translateY(6px) scale(0.95); }
-          to { opacity: 1; transform: translateY(0) scale(1); }
+          from { opacity: 0; transform: scale(0.95); }
+          to { opacity: 1; transform: scale(1); }
         }
       `}</style>
 
       <foreignObject
         x={tooltipX}
         y={tooltipY}
-        width={tooltipWidth}
-        height={tooltipHeight}
+        width={foWidth}
+        height={foHeight}
         style={{ overflow: 'visible' }}
       >
-        <div
-          className="rounded-lg border bg-popover px-3 py-1.5 text-xs text-popover-foreground shadow-lg"
-          style={{
-            whiteSpace: 'normal',
-            lineHeight: 1.25,
-            fontWeight: 500,
-            letterSpacing: '0.2px',
-            textAlign: 'center'
-          }}
-        >
-          Release token, then tap to draw an arrow while the green thing is pulsing.
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <div
+            className="inline-flex items-stretch rounded-lg bg-gray-900 dark:bg-gray-800 shadow-xl overflow-hidden"
+          >
+            {/* Orange accent bar */}
+            <div className="w-1 shrink-0 bg-orange-500" />
+
+            <div className="px-2.5 py-2">
+              <span
+                className="text-xs font-medium text-gray-50 leading-snug"
+                style={{
+                  whiteSpace: 'normal',
+                  letterSpacing: '0.2px',
+                }}
+              >
+                Tap anywhere on the court to draw an arrow
+              </span>
+            </div>
+          </div>
         </div>
       </foreignObject>
     </g>
