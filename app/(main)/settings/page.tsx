@@ -11,13 +11,6 @@ import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import ThemePicker from '@/components/ThemePicker'
 import SuggestionBox from '@/components/SuggestionBox'
 
@@ -41,15 +34,6 @@ export default function SettingsPage() {
     // Court view
     awayTeamHidePercent,
     setAwayTeamHidePercent,
-    // Debug
-    debugHitboxes,
-    setDebugHitboxes,
-    showPrintFeature,
-    setShowPrintFeature,
-    sidebarProfileInFooter,
-    setSidebarProfileInFooter,
-    courtSetupSurfaceVariant,
-    setCourtSetupSurfaceVariant,
   } = useAppStore()
   const viewer = useQuery(api.users.viewer, isAuthenticated ? {} : 'skip')
   const [isSigningOut, setIsSigningOut] = useState(false)
@@ -198,59 +182,6 @@ export default function SettingsPage() {
             )}
           </CardContent>
         </Card>
-
-        {/* Developer Tools - dev only */}
-        {process.env.NODE_ENV === 'development' && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Developer</CardTitle>
-              <CardDescription>Tools for development and debugging</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <SettingsToggle
-                id="debug-hitboxes"
-                label="Show Touch Targets"
-                description="Display green overlay on interactive touch areas"
-                checked={debugHitboxes}
-                onCheckedChange={setDebugHitboxes}
-              />
-              <SettingsToggle
-                id="show-print"
-                label="Print Feature"
-                description="Enable the print rotations feature"
-                checked={showPrintFeature}
-                onCheckedChange={setShowPrintFeature}
-              />
-              <SettingsToggle
-                id="sidebar-profile-footer"
-                label="Sidebar Footer Profile"
-                description="Move the account control to the bottom of the desktop sidebar"
-                checked={sidebarProfileInFooter}
-                onCheckedChange={setSidebarProfileInFooter}
-              />
-              <div className="space-y-2">
-                <Label htmlFor="court-setup-surface" className="text-sm font-medium">
-                  Court Setup Surface
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  Choose which desktop court setup UI to evaluate.
-                </p>
-                <Select
-                  value={courtSetupSurfaceVariant}
-                  onValueChange={(value) => setCourtSetupSurfaceVariant(value as 'popover' | 'panel')}
-                >
-                  <SelectTrigger id="court-setup-surface" className="h-9 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="popover">Popover</SelectItem>
-                    <SelectItem value="panel">Right Panel</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         {/* Suggestion Box */}
         <SuggestionBox />

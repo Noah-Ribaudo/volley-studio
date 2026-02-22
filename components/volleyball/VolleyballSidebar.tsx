@@ -45,6 +45,11 @@ const navItems = [
 
 const developerNavItems = [
   {
+    title: 'Settings',
+    url: '/developer/settings',
+    icon: Settings,
+  },
+  {
     title: 'Open Minimal Mode',
     url: '/minimal',
     icon: RectangleEllipsis,
