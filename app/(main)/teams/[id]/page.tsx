@@ -653,6 +653,7 @@ export default function TeamEditPage({ params }: TeamPageProps) {
               onChange={(next) => { void handleAssignmentsChange(next) }}
               rotation={(lineups.find((lineup) => lineup.id === selectedLineupId)?.starting_rotation as Rotation | undefined) ?? 1}
               onRotationChange={(rotation) => { void handleStartingRotationChange(rotation) }}
+              showLibero
               isLoading={isSaving}
             />
           </CardContent>

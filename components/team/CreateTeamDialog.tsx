@@ -7,7 +7,6 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
   Dialog,
   DialogContent,
@@ -17,7 +16,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { PRESET_SYSTEMS, PRESET_SYSTEM_INFO, type PresetSystem } from '@/lib/presetTypes'
+import type { PresetSystem } from '@/lib/presetTypes'
 
 interface CreateTeamDialogProps {
   onCreateTeam: (name: string, password?: string, presetSystem?: PresetSystem) => Promise<void>
@@ -207,14 +206,7 @@ function CreateTeamForm({
   localOnly?: boolean
 }) {
   const [name, setName] = useState('')
-  const [presetSystem, setPresetSystem] = useState<PresetSystem | 'scratch'>('scratch')
   const [error, setError] = useState('')
-  const handlePresetOptionKeyDown = (nextValue: PresetSystem | 'scratch') => (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault()
-      setPresetSystem(nextValue)
-    }
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -226,10 +218,8 @@ function CreateTeamForm({
     }
 
     try {
-      const selectedPreset = presetSystem === 'scratch' ? undefined : presetSystem
-      await onCreateTeam(name.trim(), undefined, selectedPreset)
+      await onCreateTeam(name.trim(), undefined, undefined)
       setName('')
-      setPresetSystem('scratch')
       onClose()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create team')
@@ -261,52 +251,6 @@ function CreateTeamForm({
             placeholder="e.g., Varsity Squad"
             autoFocus
           />
-        </div>
-        <div className="grid gap-2">
-          <Label>Starting Rotations</Label>
-          <RadioGroup
-            value={presetSystem}
-            onValueChange={(value: string) => setPresetSystem(value as PresetSystem | 'scratch')}
-            className="grid gap-2"
-          >
-            <div
-              className="flex items-start space-x-3 rounded-md border p-3 cursor-pointer"
-              tabIndex={0}
-              onClick={() => setPresetSystem('scratch')}
-              onKeyDown={handlePresetOptionKeyDown('scratch')}
-              aria-label="Start Fresh"
-            >
-              <RadioGroupItem value="scratch" id="preset-scratch" className="mt-0.5" />
-              <div className="grid gap-0.5">
-                <Label htmlFor="preset-scratch" className="font-medium cursor-pointer">
-                  Start Fresh
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  Begin with default positions and customize from scratch
-                </p>
-              </div>
-            </div>
-            {PRESET_SYSTEMS.map((system) => (
-              <div
-                key={system}
-                className="flex items-start space-x-3 rounded-md border p-3 cursor-pointer"
-                tabIndex={0}
-                onClick={() => setPresetSystem(system)}
-                onKeyDown={handlePresetOptionKeyDown(system)}
-                aria-label={PRESET_SYSTEM_INFO[system].name}
-              >
-                <RadioGroupItem value={system} id={`preset-${system}`} className="mt-0.5" />
-                <div className="grid gap-0.5">
-                  <Label htmlFor={`preset-${system}`} className="font-medium cursor-pointer">
-                    {PRESET_SYSTEM_INFO[system].name}
-                  </Label>
-                  <p className="text-xs text-muted-foreground">
-                    {PRESET_SYSTEM_INFO[system].description}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </RadioGroup>
         </div>
         {error && (
           <p className="text-sm text-destructive">{error}</p>
