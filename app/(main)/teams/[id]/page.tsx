@@ -622,7 +622,7 @@ export default function TeamEditPage({ params }: TeamPageProps) {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Lineups</CardTitle>
-            <CardDescription>The active lineup is applied on the whiteboard.</CardDescription>
+            <CardDescription>The active lineup is shown on the whiteboard. Use "Set as Active" in lineup actions.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <LineupSelector

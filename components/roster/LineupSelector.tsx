@@ -236,25 +236,6 @@ export function LineupSelector({
         </DropdownMenu>
       </div>
 
-      {/* Active lineup indicator and position source selector */}
-      {selectedLineup && (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          {isActiveLineup ? (
-            <>
-              <HugeiconsIcon
-                icon={StarIcon}
-                className="h-3.5 w-3.5 text-amber-500 fill-amber-500"
-              />
-              <span>Active lineup (shown on whiteboard)</span>
-            </>
-          ) : (
-            <span className="text-muted-foreground/70">
-              Not the active lineup
-            </span>
-          )}
-        </div>
-      )}
-
       {/* Dialog for create/rename/duplicate */}
       <Dialog open={dialogMode !== null} onOpenChange={(open) => !open && handleCloseDialog()}>
         <DialogContent>
