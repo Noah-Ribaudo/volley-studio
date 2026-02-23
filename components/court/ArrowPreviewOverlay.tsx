@@ -41,6 +41,7 @@ interface ArrowPreviewOverlayProps {
     initialControlSvg?: { x: number; y: number }
   ) => void
   onPreviewHover: (role: Role, zone: 'token' | 'arrow', isEntering: boolean) => void
+  onboardingSpotlightRole?: Role | null
 }
 
 function ArrowPreviewOverlayImpl({
@@ -64,6 +65,7 @@ function ArrowPreviewOverlayImpl({
   onArrowChange,
   onArrowDragStart,
   onPreviewHover,
+  onboardingSpotlightRole = null,
 }: ArrowPreviewOverlayProps) {
   if (!onArrowChange) return null
 
@@ -117,25 +119,30 @@ function ArrowPreviewOverlayImpl({
             : homeSvgPos.y - previewCurveHeight,
         }
 
+        const spotlightTarget = onboardingSpotlightRole === role && isPreviewActive
         return (
-          <MovementArrow
+          <g
             key={`preview-${role}`}
-            start={previewStartSvg}
-            end={previewEndSvg}
-            control={previewControlSvg}
-            color={ROLE_INFO[role].color}
-            strokeWidth={3}
-            opacity={0.85}
-            isDraggable={true}
-            onDragStart={(e) => onArrowDragStart(role, e, previewEndSvg, previewControlSvg)}
-            onMouseEnter={() => !draggingRole && !draggingArrowRole && onPreviewHover(role, 'arrow', true)}
-            onMouseLeave={() => onPreviewHover(role, 'arrow', false)}
-            dragHitArea="both"
-            dragHandleRadius={32}
-            peekAnimated={true}
-            peekActive={isPreviewActive}
-            debugHitboxes={debugHitboxes}
-          />
+            {...(spotlightTarget ? { 'data-onboarding': 'arrow-preview-target' } : {})}
+          >
+            <MovementArrow
+              start={previewStartSvg}
+              end={previewEndSvg}
+              control={previewControlSvg}
+              color={ROLE_INFO[role].color}
+              strokeWidth={3}
+              opacity={0.85}
+              isDraggable={true}
+              onDragStart={(e) => onArrowDragStart(role, e, previewEndSvg, previewControlSvg)}
+              onMouseEnter={() => !draggingRole && !draggingArrowRole && onPreviewHover(role, 'arrow', true)}
+              onMouseLeave={() => onPreviewHover(role, 'arrow', false)}
+              dragHitArea="both"
+              dragHandleRadius={32}
+              peekAnimated={true}
+              peekActive={isPreviewActive}
+              debugHitboxes={debugHitboxes}
+            />
+          </g>
         )
       })}
     </g>

@@ -1021,11 +1021,17 @@ function HomePageContent() {
         ? 3
         : undefined
 
-  const onboardingTargetSelector = showFirstDragHint || showArrowDragHint
-    ? '[data-onboarding="player-token"]'
-    : showPhaseNavigationHint
-      ? '[data-onboarding="phase-selector"]'
-      : ''
+  const onboardingTargetSelectors = showFirstDragHint
+    ? ['[data-onboarding="player-token"]']
+    : showArrowDragHint
+      ? [
+          '[data-onboarding="arrow-end-target"]',
+          '[data-onboarding="arrow-preview-target"]',
+          '[data-onboarding="player-token"]',
+        ]
+      : showPhaseNavigationHint
+        ? ['[data-onboarding="phase-selector"]']
+        : []
 
   useEffect(() => {
     if (previousPhaseRef.current === currentPhase) return
@@ -1379,18 +1385,21 @@ function HomePageContent() {
                 onTagsChange={isEditingAllowed ? (role, tags) => {
                   setTokenTags(currentRotation, currentPhase, role, tags)
                 } : undefined}
-                onPlayerAssign={isEditingAllowed && currentTeam ? (role, playerId) => {
-                  assignPlayerToRole(role, playerId)
-                } : undefined}
-	              />
+	                onPlayerAssign={isEditingAllowed && currentTeam ? (role, playerId) => {
+	                  assignPlayerToRole(role, playerId)
+	                } : undefined}
+                  suppressHoverHintTooltip={showFirstDragHint || showArrowDragHint}
+                  onboardingSpotlightRole={showArrowDragHint ? 'S' : null}
+                  showOnboardingArrowEndSpotlight={showArrowDragHint}
+		              />
 
-          <SpotlightOverlay
-            show={canShowOnboardingHint && Boolean(onboardingHintMessage)}
-            message={onboardingHintMessage || ''}
-            step={onboardingStep}
-            totalSteps={onboardingStep != null ? GUIDED_TOTAL : undefined}
-            targetSelector={onboardingTargetSelector}
-          />
+	          <SpotlightOverlay
+	            show={canShowOnboardingHint && Boolean(onboardingHintMessage)}
+	            message={onboardingHintMessage || ''}
+	            step={onboardingStep}
+	            totalSteps={onboardingStep != null ? GUIDED_TOTAL : undefined}
+	            targetSelectors={onboardingTargetSelectors}
+	          />
           </div>
         </div>
       </div>
