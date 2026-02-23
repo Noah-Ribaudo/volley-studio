@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Lineup, PositionSource, POSITION_SOURCE_INFO } from '@/lib/types'
+import { Lineup } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -34,7 +34,6 @@ import {
   Copy01Icon,
   PencilEdit01Icon,
   Delete02Icon,
-  LayoutGridIcon,
 } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 
@@ -48,7 +47,6 @@ interface LineupSelectorProps {
   onDuplicateLineup: (lineupId: string, newName: string) => void
   onDeleteLineup: (lineupId: string) => void
   onSetActiveLineup: (lineupId: string) => void
-  onPositionSourceChange?: (lineupId: string, source: PositionSource) => void
   disabled?: boolean
 }
 
@@ -64,7 +62,6 @@ export function LineupSelector({
   onDuplicateLineup,
   onDeleteLineup,
   onSetActiveLineup,
-  onPositionSourceChange,
   disabled = false,
 }: LineupSelectorProps) {
   const [dialogMode, setDialogMode] = useState<DialogMode>(null)
@@ -241,74 +238,19 @@ export function LineupSelector({
 
       {/* Active lineup indicator and position source selector */}
       {selectedLineup && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            {isActiveLineup ? (
-              <>
-                <HugeiconsIcon
-                  icon={StarIcon}
-                  className="h-3.5 w-3.5 text-amber-500 fill-amber-500"
-                />
-                <span>Active lineup (shown on whiteboard)</span>
-              </>
-            ) : (
-              <span className="text-muted-foreground/70">
-                Not the active lineup
-              </span>
-            )}
-          </div>
-
-          {/* Position source selector */}
-          {onPositionSourceChange && (
-            <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          {isActiveLineup ? (
+            <>
               <HugeiconsIcon
-                icon={LayoutGridIcon}
-                className="h-4 w-4 text-muted-foreground flex-shrink-0"
+                icon={StarIcon}
+                className="h-3.5 w-3.5 text-amber-500 fill-amber-500"
               />
-              <Select
-                value={selectedLineup.position_source || 'custom'}
-                onValueChange={(v) => onPositionSourceChange(selectedLineup.id, v as PositionSource)}
-                disabled={disabled}
-              >
-                <SelectTrigger className="h-8 text-xs flex-1">
-                  <SelectValue placeholder="Position source" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="custom">
-                    <div className="flex flex-col items-start">
-                      <span className="font-medium">{POSITION_SOURCE_INFO['custom'].name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {POSITION_SOURCE_INFO['custom'].description}
-                      </span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="full-5-1">
-                    <div className="flex flex-col items-start">
-                      <span className="font-medium">{POSITION_SOURCE_INFO['full-5-1'].name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {POSITION_SOURCE_INFO['full-5-1'].description}
-                      </span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="5-1-libero">
-                    <div className="flex flex-col items-start">
-                      <span className="font-medium">{POSITION_SOURCE_INFO['5-1-libero'].name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {POSITION_SOURCE_INFO['5-1-libero'].description}
-                      </span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="6-2">
-                    <div className="flex flex-col items-start">
-                      <span className="font-medium">{POSITION_SOURCE_INFO['6-2'].name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {POSITION_SOURCE_INFO['6-2'].description}
-                      </span>
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+              <span>Active lineup (shown on whiteboard)</span>
+            </>
+          ) : (
+            <span className="text-muted-foreground/70">
+              Not the active lineup
+            </span>
           )}
         </div>
       )}

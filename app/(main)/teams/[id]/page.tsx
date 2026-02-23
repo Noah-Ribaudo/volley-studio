@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { toast } from 'sonner'
 import { LineupSelector } from '@/components/roster/LineupSelector'
 import { PositionAssigner } from '@/components/roster/PositionAssigner'
-import type { Team, Lineup, PositionAssignments, PositionSource, Rotation } from '@/lib/types'
+import type { Team, Lineup, PositionAssignments, Rotation } from '@/lib/types'
 import { useTeamStore } from '@/store/useTeamStore'
 import { generateSlug } from '@/lib/teamUtils'
 import { getLocalTeamById, removeLocalTeam, upsertLocalTeam } from '@/lib/localTeams'
@@ -522,15 +522,6 @@ export default function TeamEditPage({ params }: TeamPageProps) {
     await persistLineups(nextLineups, activeLineupId)
   }
 
-  const handlePositionSourceChange = async (lineupId: string, source: PositionSource) => {
-    const nextLineups = lineups.map((lineup) =>
-      lineup.id === lineupId
-        ? { ...lineup, position_source: source }
-        : lineup
-    )
-    await persistLineups(nextLineups, activeLineupId)
-  }
-
   const handleStartingRotationChange = async (rotation: Rotation) => {
     if (!selectedLineupId) return
     const nextLineups = lineups.map((lineup) =>
@@ -644,7 +635,6 @@ export default function TeamEditPage({ params }: TeamPageProps) {
               onDuplicateLineup={(lineupId, newName) => { void handleDuplicateLineup(lineupId, newName) }}
               onDeleteLineup={(lineupId) => { void handleDeleteLineup(lineupId) }}
               onSetActiveLineup={(lineupId) => { void handleSetActiveLineup(lineupId) }}
-              onPositionSourceChange={(lineupId, source) => { void handlePositionSourceChange(lineupId, source) }}
               disabled={isSaving}
             />
             <PositionAssigner
