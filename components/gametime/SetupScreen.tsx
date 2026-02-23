@@ -4,10 +4,10 @@ import { useEffect, useRef, useState } from 'react'
 import { useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { useGameTimeStore } from '@/store/useGameTimeStore'
-import { useAppStore } from '@/store/useAppStore'
+import { useTeamStore } from '@/store/useTeamStore'
 import { Team, Role, RosterPlayer, Rotation, ROLE_INFO } from '@/lib/types'
 import { getRoleZone, isInFrontRow } from '@/lib/rotations'
-import { ChevronLeft, ChevronRight, Zap, Check, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ChevronDown, Zap, Check, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
@@ -34,8 +34,9 @@ export function SetupScreen() {
   const [quickStartName, setQuickStartName] = useState('')
   const [selectedRole, setSelectedRole] = useState<Role | 'L' | null>(null)
   const [localTeams, setLocalTeams] = useState<Team[]>([])
+  const [expandedTeamId, setExpandedTeamId] = useState<string | null>(null)
   const isMobile = useIsMobile()
-  const currentTeam = useAppStore((state) => state.currentTeam)
+  const currentTeam = useTeamStore((state) => state.currentTeam)
 
   // Fetch teams from Convex
   const convexTeams = useQuery(api.teams.list)
@@ -103,9 +104,18 @@ export function SetupScreen() {
   } = useGameTimeStore()
 
   // Handle team selection
-  const handleSelectTeam = (t: Team) => {
-    selectTeam(t)
+  const handleSelectTeam = (t: Team, lineupId?: string) => {
+    selectTeam(t, lineupId)
     setStep('lineup')
+  }
+
+  // Handle team card tap — expand if multiple lineups, otherwise go straight to court
+  const handleTeamTap = (t: Team) => {
+    if (t.lineups.length >= 2) {
+      setExpandedTeamId(expandedTeamId === t.id ? null : t.id)
+    } else {
+      handleSelectTeam(t)
+    }
   }
 
   const handleQuickStart = () => {
@@ -315,19 +325,13 @@ export function SetupScreen() {
                 </div>
                 <div className="space-y-2">
                   {localTeams.map((t) => (
-                    <button
+                    <TeamCard
                       key={t.id}
-                      onClick={() => handleSelectTeam(t)}
-                      className="w-full bg-card hover:bg-accent active:bg-accent/80 border border-border rounded-lg px-4 py-4 text-left transition-colors flex items-center justify-between"
-                    >
-                      <div>
-                        <div className="font-medium">{t.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {t.roster.length} players
-                        </div>
-                      </div>
-                      <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                    </button>
+                      team={t}
+                      isExpanded={expandedTeamId === t.id}
+                      onTap={() => handleTeamTap(t)}
+                      onSelectLineup={(lineupId) => handleSelectTeam(t, lineupId)}
+                    />
                   ))}
                 </div>
               </div>
@@ -347,19 +351,13 @@ export function SetupScreen() {
               ) : (
                 <div className="space-y-2">
                   {cloudTeams.map((t) => (
-                    <button
+                    <TeamCard
                       key={t.id}
-                      onClick={() => handleSelectTeam(t)}
-                      className="w-full bg-card hover:bg-accent active:bg-accent/80 border border-border rounded-lg px-4 py-4 text-left transition-colors flex items-center justify-between"
-                    >
-                      <div>
-                        <div className="font-medium">{t.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {t.roster.length} players
-                        </div>
-                      </div>
-                      <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                    </button>
+                      team={t}
+                      isExpanded={expandedTeamId === t.id}
+                      onTap={() => handleTeamTap(t)}
+                      onSelectLineup={(lineupId) => handleSelectTeam(t, lineupId)}
+                    />
                   ))}
                 </div>
               )}
@@ -610,6 +608,65 @@ export function SetupScreen() {
 
   // Lineup step is the final step — no more settings step
   return null
+}
+
+// Team card with optional lineup expansion
+function TeamCard({
+  team,
+  isExpanded,
+  onTap,
+  onSelectLineup,
+}: {
+  team: Team
+  isExpanded: boolean
+  onTap: () => void
+  onSelectLineup: (lineupId: string) => void
+}) {
+  const hasMultipleLineups = team.lineups.length >= 2
+
+  return (
+    <div className={cn(
+      'bg-card border border-border rounded-lg transition-colors overflow-hidden',
+      isExpanded && 'ring-1 ring-primary/30'
+    )}>
+      <button
+        onClick={onTap}
+        className="w-full px-4 py-4 text-left transition-colors hover:bg-accent active:bg-accent/80 flex items-center justify-between"
+      >
+        <div>
+          <div className="font-medium">{team.name}</div>
+          <div className="text-sm text-muted-foreground">
+            {team.roster.length} players{hasMultipleLineups ? ` · ${team.lineups.length} lineups` : ''}
+          </div>
+        </div>
+        {hasMultipleLineups ? (
+          <ChevronDown className={cn(
+            'w-5 h-5 text-muted-foreground transition-transform',
+            isExpanded && 'rotate-180'
+          )} />
+        ) : (
+          <ChevronRight className="w-5 h-5 text-muted-foreground" />
+        )}
+      </button>
+
+      {isExpanded && hasMultipleLineups && (
+        <div className="border-t border-border">
+          {team.lineups.map((lineup) => {
+            return (
+              <button
+                key={lineup.id}
+                onClick={() => onSelectLineup(lineup.id)}
+                className="w-full px-4 py-3 pl-8 text-left transition-colors hover:bg-accent active:bg-accent/80 flex items-center justify-between border-b border-border last:border-b-0"
+              >
+                <span className="text-sm truncate">{lineup.name}</span>
+                <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
 }
 
 // Quick start player entry

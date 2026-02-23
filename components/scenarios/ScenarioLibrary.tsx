@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { allScenarios, searchScenarios } from '@/lib/scenarios'
 import type { Scenario, ScenarioCategory, ScenarioDifficulty } from '@/lib/scenarios'
-import { useAppStore } from '@/store/useAppStore'
+import { useNavigationStore } from '@/store/useNavigationStore'
+import { useDisplayPrefsStore } from '@/store/useDisplayPrefsStore'
 import { Cancel01Icon, Search01Icon, BookOpen01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import type { Phase } from '@/lib/types'
@@ -37,7 +38,10 @@ export function ScenarioLibrary({ onClose }: ScenarioLibraryProps) {
   const [selectedCategory, setSelectedCategory] = useState<ScenarioCategory | 'all'>('all')
   const [selectedScenario, setSelectedScenario] = useState<Scenario | null>(null)
 
-  const { setRotation, setPhase, setHighlightedRole, setIsReceivingContext } = useAppStore()
+  const setRotation = useNavigationStore((state) => state.setRotation)
+  const setPhase = useNavigationStore((state) => state.setPhase)
+  const setHighlightedRole = useNavigationStore((state) => state.setHighlightedRole)
+  const setIsReceivingContext = useDisplayPrefsStore((state) => state.setIsReceivingContext)
 
   // Filter scenarios
   const filteredScenarios = searchQuery

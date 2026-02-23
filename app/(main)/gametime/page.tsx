@@ -11,7 +11,7 @@ export default function GameTimePage() {
   if (phase === 'setup') {
     return (
       <>
-        <GameTimeOnboardingModal />
+        {process.env.NODE_ENV === 'development' && <GameTimeOnboardingModal />}
         <SetupScreen />
       </>
     )

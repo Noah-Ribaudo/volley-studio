@@ -170,6 +170,58 @@ export const getBySlugOrId = query({
   },
 });
 
+// Get a team by slug or ID together with its layouts in one round trip
+export const getTeamWithLayouts = query({
+  args: { identifier: v.string() },
+  handler: async (ctx, args) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) {
+      return null;
+    }
+
+    let team: TeamDoc | null = null;
+    try {
+      team = await ctx.db.get(args.identifier as Id<"teams">);
+    } catch {
+      team = null;
+    }
+
+    if (!team) {
+      team = await ctx.db
+        .query("teams")
+        .withIndex("by_slug", (q) => q.eq("slug", args.identifier))
+        .first();
+    }
+
+    if (!team || !canAccessTeam(team, userId)) return null;
+
+    // Fetch layouts for this team
+    const layouts = await ctx.db
+      .query("customLayouts")
+      .withIndex("by_team", (q) => q.eq("teamId", team._id))
+      .collect();
+
+    // Deduplicate layouts (keep most recent per team+rotation+phase)
+    let dedupedLayouts = layouts;
+    if (layouts.length > 1) {
+      const deduped = new Map<string, (typeof layouts)[number]>();
+      for (const layout of layouts) {
+        const key = `${layout.teamId}:${layout.rotation}:${layout.phase}`;
+        const existing = deduped.get(key);
+        if (!existing || layout._creationTime > existing._creationTime) {
+          deduped.set(key, layout);
+        }
+      }
+      dedupedLayouts = Array.from(deduped.values());
+    }
+
+    return {
+      team: sanitizeTeam(team),
+      layouts: dedupedLayouts,
+    };
+  },
+});
+
 // Search teams by name (sanitized - no password)
 export const search = query({
   args: { query: v.string() },

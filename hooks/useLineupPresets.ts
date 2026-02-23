@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { useAppStore } from '@/store/useAppStore'
+import { useTeamStore } from '@/store/useTeamStore'
 import {
   loadPresetsForSystem,
   presetsToLayoutFormat,
@@ -23,7 +23,7 @@ interface PresetCache {
  * - Provides read-only position data for preset sources
  */
 export function useLineupPresets() {
-  const { currentTeam } = useAppStore()
+  const currentTeam = useTeamStore((state) => state.currentTeam)
 
   const [presetCache, setPresetCache] = useState<PresetCache>({})
   const [loadingSystem, setLoadingSystem] = useState<PresetSystem | null>(null)

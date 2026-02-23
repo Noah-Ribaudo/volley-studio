@@ -1,12 +1,16 @@
 'use client'
 
 import { useEffect, useRef, useCallback, useSyncExternalStore } from 'react'
-import { useMutation } from 'convex/react'
+import { useConvexAuth, useMutation } from 'convex/react'
 import { api } from '@/convex/_generated/api'
-import { useAppStore, getCurrentPositions } from '@/store/useAppStore'
+import { useWhiteboardStore } from '@/store/useWhiteboardStore'
+import { useTeamStore } from '@/store/useTeamStore'
+import { useNavigationStore } from '@/store/useNavigationStore'
+import { useDisplayPrefsStore } from '@/store/useDisplayPrefsStore'
 import { createRotationPhaseKey } from '@/lib/rotations'
 import { LayoutExtendedData } from '@/lib/types'
 import type { Id } from '@/convex/_generated/dataModel'
+import { getCurrentPositions } from '@/lib/whiteboardHelpers'
 
 // Debounce delay in milliseconds
 const DEBOUNCE_MS = 750
@@ -83,22 +87,21 @@ function cloneForSave<T>(value: T): T {
  * during rapid edits like dragging players around.
  */
 export function useWhiteboardSync() {
-  const {
-    currentTeam,
-    currentRotation,
-    currentPhase,
-    customLayouts,
-    isReceivingContext,
-    baseOrder,
-    showLibero,
-    localPositions,
-    localArrows,
-    arrowCurves,
-    localStatusFlags,
-    localTagFlags,
-    attackBallPositions,
-  } = useAppStore()
+  const currentTeam = useTeamStore((state) => state.currentTeam)
+  const customLayouts = useTeamStore((state) => state.customLayouts)
+  const currentRotation = useNavigationStore((state) => state.currentRotation)
+  const currentPhase = useNavigationStore((state) => state.currentPhase)
+  const baseOrder = useNavigationStore((state) => state.baseOrder)
+  const isReceivingContext = useDisplayPrefsStore((state) => state.isReceivingContext)
+  const showLibero = useDisplayPrefsStore((state) => state.showLibero)
+  const localPositions = useWhiteboardStore((state) => state.localPositions)
+  const localArrows = useWhiteboardStore((state) => state.localArrows)
+  const arrowCurves = useWhiteboardStore((state) => state.arrowCurves)
+  const localStatusFlags = useWhiteboardStore((state) => state.localStatusFlags)
+  const localTagFlags = useWhiteboardStore((state) => state.localTagFlags)
+  const attackBallPositions = useWhiteboardStore((state) => state.attackBallPositions)
 
+  const { isAuthenticated } = useConvexAuth()
   const saveLayout = useMutation(api.layouts.save)
 
   // Track previous values to detect changes
@@ -202,8 +205,8 @@ export function useWhiteboardSync() {
 
   // Handle state changes and queue saves
   useEffect(() => {
-    // Skip if no team selected or team doesn't have a Convex ID
-    if (!currentTeam?._id) {
+    // Skip if no team selected, team doesn't have a Convex ID, or user isn't authenticated
+    if (!currentTeam?._id || !isAuthenticated) {
       return
     }
 
@@ -376,6 +379,7 @@ export function useWhiteboardSync() {
     localTagFlags,
     attackBallPositions,
     executeSave,
+    isAuthenticated,
   ])
 
   // Flush pending saves before page unload
@@ -471,7 +475,9 @@ export function useFlushWhiteboardSync() {
  * This is kept for API compatibility but simplified
  */
 export function useConflictResolution() {
-  const { layoutConflict, resolveConflictKeepMine, resolveConflictLoadTheirs } = useAppStore()
+  const layoutConflict = useWhiteboardStore((state) => state.layoutConflict)
+  const resolveConflictKeepMine = useWhiteboardStore((state) => state.resolveConflictKeepMine)
+  const resolveConflictLoadTheirs = useWhiteboardStore((state) => state.resolveConflictLoadTheirs)
 
   // In Convex, the last write wins and updates are reactive
   // So conflict resolution is simpler - we just clear the conflict state

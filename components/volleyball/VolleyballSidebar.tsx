@@ -15,10 +15,10 @@ import {
   SidebarMenuItem,
   SidebarSeparator,
 } from '@/components/ui/sidebar'
-import { Layout, Users, Timer, Settings, SlidersHorizontal, Palette, Paintbrush, RectangleEllipsis } from 'lucide-react'
+import { Layout, Users, Timer, Settings, SlidersHorizontal, Palette, Paintbrush, RectangleEllipsis, RotateCcw, Gauge } from 'lucide-react'
 import VolleyBall from '@/components/logo/VolleyBall'
 import { SidebarUserMenu } from '@/components/auth'
-import { useAppStore } from '@/store/useAppStore'
+import { useUIPrefsStore } from '@/store/useUIPrefsStore'
 
 const navItems = [
   {
@@ -45,6 +45,11 @@ const navItems = [
 
 const developerNavItems = [
   {
+    title: 'Dev Toggles',
+    url: '/developer/settings',
+    icon: Settings,
+  },
+  {
     title: 'Open Minimal Mode',
     url: '/minimal',
     icon: RectangleEllipsis,
@@ -64,9 +69,11 @@ const developerNavItems = [
 export function VolleyballSidebar() {
   const pathname = usePathname()
   const router = useRouter()
-  const sidebarProfileInFooter = useAppStore((state) => state.sidebarProfileInFooter)
-  const showMotionDebugPanel = useAppStore((state) => state.showMotionDebugPanel)
-  const setShowMotionDebugPanel = useAppStore((state) => state.setShowMotionDebugPanel)
+  const sidebarProfileInFooter = useUIPrefsStore((state) => state.sidebarProfileInFooter)
+  const showMotionDebugPanel = useUIPrefsStore((state) => state.showMotionDebugPanel)
+  const setShowMotionDebugPanel = useUIPrefsStore((state) => state.setShowMotionDebugPanel)
+  const showWhiteboardDialKit = useUIPrefsStore((state) => state.showWhiteboardDialKit)
+  const setShowWhiteboardDialKit = useUIPrefsStore((state) => state.setShowWhiteboardDialKit)
   const showMotionDebugToggle = process.env.NODE_ENV === 'development'
   const isOnWhiteboard = pathname === '/'
 
@@ -77,6 +84,20 @@ export function VolleyballSidebar() {
     }
     setShowMotionDebugPanel(true)
     router.push('/')
+  }
+
+  const handleDialKitClick = () => {
+    if (isOnWhiteboard) {
+      setShowWhiteboardDialKit(!showWhiteboardDialKit)
+      return
+    }
+    setShowWhiteboardDialKit(true)
+    router.push('/')
+  }
+
+  const handleResetTooltips = () => {
+    localStorage.removeItem('volleyball-hints')
+    window.location.href = '/'
   }
 
   return (
@@ -138,6 +159,27 @@ export function VolleyballSidebar() {
                     >
                       <SlidersHorizontal />
                       <span>Motion Debug</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      type="button"
+                      isActive={showWhiteboardDialKit && isOnWhiteboard}
+                      tooltip="Whiteboard DialKit"
+                      onClick={handleDialKitClick}
+                    >
+                      <Gauge />
+                      <span>Whiteboard DialKit</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      type="button"
+                      tooltip="Reset Tooltips"
+                      onClick={handleResetTooltips}
+                    >
+                      <RotateCcw />
+                      <span>Reset Tooltips</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   {developerNavItems.map((item) => (

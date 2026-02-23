@@ -58,7 +58,7 @@ interface GameTimeState {
   undoStack: GameSnapshot[]
 
   // Actions - Setup
-  selectTeam: (team: Team) => void
+  selectTeam: (team: Team, lineupId?: string) => void
   quickStart: (teamName: string) => void
   assignPlayer: (role: Role, player: RosterPlayer) => void
   assignLibero: (player: RosterPlayer | null) => void
@@ -147,8 +147,8 @@ export const useGameTimeStore = create<GameTimeState>()(
       undoStack: [],
 
       // Setup actions
-      selectTeam: (team: Team) => {
-        const activeLineup = team.lineups.find((lineup) => lineup.id === team.active_lineup_id) || team.lineups[0]
+      selectTeam: (team: Team, lineupId?: string) => {
+        const activeLineup = (lineupId ? team.lineups.find((l) => l.id === lineupId) : undefined) || team.lineups.find((lineup) => lineup.id === team.active_lineup_id) || team.lineups[0]
         const sourceAssignments = activeLineup?.position_assignments || team.position_assignments || {}
 
         const seededLineup: Lineup = {}

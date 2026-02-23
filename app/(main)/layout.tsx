@@ -1,26 +1,65 @@
 'use client'
 
-import { useCallback, useState } from 'react'
-import { usePathname } from 'next/navigation'
+import { useCallback, useEffect, useState } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import { MobileBottomNav } from '@/components/volleyball/MobileBottomNav'
 import { DesktopHeaderNav } from '@/components/volleyball/DesktopHeaderNav'
 import { VolleyballSidebar } from '@/components/volleyball/VolleyballSidebar'
 import { MobileContextBar } from '@/components/controls'
-import { useAppStore, getCurrentPositions } from '@/store/useAppStore'
+import { useNavigationStore } from '@/store/useNavigationStore'
+import { useUIPrefsStore } from '@/store/useUIPrefsStore'
+import { useTeamStore } from '@/store/useTeamStore'
+import { useWhiteboardStore } from '@/store/useWhiteboardStore'
 import { useGameTimeStore } from '@/store/useGameTimeStore'
 import { Button } from '@/components/ui/button'
 import { PrinterIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { PrintDialog } from '@/components/print'
+import { useConvexAuth, useQuery } from 'convex/react'
+import { api } from '@/convex/_generated/api'
 import { getActiveAssignments } from '@/lib/lineups'
+import { recordBreadcrumb, getRouteLabel } from '@/lib/session-breadcrumbs'
 import type { Rotation, Phase, PositionCoordinates, RallyPhase } from '@/lib/types'
 import { getVisibleOrderedRallyPhases } from '@/lib/rallyPhaseOrder'
+import { getCurrentPositions } from '@/lib/whiteboardHelpers'
 import VolleyBall from '@/components/logo/VolleyBall'
 import { UserMenu } from '@/components/auth'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import Link from 'next/link'
 
+const PrintDialog = dynamic(
+  () => import('@/components/print').then((m) => ({ default: m.PrintDialog })),
+  { ssr: false }
+)
+
 const OPEN_COURT_SETUP_EVENT = 'open-court-setup'
+const MAIN_NAV_PREFETCH_KEY = 'volley-main-nav-prefetched-v1'
+const MAIN_NAV_ROUTES = ['/', '/teams', '/gametime', '/settings'] as const
+
+function MainPageWarmup({ pathname }: { pathname: string }) {
+  const router = useRouter()
+  const { isAuthenticated } = useConvexAuth()
+
+  // Warm background data used by the 4 primary tabs.
+  useQuery(api.teams.search, { query: '' })
+  useQuery(api.teams.list, {})
+  useQuery(api.users.viewer, isAuthenticated ? {} : 'skip')
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (window.sessionStorage.getItem(MAIN_NAV_PREFETCH_KEY) === 'true') return
+
+    for (const route of MAIN_NAV_ROUTES) {
+      if (route !== pathname) {
+        router.prefetch(route)
+      }
+    }
+
+    window.sessionStorage.setItem(MAIN_NAV_PREFETCH_KEY, 'true')
+  }, [pathname, router])
+
+  return null
+}
 
 export default function VolleyballLayout({
   children,
@@ -29,20 +68,32 @@ export default function VolleyballLayout({
 }) {
   const pathname = usePathname()
   const [printDialogOpen, setPrintDialogOpen] = useState(false)
-  const currentRotation = useAppStore((state) => state.currentRotation)
-  const currentPhase = useAppStore((state) => state.currentPhase)
-  const visiblePhases = useAppStore((state) => state.visiblePhases)
-  const setRotation = useAppStore((state) => state.setRotation)
-  const setPhase = useAppStore((state) => state.setPhase)
-  const nextPhase = useAppStore((state) => state.nextPhase)
-  const prevPhase = useAppStore((state) => state.prevPhase)
-  const showPrintFeature = useAppStore((state) => state.showPrintFeature)
+  const currentRotation = useNavigationStore((state) => state.currentRotation)
+  const currentPhase = useNavigationStore((state) => state.currentPhase)
+  const visiblePhases = useNavigationStore((state) => state.visiblePhases)
+  const setRotation = useNavigationStore((state) => state.setRotation)
+  const setPhase = useNavigationStore((state) => state.setPhase)
+  const nextPhase = useNavigationStore((state) => state.nextPhase)
+  const prevPhase = useNavigationStore((state) => state.prevPhase)
+  const showPrintFeature = useUIPrefsStore((state) => state.showPrintFeature)
 
   // Data for print dialog
-  const currentTeam = useAppStore((state) => state.currentTeam)
-  const baseOrder = useAppStore((state) => state.baseOrder)
-  const localPositions = useAppStore((state) => state.localPositions)
-  const customLayouts = useAppStore((state) => state.customLayouts)
+  const currentTeam = useTeamStore((state) => state.currentTeam)
+  const baseOrder = useNavigationStore((state) => state.baseOrder)
+  const localPositions = useWhiteboardStore((state) => state.localPositions)
+  const customLayouts = useTeamStore((state) => state.customLayouts)
+
+  // Record breadcrumbs for contextual 404 / error page
+  useEffect(() => {
+    try {
+      if (!pathname) return
+      let label = getRouteLabel(pathname)
+      if (pathname.startsWith('/teams/') && currentTeam?.name) {
+        label = `Team – ${currentTeam.name}`
+      }
+      recordBreadcrumb(pathname, label)
+    } catch { /* never break the layout */ }
+  }, [pathname, currentTeam?.name])
 
   // Function to get positions for any rotation/phase (used by print dialog)
   const getPositionsForRotation = useCallback((rotation: Rotation, phase: Phase): PositionCoordinates => {
@@ -83,7 +134,8 @@ export default function VolleyballLayout({
 
   return (
     <div className="h-dvh relative overflow-hidden bg-background">
-      <SidebarProvider defaultOpen className="h-dvh w-full">
+      <MainPageWarmup pathname={pathname ?? '/'} />
+      <SidebarProvider defaultOpen={false} className="h-dvh w-full">
         <VolleyballSidebar />
         <SidebarInset className="relative h-dvh flex flex-col bg-gradient-to-b from-background to-muted/30">
         {/* Desktop header nav */}

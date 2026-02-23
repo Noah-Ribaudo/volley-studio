@@ -11,8 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { toast } from 'sonner'
 import { LineupSelector } from '@/components/roster/LineupSelector'
 import { PositionAssigner } from '@/components/roster/PositionAssigner'
-import type { Team, Lineup, PositionAssignments, PositionSource, Rotation } from '@/lib/types'
-import { useAppStore } from '@/store/useAppStore'
+import type { Team, Lineup, PositionAssignments, Rotation } from '@/lib/types'
+import { useTeamStore } from '@/store/useTeamStore'
 import { generateSlug } from '@/lib/teamUtils'
 import { getLocalTeamById, removeLocalTeam, upsertLocalTeam } from '@/lib/localTeams'
 import { createLineup, duplicateLineup, ensureAtLeastOneLineup } from '@/lib/lineups'
@@ -25,8 +25,8 @@ export default function TeamEditPage({ params }: TeamPageProps) {
   const { id } = use(params)
   const router = useRouter()
   const isLocalTeam = id.startsWith('local-')
-  const setCurrentTeam = useAppStore((state) => state.setCurrentTeam)
-  const currentTeam = useAppStore((state) => state.currentTeam)
+  const setCurrentTeam = useTeamStore((state) => state.setCurrentTeam)
+  const currentTeam = useTeamStore((state) => state.currentTeam)
 
   // Fetch team data by ID
   const team = useQuery(api.teams.getBySlugOrId, isLocalTeam ? 'skip' : { identifier: id })
@@ -507,25 +507,12 @@ export default function TeamEditPage({ params }: TeamPageProps) {
     await persistLineups(filtered, nextActive, 'Lineup deleted')
   }
 
-  const handleSetActiveLineup = async (lineupId: string) => {
-    await persistLineups(lineups, lineupId, 'Active lineup updated')
-  }
-
   const handleAssignmentsChange = async (nextAssignments: PositionAssignments) => {
     if (!selectedLineupId) return
     setLineupAssignments(nextAssignments)
     const nextLineups = lineups.map((lineup) =>
       lineup.id === selectedLineupId
         ? { ...lineup, position_assignments: nextAssignments }
-        : lineup
-    )
-    await persistLineups(nextLineups, activeLineupId)
-  }
-
-  const handlePositionSourceChange = async (lineupId: string, source: PositionSource) => {
-    const nextLineups = lineups.map((lineup) =>
-      lineup.id === lineupId
-        ? { ...lineup, position_source: source }
         : lineup
     )
     await persistLineups(nextLineups, activeLineupId)
@@ -631,20 +618,17 @@ export default function TeamEditPage({ params }: TeamPageProps) {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Lineups</CardTitle>
-            <CardDescription>The active lineup is applied on the whiteboard.</CardDescription>
+            <CardDescription>Select a lineup to edit assignments and starting rotation.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <LineupSelector
               lineups={lineups}
               selectedLineupId={selectedLineupId}
-              activeLineupId={activeLineupId}
               onSelectLineup={handleSelectLineup}
               onCreateLineup={(name) => { void handleCreateLineup(name) }}
               onRenameLineup={(lineupId, newName) => { void handleRenameLineup(lineupId, newName) }}
               onDuplicateLineup={(lineupId, newName) => { void handleDuplicateLineup(lineupId, newName) }}
               onDeleteLineup={(lineupId) => { void handleDeleteLineup(lineupId) }}
-              onSetActiveLineup={(lineupId) => { void handleSetActiveLineup(lineupId) }}
-              onPositionSourceChange={(lineupId, source) => { void handlePositionSourceChange(lineupId, source) }}
               disabled={isSaving}
             />
             <PositionAssigner
@@ -653,6 +637,7 @@ export default function TeamEditPage({ params }: TeamPageProps) {
               onChange={(next) => { void handleAssignmentsChange(next) }}
               rotation={(lineups.find((lineup) => lineup.id === selectedLineupId)?.starting_rotation as Rotation | undefined) ?? 1}
               onRotationChange={(rotation) => { void handleStartingRotationChange(rotation) }}
+              showLibero
               isLoading={isSaving}
             />
           </CardContent>

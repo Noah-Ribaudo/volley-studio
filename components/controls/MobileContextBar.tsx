@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 import { getPhaseInfo, getCompactPhaseIcon } from '@/lib/phaseIcons'
 import { ArrowLeft01Icon, ArrowRight01Icon, ArrowDown01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { useAppStore } from '@/store/useAppStore'
+import { useNavigationStore } from '@/store/useNavigationStore'
 import { getVisibleOrderedRallyPhases } from '@/lib/rallyPhaseOrder'
 import {
   DropdownMenu,
@@ -40,10 +40,10 @@ export function MobileContextBar({
   onPrev,
   visiblePhases,
 }: MobileContextBarProps) {
-  const isPreviewingMovement = useAppStore((state) => state.isPreviewingMovement)
-  const setPreviewingMovement = useAppStore((state) => state.setPreviewingMovement)
-  const triggerPlayAnimation = useAppStore((state) => state.triggerPlayAnimation)
-  const phaseOrder = useAppStore((state) => state.phaseOrder)
+  const isPreviewingMovement = useNavigationStore((state) => state.isPreviewingMovement)
+  const setPreviewingMovement = useNavigationStore((state) => state.setPreviewingMovement)
+  const triggerPlayAnimation = useNavigationStore((state) => state.triggerPlayAnimation)
+  const phaseOrder = useNavigationStore((state) => state.phaseOrder)
 
   const orderedVisiblePhases = getVisibleOrderedRallyPhases(phaseOrder, visiblePhases)
   const phasesToShow: Phase[] = orderedVisiblePhases
@@ -109,7 +109,7 @@ export function MobileContextBar({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <div className="flex min-w-0 flex-1 items-center gap-1">
+        <div data-onboarding="phase-selector" className="flex min-w-0 flex-1 items-center gap-1">
           <Button
             variant="ghost"
             size="icon"

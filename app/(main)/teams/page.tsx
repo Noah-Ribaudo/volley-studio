@@ -1,17 +1,17 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery, useMutation } from 'convex/react'
+import { useConvexAuth } from 'convex/react'
 import { api } from '@/convex/_generated/api'
 import { Id } from '@/convex/_generated/dataModel'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { TeamCard, CreateTeamDialog, ImportTeamDialog, TeamSearchBar } from '@/components/team'
-import { useAppStore } from '@/store/useAppStore'
+import { TeamCard, ImportTeamDialog, TeamSearchBar } from '@/components/team'
+import { useTeamStore } from '@/store/useTeamStore'
 import type { Team } from '@/lib/types'
-import type { PresetSystem } from '@/lib/presetTypes'
 import { toast } from 'sonner'
 import { listLocalTeams, upsertLocalTeam } from '@/lib/localTeams'
 
@@ -36,16 +36,20 @@ export default function TeamsPage() {
   const [localTeams, setLocalTeams] = useState<Team[]>([])
 
   // Convex queries - automatically reactive
-  const allCloudTeams = useQuery(api.teams.search, { query: '' })
   const teams = useQuery(api.teams.search, { query: searchQuery })
   const createTeam = useMutation(api.teams.create)
   const cloneTeam = useMutation(api.teams.clone)
 
   const isLoading = teams === undefined
-  const isCloudTeamCountLoading = allCloudTeams === undefined
 
-  const setCurrentTeam = useAppStore((state) => state.setCurrentTeam)
-  const currentTeam = useAppStore((state) => state.currentTeam)
+  // Track total cloud count from the unfiltered query result
+  const cloudCountRef = useRef(0)
+  if (!searchQuery && teams !== undefined) {
+    cloudCountRef.current = teams.length
+  }
+
+  const setCurrentTeam = useTeamStore((state) => state.setCurrentTeam)
+  const currentTeam = useTeamStore((state) => state.currentTeam)
 
   useEffect(() => {
     const storedTeams = listLocalTeams()
@@ -57,7 +61,7 @@ export default function TeamsPage() {
     setLocalTeams(storedTeams)
   }, [currentTeam])
 
-  const cloudTeamCount = allCloudTeams?.length ?? 0
+  const cloudTeamCount = !searchQuery ? (teams?.length ?? 0) : cloudCountRef.current
   const totalTeamCount = cloudTeamCount + localTeams.length
   const shouldShowSearch = totalTeamCount >= SEARCH_MIN_TEAM_COUNT
   const hasAnyTeams = totalTeamCount > 0
@@ -68,40 +72,45 @@ export default function TeamsPage() {
     }
   }, [searchQuery, shouldShowSearch])
 
-  // Handle team creation (cloud)
-  const handleCreateTeam = async (name: string, password?: string, presetSystem?: PresetSystem) => {
-    const slug = generateSlug(name)
-    const teamId = await createTeam({ name, slug, password, presetSystem })
-    router.push(`/teams/${teamId}`)
-  }
+  const { isAuthenticated } = useConvexAuth()
 
-  // Handle local-only team creation (no account)
-  const handleCreateLocalTeam = (name: string, presetSystem?: PresetSystem) => {
+  // Create a team instantly and navigate to the detail page
+  const handleNewTeam = async () => {
+    const defaultName = 'Untitled Team'
     const now = new Date().toISOString()
-    const localTeam: Team = {
-      id: `local-${Date.now()}`,
-      name,
-      slug: generateSlug(name),
-      roster: [],
-      lineups: [{
-        id: 'default',
-        name: 'Default',
+
+    if (isAuthenticated) {
+      try {
+        const slug = `${generateSlug(defaultName)}_${Date.now()}`
+        const teamId = await createTeam({ name: defaultName, slug })
+        router.push(`/teams/${teamId}`)
+      } catch {
+        toast.error('Failed to create team')
+      }
+    } else {
+      const localTeam: Team = {
+        id: `local-${Date.now()}`,
+        name: defaultName,
+        slug: generateSlug(defaultName),
+        roster: [],
+        lineups: [{
+          id: 'default',
+          name: 'Lineup 1',
+          position_assignments: {},
+          starting_rotation: 1,
+          created_at: now,
+        }],
+        active_lineup_id: 'default',
         position_assignments: {},
-        position_source: presetSystem,
-        starting_rotation: 1,
         created_at: now,
-      }],
-      active_lineup_id: 'default',
-      position_assignments: {},
-      created_at: now,
-      updated_at: now,
+        updated_at: now,
+      }
+      const nextLocalTeams = upsertLocalTeam(localTeam)
+      setLocalTeams(nextLocalTeams)
+      setCurrentTeam(localTeam)
+      setSearchQuery('')
+      router.push(`/teams/${localTeam.id}`)
     }
-    const nextLocalTeams = upsertLocalTeam(localTeam)
-    setLocalTeams(nextLocalTeams)
-    setCurrentTeam(localTeam)
-    setSearchQuery('')
-    toast.success(`Created local team: ${name}`)
-    router.push(`/teams/${localTeam.id}`)
   }
 
   const openLocalTeamWhiteboard = (team: Team) => {
@@ -147,7 +156,7 @@ export default function TeamsPage() {
         )}
 
         {/* Empty first-run state */}
-        {!isLoading && !isCloudTeamCountLoading && !searchQuery && !hasAnyTeams && (
+        {!isLoading && !searchQuery && !hasAnyTeams && (
           <Card className="border-dashed border-border/70 bg-card/60">
             <CardContent className="pt-8 pb-8">
               <div className="mx-auto max-w-md text-center space-y-3">
@@ -175,7 +184,10 @@ export default function TeamsPage() {
                 </p>
               </div>
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                <CreateTeamDialog onCreateTeam={handleCreateTeam} onCreateLocalTeam={handleCreateLocalTeam} />
+                <Button onClick={handleNewTeam}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                  New Team
+                </Button>
                 <ImportTeamDialog onImportTeam={handleImportTeam} isLoading={isImporting} />
               </div>
             </CardContent>
@@ -192,7 +204,10 @@ export default function TeamsPage() {
                 <p className="text-sm text-muted-foreground mb-3">
                   Start fresh with a new team
                 </p>
-                <CreateTeamDialog onCreateTeam={handleCreateTeam} onCreateLocalTeam={handleCreateLocalTeam} />
+                <Button onClick={handleNewTeam}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                  New Team
+                </Button>
               </CardContent>
             </Card>
 

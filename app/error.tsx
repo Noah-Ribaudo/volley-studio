@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { getRecentPages, type Breadcrumb } from '@/lib/session-breadcrumbs'
 
 export default function Error({
   error,
@@ -10,9 +11,18 @@ export default function Error({
   error: Error & { digest?: string }
   reset: () => void
 }) {
+  const [recentPages, setRecentPages] = useState<Breadcrumb[]>([])
+
   useEffect(() => {
     console.error(error)
   }, [error])
+
+  useEffect(() => {
+    try {
+      const pages = getRecentPages(undefined, 2)
+      setRecentPages(pages)
+    } catch { /* never break the error page */ }
+  }, [])
 
   const message = error.message?.trim() || 'An unexpected client-side error occurred.'
 
@@ -46,6 +56,24 @@ export default function Error({
             Back to whiteboard
           </Link>
         </div>
+
+        {/* Breadcrumb suggestions — hidden if none exist */}
+        {recentPages.length > 0 && (
+          <div className="mt-4 rounded-lg border bg-muted/30 p-3">
+            <p className="text-xs font-medium text-muted-foreground">Or go back to</p>
+            <div className="mt-1.5 flex flex-wrap gap-2">
+              {recentPages.map((page) => (
+                <Link
+                  key={page.path}
+                  href={page.path}
+                  className="rounded-md border bg-card px-3 py-1.5 text-sm hover:bg-accent transition-colors"
+                >
+                  {page.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

@@ -5,12 +5,14 @@
   "scripts": {
     "dev": "npm-run-all --parallel dev:convex dev:next",
     "dev:convex": "convex dev",
-    "dev:next": "next dev",
+    "dev:next": "rm -rf .next && next dev",
     "build": "next build",
     "build:prod": "convex deploy --cmd 'next build'",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
     "test": "playwright test",
+    "test:blocking": "playwright test --config=playwright.blocking.config.ts",
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed"
   },

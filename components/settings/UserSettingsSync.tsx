@@ -3,8 +3,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useConvexAuth, useMutation, useQuery } from 'convex/react'
 import { api } from '@/convex/_generated/api'
-import { useAppStore } from '@/store/useAppStore'
+import { useDisplayPrefsStore } from '@/store/useDisplayPrefsStore'
+import { useUIPrefsStore } from '@/store/useUIPrefsStore'
+import { useNavigationStore } from '@/store/useNavigationStore'
+import { useLearningStore } from '@/store/useLearningStore'
 import { useThemeStore } from '@/store/useThemeStore'
+import { useSettingsStoresHydrated } from '@/store/hydration'
+import { applyUserSettingsFromServer } from '@/store/transactions'
 import {
   DEFAULT_PHASE_ORDER,
   DEFAULT_VISIBLE_PHASES,
@@ -108,28 +113,32 @@ function payloadSignature(payload: UserSettingsPayload): string {
 
 export function UserSettingsSync() {
   const { isAuthenticated } = useConvexAuth()
+  const isHydrated = useSettingsStoresHydrated()
   const remoteSettings = useQuery(api.userSettings.getMine, isAuthenticated ? {} : 'skip')
   const upsertSettings = useMutation(api.userSettings.upsertMine)
 
-  const showPosition = useAppStore((state) => state.showPosition)
-  const showPlayer = useAppStore((state) => state.showPlayer)
-  const showNumber = useAppStore((state) => state.showNumber)
-  const showLibero = useAppStore((state) => state.showLibero)
-  const circleTokens = useAppStore((state) => state.circleTokens)
-  const hideAwayTeam = useAppStore((state) => state.hideAwayTeam)
-  const fullStatusLabels = useAppStore((state) => state.fullStatusLabels)
-  const showLearnTab = useAppStore((state) => state.showLearnTab)
-  const debugHitboxes = useAppStore((state) => state.debugHitboxes)
-  const isReceivingContext = useAppStore((state) => state.isReceivingContext)
-  const tokenSize = useAppStore((state) => state.tokenSize)
-  const navMode = useAppStore((state) => state.navMode)
-  const backgroundShader = useAppStore((state) => state.backgroundShader)
-  const backgroundOpacity = useAppStore((state) => state.backgroundOpacity)
-  const awayTeamHidePercent = useAppStore((state) => state.awayTeamHidePercent)
-  const visiblePhases = useAppStore((state) => state.visiblePhases)
-  const phaseOrder = useAppStore((state) => state.phaseOrder)
-  const highlightedRole = useAppStore((state) => state.highlightedRole)
-  const learningPanelPosition = useAppStore((state) => state.learningPanelPosition)
+  const showPosition = useDisplayPrefsStore((state) => state.showPosition)
+  const showPlayer = useDisplayPrefsStore((state) => state.showPlayer)
+  const showNumber = useDisplayPrefsStore((state) => state.showNumber)
+  const showLibero = useDisplayPrefsStore((state) => state.showLibero)
+  const circleTokens = useDisplayPrefsStore((state) => state.circleTokens)
+  const hideAwayTeam = useDisplayPrefsStore((state) => state.hideAwayTeam)
+  const fullStatusLabels = useDisplayPrefsStore((state) => state.fullStatusLabels)
+  const isReceivingContext = useDisplayPrefsStore((state) => state.isReceivingContext)
+  const tokenSize = useDisplayPrefsStore((state) => state.tokenSize)
+  const awayTeamHidePercent = useDisplayPrefsStore((state) => state.awayTeamHidePercent)
+
+  const showLearnTab = useUIPrefsStore((state) => state.showLearnTab)
+  const debugHitboxes = useUIPrefsStore((state) => state.debugHitboxes)
+  const navMode = useUIPrefsStore((state) => state.navMode)
+  const backgroundShader = useUIPrefsStore((state) => state.backgroundShader)
+  const backgroundOpacity = useUIPrefsStore((state) => state.backgroundOpacity)
+
+  const visiblePhases = useNavigationStore((state) => state.visiblePhases)
+  const phaseOrder = useNavigationStore((state) => state.phaseOrder)
+  const highlightedRole = useNavigationStore((state) => state.highlightedRole)
+
+  const learningPanelPosition = useLearningStore((state) => state.learningPanelPosition)
   const themePreference = useThemeStore((state) => state.themePreference)
 
   const [isReadyToPersist, setIsReadyToPersist] = useState(false)
@@ -233,6 +242,10 @@ export function UserSettingsSync() {
   // Depends on serverSignature (content-based) so it only fires when the
   // server data actually changes, not on every Convex useQuery re-reference.
   useEffect(() => {
+    if (!isHydrated) {
+      return
+    }
+
     if (!isAuthenticated) {
       setIsReadyToPersist(false)
       lastSyncedSignatureRef.current = null
@@ -266,42 +279,14 @@ export function UserSettingsSync() {
     // This prevents the server from overriding local changes before they've
     // been persisted.
     if (serverSignature !== lastSyncedSignatureRef.current && serverSignature !== localSignatureRef.current && typeof serverPayload === 'object') {
-      useAppStore.setState((state) => ({
-        ...state,
-        showPosition: serverPayload.showPosition,
-        showPlayer: serverPayload.showPlayer,
-        showNumber: serverPayload.showNumber,
-        showLibero: serverPayload.showLibero,
-        circleTokens: serverPayload.circleTokens,
-        hideAwayTeam: serverPayload.hideAwayTeam,
-        fullStatusLabels: serverPayload.fullStatusLabels,
-        showLearnTab: serverPayload.showLearnTab,
-        debugHitboxes: serverPayload.debugHitboxes,
-        isReceivingContext: serverPayload.isReceivingContext,
-        tokenSize: serverPayload.tokenSize,
-        navMode: serverPayload.navMode,
-        backgroundShader: serverPayload.backgroundShader,
-        backgroundOpacity: serverPayload.backgroundOpacity,
-        awayTeamHidePercent: serverPayload.awayTeamHidePercent,
-        visiblePhases: new Set(serverPayload.visiblePhases),
-        phaseOrder: serverPayload.phaseOrder,
-        highlightedRole: serverPayload.highlightedRole ?? null,
-        learningPanelPosition: serverPayload.learningPanelPosition,
-      }))
-      useThemeStore.setState((state) => ({
-        ...state,
-        themePreference: serverPayload.themePreference,
-        theme: serverPayload.themePreference === 'auto'
-          ? state.theme
-          : serverPayload.themePreference,
-      }))
+      applyUserSettingsFromServer(serverPayload)
     }
 
     lastSyncedSignatureRef.current = serverSignature
     didSeedFromLocalRef.current = false
     setIsReadyToPersist(true)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, serverSignature, upsertSettings])
+  }, [isAuthenticated, isHydrated, serverSignature, upsertSettings])
 
   useEffect(() => {
     if (!isAuthenticated || !isReadyToPersist) {

@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import dynamic from 'next/dynamic'
 import VolleyBall from '@/components/logo/VolleyBall'
 import VolleyWordmark from '@/components/logo/VolleyWordmark'
 import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 // Dynamic imports for heavy shader components (no SSR)
@@ -200,6 +201,18 @@ export default function DevLogoSection() {
   const [gradDir, setGradDir] = useState<GradientDirection>('to-right')
   const [effect, setEffect] = useState<EffectType>('none')
   const [scale, setScale] = useState(1.5)
+  const [shadersLoaded, setShadersLoaded] = useState(false)
+  const [shadersLoading, setShadersLoading] = useState(false)
+
+  const handleLoadAllShaders = useCallback(async () => {
+    setShadersLoading(true)
+    try {
+      await import('@paper-design/shaders-react')
+      setShadersLoaded(true)
+    } finally {
+      setShadersLoading(false)
+    }
+  }, [])
 
   // Paper shader tunables
   const [metalSpeed, setMetalSpeed] = useState(1)
@@ -521,6 +534,28 @@ export default function DevLogoSection() {
                     </div>
                   )}
                 </div>
+              </div>
+            )}
+
+            {/* Load all shaders */}
+            {!shadersLoaded && (
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1.5 block">Shader Bundle</Label>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={handleLoadAllShaders}
+                  disabled={shadersLoading}
+                >
+                  {shadersLoading ? 'Loading shaders...' : 'Load All Shaders'}
+                </Button>
+                <p className="text-xs text-muted-foreground mt-1">Pre-loads all 24 WebGL shaders for instant switching.</p>
+              </div>
+            )}
+            {shadersLoaded && (
+              <div>
+                <p className="text-xs text-emerald-500">All shaders loaded.</p>
               </div>
             )}
 

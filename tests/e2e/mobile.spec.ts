@@ -84,40 +84,36 @@ test.describe('Mobile Experience', () => {
     test.skip(!isMobile, 'This test only runs on mobile')
 
     await page.goto('/teams')
-    await page.waitForLoadState('networkidle')
 
-    // Should see the teams page content
-    await expect(page.getByText(/create new team/i)).toBeVisible()
+    // Wait for the New Team button to appear (loading must complete)
+    const newTeamBtn = page.getByRole('button', { name: /new team/i }).first()
+    await expect(newTeamBtn).toBeVisible({ timeout: 15_000 })
 
-    // Create team button should be tappable
-    await clickVisibleButtonByName(page, /new team/i)
+    // Create team button should be tappable and navigate to team editor
+    await newTeamBtn.click()
 
-    // Dialog should open
-    await expect(page.getByRole('dialog')).toBeVisible({ timeout: 10_000 })
+    // Should navigate to the team edit page
+    await expect(page).toHaveURL(/\/teams\/local-/, { timeout: 10_000 })
+    await expect(page.getByRole('heading', { name: /edit team/i })).toBeVisible()
   })
 
-  test('dialogs are usable on mobile', async ({ page, isMobile }) => {
+  test('team creation works on mobile', async ({ page, isMobile }) => {
     test.skip(!isMobile, 'This test only runs on mobile')
 
     await page.goto('/teams')
 
-    // Open create team dialog
-    await clickVisibleButtonByName(page, /new team/i)
+    // Wait for the New Team button to appear (loading must complete)
+    const newTeamBtn = page.getByRole('button', { name: /new team/i }).first()
+    await expect(newTeamBtn).toBeVisible({ timeout: 15_000 })
+    await newTeamBtn.click()
 
-    // Dialog should be visible and contain expected content
-    await expect(page.getByRole('dialog')).toBeVisible({ timeout: 10_000 })
+    // Should be on the team edit page
+    await expect(page).toHaveURL(/\/teams\/local-/, { timeout: 10_000 })
+    await expect(page.getByRole('heading', { name: /edit team/i })).toBeVisible()
 
-    const continueButton = page.getByRole('button', { name: /continue without an account/i })
-    if (await continueButton.isVisible()) {
-      // Sign-in prompt path: continue to local-only form.
-      await continueButton.click({ noWaitAfter: true })
-    }
-
-    // Dialog should remain usable with either prompt or team-creation content.
-    const dialogContent = page
-      .getByRole('heading', { name: /create new team/i })
-      .or(page.getByText(/quick sign-in/i))
-    await expect(dialogContent).toBeVisible({ timeout: 10_000 })
+    // Team name input should be usable on mobile
+    const teamNameInput = page.getByPlaceholder(/team name/i)
+    await expect(teamNameInput).toBeVisible()
   })
 
   test('privacy page is readable on mobile', async ({ page, isMobile }) => {
@@ -168,18 +164,28 @@ test.describe('Cross-device compatibility', () => {
     await expect(page.getByRole('heading', { name: /privacy policy/i })).toBeVisible({ timeout: 10_000 })
   })
 
-  test('create team dialog opens', async ({ page }) => {
+  test('create team navigates to editor', async ({ page }) => {
     await page.goto('/teams')
-    await clickVisibleButtonByName(page, /new team/i)
 
-    await expect(page.getByRole('dialog')).toBeVisible({ timeout: 10_000 })
+    // Wait for the New Team button to appear (loading must complete)
+    const newTeamBtn = page.getByRole('button', { name: /new team/i }).first()
+    await expect(newTeamBtn).toBeVisible({ timeout: 15_000 })
+    await newTeamBtn.click()
+
+    // Should navigate to the team edit page
+    await expect(page).toHaveURL(/\/teams\/local-/, { timeout: 10_000 })
+    await expect(page.getByRole('heading', { name: /edit team/i })).toBeVisible()
   })
 
-  test('auth prompt appears for unauthenticated users', async ({ page }) => {
+  test('unauthenticated users can create local teams directly', async ({ page }) => {
     await page.goto('/teams')
-    await clickVisibleButtonByName(page, /new team/i)
 
-    // Should see the "I don't want your data" message
-    await expect(page.getByText(/I don't want your data/i)).toBeVisible({ timeout: 10_000 })
+    // Wait for the New Team button to appear (loading must complete)
+    const newTeamBtn = page.getByRole('button', { name: /new team/i }).first()
+    await expect(newTeamBtn).toBeVisible({ timeout: 15_000 })
+    await newTeamBtn.click()
+
+    // Unauthenticated users create local teams without auth prompt
+    await expect(page).toHaveURL(/\/teams\/local-/, { timeout: 10_000 })
   })
 })

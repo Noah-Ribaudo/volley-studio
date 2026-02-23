@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { useAppStore } from '@/store/useAppStore'
+import { useTeamStore } from '@/store/useTeamStore'
 import { useGameTimeStore } from '@/store/useGameTimeStore'
 import {
   PresentationBarChart01Icon,
@@ -42,7 +42,7 @@ const navItems = [
 
 export function MobileBottomNav() {
   const pathname = usePathname()
-  const currentTeam = useAppStore((state) => state.currentTeam)
+  const currentTeam = useTeamStore((state) => state.currentTeam)
   const gamePhase = useGameTimeStore((s) => s.phase)
   const hasActiveGame = gamePhase === 'playing'
 

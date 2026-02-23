@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useCallback, useRef, useState } from 'react'
-import { useAppStore } from '@/store/useAppStore'
+import { useLearningStore } from '@/store/useLearningStore'
+import { useNavigationStore } from '@/store/useNavigationStore'
 import { getLessonById, getNextLesson } from '@/lib/learning/allModules'
 import { Button } from '@/components/ui/button'
 import { DragHandle } from '@/components/ui/drag-handle'
@@ -13,22 +14,20 @@ import { Cancel01Icon, CheckmarkCircle01Icon, Cancel01Icon as XCircleIcon } from
 import { HugeiconsIcon } from '@hugeicons/react'
 
 export function LearningPanel() {
-  const {
-    learningMode,
-    learningLessonId,
-    learningStepIndex,
-    learningPanelPosition,
-    learningSelectedRole,
-    advanceLearningStep,
-    prevLearningStep,
-    exitLearning,
-    completeLearningLesson,
-    startLesson,
-    setRotation,
-    setPhase,
-    setHighlightedRole,
-    setLearningSelectedRole,
-  } = useAppStore()
+  const learningMode = useLearningStore((state) => state.learningMode)
+  const learningLessonId = useLearningStore((state) => state.learningLessonId)
+  const learningStepIndex = useLearningStore((state) => state.learningStepIndex)
+  const learningPanelPosition = useLearningStore((state) => state.learningPanelPosition)
+  const learningSelectedRole = useLearningStore((state) => state.learningSelectedRole)
+  const advanceLearningStep = useLearningStore((state) => state.advanceLearningStep)
+  const prevLearningStep = useLearningStore((state) => state.prevLearningStep)
+  const exitLearning = useLearningStore((state) => state.exitLearning)
+  const completeLearningLesson = useLearningStore((state) => state.completeLearningLesson)
+  const startLesson = useLearningStore((state) => state.startLesson)
+  const setLearningSelectedRole = useLearningStore((state) => state.setLearningSelectedRole)
+  const setRotation = useNavigationStore((state) => state.setRotation)
+  const setPhase = useNavigationStore((state) => state.setPhase)
+  const setHighlightedRole = useNavigationStore((state) => state.setHighlightedRole)
 
   // Get the current lesson
   const lesson = learningLessonId ? getLessonById(learningLessonId) : null

@@ -17,13 +17,11 @@ import {
 import { RosterManagementCard } from '@/components/roster'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import {
-  useAppStore,
   getCurrentArrows,
   getCurrentPositions,
   getCurrentTags,
   getActiveLineupPositionSource,
-} from '@/store/useAppStore'
-import { useThemeStore } from '@/store/useThemeStore'
+} from '@/lib/whiteboardHelpers'
 import { useWhiteboardSaveState, useWhiteboardSync } from '@/hooks/useWhiteboardSync'
 import {
   ROLES,
@@ -44,6 +42,12 @@ import { createRotationPhaseKey, getBackRowMiddle, getRoleZone } from '@/lib/rot
 import { validateRotationLegality } from '@/lib/model/legality'
 import { cn } from '@/lib/utils'
 import { getLocalTeamById, listLocalTeams, upsertLocalTeam } from '@/lib/localTeams'
+import { useStoresHydrated } from '@/store/hydration'
+import { useNavigationStore } from '@/store/useNavigationStore'
+import { useWhiteboardStore } from '@/store/useWhiteboardStore'
+import { useTeamStore } from '@/store/useTeamStore'
+import { useDisplayPrefsStore } from '@/store/useDisplayPrefsStore'
+import { useUIPrefsStore } from '@/store/useUIPrefsStore'
 import { toast } from 'sonner'
 
 const ANIMATION_MODE = 'raf' as const
@@ -70,67 +74,68 @@ function getServerRole(rotation: number, baseOrder: Role[]): Role {
 function MinimalModeContent() {
   useWhiteboardSync()
 
-  const {
-    currentRotation,
-    currentPhase,
-    localPositions,
-    localArrows,
-    arrowCurves,
-    localStatusFlags,
-    localTagFlags,
-    attackBallPositions,
-    customLayouts,
-    currentTeam,
-    baseOrder,
-    isReceivingContext,
-    showLibero,
-    showPosition,
-    showPlayer,
-    showNumber,
-    circleTokens,
-    fullStatusLabels,
-    hideAwayTeam,
-    awayTeamHidePercent,
-    contextPlayer,
-    isPreviewingMovement,
-    playAnimationTrigger,
-    visiblePhases,
-    phaseOrder,
-    minimalContrast,
-    minimalAllowAccent,
-    minimalDenseLayout,
-    setUiMode,
-    setRotation,
-    setPhase,
-    nextPhase,
-    prevPhase,
-    updateLocalPosition,
-    updateArrow,
-    clearArrow,
-    setArrowCurve,
-    setContextPlayer,
-    togglePlayerStatus,
-    setTokenTags,
-    assignPlayerToRole,
-    setShowPosition,
-    setShowPlayer,
-    setShowNumber,
-    setPreviewingMovement,
-    triggerPlayAnimation,
-    setMinimalContrast,
-    setMinimalAllowAccent,
-    setMinimalDenseLayout,
-    setAttackBallPosition,
-    clearAttackBallPosition,
-    setCurrentTeam,
-    setCustomLayouts,
-    populateFromLayouts,
-    setAccessMode,
-    setTeamPasswordProvided,
-    isHydrated: isAppHydrated,
-  } = useAppStore()
-  const isThemeHydrated = useThemeStore((state) => state.isHydrated)
-  const isUiHydrated = isAppHydrated && isThemeHydrated
+  const currentRotation = useNavigationStore((state) => state.currentRotation)
+  const currentPhase = useNavigationStore((state) => state.currentPhase)
+  const baseOrder = useNavigationStore((state) => state.baseOrder)
+  const visiblePhases = useNavigationStore((state) => state.visiblePhases)
+  const phaseOrder = useNavigationStore((state) => state.phaseOrder)
+  const setRotation = useNavigationStore((state) => state.setRotation)
+  const setPhase = useNavigationStore((state) => state.setPhase)
+  const nextPhase = useNavigationStore((state) => state.nextPhase)
+  const prevPhase = useNavigationStore((state) => state.prevPhase)
+  const isPreviewingMovement = useNavigationStore((state) => state.isPreviewingMovement)
+  const playAnimationTrigger = useNavigationStore((state) => state.playAnimationTrigger)
+  const setPreviewingMovement = useNavigationStore((state) => state.setPreviewingMovement)
+  const triggerPlayAnimation = useNavigationStore((state) => state.triggerPlayAnimation)
+
+  const localPositions = useWhiteboardStore((state) => state.localPositions)
+  const localArrows = useWhiteboardStore((state) => state.localArrows)
+  const arrowCurves = useWhiteboardStore((state) => state.arrowCurves)
+  const localStatusFlags = useWhiteboardStore((state) => state.localStatusFlags)
+  const localTagFlags = useWhiteboardStore((state) => state.localTagFlags)
+  const attackBallPositions = useWhiteboardStore((state) => state.attackBallPositions)
+  const contextPlayer = useWhiteboardStore((state) => state.contextPlayer)
+  const updateLocalPosition = useWhiteboardStore((state) => state.updateLocalPosition)
+  const updateArrow = useWhiteboardStore((state) => state.updateArrow)
+  const clearArrow = useWhiteboardStore((state) => state.clearArrow)
+  const setArrowCurve = useWhiteboardStore((state) => state.setArrowCurve)
+  const setContextPlayer = useWhiteboardStore((state) => state.setContextPlayer)
+  const togglePlayerStatus = useWhiteboardStore((state) => state.togglePlayerStatus)
+  const setTokenTags = useWhiteboardStore((state) => state.setTokenTags)
+  const setAttackBallPosition = useWhiteboardStore((state) => state.setAttackBallPosition)
+  const clearAttackBallPosition = useWhiteboardStore((state) => state.clearAttackBallPosition)
+  const populateFromLayouts = useWhiteboardStore((state) => state.populateFromLayouts)
+
+  const currentTeam = useTeamStore((state) => state.currentTeam)
+  const customLayouts = useTeamStore((state) => state.customLayouts)
+  const assignPlayerToRole = useTeamStore((state) => state.assignPlayerToRole)
+  const setCurrentTeam = useTeamStore((state) => state.setCurrentTeam)
+  const setCustomLayouts = useTeamStore((state) => state.setCustomLayouts)
+  const setAccessMode = useTeamStore((state) => state.setAccessMode)
+  const setTeamPasswordProvided = useTeamStore((state) => state.setTeamPasswordProvided)
+
+  const isReceivingContext = useDisplayPrefsStore((state) => state.isReceivingContext)
+  const showLibero = useDisplayPrefsStore((state) => state.showLibero)
+  const showPosition = useDisplayPrefsStore((state) => state.showPosition)
+  const showPlayer = useDisplayPrefsStore((state) => state.showPlayer)
+  const showNumber = useDisplayPrefsStore((state) => state.showNumber)
+  const circleTokens = useDisplayPrefsStore((state) => state.circleTokens)
+  const fullStatusLabels = useDisplayPrefsStore((state) => state.fullStatusLabels)
+  const hideAwayTeam = useDisplayPrefsStore((state) => state.hideAwayTeam)
+  const awayTeamHidePercent = useDisplayPrefsStore((state) => state.awayTeamHidePercent)
+  const setShowPosition = useDisplayPrefsStore((state) => state.setShowPosition)
+  const setShowPlayer = useDisplayPrefsStore((state) => state.setShowPlayer)
+  const setShowNumber = useDisplayPrefsStore((state) => state.setShowNumber)
+
+  const minimalContrast = useUIPrefsStore((state) => state.minimalContrast)
+  const minimalAllowAccent = useUIPrefsStore((state) => state.minimalAllowAccent)
+  const minimalDenseLayout = useUIPrefsStore((state) => state.minimalDenseLayout)
+  const setUiMode = useUIPrefsStore((state) => state.setUiMode)
+  const setMinimalContrast = useUIPrefsStore((state) => state.setMinimalContrast)
+  const setMinimalAllowAccent = useUIPrefsStore((state) => state.setMinimalAllowAccent)
+  const setMinimalDenseLayout = useUIPrefsStore((state) => state.setMinimalDenseLayout)
+
+  const isUiHydrated = useStoresHydrated()
   const router = useRouter()
   const searchParams = useSearchParams()
   const teamFromUrl = searchParams.get('team')?.trim() || ''
@@ -486,7 +491,7 @@ function MinimalModeContent() {
 
   const handleAssignPlayer = useCallback(async (role: Role, playerId: string | undefined) => {
     assignPlayerToRole(role, playerId)
-    const nextTeam = useAppStore.getState().currentTeam
+    const nextTeam = useTeamStore.getState().currentTeam
     if (!nextTeam) return
     try {
       await persistLineupsForTeam(nextTeam)

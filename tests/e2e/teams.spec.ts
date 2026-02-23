@@ -21,39 +21,28 @@ test.describe('Teams Page', () => {
     await expect(page.getByPlaceholder(/search teams/i)).toHaveCount(0)
   })
 
-  test('create team button opens dialog', async ({ page }) => {
+  test('create team button navigates to team editor', async ({ page }) => {
     await page.goto('/teams')
 
     // Click the new team button
     const newTeamButton = page.getByRole('button', { name: /new team/i })
     await newTeamButton.click()
 
-    // Should see dialog content (either auth prompt or create form)
-    await expect(page.getByRole('dialog')).toBeVisible({ timeout: 10_000 })
+    // Should navigate to the new team's edit page
+    await expect(page).toHaveURL(/\/teams\/local-/, { timeout: 10_000 })
+    await expect(page.getByRole('heading', { name: /edit team/i })).toBeVisible()
   })
 
-  test('unauthenticated user sees sign-in prompt when creating team', async ({ page }) => {
+  test('unauthenticated user can create a local team directly', async ({ page }) => {
     await page.goto('/teams')
 
-    // Click the new team button
+    // Click the new team button - creates a local team and navigates
     const newTeamButton = page.getByRole('button', { name: /new team/i })
     await newTeamButton.click()
 
-    // Should see the sign-in prompt (not the create form)
-    await expect(page.getByText(/quick sign-in/i)).toBeVisible()
-    await expect(page.getByText(/I don't want your data/i)).toBeVisible()
-
-    // Should see Google sign-in option
-    await expect(page.getByText(/continue with google/i)).toBeVisible()
-
-    // Should see email/password option
-    await expect(page.getByPlaceholder(/email/i)).toBeVisible()
-
-    // Should see the local-only escape option
-    await expect(page.getByRole('button', { name: /continue without an account/i })).toBeVisible()
-
-    // Should see privacy policy link
-    await expect(page.getByText(/privacy policy/i)).toBeVisible()
+    // Should navigate to the team edit page without requiring auth
+    await expect(page).toHaveURL(/\/teams\/local-/, { timeout: 10_000 })
+    await expect(page.getByRole('heading', { name: /edit team/i })).toBeVisible()
   })
 
   test('import team button opens dialog', async ({ page }) => {
@@ -78,22 +67,19 @@ test.describe('Teams Page', () => {
     await expect(page.getByText(/I don't want your data/i)).toBeVisible()
   })
 
-  test('can dismiss create team dialog', async ({ page }) => {
+  test('can navigate back from team editor to teams list', async ({ page }) => {
     await page.goto('/teams')
 
-    // Open dialog
+    // Create a local team
     const newTeamButton = page.getByRole('button', { name: /new team/i })
     await newTeamButton.click()
 
-    // Dialog should be visible
-    await expect(page.getByRole('dialog')).toBeVisible()
+    // Should be on team edit page
+    await expect(page).toHaveURL(/\/teams\/local-/, { timeout: 10_000 })
 
-    // Click the local-only button
-    const dismissButton = page.getByRole('button', { name: /continue without an account/i })
-    await dismissButton.click()
-
-    // Dialog should stay open and switch to local create form
-    await expect(page.getByRole('heading', { name: /create new team/i })).toBeVisible()
+    // Navigate back to teams
+    await page.goto('/teams')
+    await expect(page.getByRole('heading', { name: /^teams$/i })).toBeVisible()
   })
 
   test('does not show an in-page back button', async ({ page }) => {
