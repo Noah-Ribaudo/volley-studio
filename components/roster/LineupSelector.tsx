@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Lineup, PositionSource, POSITION_SOURCE_INFO } from '@/lib/types'
+import { Lineup } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -9,6 +9,7 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
@@ -30,25 +31,20 @@ import {
 import {
   Add01Icon,
   MoreHorizontalIcon,
-  StarIcon,
   Copy01Icon,
   PencilEdit01Icon,
   Delete02Icon,
-  LayoutGridIcon,
 } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 
 interface LineupSelectorProps {
   lineups: Lineup[]
   selectedLineupId: string | null
-  activeLineupId: string | null
   onSelectLineup: (lineupId: string) => void
   onCreateLineup: (name: string) => void
   onRenameLineup: (lineupId: string, newName: string) => void
   onDuplicateLineup: (lineupId: string, newName: string) => void
   onDeleteLineup: (lineupId: string) => void
-  onSetActiveLineup: (lineupId: string) => void
-  onPositionSourceChange?: (lineupId: string, source: PositionSource) => void
   disabled?: boolean
 }
 
@@ -57,22 +53,19 @@ type DialogMode = 'create' | 'rename' | 'duplicate' | null
 export function LineupSelector({
   lineups,
   selectedLineupId,
-  activeLineupId,
   onSelectLineup,
   onCreateLineup,
   onRenameLineup,
   onDuplicateLineup,
   onDeleteLineup,
-  onSetActiveLineup,
-  onPositionSourceChange,
   disabled = false,
 }: LineupSelectorProps) {
+  const CREATE_LINEUP_VALUE = '__create_lineup__'
   const [dialogMode, setDialogMode] = useState<DialogMode>(null)
   const [dialogInput, setDialogInput] = useState('')
   const [targetLineupId, setTargetLineupId] = useState<string | null>(null)
 
   const selectedLineup = lineups.find(l => l.id === selectedLineupId)
-  const isActiveLineup = selectedLineupId === activeLineupId
 
   const handleOpenDialog = (mode: DialogMode, existingName = '', lineupId: string | null = null) => {
     setDialogMode(mode)
@@ -146,6 +139,14 @@ export function LineupSelector({
     }
   }
 
+  const handleLineupValueChange = (value: string) => {
+    if (value === CREATE_LINEUP_VALUE) {
+      handleOpenDialog('create')
+      return
+    }
+    onSelectLineup(value)
+  }
+
   return (
     <div className="space-y-3">
       {/* Lineup selector row */}
@@ -153,7 +154,7 @@ export function LineupSelector({
         <div className="flex-1">
           <Select
             value={selectedLineupId || ''}
-            onValueChange={onSelectLineup}
+            onValueChange={handleLineupValueChange}
             disabled={disabled}
           >
             <SelectTrigger className="w-full">
@@ -162,31 +163,19 @@ export function LineupSelector({
             <SelectContent>
               {lineups.map((lineup) => (
                 <SelectItem key={lineup.id} value={lineup.id}>
-                  <div className="flex items-center gap-2">
-                    {lineup.id === activeLineupId && (
-                      <HugeiconsIcon
-                        icon={StarIcon}
-                        className="h-3.5 w-3.5 text-amber-500 fill-amber-500"
-                      />
-                    )}
-                    <span>{lineup.name}</span>
-                  </div>
+                  <span>{lineup.name}</span>
                 </SelectItem>
               ))}
+              <SelectSeparator />
+              <SelectItem value={CREATE_LINEUP_VALUE}>
+                <div className="flex items-center gap-2 font-medium">
+                  <HugeiconsIcon icon={Add01Icon} className="h-4 w-4" />
+                  <span>Create lineup...</span>
+                </div>
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>
-
-        {/* New lineup button */}
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => handleOpenDialog('create')}
-          disabled={disabled}
-          aria-label="Create new lineup"
-        >
-          <HugeiconsIcon icon={Add01Icon} className="h-4 w-4" />
-        </Button>
 
         {/* More actions menu */}
         <DropdownMenu>
@@ -201,15 +190,6 @@ export function LineupSelector({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            {!isActiveLineup && (
-              <>
-                <DropdownMenuItem onClick={() => selectedLineupId && onSetActiveLineup(selectedLineupId)}>
-                  <HugeiconsIcon icon={StarIcon} className="h-4 w-4 mr-2" />
-                  Set as Active
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-              </>
-            )}
             <DropdownMenuItem
               onClick={() =>
                 handleOpenDialog('rename', selectedLineup?.name || '', selectedLineupId)
@@ -238,80 +218,6 @@ export function LineupSelector({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-
-      {/* Active lineup indicator and position source selector */}
-      {selectedLineup && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            {isActiveLineup ? (
-              <>
-                <HugeiconsIcon
-                  icon={StarIcon}
-                  className="h-3.5 w-3.5 text-amber-500 fill-amber-500"
-                />
-                <span>Active lineup (shown on whiteboard)</span>
-              </>
-            ) : (
-              <span className="text-muted-foreground/70">
-                Not the active lineup
-              </span>
-            )}
-          </div>
-
-          {/* Position source selector */}
-          {onPositionSourceChange && (
-            <div className="flex items-center gap-2">
-              <HugeiconsIcon
-                icon={LayoutGridIcon}
-                className="h-4 w-4 text-muted-foreground flex-shrink-0"
-              />
-              <Select
-                value={selectedLineup.position_source || 'custom'}
-                onValueChange={(v) => onPositionSourceChange(selectedLineup.id, v as PositionSource)}
-                disabled={disabled}
-              >
-                <SelectTrigger className="h-8 text-xs flex-1">
-                  <SelectValue placeholder="Position source" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="custom">
-                    <div className="flex flex-col items-start">
-                      <span className="font-medium">{POSITION_SOURCE_INFO['custom'].name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {POSITION_SOURCE_INFO['custom'].description}
-                      </span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="full-5-1">
-                    <div className="flex flex-col items-start">
-                      <span className="font-medium">{POSITION_SOURCE_INFO['full-5-1'].name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {POSITION_SOURCE_INFO['full-5-1'].description}
-                      </span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="5-1-libero">
-                    <div className="flex flex-col items-start">
-                      <span className="font-medium">{POSITION_SOURCE_INFO['5-1-libero'].name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {POSITION_SOURCE_INFO['5-1-libero'].description}
-                      </span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="6-2">
-                    <div className="flex flex-col items-start">
-                      <span className="font-medium">{POSITION_SOURCE_INFO['6-2'].name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {POSITION_SOURCE_INFO['6-2'].description}
-                      </span>
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Dialog for create/rename/duplicate */}
       <Dialog open={dialogMode !== null} onOpenChange={(open) => !open && handleCloseDialog()}>

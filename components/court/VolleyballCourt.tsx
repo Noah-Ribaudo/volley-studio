@@ -144,6 +144,12 @@ interface VolleyballCourtProps {
   onPlayerAssign?: (role: Role, playerId: string) => void
   // Force a role into hover state (shows arrow preview) regardless of actual mouse hover
   forceHoveredRole?: Role | null
+  // Hide hover hint tooltip while guided onboarding spotlight is active
+  suppressHoverHintTooltip?: boolean
+  // Role whose preview arrow should become the spotlight target
+  onboardingSpotlightRole?: Role | null
+  // Show a moving spotlight target on the arrow end while dragging
+  showOnboardingArrowEndSpotlight?: boolean
 }
 
 type PlayAnimState = {
@@ -229,6 +235,9 @@ export function VolleyballCourt({
   onTagsChange,
   onPlayerAssign,
   forceHoveredRole,
+  suppressHoverHintTooltip = false,
+  onboardingSpotlightRole = null,
+  showOnboardingArrowEndSpotlight = false,
 }: VolleyballCourtProps) {
   // In simulation mode, disable editing
   const isEditable = mode === 'whiteboard' && editable
@@ -570,8 +579,10 @@ export function VolleyballCourt({
           if ((hoveredZonesRef.current[role]?.size ?? 0) === 0) return
           setHoveredRole(role)
           setPreviewVisible(prev => (prev[role] ? prev : { ...prev, [role]: true }))
-          // Show arrow drag hint only for players without an existing arrow
-          if (shouldShowNextStepHint() && !useHintStore.getState().hasLearnedArrowDrag) {
+          if (suppressHoverHintTooltip) {
+            setNextStepTooltipRole(null)
+          } else if (shouldShowNextStepHint() && !useHintStore.getState().hasLearnedArrowDrag) {
+            // Show arrow drag hint only for players without an existing arrow
             setNextStepTooltipRole(role)
             incrementNextStepHintHoverCount()
           } else {
@@ -596,7 +607,13 @@ export function VolleyballCourt({
       }, 200)
     }
     // else: leaving one zone while another is still hovered → do nothing, arrow stays
-  }, [incrementNextStepHintHoverCount, shouldShowNextStepHint])
+  }, [incrementNextStepHintHoverCount, shouldShowNextStepHint, suppressHoverHintTooltip])
+
+  useEffect(() => {
+    if (suppressHoverHintTooltip) {
+      setNextStepTooltipRole(null)
+    }
+  }, [suppressHoverHintTooltip])
 
   const clearPreviewStateForRole = useCallback((role: Role) => {
     const pendingTimeout = hoverDelayRef.current[role]
@@ -1588,7 +1605,6 @@ export function VolleyballCourt({
     // Track drag count for hint dismissal
     incrementDragCount()
     markNextStepDragLearned()
-    markArrowDragLearned()
     setNextStepTooltipRole(null)
 
     const isCreatingNewArrow = !arrows[role]
@@ -1700,6 +1716,7 @@ export function VolleyballCourt({
       if (isMobile && !wasOffCourt) {
         setTappedRole(role)
       }
+      markArrowDragLearned()
 
       clearPreviewStateForRole(role)
 
@@ -2298,6 +2315,7 @@ export function VolleyballCourt({
           onArrowChange={onArrowChange}
           onArrowDragStart={handleArrowDragStart}
           onPreviewHover={handlePreviewHover}
+          onboardingSpotlightRole={onboardingSpotlightRole}
         />
 
         {/* Players and arrow handles - rendered SECOND so they appear on top */}
@@ -2610,8 +2628,22 @@ export function VolleyballCourt({
           onAttackBallDragStart={handleAttackBallDragStart}
         />
 
+        {showOnboardingArrowEndSpotlight && draggingArrowRole && arrowDragPosition && (() => {
+          const arrowEnd = toSvgCoords(arrowDragPosition)
+          return (
+            <circle
+              data-onboarding="arrow-end-target"
+              cx={arrowEnd.x}
+              cy={arrowEnd.y}
+              r={16}
+              fill="transparent"
+              style={{ pointerEvents: 'none' }}
+            />
+          )
+        })()}
+
         {/* First-time tip: teaches how to reveal the next-step arrow */}
-        {nextStepTooltipRole && !draggingArrowRole && (() => {
+        {!suppressHoverHintTooltip && nextStepTooltipRole && !draggingArrowRole && (() => {
           const rolePos = displayPositions[nextStepTooltipRole]
           if (!rolePos) return null
 

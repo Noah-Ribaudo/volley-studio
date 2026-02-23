@@ -8,7 +8,7 @@ import { Id } from '@/convex/_generated/dataModel'
 import { getCurrentPositions, getCurrentArrows, getCurrentTags } from '@/lib/whiteboardHelpers'
 import { VolleyballCourt } from '@/components/court'
 import { RosterManagementCard } from '@/components/roster'
-import { Role, ROLES, RALLY_PHASES, Position, PositionCoordinates, RallyPhase, Team, CustomLayout, Lineup } from '@/lib/types'
+import { Role, ROLES, RALLY_PHASES, Position, PositionCoordinates, PositionAssignments, RallyPhase, Team, CustomLayout, Lineup } from '@/lib/types'
 import { getActiveAssignments } from '@/lib/lineups'
 import { getWhiteboardPositions } from '@/lib/whiteboard'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
@@ -34,6 +34,8 @@ import {
 } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 import { getLocalTeamById, listLocalTeams, upsertLocalTeam } from '@/lib/localTeams'
 import { generateSlug } from '@/lib/teamUtils'
 import { useHintStore } from '@/store/useHintStore'
@@ -150,6 +152,7 @@ function HomePageContent() {
   const lineupFromUrl = searchParams.get('lineup')?.trim() || ''
   const myTeams = useQuery(api.teams.listMyTeams, {})
   const updateLineups = useMutation(api.teams.updateLineups)
+  const updateRoster = useMutation(api.teams.updateRoster)
   const createTeam = useMutation(api.teams.create)
   const teamWithLayouts = useQuery(
     api.teams.getTeamWithLayouts,
@@ -159,6 +162,11 @@ function HomePageContent() {
   const selectedLayouts = teamWithLayouts?.layouts ?? undefined
   const [localTeams, setLocalTeams] = useState<Team[]>([])
   const [isSavingLineup, setIsSavingLineup] = useState(false)
+  const [isSavingLineupEditor, setIsSavingLineupEditor] = useState(false)
+  const [lineupDraftAssignments, setLineupDraftAssignments] = useState<PositionAssignments>({})
+  const [newLineupNameDraft, setNewLineupNameDraft] = useState('')
+  const [newCourtSetupPlayerName, setNewCourtSetupPlayerName] = useState('')
+  const [newCourtSetupPlayerNumber, setNewCourtSetupPlayerNumber] = useState('')
   const [isMounted, setIsMounted] = useState(false)
   const loadedTeamFromUrlRef = useRef<string | null>(null)
   const previousPhaseRef = useRef(currentPhase)
@@ -628,9 +636,60 @@ function HomePageContent() {
     }
     return currentTeam.lineups.find((lineup) => lineup.id === currentTeam.active_lineup_id) || currentTeam.lineups[0]
   }, [currentTeam])
+  const lineupRolesForSetup = useMemo(
+    () => (showLibero ? ROLES : ROLES.filter((role) => role !== 'L')),
+    [showLibero]
+  )
+  const currentLineupId = currentLineup?.id
+  const currentLineupAssignments = currentLineup?.position_assignments
+
+  useEffect(() => {
+    if (!currentLineupId) {
+      setLineupDraftAssignments({})
+      return
+    }
+    setLineupDraftAssignments(cleanAssignments(currentLineupAssignments || {}))
+  }, [cleanAssignments, currentLineupAssignments, currentLineupId])
+
+  const getDefaultLineupName = useCallback((lineups: Lineup[]) => {
+    const usedNames = new Set(lineups.map((lineup) => lineup.name.trim().toLowerCase()))
+    let nextIndex = lineups.length + 1
+    let nextName = `Lineup ${nextIndex}`
+    while (usedNames.has(nextName.toLowerCase())) {
+      nextIndex += 1
+      nextName = `Lineup ${nextIndex}`
+    }
+    return nextName
+  }, [])
+
+  const createLineupId = useCallback(() => {
+    return typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : `lineup-${Date.now()}`
+  }, [])
+
+  const assignmentSignature = useCallback((assignments: PositionAssignments) => {
+    return JSON.stringify(
+      Object.entries(assignments)
+        .filter(([, playerId]) => typeof playerId === 'string' && playerId.trim() !== '')
+        .sort(([left], [right]) => left.localeCompare(right))
+    )
+  }, [])
+
+  const cleanedLineupDraftAssignments = useMemo(
+    () => cleanAssignments(lineupDraftAssignments),
+    [lineupDraftAssignments, cleanAssignments]
+  )
+  const cleanedCurrentLineupAssignments = useMemo(
+    () => cleanAssignments(currentLineup?.position_assignments || {}),
+    [currentLineup?.position_assignments, cleanAssignments]
+  )
+  const lineupDraftHasChanges = useMemo(
+    () => assignmentSignature(cleanedLineupDraftAssignments) !== assignmentSignature(cleanedCurrentLineupAssignments),
+    [assignmentSignature, cleanedCurrentLineupAssignments, cleanedLineupDraftAssignments]
+  )
   const lineupSelectValue = currentLineup?.id || '__none__'
   const handleTeamSelect = useCallback((value: string) => {
-    setCourtSetupOpen(false)
     if (value === '__new__') {
       void handleNewTeamFromWhiteboard()
       return
@@ -712,7 +771,6 @@ function HomePageContent() {
     }
   }, [isAuthenticated, createTeam, router, setCurrentTeam])
   const handleLineupSelect = useCallback(async (value: string) => {
-    setCourtSetupOpen(false)
     if (value === '__none__') {
       return
     }
@@ -734,21 +792,13 @@ function HomePageContent() {
 
       const existingLineups = currentTeam.lineups || []
       const baseLineup = currentLineup || existingLineups[0]
-      const usedNames = new Set(existingLineups.map((lineup) => lineup.name.trim().toLowerCase()))
-      let nextIndex = existingLineups.length + 1
-      let nextName = `Lineup ${nextIndex}`
-      while (usedNames.has(nextName.toLowerCase())) {
-        nextIndex += 1
-        nextName = `Lineup ${nextIndex}`
-      }
+      const nextName = getDefaultLineupName(existingLineups)
 
       const clonedAssignments = {
         ...(baseLineup?.position_assignments || {}),
       }
       const newLineup: Lineup = {
-        id: typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-          ? crypto.randomUUID()
-          : `lineup-${Date.now()}`,
+        id: createLineupId(),
         name: nextName,
         position_assignments: clonedAssignments,
         position_source: baseLineup?.position_source ?? 'custom',
@@ -804,7 +854,149 @@ function HomePageContent() {
     } finally {
       setIsSavingLineup(false)
     }
-  }, [currentLineup, currentTeam, persistLineupsForTeam, router, setCurrentTeam])
+  }, [createLineupId, currentLineup, currentTeam, getDefaultLineupName, persistLineupsForTeam, router, setCurrentTeam])
+
+  const handleLineupDraftAssignmentChange = useCallback((role: Role, playerId: string | '__none__') => {
+    setLineupDraftAssignments((prev) => {
+      const next = { ...prev }
+      if (playerId === '__none__') {
+        delete next[role]
+      } else {
+        next[role] = playerId
+      }
+      return next
+    })
+  }, [])
+
+  const handleSaveSelectedLineupChanges = useCallback(async () => {
+    if (!currentTeam || !currentLineup) return
+
+    const updatedAssignments = cleanAssignments(lineupDraftAssignments)
+    const nextLineups = currentTeam.lineups.map((lineup) =>
+      lineup.id === currentLineup.id
+        ? { ...lineup, position_assignments: updatedAssignments }
+        : lineup
+    )
+    const nextTeam: Team = {
+      ...currentTeam,
+      lineups: nextLineups,
+      active_lineup_id: currentLineup.id,
+      position_assignments: updatedAssignments,
+    }
+
+    setIsSavingLineupEditor(true)
+    setCurrentTeam(nextTeam)
+    try {
+      await persistLineupsForTeam(nextTeam)
+      toast.success('Lineup updated')
+    } catch (error) {
+      setCurrentTeam(currentTeam)
+      const message = error instanceof Error ? error.message : 'Failed to update lineup'
+      toast.error(message)
+    } finally {
+      setIsSavingLineupEditor(false)
+    }
+  }, [cleanAssignments, currentLineup, currentTeam, lineupDraftAssignments, persistLineupsForTeam, setCurrentTeam])
+
+  const handleSaveAsNewLineupFromDraft = useCallback(async () => {
+    if (!currentTeam) return
+
+    const updatedAssignments = cleanAssignments(lineupDraftAssignments)
+    const existingLineups = currentTeam.lineups || []
+    const baseLineup = currentLineup || existingLineups[0]
+    const lineupName = newLineupNameDraft.trim() || getDefaultLineupName(existingLineups)
+    const newLineup: Lineup = {
+      id: createLineupId(),
+      name: lineupName,
+      position_assignments: updatedAssignments,
+      position_source: baseLineup?.position_source ?? 'custom',
+      starting_rotation: baseLineup?.starting_rotation ?? 1,
+      created_at: new Date().toISOString(),
+    }
+
+    const nextTeam: Team = {
+      ...currentTeam,
+      lineups: [...existingLineups, newLineup],
+      active_lineup_id: newLineup.id,
+      position_assignments: updatedAssignments,
+    }
+
+    setIsSavingLineupEditor(true)
+    setCurrentTeam(nextTeam)
+    try {
+      await persistLineupsForTeam(nextTeam)
+      setNewLineupNameDraft('')
+      toast.success(`Saved ${lineupName}`)
+    } catch (error) {
+      setCurrentTeam(currentTeam)
+      const message = error instanceof Error ? error.message : 'Failed to save new lineup'
+      toast.error(message)
+    } finally {
+      setIsSavingLineupEditor(false)
+    }
+  }, [
+    cleanAssignments,
+    createLineupId,
+    currentLineup,
+    currentTeam,
+    getDefaultLineupName,
+    lineupDraftAssignments,
+    newLineupNameDraft,
+    persistLineupsForTeam,
+    setCurrentTeam,
+  ])
+
+  const handleAddPlayerFromCourtSetup = useCallback(async () => {
+    if (!currentTeam) return
+
+    const name = newCourtSetupPlayerName.trim()
+    const number = newCourtSetupPlayerNumber.replace(/\D/g, '').slice(0, 3)
+    if (!name && !number) {
+      toast.error('Enter a player name, number, or both')
+      return
+    }
+
+    const nextPlayer = {
+      id: `player-${Date.now()}`,
+      name: name || undefined,
+      number: number ? parseInt(number, 10) : undefined,
+    }
+    const nextRoster = [...currentTeam.roster, nextPlayer]
+    const nextTeam: Team = {
+      ...currentTeam,
+      roster: nextRoster,
+    }
+
+    setIsSavingLineupEditor(true)
+    setCurrentTeam(nextTeam)
+    try {
+      if (nextTeam._id) {
+        await updateRoster({
+          id: nextTeam._id as Id<'teams'>,
+          roster: nextRoster,
+        })
+      } else {
+        upsertLocalTeam(nextTeam)
+        setLocalTeams(listLocalTeams())
+      }
+
+      setNewCourtSetupPlayerName('')
+      setNewCourtSetupPlayerNumber('')
+      toast.success('Player added')
+    } catch (error) {
+      setCurrentTeam(currentTeam)
+      const message = error instanceof Error ? error.message : 'Failed to add player'
+      toast.error(message)
+    } finally {
+      setIsSavingLineupEditor(false)
+    }
+  }, [
+    currentTeam,
+    newCourtSetupPlayerName,
+    newCourtSetupPlayerNumber,
+    setCurrentTeam,
+    updateRoster,
+  ])
 
   const canShowOnboardingHint = isMounted && isUiHydrated
   const showFirstDragHint = canShowOnboardingHint ? shouldShowFirstDragHint() : false
@@ -829,11 +1021,17 @@ function HomePageContent() {
         ? 3
         : undefined
 
-  const onboardingTargetSelector = showFirstDragHint || showArrowDragHint
-    ? '[data-onboarding="player-token"]'
-    : showPhaseNavigationHint
-      ? '[data-onboarding="phase-selector"]'
-      : ''
+  const onboardingTargetSelectors = showFirstDragHint
+    ? ['[data-onboarding="player-token"]']
+    : showArrowDragHint
+      ? [
+          '[data-onboarding="arrow-end-target"]',
+          '[data-onboarding="arrow-preview-target"]',
+          '[data-onboarding="player-token"]',
+        ]
+      : showPhaseNavigationHint
+        ? ['[data-onboarding="phase-selector"]']
+        : []
 
   useEffect(() => {
     if (previousPhaseRef.current === currentPhase) return
@@ -890,7 +1088,7 @@ function HomePageContent() {
         <Select
           value={lineupSelectValue}
           onValueChange={(value) => { void handleLineupSelect(value) }}
-          disabled={isSavingLineup}
+          disabled={isSavingLineup || isSavingLineupEditor}
         >
           <SelectTrigger className="h-9 text-sm">
             <SelectValue placeholder={currentTeam ? 'Select lineup' : 'Select team first'} />
@@ -898,7 +1096,6 @@ function HomePageContent() {
           <SelectContent>
             <SelectGroup>
               <SelectLabel>Actions</SelectLabel>
-              <SelectItem value="__new__">+ New Lineup...</SelectItem>
               <SelectItem value="__manage__">Manage Lineups...</SelectItem>
             </SelectGroup>
             <SelectSeparator />
@@ -926,6 +1123,104 @@ function HomePageContent() {
             )}
           </SelectContent>
         </Select>
+      </div>
+
+      <div className="space-y-3 rounded-lg border border-border bg-muted/40 px-3 py-3">
+        <div className="space-y-0.5">
+          <Label className="text-sm font-medium">Lineup Positions</Label>
+          <p className="text-xs text-muted-foreground">
+            Pick players for each role, then save to this lineup or save as a new one.
+          </p>
+        </div>
+        {!currentTeam ? (
+          <p className="text-xs text-muted-foreground">Select a team first.</p>
+        ) : (
+          <>
+            <div className="space-y-2">
+              {lineupRolesForSetup.map((role) => (
+                <div key={role} className="grid grid-cols-[72px_1fr] items-center gap-2">
+                  <span className="text-xs font-medium text-muted-foreground">{role}</span>
+                  <Select
+                    value={lineupDraftAssignments[role] || '__none__'}
+                    onValueChange={(value) => handleLineupDraftAssignmentChange(role, value as string | '__none__')}
+                    disabled={isSavingLineupEditor}
+                  >
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue placeholder="Unassigned" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">Unassigned</SelectItem>
+                      <SelectSeparator />
+                      {currentTeam.roster.map((player) => (
+                        <SelectItem key={player.id} value={player.id}>
+                          {(player.name && player.name.trim()) ? player.name : `Player ${player.number ?? ''}`.trim()}
+                          {player.number !== undefined ? ` #${player.number}` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <Button
+                size="sm"
+                onClick={() => { void handleSaveSelectedLineupChanges() }}
+                disabled={!currentLineup || !lineupDraftHasChanges || isSavingLineupEditor}
+              >
+                Save Lineup Changes
+              </Button>
+              <div className="flex flex-1 min-w-[220px] items-center gap-2">
+                <Input
+                  value={newLineupNameDraft}
+                  onChange={(event) => setNewLineupNameDraft(event.target.value)}
+                  placeholder="New lineup name (optional)"
+                  className="h-8 text-xs"
+                  disabled={isSavingLineupEditor}
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => { void handleSaveAsNewLineupFromDraft() }}
+                  disabled={isSavingLineupEditor}
+                >
+                  Save as New
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-2 border-t border-border/60 pt-3">
+              <Label className="text-xs text-muted-foreground">Add Player to Roster</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  value={newCourtSetupPlayerName}
+                  onChange={(event) => setNewCourtSetupPlayerName(event.target.value)}
+                  placeholder="Player name"
+                  className="h-8 text-xs"
+                  disabled={isSavingLineupEditor}
+                />
+                <Input
+                  value={newCourtSetupPlayerNumber}
+                  onChange={(event) => setNewCourtSetupPlayerNumber(event.target.value.replace(/\D/g, '').slice(0, 3))}
+                  placeholder="#"
+                  className="h-8 w-20 text-xs"
+                  inputMode="numeric"
+                  maxLength={3}
+                  disabled={isSavingLineupEditor}
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => { void handleAddPlayerFromCourtSetup() }}
+                  disabled={isSavingLineupEditor || (!newCourtSetupPlayerName.trim() && !newCourtSetupPlayerNumber.trim())}
+                >
+                  Add
+                </Button>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       <div className="flex items-center justify-between rounded-lg border border-border bg-muted/40 px-3 py-2">
@@ -1090,18 +1385,21 @@ function HomePageContent() {
                 onTagsChange={isEditingAllowed ? (role, tags) => {
                   setTokenTags(currentRotation, currentPhase, role, tags)
                 } : undefined}
-                onPlayerAssign={isEditingAllowed && currentTeam ? (role, playerId) => {
-                  assignPlayerToRole(role, playerId)
-                } : undefined}
-	              />
+	                onPlayerAssign={isEditingAllowed && currentTeam ? (role, playerId) => {
+	                  assignPlayerToRole(role, playerId)
+	                } : undefined}
+                  suppressHoverHintTooltip={showFirstDragHint || showArrowDragHint}
+                  onboardingSpotlightRole={showArrowDragHint ? 'S' : null}
+                  showOnboardingArrowEndSpotlight={showArrowDragHint}
+		              />
 
-          <SpotlightOverlay
-            show={canShowOnboardingHint && Boolean(onboardingHintMessage)}
-            message={onboardingHintMessage || ''}
-            step={onboardingStep}
-            totalSteps={onboardingStep != null ? GUIDED_TOTAL : undefined}
-            targetSelector={onboardingTargetSelector}
-          />
+	          <SpotlightOverlay
+	            show={canShowOnboardingHint && Boolean(onboardingHintMessage)}
+	            message={onboardingHintMessage || ''}
+	            step={onboardingStep}
+	            totalSteps={onboardingStep != null ? GUIDED_TOTAL : undefined}
+	            targetSelectors={onboardingTargetSelectors}
+	          />
           </div>
         </div>
       </div>
@@ -1115,7 +1413,7 @@ function HomePageContent() {
             <DialogHeader>
               <DialogTitle>Court Setup</DialogTitle>
               <DialogDescription>
-                Choose team, lineup, and opponent visibility for the whiteboard.
+                Choose a team, assign players to lineup positions, and control court display.
               </DialogDescription>
             </DialogHeader>
             {courtSetupContent}
@@ -1131,7 +1429,7 @@ function HomePageContent() {
             <SheetHeader className="pb-4">
               <SheetTitle>Court Setup</SheetTitle>
               <SheetDescription>
-                Choose team, lineup, and opponent visibility for the whiteboard.
+                Choose a team, assign players to lineup positions, and control court display.
               </SheetDescription>
             </SheetHeader>
             {courtSetupContent}
@@ -1151,7 +1449,7 @@ function HomePageContent() {
             <div className="mb-4 space-y-1.5">
               <h2 className="text-lg font-semibold leading-none tracking-tight">Court Setup</h2>
               <p className="text-sm text-muted-foreground">
-                Choose team, lineup, and opponent visibility for the whiteboard.
+                Choose a team, assign players to lineup positions, and control court display.
               </p>
             </div>
             {courtSetupContent}

@@ -8,7 +8,8 @@ interface SpotlightOverlayProps {
   message: string
   step?: number
   totalSteps?: number
-  targetSelector: string
+  targetSelector?: string
+  targetSelectors?: string[]
   /** Extra padding around the spotlight circle (px) */
   spotlightPadding?: number
 }
@@ -19,6 +20,7 @@ export function SpotlightOverlay({
   step,
   totalSteps,
   targetSelector,
+  targetSelectors,
   spotlightPadding = 12,
 }: SpotlightOverlayProps) {
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null)
@@ -28,7 +30,23 @@ export function SpotlightOverlay({
 
   // Measure the target element
   const measure = useCallback(() => {
-    const el = document.querySelector(targetSelector)
+    const selectors = targetSelectors && targetSelectors.length > 0
+      ? targetSelectors
+      : targetSelector
+        ? [targetSelector]
+        : []
+
+    if (selectors.length === 0) {
+      setTargetRect(null)
+      return
+    }
+
+    let el: Element | null = null
+    for (const selector of selectors) {
+      el = document.querySelector(selector)
+      if (el) break
+    }
+
     if (!el) {
       setTargetRect(null)
       return
@@ -36,7 +54,7 @@ export function SpotlightOverlay({
     const rect = el.getBoundingClientRect()
     setTargetRect(rect)
     setViewportSize({ w: window.innerWidth, h: window.innerHeight })
-  }, [targetSelector])
+  }, [targetSelector, targetSelectors])
 
   // Mount portal target
   useEffect(() => {
