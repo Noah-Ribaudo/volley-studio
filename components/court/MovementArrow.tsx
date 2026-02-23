@@ -2,6 +2,7 @@
 
 import { memo, useCallback, useEffect, useRef } from 'react'
 import { animate, animateIfAllowed, stopAnimation, type AnimationPlaybackControls } from '@/lib/motion-utils'
+import { useWhiteboardDials } from '@/lib/whiteboard-dial-context'
 
 interface MovementArrowProps {
   start: { x: number; y: number }
@@ -72,6 +73,8 @@ function MovementArrowImpl({
   startDotOpacityScale = 1,
   arrowheadOpacityScale = 1,
 }: MovementArrowProps) {
+  const dials = useWhiteboardDials()
+
   const pathRef = useRef<SVGPathElement>(null)
   const arrowheadRef = useRef<SVGPathElement>(null)
   const peekGroupRef = useRef<SVGGElement>(null)
@@ -151,11 +154,11 @@ function MovementArrowImpl({
 
   const { dx, dy } = calculateArrowhead()
   const curveMidpoint = calculateCurveMidpoint()
-  const resolvedStartDotRadius = startDotRadius ?? Math.max(2.25, Math.min(5, strokeWidth * 0.85))
+  const resolvedStartDotRadius = startDotRadius ?? dials.arrowStartDotRadius
 
   // Arrowhead size
-  const arrowheadSize = Math.max(8, strokeWidth * 2.5)
-  const arrowheadAngle = Math.PI / 6 // 30 degrees
+  const arrowheadSize = Math.max(8, strokeWidth * dials.arrowheadSizeMultiplier)
+  const arrowheadAngle = (dials.arrowheadAngle * Math.PI) / 180
 
   // Calculate arrowhead points
   const arrowheadX1 = end.x - arrowheadSize * (dx * Math.cos(arrowheadAngle) - dy * Math.sin(arrowheadAngle))
@@ -227,7 +230,7 @@ function MovementArrowImpl({
 
     // Animate path draw with spring
     animationRef.current = animateIfAllowed(() => animate(0, 1, {
-      duration: 0.3,
+      duration: dials.arrowDrawInDuration / 1000,
       ease: [0.4, 0, 0.2, 1],
       onUpdate: (progress) => {
         // Draw the path
@@ -284,7 +287,7 @@ function MovementArrowImpl({
     }
 
     peekAnimationRef.current = animateIfAllowed(() => animate(start, target, {
-      duration: target > start ? 0.2 : 0.14,
+      duration: target > start ? dials.arrowPeekRevealDuration / 1000 : dials.arrowPeekRetractDuration / 1000,
       ease: target > start ? [0.0, 0.0, 0.2, 1.0] : [0.4, 0.0, 1.0, 1.0],
       onUpdate: (value) => {
         peekProgressRef.current = value
@@ -338,7 +341,7 @@ function MovementArrowImpl({
             d={pathData}
             fill="none"
             stroke={debugHitboxes ? "rgba(57, 255, 20, 0.5)" : "transparent"}
-            strokeWidth={Math.max(30, strokeWidth * 6)}
+            strokeWidth={Math.max(dials.arrowHitAreaWidth, strokeWidth * 6)}
             strokeLinecap="round"
             strokeLinejoin="round"
             style={{ pointerEvents: peekAnimated ? 'none' : 'auto', cursor: canDragFromPath ? 'grab' : 'pointer' }}
@@ -376,7 +379,7 @@ function MovementArrowImpl({
             cy={start.y}
             r={resolvedStartDotRadius}
             fill={color}
-            opacity={Math.min(1, opacity * 0.92 * startDotOpacityScale)}
+            opacity={Math.min(1, opacity * dials.arrowStartDotOpacity * startDotOpacityScale)}
             style={{ pointerEvents: 'none' }}
           />
         )}
@@ -429,7 +432,7 @@ function MovementArrowImpl({
           <circle
             cx={curveMidpoint.x}
             cy={curveMidpoint.y}
-            r={6}
+            r={dials.arrowCurveHandleRadius}
             fill="rgba(0,0,0,0.5)"
             stroke="white"
             strokeWidth={1.5}
@@ -439,7 +442,7 @@ function MovementArrowImpl({
           <circle
             cx={curveMidpoint.x}
             cy={curveMidpoint.y}
-            r={2.5}
+            r={dials.arrowCurveHandleRadius * 0.42}
             fill="white"
             style={{ pointerEvents: 'none' }}
           />
@@ -447,7 +450,7 @@ function MovementArrowImpl({
           <circle
             cx={curveMidpoint.x}
             cy={curveMidpoint.y}
-            r={27}
+            r={dials.arrowCurveHandleHitRadius}
             fill={debugHitboxes ? "rgba(57, 255, 20, 0.3)" : "transparent"}
             stroke={debugHitboxes ? "rgba(57, 255, 20, 0.8)" : "none"}
             strokeWidth={debugHitboxes ? 2 : 0}

@@ -3,6 +3,7 @@
 import { memo } from 'react'
 import { Role, ROLE_INFO, PlayerStatus, PLAYER_STATUS_INFO } from '@/lib/types'
 import { getTextColorForOklch } from '@/lib/utils'
+import { useWhiteboardDials } from '@/lib/whiteboard-dial-context'
 
 // Helper function to calculate token dimensions for hit targets
 export function getPlayerTokenDimensions(
@@ -93,6 +94,8 @@ function PlayerTokenImpl({
   fullStatusLabels = true,
   isPrimed = false
 }: PlayerTokenProps) {
+  const dials = useWhiteboardDials()
+
   // Normalize statuses - handle legacy single-value format
   const statuses = Array.isArray(statusesProp) ? statusesProp : (statusesProp ? [statusesProp] : [])
 
@@ -110,10 +113,10 @@ function PlayerTokenImpl({
       <g
         className={`player-token transition-all duration-200 ${isDragging ? 'cursor-grabbing' : 'cursor-grab focus:outline-none'}`}
         style={{
-          transform: `translate(${x}px, ${y}px) scale(${isDragging ? 1.06 : 1})`,
-          opacity: dimmed ? 0.4 : 1,
-          filter: isDragging ? 'drop-shadow(0 8px 16px rgba(0,0,0,0.35))' : undefined,
-          transition: 'filter 120ms ease-out, transform 120ms ease-out',
+          transform: `translate(${x}px, ${y}px) scale(${isDragging ? dials.tokenDragScale : 1})`,
+          opacity: dimmed ? dials.tokenDimmedOpacity : 1,
+          filter: isDragging ? `drop-shadow(0 8px ${dials.tokenDragShadowBlur}px rgba(0,0,0,${dials.tokenDragShadowOpacity}))` : undefined,
+          transition: `filter ${dials.tokenTransitionMs}ms ease-out, transform ${dials.tokenTransitionMs}ms ease-out`,
         }}
         onClick={onClick}
         role="button"
@@ -134,24 +137,24 @@ function PlayerTokenImpl({
             <circle
               cx={0}
               cy={0}
-              r={circleRadius + 4 * mobileScale}
+              r={circleRadius + dials.glowOffset * 0.67 * mobileScale}
               fill="none"
-              stroke="rgba(57, 255, 20, 0.8)"
-              strokeWidth={3 * mobileScale}
+              stroke={`${dials.glowColor}cc`}
+              strokeWidth={dials.glowMinStrokeWidth * mobileScale}
               style={{
-                animation: 'prime-pulse-small 1s ease-in-out infinite',
+                animation: `prime-pulse-small ${dials.glowPulseDuration}s ease-in-out infinite`,
               }}
             />
             <style>
               {`
                 @keyframes prime-pulse-small {
                   0%, 100% {
-                    opacity: 0.6;
-                    stroke-width: ${2 * mobileScale}px;
+                    opacity: ${dials.glowMinOpacity};
+                    stroke-width: ${(dials.glowMinStrokeWidth - 1) * mobileScale}px;
                   }
                   50% {
-                    opacity: 1;
-                    stroke-width: ${4 * mobileScale}px;
+                    opacity: ${dials.glowMaxOpacity};
+                    stroke-width: ${(dials.glowMaxStrokeWidth - 1) * mobileScale}px;
                   }
                 }
               `}
@@ -176,7 +179,7 @@ function PlayerTokenImpl({
           cx={0}
           cy={0}
           r={circleRadius - 2 * mobileScale}
-          fill="rgba(255,255,255,0.2)"
+          fill={`rgba(255,255,255,${dials.tokenInnerHighlight})`}
         />
 
         {/* Role abbreviation */}
@@ -282,8 +285,8 @@ function PlayerTokenImpl({
 
   // Base sizes (will be scaled for mobile)
   // Position-only: larger for visibility, min 44px for touch target on mobile
-  const POSITION_ONLY_BASE_SIZE = 56 // Base size for position-only
-  const PLAYER_TOKEN_BASE_SIZE = 48 // Base size for player tokens
+  const POSITION_ONLY_BASE_SIZE = dials.tokenBaseSizePositionOnly
+  const PLAYER_TOKEN_BASE_SIZE = dials.tokenBaseSizePlayer
 
   // Scaled sizes
   const baseTokenSize = isPositionOnlyMode
@@ -292,7 +295,7 @@ function PlayerTokenImpl({
 
   const padding = 6 * mobileScale
   const scale = 1 * mobileScale
-  const rectRadius = 6 * scale
+  const rectRadius = dials.tokenCornerRadius * scale
 
   // Dynamic text sizing based on container and content
   const baseFontSize = isPositionOnlyMode ? 14 : 11
@@ -471,10 +474,10 @@ function PlayerTokenImpl({
     <g
       className={`player-token transition-all duration-200 ${isDragging ? 'cursor-grabbing' : 'cursor-grab focus:outline-none'}`}
       style={{
-        transform: `translate(${x}px, ${y}px) scale(${isDragging ? 1.06 : 1})`,
-        opacity: dimmed ? 0.4 : 1,
-        filter: isDragging ? 'drop-shadow(0 8px 16px rgba(0,0,0,0.35))' : undefined,
-        transition: 'filter 120ms ease-out, transform 120ms ease-out',
+        transform: `translate(${x}px, ${y}px) scale(${isDragging ? dials.tokenDragScale : 1})`,
+        opacity: dimmed ? dials.tokenDimmedOpacity : 1,
+        filter: isDragging ? `drop-shadow(0 8px ${dials.tokenDragShadowBlur}px rgba(0,0,0,${dials.tokenDragShadowOpacity}))` : undefined,
+        transition: `filter ${dials.tokenTransitionMs}ms ease-out, transform ${dials.tokenTransitionMs}ms ease-out`,
       }}
       onClick={onClick}
       role="button"
@@ -495,27 +498,27 @@ function PlayerTokenImpl({
           <circle
             cx={0}
             cy={0}
-            r={actualWidth / 2 + 6 * mobileScale}
+            r={actualWidth / 2 + dials.glowOffset * mobileScale}
             fill="none"
-            stroke="rgba(57, 255, 20, 0.8)"
-            strokeWidth={4 * mobileScale}
+            stroke={`${dials.glowColor}cc`}
+            strokeWidth={((dials.glowMinStrokeWidth + dials.glowMaxStrokeWidth) / 2) * mobileScale}
             style={{
-              animation: 'prime-pulse 1s ease-in-out infinite',
+              animation: `prime-pulse ${dials.glowPulseDuration}s ease-in-out infinite`,
             }}
           />
         ) : (
           <rect
-            x={-actualWidth / 2 - 6 * mobileScale}
-            y={-actualHeight / 2 - 6 * mobileScale}
-            width={actualWidth + 12 * mobileScale}
-            height={actualHeight + 12 * mobileScale}
+            x={-actualWidth / 2 - dials.glowOffset * mobileScale}
+            y={-actualHeight / 2 - dials.glowOffset * mobileScale}
+            width={actualWidth + dials.glowOffset * 2 * mobileScale}
+            height={actualHeight + dials.glowOffset * 2 * mobileScale}
             rx={rectRadius + 4 * mobileScale}
             ry={rectRadius + 4 * mobileScale}
             fill="none"
-            stroke="rgba(57, 255, 20, 0.8)"
-            strokeWidth={4 * mobileScale}
+            stroke={`${dials.glowColor}cc`}
+            strokeWidth={((dials.glowMinStrokeWidth + dials.glowMaxStrokeWidth) / 2) * mobileScale}
             style={{
-              animation: 'prime-pulse 1s ease-in-out infinite',
+              animation: `prime-pulse ${dials.glowPulseDuration}s ease-in-out infinite`,
             }}
           />
         )
@@ -527,12 +530,12 @@ function PlayerTokenImpl({
           {`
             @keyframes prime-pulse {
               0%, 100% {
-                opacity: 0.6;
-                stroke-width: ${3 * mobileScale}px;
+                opacity: ${dials.glowMinOpacity};
+                stroke-width: ${dials.glowMinStrokeWidth * mobileScale}px;
               }
               50% {
-                opacity: 1;
-                stroke-width: ${5 * mobileScale}px;
+                opacity: ${dials.glowMaxOpacity};
+                stroke-width: ${dials.glowMaxStrokeWidth * mobileScale}px;
               }
             }
           `}
@@ -551,7 +554,7 @@ function PlayerTokenImpl({
                 r={actualWidth / 2}
                 fill={tokenColor}
                 stroke={isInViolation ? '#ef4444' : (isContextOpen || highlighted) ? '#fff' : 'rgba(0,0,0,0.3)'}
-                strokeWidth={isInViolation ? 1.5 * mobileScale : (isContextOpen || highlighted) ? 3 * mobileScale : 2 * mobileScale}
+                strokeWidth={isInViolation ? 1.5 * mobileScale : (isContextOpen || highlighted) ? dials.tokenSelectedBorderWidth * mobileScale : dials.tokenBorderWidth * mobileScale}
                 strokeDasharray={isInViolation ? '4,4' : undefined}
                 className="transition-all duration-150"
                 style={{
@@ -564,7 +567,7 @@ function PlayerTokenImpl({
                 cx={0}
                 cy={0}
                 r={actualWidth / 2 - 2 * mobileScale}
-                fill="rgba(255,255,255,0.2)"
+                fill={`rgba(255,255,255,${dials.tokenInnerHighlight})`}
               />
             </>
           ) : (
@@ -579,7 +582,7 @@ function PlayerTokenImpl({
                 ry={rectRadius}
                 fill={tokenColor}
                 stroke={isInViolation ? '#ef4444' : (isContextOpen || highlighted) ? '#fff' : 'rgba(0,0,0,0.3)'}
-                strokeWidth={isInViolation ? 1.5 * mobileScale : (isContextOpen || highlighted) ? 3 * mobileScale : 2 * mobileScale}
+                strokeWidth={isInViolation ? 1.5 * mobileScale : (isContextOpen || highlighted) ? dials.tokenSelectedBorderWidth * mobileScale : dials.tokenBorderWidth * mobileScale}
                 strokeDasharray={isInViolation ? '4,4' : undefined}
                 className="transition-all duration-150"
                 style={{
@@ -595,7 +598,7 @@ function PlayerTokenImpl({
                 height={actualHeight - 4 * mobileScale}
                 rx={rectRadius - 2 * mobileScale}
                 ry={rectRadius - 2 * mobileScale}
-                fill="rgba(255,255,255,0.2)"
+                fill={`rgba(255,255,255,${dials.tokenInnerHighlight})`}
               />
             </>
           )}
@@ -657,7 +660,7 @@ function PlayerTokenImpl({
                 r={actualWidth / 2}
                 fill={tokenColor}
                 stroke={isInViolation ? '#ef4444' : (isContextOpen || highlighted) ? '#fff' : 'rgba(0,0,0,0.3)'}
-                strokeWidth={isInViolation ? 1.5 * mobileScale : (isContextOpen || highlighted) ? 3 * mobileScale : 2 * mobileScale}
+                strokeWidth={isInViolation ? 1.5 * mobileScale : (isContextOpen || highlighted) ? dials.tokenSelectedBorderWidth * mobileScale : dials.tokenBorderWidth * mobileScale}
                 strokeDasharray={isInViolation ? '4,4' : undefined}
                 className="transition-all duration-150"
                 style={{
@@ -670,7 +673,7 @@ function PlayerTokenImpl({
                 cx={0}
                 cy={0}
                 r={actualWidth / 2 - 2 * mobileScale}
-                fill="rgba(255,255,255,0.2)"
+                fill={`rgba(255,255,255,${dials.tokenInnerHighlight})`}
               />
             </>
           ) : (
@@ -685,7 +688,7 @@ function PlayerTokenImpl({
                 ry={rectRadius}
                 fill={tokenColor}
                 stroke={isInViolation ? '#ef4444' : (isContextOpen || highlighted) ? '#fff' : 'rgba(0,0,0,0.3)'}
-                strokeWidth={isInViolation ? 1.5 * mobileScale : (isContextOpen || highlighted) ? 3 * mobileScale : 2 * mobileScale}
+                strokeWidth={isInViolation ? 1.5 * mobileScale : (isContextOpen || highlighted) ? dials.tokenSelectedBorderWidth * mobileScale : dials.tokenBorderWidth * mobileScale}
                 strokeDasharray={isInViolation ? '4,4' : undefined}
                 className="transition-all duration-150"
                 style={{
@@ -701,7 +704,7 @@ function PlayerTokenImpl({
                 height={actualHeight - 4 * mobileScale}
                 rx={rectRadius - 2 * mobileScale}
                 ry={rectRadius - 2 * mobileScale}
-                fill="rgba(255,255,255,0.2)"
+                fill={`rgba(255,255,255,${dials.tokenInnerHighlight})`}
               />
             </>
           )}

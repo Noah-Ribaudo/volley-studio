@@ -34,6 +34,9 @@ import { useReducedMotion } from '@/hooks/useReducedMotion'
 import { PlayerPicker } from './PlayerPicker'
 import { TagPicker } from './TagPicker'
 import { MotionDebugPanel } from './MotionDebugPanel'
+import { WhiteboardDialKit } from './WhiteboardDialKit'
+import { WhiteboardDialProvider } from '@/lib/whiteboard-dial-context'
+import { useUIPrefsStore } from '@/store/useUIPrefsStore'
 import {
   computeSteering,
   clampPosition,
@@ -242,6 +245,9 @@ export function VolleyballCourt({
   // In simulation mode, disable editing
   const isEditable = mode === 'whiteboard' && editable
   // Arrows are always available in whiteboard mode (no special mode needed)
+
+  // DialKit panel toggle
+  const showDialKit = useUIPrefsStore((state) => state.showWhiteboardDialKit)
 
   // Hint store for teaching UI
   const incrementDragCount = useHintStore((state) => state.incrementDragCount)
@@ -2141,6 +2147,7 @@ export function VolleyballCourt({
   }, [])
 
   return (
+    <WhiteboardDialProvider>
     <div
       ref={debugOverlayHostRef}
       className="relative w-full h-full flex items-center justify-center"
@@ -2150,6 +2157,7 @@ export function VolleyballCourt({
         WebkitUserSelect: 'none'
       }}
     >
+      {showDialKit && <WhiteboardDialKit />}
       {showDebugOverlay && (
         <MotionDebugPanel
           mode={mode}
@@ -2761,5 +2769,6 @@ export function VolleyballCourt({
         />
       )}
     </div>
+    </WhiteboardDialProvider>
   )
 }
