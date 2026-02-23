@@ -2675,7 +2675,7 @@ export function VolleyballCourt({
         })()}
 
         {/* Floating tooltip for new users - teaches drag-off-court to delete */}
-        {shouldShowDeleteHint() && draggingArrowRole && arrowDragPosition && (
+        {process.env.NODE_ENV === 'development' && shouldShowDeleteHint() && draggingArrowRole && arrowDragPosition && (
           <DragTooltip
             visible={true}
             x={toSvgCoords(arrowDragPosition).x}
