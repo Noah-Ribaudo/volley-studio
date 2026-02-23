@@ -83,8 +83,8 @@ test.describe('Whiteboard', () => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
 
-    const courtSetupButton = page.getByRole('button', { name: /^Court Setup$/i }).first()
-    const setupDescription = page.getByText('Choose team, lineup, and opponent visibility for the whiteboard.').first()
+    const courtSetupButton = page.getByRole('button', { name: /court setup/i }).first()
+    const setupDescription = page.getByText('Choose a team, assign players to lineup positions, and control court display.').first()
 
     await expect(courtSetupButton).toBeVisible()
     await expect(setupDescription).not.toBeVisible()
@@ -92,7 +92,13 @@ test.describe('Whiteboard', () => {
     await courtSetupButton.click()
     await expect(setupDescription).toBeVisible()
 
-    await courtSetupButton.click()
+    // Close: if a dialog opened (mobile), press Escape; otherwise click button again
+    const dialog = page.getByRole('dialog')
+    if (await dialog.isVisible().catch(() => false)) {
+      await page.keyboard.press('Escape')
+    } else {
+      await courtSetupButton.click()
+    }
     await expect(setupDescription).not.toBeVisible()
   })
 })

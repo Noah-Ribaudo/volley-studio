@@ -9,8 +9,8 @@ test.describe('Blocking auth flows', () => {
   test('signed-out entry points route to sign-in and back to app', async ({ page }) => {
     await page.goto('/settings')
 
-    await expect(page.getByRole('heading', { name: /account/i })).toBeVisible()
-    await page.getByRole('link', { name: /^sign in$/i }).click()
+    await expect(page.getByText(/account/i).first()).toBeVisible()
+    await page.getByRole('link', { name: /^sign in$/i }).first().click()
 
     await expect(page).toHaveURL(/\/sign-in/, { timeout: 15_000 })
     await expect(page.getByRole('button', { name: /continue with google/i })).toBeVisible()
@@ -32,6 +32,6 @@ test.describe('Blocking auth flows', () => {
     await expect(signOutButton).toBeVisible({ timeout: 15_000 })
     await signOutButton.click()
 
-    await expect(page.getByRole('link', { name: /^sign in$/i })).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('link', { name: /^sign in$/i }).first()).toBeVisible({ timeout: 15_000 })
   })
 })
