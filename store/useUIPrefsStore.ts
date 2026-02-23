@@ -9,6 +9,7 @@ export type UIPrefsPersistedState = {
   showLearnTab: boolean
   debugHitboxes: boolean
   showMotionDebugPanel: boolean
+  showWhiteboardDialKit: boolean
   showPrintFeature: boolean
   sidebarProfileInFooter: boolean
   courtSetupSurfaceVariant: 'popover' | 'panel'
@@ -26,6 +27,7 @@ interface UIPrefsState {
   showLearnTab: boolean
   debugHitboxes: boolean
   showMotionDebugPanel: boolean
+  showWhiteboardDialKit: boolean
   showPrintFeature: boolean
   sidebarProfileInFooter: boolean
   courtSetupSurfaceVariant: 'popover' | 'panel'
@@ -42,6 +44,7 @@ interface UIPrefsState {
   setShowLearnTab: (show: boolean) => void
   setDebugHitboxes: (show: boolean) => void
   setShowMotionDebugPanel: (show: boolean) => void
+  setShowWhiteboardDialKit: (show: boolean) => void
   setShowPrintFeature: (show: boolean) => void
   setSidebarProfileInFooter: (show: boolean) => void
   setCourtSetupSurfaceVariant: (variant: 'popover' | 'panel') => void
@@ -61,6 +64,7 @@ export const useUIPrefsStore = create<UIPrefsState>()(
       showLearnTab: false,
       debugHitboxes: false,
       showMotionDebugPanel: false,
+      showWhiteboardDialKit: false,
       showPrintFeature: false,
       sidebarProfileInFooter: false,
       courtSetupSurfaceVariant: 'popover',
@@ -77,6 +81,7 @@ export const useUIPrefsStore = create<UIPrefsState>()(
       setShowLearnTab: (show) => set({ showLearnTab: show }),
       setDebugHitboxes: (show) => set({ debugHitboxes: show }),
       setShowMotionDebugPanel: (show) => set({ showMotionDebugPanel: show }),
+      setShowWhiteboardDialKit: (show) => set({ showWhiteboardDialKit: show }),
       setShowPrintFeature: (show) => set({ showPrintFeature: show }),
       setSidebarProfileInFooter: (show) => set({ sidebarProfileInFooter: show }),
       setCourtSetupSurfaceVariant: (variant) => set({ courtSetupSurfaceVariant: variant }),
@@ -97,6 +102,7 @@ export const useUIPrefsStore = create<UIPrefsState>()(
         showLearnTab: state.showLearnTab,
         debugHitboxes: state.debugHitboxes,
         showMotionDebugPanel: state.showMotionDebugPanel,
+        showWhiteboardDialKit: state.showWhiteboardDialKit,
         showPrintFeature: state.showPrintFeature,
         sidebarProfileInFooter: state.sidebarProfileInFooter,
         courtSetupSurfaceVariant: state.courtSetupSurfaceVariant,
@@ -118,6 +124,7 @@ export const useUIPrefsStore = create<UIPrefsState>()(
         if (state.showLearnTab === undefined) state.showLearnTab = false
         if (state.debugHitboxes === undefined) state.debugHitboxes = false
         if (state.showMotionDebugPanel === undefined) state.showMotionDebugPanel = false
+        if (state.showWhiteboardDialKit === undefined) state.showWhiteboardDialKit = false
         if (state.showPrintFeature === undefined) state.showPrintFeature = false
         if (state.sidebarProfileInFooter === undefined) state.sidebarProfileInFooter = false
         if (state.courtSetupSurfaceVariant === undefined) state.courtSetupSurfaceVariant = 'popover'

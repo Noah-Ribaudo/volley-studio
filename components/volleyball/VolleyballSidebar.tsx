@@ -15,7 +15,7 @@ import {
   SidebarMenuItem,
   SidebarSeparator,
 } from '@/components/ui/sidebar'
-import { Layout, Users, Timer, Settings, SlidersHorizontal, Palette, Paintbrush, RectangleEllipsis, RotateCcw } from 'lucide-react'
+import { Layout, Users, Timer, Settings, SlidersHorizontal, Palette, Paintbrush, RectangleEllipsis, RotateCcw, Gauge } from 'lucide-react'
 import VolleyBall from '@/components/logo/VolleyBall'
 import { SidebarUserMenu } from '@/components/auth'
 import { useUIPrefsStore } from '@/store/useUIPrefsStore'
@@ -72,6 +72,8 @@ export function VolleyballSidebar() {
   const sidebarProfileInFooter = useUIPrefsStore((state) => state.sidebarProfileInFooter)
   const showMotionDebugPanel = useUIPrefsStore((state) => state.showMotionDebugPanel)
   const setShowMotionDebugPanel = useUIPrefsStore((state) => state.setShowMotionDebugPanel)
+  const showWhiteboardDialKit = useUIPrefsStore((state) => state.showWhiteboardDialKit)
+  const setShowWhiteboardDialKit = useUIPrefsStore((state) => state.setShowWhiteboardDialKit)
   const showMotionDebugToggle = process.env.NODE_ENV === 'development'
   const isOnWhiteboard = pathname === '/'
 
@@ -81,6 +83,15 @@ export function VolleyballSidebar() {
       return
     }
     setShowMotionDebugPanel(true)
+    router.push('/')
+  }
+
+  const handleDialKitClick = () => {
+    if (isOnWhiteboard) {
+      setShowWhiteboardDialKit(!showWhiteboardDialKit)
+      return
+    }
+    setShowWhiteboardDialKit(true)
     router.push('/')
   }
 
@@ -148,6 +159,17 @@ export function VolleyballSidebar() {
                     >
                       <SlidersHorizontal />
                       <span>Motion Debug</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      type="button"
+                      isActive={showWhiteboardDialKit && isOnWhiteboard}
+                      tooltip="Whiteboard DialKit"
+                      onClick={handleDialKitClick}
+                    >
+                      <Gauge />
+                      <span>Whiteboard DialKit</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
