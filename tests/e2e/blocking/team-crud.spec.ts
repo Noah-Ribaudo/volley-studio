@@ -21,11 +21,16 @@ test.describe('Blocking local team CRUD flows', () => {
     await page.getByRole('button', { name: /^save$/i }).nth(1).click()
     await expect(page.locator('input[value="Alex Prime"]')).toBeVisible()
 
-    await page.getByRole('button', { name: /create new lineup/i }).click()
+    // Create a new lineup via the dropdown select
+    const lineupSelect = page.getByRole('combobox').first()
+    await lineupSelect.click()
+    await page.getByRole('option', { name: /create lineup/i }).click()
+
+    // Fill in the lineup name in the dialog
     await page.getByLabel(/lineup name/i).fill('Serve Receive')
     await page.getByRole('button', { name: /^create$/i }).click()
 
-    const lineupSelect = page.getByRole('combobox').first()
+    // Verify the new lineup appears in the select
     await lineupSelect.click()
     await expect(page.getByRole('option', { name: /serve receive/i })).toBeVisible()
     await page.keyboard.press('Escape')
