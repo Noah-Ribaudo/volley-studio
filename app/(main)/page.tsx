@@ -998,7 +998,7 @@ function HomePageContent() {
     updateRoster,
   ])
 
-  const canShowOnboardingHint = isMounted && isUiHydrated
+  const canShowOnboardingHint = process.env.NODE_ENV === 'development' && isMounted && isUiHydrated
   const showFirstDragHint = canShowOnboardingHint ? shouldShowFirstDragHint() : false
   const showArrowDragHint = canShowOnboardingHint && !showFirstDragHint && shouldShowArrowDragHint()
   const showPhaseNavigationHint = canShowOnboardingHint && !showFirstDragHint && !showArrowDragHint && shouldShowPhaseNavigationHint()
