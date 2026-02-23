@@ -9,6 +9,7 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
@@ -64,6 +65,7 @@ export function LineupSelector({
   onSetActiveLineup,
   disabled = false,
 }: LineupSelectorProps) {
+  const CREATE_LINEUP_VALUE = '__create_lineup__'
   const [dialogMode, setDialogMode] = useState<DialogMode>(null)
   const [dialogInput, setDialogInput] = useState('')
   const [targetLineupId, setTargetLineupId] = useState<string | null>(null)
@@ -143,6 +145,14 @@ export function LineupSelector({
     }
   }
 
+  const handleLineupValueChange = (value: string) => {
+    if (value === CREATE_LINEUP_VALUE) {
+      handleOpenDialog('create')
+      return
+    }
+    onSelectLineup(value)
+  }
+
   return (
     <div className="space-y-3">
       {/* Lineup selector row */}
@@ -150,7 +160,7 @@ export function LineupSelector({
         <div className="flex-1">
           <Select
             value={selectedLineupId || ''}
-            onValueChange={onSelectLineup}
+            onValueChange={handleLineupValueChange}
             disabled={disabled}
           >
             <SelectTrigger className="w-full">
@@ -170,20 +180,16 @@ export function LineupSelector({
                   </div>
                 </SelectItem>
               ))}
+              <SelectSeparator />
+              <SelectItem value={CREATE_LINEUP_VALUE}>
+                <div className="flex items-center gap-2 font-medium">
+                  <HugeiconsIcon icon={Add01Icon} className="h-4 w-4" />
+                  <span>Create lineup...</span>
+                </div>
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>
-
-        {/* New lineup button */}
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => handleOpenDialog('create')}
-          disabled={disabled}
-          aria-label="Create new lineup"
-        >
-          <HugeiconsIcon icon={Add01Icon} className="h-4 w-4" />
-        </Button>
 
         {/* More actions menu */}
         <DropdownMenu>
