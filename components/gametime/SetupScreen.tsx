@@ -652,20 +652,13 @@ function TeamCard({
       {isExpanded && hasMultipleLineups && (
         <div className="border-t border-border">
           {team.lineups.map((lineup) => {
-            const isActive = lineup.id === team.active_lineup_id
-
             return (
               <button
                 key={lineup.id}
                 onClick={() => onSelectLineup(lineup.id)}
                 className="w-full px-4 py-3 pl-8 text-left transition-colors hover:bg-accent active:bg-accent/80 flex items-center justify-between border-b border-border last:border-b-0"
               >
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-sm truncate">{lineup.name}</span>
-                  {isActive && (
-                    <span className="text-[11px] text-primary font-medium shrink-0">(Active)</span>
-                  )}
-                </div>
+                <span className="text-sm truncate">{lineup.name}</span>
                 <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
               </button>
             )

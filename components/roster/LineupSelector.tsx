@@ -31,7 +31,6 @@ import {
 import {
   Add01Icon,
   MoreHorizontalIcon,
-  StarIcon,
   Copy01Icon,
   PencilEdit01Icon,
   Delete02Icon,
@@ -41,13 +40,11 @@ import { HugeiconsIcon } from '@hugeicons/react'
 interface LineupSelectorProps {
   lineups: Lineup[]
   selectedLineupId: string | null
-  activeLineupId: string | null
   onSelectLineup: (lineupId: string) => void
   onCreateLineup: (name: string) => void
   onRenameLineup: (lineupId: string, newName: string) => void
   onDuplicateLineup: (lineupId: string, newName: string) => void
   onDeleteLineup: (lineupId: string) => void
-  onSetActiveLineup: (lineupId: string) => void
   disabled?: boolean
 }
 
@@ -56,13 +53,11 @@ type DialogMode = 'create' | 'rename' | 'duplicate' | null
 export function LineupSelector({
   lineups,
   selectedLineupId,
-  activeLineupId,
   onSelectLineup,
   onCreateLineup,
   onRenameLineup,
   onDuplicateLineup,
   onDeleteLineup,
-  onSetActiveLineup,
   disabled = false,
 }: LineupSelectorProps) {
   const CREATE_LINEUP_VALUE = '__create_lineup__'
@@ -71,7 +66,6 @@ export function LineupSelector({
   const [targetLineupId, setTargetLineupId] = useState<string | null>(null)
 
   const selectedLineup = lineups.find(l => l.id === selectedLineupId)
-  const isActiveLineup = selectedLineupId === activeLineupId
 
   const handleOpenDialog = (mode: DialogMode, existingName = '', lineupId: string | null = null) => {
     setDialogMode(mode)
@@ -169,15 +163,7 @@ export function LineupSelector({
             <SelectContent>
               {lineups.map((lineup) => (
                 <SelectItem key={lineup.id} value={lineup.id}>
-                  <div className="flex items-center gap-2">
-                    {lineup.id === activeLineupId && (
-                      <HugeiconsIcon
-                        icon={StarIcon}
-                        className="h-3.5 w-3.5 text-amber-500 fill-amber-500"
-                      />
-                    )}
-                    <span>{lineup.name}</span>
-                  </div>
+                  <span>{lineup.name}</span>
                 </SelectItem>
               ))}
               <SelectSeparator />
@@ -204,15 +190,6 @@ export function LineupSelector({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            {!isActiveLineup && (
-              <>
-                <DropdownMenuItem onClick={() => selectedLineupId && onSetActiveLineup(selectedLineupId)}>
-                  <HugeiconsIcon icon={StarIcon} className="h-4 w-4 mr-2" />
-                  Set as Active
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-              </>
-            )}
             <DropdownMenuItem
               onClick={() =>
                 handleOpenDialog('rename', selectedLineup?.name || '', selectedLineupId)

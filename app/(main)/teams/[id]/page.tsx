@@ -507,10 +507,6 @@ export default function TeamEditPage({ params }: TeamPageProps) {
     await persistLineups(filtered, nextActive, 'Lineup deleted')
   }
 
-  const handleSetActiveLineup = async (lineupId: string) => {
-    await persistLineups(lineups, lineupId, 'Active lineup updated')
-  }
-
   const handleAssignmentsChange = async (nextAssignments: PositionAssignments) => {
     if (!selectedLineupId) return
     setLineupAssignments(nextAssignments)
@@ -622,19 +618,17 @@ export default function TeamEditPage({ params }: TeamPageProps) {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Lineups</CardTitle>
-            <CardDescription>The active lineup is shown on the whiteboard. Use "Set as Active" in lineup actions.</CardDescription>
+            <CardDescription>Select a lineup to edit assignments and starting rotation.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <LineupSelector
               lineups={lineups}
               selectedLineupId={selectedLineupId}
-              activeLineupId={activeLineupId}
               onSelectLineup={handleSelectLineup}
               onCreateLineup={(name) => { void handleCreateLineup(name) }}
               onRenameLineup={(lineupId, newName) => { void handleRenameLineup(lineupId, newName) }}
               onDuplicateLineup={(lineupId, newName) => { void handleDuplicateLineup(lineupId, newName) }}
               onDeleteLineup={(lineupId) => { void handleDeleteLineup(lineupId) }}
-              onSetActiveLineup={(lineupId) => { void handleSetActiveLineup(lineupId) }}
               disabled={isSaving}
             />
             <PositionAssigner
