@@ -15,7 +15,7 @@ import {
   SidebarMenuItem,
   SidebarSeparator,
 } from '@/components/ui/sidebar'
-import { Layout, Users, Timer, Settings, SlidersHorizontal, Palette, Paintbrush, RectangleEllipsis } from 'lucide-react'
+import { Layout, Users, Timer, Settings, SlidersHorizontal, Palette, Paintbrush, RectangleEllipsis, BookOpen } from 'lucide-react'
 import VolleyBall from '@/components/logo/VolleyBall'
 import { SidebarUserMenu } from '@/components/auth'
 import { useAppStore } from '@/store/useAppStore'
@@ -44,6 +44,11 @@ const navItems = [
 ]
 
 const developerNavItems = [
+  {
+    title: 'Design System',
+    url: '/developer/design-system',
+    icon: BookOpen,
+  },
   {
     title: 'Open Minimal Mode',
     url: '/minimal',
