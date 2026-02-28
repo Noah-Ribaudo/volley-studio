@@ -1,8 +1,9 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { VolleyballCourt } from '@/components/court'
 import { PrototypeControlPanel } from '@/components/rebuild/prototypes'
+import { RebuildDialKitBridge } from '@/components/rebuild/prototypes/RebuildDialKitBridge'
 import { usePrototypeLabController } from '@/components/rebuild/prototypes/usePrototypeLabController'
 import { Button } from '@/components/ui/button'
 import { validateRotationLegality } from '@/lib/model/legality'
@@ -17,6 +18,7 @@ import {
   toRallyPhase,
 } from '@/lib/rebuild/prototypeFlow'
 import { getPrototypeSeed } from '@/lib/rebuild/prototypeSeeds'
+import { DEFAULT_TACTILE_TUNING, toTactileCssVariables, type TactileTuning } from '@/lib/rebuild/tactileTuning'
 import { createRotationPhaseKey, getBackRowMiddle } from '@/lib/rotations'
 import { getCurrentArrows, getCurrentPositions, getCurrentTags } from '@/lib/whiteboardHelpers'
 import { ROLES, type Position, type Role, type Rotation } from '@/lib/types'
@@ -27,6 +29,7 @@ import { useThemeStore } from '@/store/useThemeStore'
 import { useWhiteboardStore } from '@/store/useWhiteboardStore'
 
 export default function RebuildPrototypeLabPage() {
+  const isDev = process.env.NODE_ENV === 'development'
   const isBootstrapped = useStoreBootstrapReady()
   const whiteboardHydrated = useWhiteboardStore((state) => state.isHydrated)
   const teamHydrated = useTeamStore((state) => state.isHydrated)
@@ -39,6 +42,9 @@ export default function RebuildPrototypeLabPage() {
     displayPrefsHydrated &&
     themeHydrated
   const didBootstrapSeedsRef = useRef(false)
+  const [isTuneOpen, setIsTuneOpen] = useState(false)
+  const [tactileTuning, setTactileTuning] = useState<TactileTuning>(DEFAULT_TACTILE_TUNING)
+  const tactileCssVariables = useMemo(() => toTactileCssVariables(tactileTuning), [tactileTuning])
 
   const {
     activeVariant,
@@ -48,7 +54,6 @@ export default function RebuildPrototypeLabPage() {
     isOurServe,
     isPreviewingMovement,
     playAnimationTrigger,
-    handleRotationStep,
     handleRotationSelect,
     handlePhaseSelect,
     handlePlay,
@@ -210,6 +215,9 @@ export default function RebuildPrototypeLabPage() {
   const nextByPlay = getNextByPlay(currentCorePhase)
   const legalPlayLabel = getLegalPlayLabel(currentCorePhase)
   const scoringEnabled = canVariantScore(activeVariant)
+  const handleTuningChange = useCallback((next: TactileTuning) => {
+    setTactileTuning(next)
+  }, [])
 
   if (!isUiHydrated) {
     return (
@@ -222,9 +230,13 @@ export default function RebuildPrototypeLabPage() {
   }
 
   return (
-    <div className="h-dvh w-full overflow-hidden bg-background text-foreground">
+    <div
+      className="lab-light-canvas h-dvh w-full overflow-hidden bg-background text-foreground"
+      data-rebuild-lab="tactile"
+      style={tactileCssVariables}
+    >
       <div className="mx-auto flex h-full w-full max-w-[1280px] flex-col overflow-hidden p-2 sm:p-3">
-        <header className="shrink-0 rounded-xl border border-border bg-card/70 p-2">
+        <header className="lab-panel lab-texture shrink-0 rounded-xl p-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Volley Studio Rebuild Lab</p>
@@ -240,10 +252,23 @@ export default function RebuildPrototypeLabPage() {
               <Button type="button" variant="outline" size="sm" className="h-8" onClick={handleResetCurrentPhase}>
                 Reset Current Phase
               </Button>
+              {isDev ? (
+                <div className="w-[5.25rem]">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={isTuneOpen ? 'default' : 'outline'}
+                    className="h-8 w-full"
+                    onClick={() => setIsTuneOpen((prev) => !prev)}
+                  >
+                    {isTuneOpen ? 'Tune On' : 'Tune'}
+                  </Button>
+                </div>
+              ) : null}
             </div>
           </div>
 
-          <div className="mt-2 rounded-lg border border-border bg-background/70 p-1">
+          <div className="lab-inset mt-2 rounded-lg p-1">
             <div className="grid grid-cols-3 gap-1">
               {PROTOTYPE_VARIANTS.map((variant) => (
                 <Button
@@ -265,7 +290,7 @@ export default function RebuildPrototypeLabPage() {
         </header>
 
         <main className="mt-2 flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
-          <section className="min-h-0 flex-1 overflow-hidden rounded-xl border border-border bg-card/50 p-1 sm:p-2">
+          <section className="lab-panel min-h-0 flex-1 overflow-hidden rounded-xl p-1 sm:p-2">
             <div className="h-full w-full overflow-hidden rounded-lg border border-border bg-background/70">
               <VolleyballCourt
                 positions={positions}
@@ -352,7 +377,7 @@ export default function RebuildPrototypeLabPage() {
             </div>
           </section>
 
-          <section className="h-[38dvh] min-h-[240px] max-h-[360px] shrink-0 overflow-hidden rounded-xl border border-border bg-card/65 p-2">
+          <section className="lab-panel h-[38dvh] min-h-[240px] max-h-[360px] shrink-0 overflow-hidden rounded-xl p-2">
             <div className="h-full min-h-0 overflow-y-auto pr-1">
               <PrototypeControlPanel
                 activeVariant={activeVariant}
@@ -364,8 +389,8 @@ export default function RebuildPrototypeLabPage() {
                 isFoundationalPhase={isFoundationalPhase(currentCorePhase)}
                 isOurServe={isOurServe}
                 canScore={scoringEnabled}
+                switchMotion={tactileTuning.switchMotion}
                 onRotationSelect={handleRotationSelect}
-                onRotationStep={handleRotationStep}
                 onPhaseSelect={handlePhaseSelect}
                 onPlay={handlePlay}
                 onPoint={handlePoint}
@@ -373,6 +398,8 @@ export default function RebuildPrototypeLabPage() {
             </div>
           </section>
         </main>
+
+        {isDev && isTuneOpen ? <RebuildDialKitBridge onTuningChange={handleTuningChange} /> : null}
       </div>
     </div>
   )

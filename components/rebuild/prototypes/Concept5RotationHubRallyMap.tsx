@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { formatCorePhaseLabel } from '@/lib/rebuild/prototypeFlow'
 import { cn } from '@/lib/utils'
 import { PlayButton, PossessionPill, ScoreButtons, SetterZoneRotationGrid } from './ControlShared'
+import { TactileRotationSwitch } from './TactileRotationSwitch'
 import type { PrototypeControlProps } from './types'
 
 export function Concept5RotationHubRallyMap({
@@ -13,6 +14,7 @@ export function Concept5RotationHubRallyMap({
   legalPlayLabel,
   isFoundationalPhase,
   isOurServe,
+  switchMotion,
   onRotationSelect,
   onPhaseSelect,
   onPlay,
@@ -31,41 +33,14 @@ export function Concept5RotationHubRallyMap({
 
       <section className="rounded-lg border border-border bg-card/70 p-2">
         <div className="mb-2 text-[11px] uppercase tracking-[0.1em] text-muted-foreground">Rotation selector morph</div>
-        <div className="relative min-h-[132px]">
-          <div
-            className={cn(
-              'absolute inset-0 transition-opacity duration-200',
-              isFoundationalPhase ? 'opacity-100' : 'pointer-events-none opacity-0'
-            )}
-          >
-            <div className="rounded-lg border border-border bg-background/70 p-2">
-              <div className="mb-1 text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Top tabs mode</div>
-              <div className="grid grid-cols-6 gap-1">
-                {[1, 2, 3, 4, 5, 6].map((rotation) => (
-                  <Button
-                    key={rotation}
-                    type="button"
-                    variant={rotation === currentRotation ? 'default' : 'outline'}
-                    size="sm"
-                    className="h-9 px-1 text-[11px]"
-                    onClick={() => onRotationSelect(rotation as 1 | 2 | 3 | 4 | 5 | 6)}
-                  >
-                    R{rotation}
-                  </Button>
-                ))}
-              </div>
-              <div className="mt-2 text-xs text-muted-foreground">Foundational planning: choose rotation via fast top tabs.</div>
-            </div>
-          </div>
-
-          <SetterZoneRotationGrid
-            currentRotation={currentRotation}
-            onRotationSelect={onRotationSelect}
-            className={cn(
-              'absolute inset-0 transition-opacity duration-200',
-              isFoundationalPhase ? 'pointer-events-none opacity-0' : 'opacity-100'
-            )}
-          />
+        <TactileRotationSwitch value={currentRotation} onValueChange={onRotationSelect} switchMotion={switchMotion} />
+        <div className={cn('mt-2 transition-all duration-200', isFoundationalPhase ? 'opacity-80' : 'opacity-100')}>
+          <SetterZoneRotationGrid currentRotation={currentRotation} onRotationSelect={onRotationSelect} className="bg-background/55" />
+        </div>
+        <div className="mt-2 text-xs text-muted-foreground">
+          {isFoundationalPhase
+            ? 'Primary selector is the tactile 6-segment deck. Setter map remains synced as secondary context.'
+            : 'Live loop mode keeps tactile selection and setter-zone map active together.'}
         </div>
       </section>
 

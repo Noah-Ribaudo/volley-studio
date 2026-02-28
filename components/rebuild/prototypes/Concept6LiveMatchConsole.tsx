@@ -3,7 +3,8 @@
 import { Button } from '@/components/ui/button'
 import { formatCorePhaseLabel } from '@/lib/rebuild/prototypeFlow'
 import { cn } from '@/lib/utils'
-import { PlayButton, PossessionPill, RotationStepper, ScoreButtons, SetterZoneRotationGrid } from './ControlShared'
+import { PlayButton, PossessionPill, ScoreButtons, SetterZoneRotationGrid } from './ControlShared'
+import { TactileRotationSwitch } from './TactileRotationSwitch'
 import type { PrototypeControlProps } from './types'
 
 export function Concept6LiveMatchConsole({
@@ -13,7 +14,7 @@ export function Concept6LiveMatchConsole({
   legalPlayLabel,
   isFoundationalPhase,
   isOurServe,
-  onRotationStep,
+  switchMotion,
   onRotationSelect,
   onPhaseSelect,
   onPlay,
@@ -31,25 +32,14 @@ export function Concept6LiveMatchConsole({
       </div>
 
       <section className="rounded-lg border border-border bg-card/70 p-2">
-        <div className="flex items-center justify-between gap-2">
-          <div className="text-[11px] uppercase tracking-[0.1em] text-muted-foreground">Rotation command deck</div>
-          <RotationStepper currentRotation={currentRotation} onRotationStep={onRotationStep} />
-        </div>
-
-        <div className="mt-2 grid grid-cols-6 gap-1">
-          {[1, 2, 3, 4, 5, 6].map((rotation) => (
-            <Button
-              key={rotation}
-              type="button"
-              variant={rotation === currentRotation ? 'default' : 'outline'}
-              size="sm"
-              className="h-8 px-1 text-[11px]"
-              onClick={() => onRotationSelect(rotation as 1 | 2 | 3 | 4 | 5 | 6)}
-            >
-              R{rotation}
-            </Button>
-          ))}
-        </div>
+        <div className="mb-2 text-[11px] uppercase tracking-[0.1em] text-muted-foreground">Rotation command deck</div>
+        <TactileRotationSwitch
+          className="w-full"
+          density="compact"
+          value={currentRotation}
+          onValueChange={onRotationSelect}
+          switchMotion={switchMotion}
+        />
 
         <div
           className={cn(

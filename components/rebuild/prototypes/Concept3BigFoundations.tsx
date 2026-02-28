@@ -3,7 +3,8 @@
 import { Button } from '@/components/ui/button'
 import { formatCorePhaseLabel } from '@/lib/rebuild/prototypeFlow'
 import { cn } from '@/lib/utils'
-import { PlayButton, RotationRail } from './ControlShared'
+import { PlayButton } from './ControlShared'
+import { TactileRotationSwitch } from './TactileRotationSwitch'
 import type { PrototypeControlProps } from './types'
 
 export function Concept3BigFoundations({
@@ -12,6 +13,7 @@ export function Concept3BigFoundations({
   isFoundationalPhase,
   legalPlayLabel,
   nextByPlay,
+  switchMotion,
   onRotationSelect,
   onPhaseSelect,
   onPlay,
@@ -28,10 +30,10 @@ export function Concept3BigFoundations({
         </div>
       </div>
 
-      <RotationRail
-        currentRotation={currentRotation}
-        onRotationSelect={onRotationSelect}
-        className="grid grid-cols-6 gap-1"
+      <TactileRotationSwitch
+        value={currentRotation}
+        onValueChange={onRotationSelect}
+        switchMotion={switchMotion}
       />
 
       <div className="grid min-h-0 flex-1 gap-2">
