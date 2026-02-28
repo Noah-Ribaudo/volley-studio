@@ -10,6 +10,7 @@ import {
   GeistPixelLine,
 } from "geist/font/pixel";
 import "./globals.css";
+import "dialkit/styles.css";
 import TextureModeLoader from "@/components/TextureModeLoader";
 import ThemeInitializer from "@/components/ThemeInitializer";
 import { ConvexClientProvider } from "@/components/ConvexClientProvider";

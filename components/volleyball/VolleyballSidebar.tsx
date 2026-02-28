@@ -15,7 +15,7 @@ import {
   SidebarMenuItem,
   SidebarSeparator,
 } from '@/components/ui/sidebar'
-import { Layout, Users, Timer, Settings, SlidersHorizontal, Palette, Paintbrush, RectangleEllipsis, RotateCcw, Gauge } from 'lucide-react'
+import { Layout, Users, Timer, Settings, SlidersHorizontal, Palette, Paintbrush, RectangleEllipsis, RotateCcw, Gauge, BookOpen } from 'lucide-react'
 import VolleyBall from '@/components/logo/VolleyBall'
 import { SidebarUserMenu } from '@/components/auth'
 import { useUIPrefsStore } from '@/store/useUIPrefsStore'
@@ -48,6 +48,11 @@ const developerNavItems = [
     title: 'Dev Toggles',
     url: '/developer/settings',
     icon: Settings,
+  },
+  {
+    title: 'Design System',
+    url: '/developer/design-system',
+    icon: BookOpen,
   },
   {
     title: 'Open Minimal Mode',
