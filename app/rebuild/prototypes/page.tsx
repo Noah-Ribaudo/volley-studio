@@ -1,0 +1,359 @@
+'use client'
+
+import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { VolleyballCourt } from '@/components/court'
+import { PrototypeControlPanel } from '@/components/rebuild/prototypes'
+import { usePrototypeLabController } from '@/components/rebuild/prototypes/usePrototypeLabController'
+import { Button } from '@/components/ui/button'
+import { validateRotationLegality } from '@/lib/model/legality'
+import {
+  canVariantScore,
+  CORE_PHASES,
+  formatCorePhaseLabel,
+  getLegalPlayLabel,
+  getNextByPlay,
+  isFoundationalPhase,
+  PROTOTYPE_VARIANTS,
+  toRallyPhase,
+} from '@/lib/rebuild/prototypeFlow'
+import { getPrototypeSeed } from '@/lib/rebuild/prototypeSeeds'
+import { createRotationPhaseKey, getBackRowMiddle } from '@/lib/rotations'
+import { getCurrentArrows, getCurrentPositions, getCurrentTags } from '@/lib/whiteboardHelpers'
+import { ROLES, type Position, type Role, type Rotation } from '@/lib/types'
+import { useStoresHydrated } from '@/store/hydration'
+import { useDisplayPrefsStore } from '@/store/useDisplayPrefsStore'
+import { useTeamStore } from '@/store/useTeamStore'
+import { useWhiteboardStore } from '@/store/useWhiteboardStore'
+
+export default function RebuildPrototypeLabPage() {
+  const isUiHydrated = useStoresHydrated()
+  const didBootstrapSeedsRef = useRef(false)
+
+  const {
+    activeVariant,
+    setActiveVariant,
+    currentRotation,
+    currentCorePhase,
+    isOurServe,
+    isPreviewingMovement,
+    playAnimationTrigger,
+    handleRotationStep,
+    handleRotationSelect,
+    handlePhaseSelect,
+    handlePlay,
+    handlePoint,
+    resetPreview,
+    resetToBaseline,
+  } = usePrototypeLabController()
+
+  const rallyPhase = toRallyPhase(currentCorePhase)
+  const rotationPhaseKey = createRotationPhaseKey(currentRotation, rallyPhase)
+
+  const localPositions = useWhiteboardStore((state) => state.localPositions)
+  const localArrows = useWhiteboardStore((state) => state.localArrows)
+  const arrowCurves = useWhiteboardStore((state) => state.arrowCurves)
+  const localStatusFlags = useWhiteboardStore((state) => state.localStatusFlags)
+  const localTagFlags = useWhiteboardStore((state) => state.localTagFlags)
+  const attackBallPositions = useWhiteboardStore((state) => state.attackBallPositions)
+  const updateLocalPosition = useWhiteboardStore((state) => state.updateLocalPosition)
+  const updateArrow = useWhiteboardStore((state) => state.updateArrow)
+  const clearArrow = useWhiteboardStore((state) => state.clearArrow)
+  const setArrowCurve = useWhiteboardStore((state) => state.setArrowCurve)
+  const togglePlayerStatus = useWhiteboardStore((state) => state.togglePlayerStatus)
+  const setTokenTags = useWhiteboardStore((state) => state.setTokenTags)
+  const setAttackBallPosition = useWhiteboardStore((state) => state.setAttackBallPosition)
+  const clearAttackBallPosition = useWhiteboardStore((state) => state.clearAttackBallPosition)
+  const resetToDefaults = useWhiteboardStore((state) => state.resetToDefaults)
+
+  const currentTeam = useTeamStore((state) => state.currentTeam)
+  const customLayouts = useTeamStore((state) => state.customLayouts)
+  const assignPlayerToRole = useTeamStore((state) => state.assignPlayerToRole)
+
+  const showLibero = useDisplayPrefsStore((state) => state.showLibero)
+  const showPosition = useDisplayPrefsStore((state) => state.showPosition)
+  const showPlayer = useDisplayPrefsStore((state) => state.showPlayer)
+  const showNumber = useDisplayPrefsStore((state) => state.showNumber)
+  const circleTokens = useDisplayPrefsStore((state) => state.circleTokens)
+  const fullStatusLabels = useDisplayPrefsStore((state) => state.fullStatusLabels)
+  const hideAwayTeam = useDisplayPrefsStore((state) => state.hideAwayTeam)
+  const awayTeamHidePercent = useDisplayPrefsStore((state) => state.awayTeamHidePercent)
+
+  const currentAttackBallPosition = attackBallPositions[rotationPhaseKey] || null
+
+  const isReceivingContext = currentCorePhase === 'RECEIVE'
+
+  const positions = useMemo(
+    () =>
+      getCurrentPositions(
+        currentRotation,
+        rallyPhase,
+        localPositions,
+        customLayouts,
+        currentTeam,
+        isReceivingContext,
+        undefined,
+        showLibero,
+        currentAttackBallPosition
+      ),
+    [
+      currentAttackBallPosition,
+      currentRotation,
+      currentTeam,
+      customLayouts,
+      isReceivingContext,
+      localPositions,
+      rallyPhase,
+      showLibero,
+    ]
+  )
+
+  const currentArrows = useMemo(
+    () =>
+      getCurrentArrows(
+        currentRotation,
+        rallyPhase,
+        localArrows,
+        isReceivingContext,
+        undefined,
+        showLibero,
+        currentAttackBallPosition,
+        currentTeam
+      ),
+    [
+      currentAttackBallPosition,
+      currentRotation,
+      currentTeam,
+      isReceivingContext,
+      localArrows,
+      rallyPhase,
+      showLibero,
+    ]
+  )
+
+  const currentArrowCurves = arrowCurves[rotationPhaseKey] || {}
+  const currentStatusFlags = localStatusFlags[rotationPhaseKey] || {}
+  const currentTagFlags = getCurrentTags(currentRotation, rallyPhase, localTagFlags)
+
+  const violations = useMemo(() => {
+    if (rallyPhase !== 'PRE_SERVE' && rallyPhase !== 'SERVE_RECEIVE') {
+      return []
+    }
+
+    const replacedMB = showLibero ? getBackRowMiddle(currentRotation) : null
+    const validPositions: Record<Role, Position> = {} as Record<Role, Position>
+
+    for (const role of ROLES) {
+      if (role === 'L' && !showLibero) {
+        validPositions[role] = { x: 0.5, y: 0.5 }
+      } else if (showLibero && role === replacedMB) {
+        validPositions[role] = positions.L || positions[replacedMB] || { x: 0.5, y: 0.5 }
+      } else {
+        validPositions[role] = positions[role] || { x: 0.5, y: 0.5 }
+      }
+    }
+
+    return validateRotationLegality(currentRotation, validPositions)
+  }, [currentRotation, positions, rallyPhase, showLibero])
+
+  const handleLoadDemoSeeds = useCallback(() => {
+    resetPreview()
+
+    ;([1, 4] as Rotation[]).forEach((rotation) => {
+      CORE_PHASES.forEach((phase) => {
+        const seed = getPrototypeSeed(rotation, phase)
+        if (!seed) return
+        const mappedPhase = toRallyPhase(phase)
+
+        for (const role of ROLES) {
+          clearArrow(rotation, mappedPhase, role)
+        }
+
+        for (const [role, pos] of Object.entries(seed.positions)) {
+          if (!pos) continue
+          updateLocalPosition(rotation, mappedPhase, role as Role, pos)
+        }
+
+        for (const [role, pos] of Object.entries(seed.arrows)) {
+          if (!pos) continue
+          updateArrow(rotation, mappedPhase, role as Role, pos)
+        }
+      })
+    })
+
+    resetToBaseline()
+  }, [clearArrow, resetPreview, resetToBaseline, updateArrow, updateLocalPosition])
+
+  const handleResetCurrentPhase = useCallback(() => {
+    resetPreview()
+    resetToDefaults(currentRotation, rallyPhase)
+    clearAttackBallPosition(currentRotation, rallyPhase)
+  }, [clearAttackBallPosition, currentRotation, rallyPhase, resetPreview, resetToDefaults])
+
+  useEffect(() => {
+    if (didBootstrapSeedsRef.current) return
+    didBootstrapSeedsRef.current = true
+    handleLoadDemoSeeds()
+  }, [handleLoadDemoSeeds])
+
+  const isEditingAllowed = !isPreviewingMovement
+  const nextByPlay = getNextByPlay(currentCorePhase)
+  const legalPlayLabel = getLegalPlayLabel(currentCorePhase)
+  const scoringEnabled = canVariantScore(activeVariant)
+
+  if (!isUiHydrated) {
+    return <div className="h-dvh bg-background" />
+  }
+
+  return (
+    <div className="h-dvh w-full overflow-hidden bg-background text-foreground">
+      <div className="mx-auto flex h-full w-full max-w-[1280px] flex-col overflow-hidden p-2 sm:p-3">
+        <header className="shrink-0 rounded-xl border border-border bg-card/70 p-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Volley Studio Rebuild Lab</p>
+              <h1 className="text-lg font-semibold">Six Combined Control Prototypes</h1>
+              <p className="text-xs text-muted-foreground">
+                Rotation {currentRotation} • {formatCorePhaseLabel(currentCorePhase)} • {isOurServe ? 'We Serve' : 'We Receive'}
+              </p>
+            </div>
+            <div className="flex items-center gap-1">
+              <Button type="button" variant="outline" size="sm" className="h-8" onClick={handleLoadDemoSeeds}>
+                Load Demo Seeds
+              </Button>
+              <Button type="button" variant="outline" size="sm" className="h-8" onClick={handleResetCurrentPhase}>
+                Reset Current Phase
+              </Button>
+            </div>
+          </div>
+
+          <div className="mt-2 overflow-x-auto pb-1">
+            <div className="flex min-w-max gap-1">
+              {PROTOTYPE_VARIANTS.map((variant) => (
+                <Button
+                  key={variant.id}
+                  type="button"
+                  variant={variant.id === activeVariant ? 'default' : 'outline'}
+                  size="sm"
+                  className="h-8 px-2 text-[11px]"
+                  onClick={() => setActiveVariant(variant.id)}
+                >
+                  {variant.shortLabel}: {variant.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </header>
+
+        <main className="mt-2 flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
+          <section className="min-h-0 flex-1 overflow-hidden rounded-xl border border-border bg-card/50 p-1 sm:p-2">
+            <div className="h-full w-full overflow-hidden rounded-lg border border-border bg-background/70">
+              <VolleyballCourt
+                positions={positions}
+                hideAwayTeam={hideAwayTeam}
+                awayTeamHidePercent={awayTeamHidePercent}
+                rotation={currentRotation}
+                roster={currentTeam?.roster || []}
+                assignments={currentTeam?.position_assignments || {}}
+                onPositionChange={
+                  isEditingAllowed
+                    ? (role, position) => {
+                        updateLocalPosition(currentRotation, rallyPhase, role, position)
+                      }
+                    : undefined
+                }
+                arrows={currentArrows}
+                onArrowChange={
+                  isEditingAllowed
+                    ? (role, position) => {
+                        if (!position) {
+                          clearArrow(currentRotation, rallyPhase, role)
+                          return
+                        }
+
+                        updateArrow(currentRotation, rallyPhase, role, position)
+                      }
+                    : undefined
+                }
+                arrowCurves={currentArrowCurves}
+                onArrowCurveChange={
+                  isEditingAllowed
+                    ? (role, curve) => {
+                        setArrowCurve(currentRotation, rallyPhase, role, curve)
+                      }
+                    : undefined
+                }
+                showPosition={showPosition}
+                showPlayer={showPlayer}
+                showNumber={showNumber}
+                circleTokens={circleTokens}
+                legalityViolations={violations}
+                showLibero={showLibero}
+                currentPhase={rallyPhase}
+                attackBallPosition={currentAttackBallPosition}
+                onAttackBallChange={
+                  isEditingAllowed
+                    ? (position) => {
+                        if (!position) {
+                          clearAttackBallPosition(currentRotation, rallyPhase)
+                          return
+                        }
+
+                        setAttackBallPosition(currentRotation, rallyPhase, position)
+                      }
+                    : undefined
+                }
+                statusFlags={currentStatusFlags}
+                onStatusToggle={
+                  isEditingAllowed
+                    ? (role, status) => {
+                        togglePlayerStatus(currentRotation, rallyPhase, role, status)
+                      }
+                    : undefined
+                }
+                fullStatusLabels={fullStatusLabels}
+                animationTrigger={playAnimationTrigger}
+                isPreviewingMovement={isPreviewingMovement}
+                tagFlags={currentTagFlags}
+                onTagsChange={
+                  isEditingAllowed
+                    ? (role, tags) => {
+                        setTokenTags(currentRotation, rallyPhase, role, tags)
+                      }
+                    : undefined
+                }
+                onPlayerAssign={
+                  isEditingAllowed
+                    ? (role, playerId) => {
+                        assignPlayerToRole(role, playerId)
+                      }
+                    : undefined
+                }
+              />
+            </div>
+          </section>
+
+          <section className="h-[38dvh] min-h-[240px] max-h-[360px] shrink-0 overflow-hidden rounded-xl border border-border bg-card/65 p-2">
+            <div className="h-full min-h-0 overflow-y-auto pr-1">
+              <PrototypeControlPanel
+                activeVariant={activeVariant}
+                variantId={activeVariant}
+                currentRotation={currentRotation}
+                currentCorePhase={currentCorePhase}
+                nextByPlay={nextByPlay}
+                legalPlayLabel={legalPlayLabel}
+                isFoundationalPhase={isFoundationalPhase(currentCorePhase)}
+                isOurServe={isOurServe}
+                canScore={scoringEnabled}
+                onRotationSelect={handleRotationSelect}
+                onRotationStep={handleRotationStep}
+                onPhaseSelect={handlePhaseSelect}
+                onPlay={handlePlay}
+                onPoint={handlePoint}
+              />
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+  )
+}
