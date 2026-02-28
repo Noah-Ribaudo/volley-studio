@@ -6,6 +6,8 @@ import {
   CORE_PHASES,
   type CorePhase,
   formatCorePhaseLabel,
+  getRotationForSetterZone,
+  getSetterZoneForRotation,
   type PointWinner,
 } from '@/lib/rebuild/prototypeFlow'
 import type { Rotation } from '@/lib/types'
@@ -123,6 +125,56 @@ export function PossessionPill({ isOurServe }: { isOurServe: boolean }) {
   return (
     <div className="inline-flex h-8 items-center rounded-full border border-border bg-card px-3 text-[11px] font-semibold uppercase tracking-[0.09em]">
       {isOurServe ? 'We Serve' : 'We Receive'}
+    </div>
+  )
+}
+
+export function SetterZoneRotationGrid({
+  currentRotation,
+  onRotationSelect,
+  className,
+}: {
+  currentRotation: Rotation
+  onRotationSelect: (rotation: Rotation) => void
+  className?: string
+}) {
+  const setterZone = getSetterZoneForRotation(currentRotation)
+  const zoneRows: Array<Array<1 | 2 | 3 | 4 | 5 | 6>> = [
+    [4, 3, 2],
+    [5, 6, 1],
+  ]
+
+  return (
+    <div className={cn('rounded-lg border border-border bg-card/80 p-2', className)}>
+      <div className="mb-1 text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+        Setter zone map (3x2)
+      </div>
+      <div className="grid gap-1">
+        {zoneRows.map((row, rowIndex) => (
+          <div key={rowIndex} className="grid grid-cols-3 gap-1">
+            {row.map((zone) => {
+              const mappedRotation = getRotationForSetterZone(zone)
+              const isActiveZone = setterZone === zone
+              return (
+                <button
+                  key={zone}
+                  type="button"
+                  onClick={() => onRotationSelect(mappedRotation)}
+                  className={cn(
+                    'rounded-md border px-1 py-1 text-left transition-all',
+                    isActiveZone
+                      ? 'border-primary bg-primary/15 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]'
+                      : 'border-border bg-background/70 hover:bg-background'
+                  )}
+                >
+                  <div className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Zone {zone}</div>
+                  <div className="text-xs font-semibold">R{mappedRotation}</div>
+                </button>
+              )
+            })}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

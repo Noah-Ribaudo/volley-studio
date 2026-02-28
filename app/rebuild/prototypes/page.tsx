@@ -228,7 +228,7 @@ export default function RebuildPrototypeLabPage() {
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Volley Studio Rebuild Lab</p>
-              <h1 className="text-lg font-semibold">Six Combined Control Prototypes</h1>
+              <h1 className="text-lg font-semibold">Three Experimental Control Prototypes</h1>
               <p className="text-xs text-muted-foreground">
                 Rotation {currentRotation} • {formatCorePhaseLabel(currentCorePhase)} • {isOurServe ? 'We Serve' : 'We Receive'}
               </p>
@@ -243,20 +243,23 @@ export default function RebuildPrototypeLabPage() {
             </div>
           </div>
 
-          <div className="mt-2 overflow-x-auto pb-1">
-            <div className="flex min-w-max gap-1">
+          <div className="mt-2 rounded-lg border border-border bg-background/70 p-1">
+            <div className="grid grid-cols-3 gap-1">
               {PROTOTYPE_VARIANTS.map((variant) => (
                 <Button
                   key={variant.id}
                   type="button"
                   variant={variant.id === activeVariant ? 'default' : 'outline'}
                   size="sm"
-                  className="h-8 px-2 text-[11px]"
+                  className="h-9 px-2 text-[11px]"
                   onClick={() => setActiveVariant(variant.id)}
                 >
-                  {variant.shortLabel}: {variant.label}
+                  {variant.shortLabel}
                 </Button>
               ))}
+            </div>
+            <div className="px-2 pt-1 text-[11px] text-muted-foreground">
+              {PROTOTYPE_VARIANTS.find((variant) => variant.id === activeVariant)?.label}
             </div>
           </div>
         </header>

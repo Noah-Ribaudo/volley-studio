@@ -1,13 +1,7 @@
 import type { RallyPhase, Rotation } from '@/lib/types'
 
 export type CorePhase = 'SERVE' | 'RECEIVE' | 'OFFENSE' | 'DEFENSE'
-export type PrototypeVariantId =
-  | 'concept1'
-  | 'concept2'
-  | 'concept3'
-  | 'concept4'
-  | 'concept5'
-  | 'concept6'
+export type PrototypeVariantId = 'concept3' | 'concept5' | 'concept6'
 
 export type PointWinner = 'us' | 'them'
 
@@ -31,12 +25,9 @@ export const PROTOTYPE_VARIANTS: Array<{
   shortLabel: string
   label: string
 }> = [
-  { id: 'concept1', shortLabel: 'C1', label: 'Workbook + State Graph' },
-  { id: 'concept2', shortLabel: 'C2', label: 'Dual Play Lanes' },
-  { id: 'concept3', shortLabel: 'C3', label: 'Big Foundations / Small Reactive' },
-  { id: 'concept4', shortLabel: 'C4', label: 'Rules Table + Router' },
+  { id: 'concept3', shortLabel: 'C3', label: 'Foundation Morph Deck' },
   { id: 'concept5', shortLabel: 'C5', label: 'Rotation Hub + Rally Map' },
-  { id: 'concept6', shortLabel: 'C6', label: 'Live Match Console' },
+  { id: 'concept6', shortLabel: 'C6', label: 'Live Match Console+' },
 ]
 
 export const CORE_PHASE_TO_RALLY_PHASE: Record<CorePhase, RallyPhase> = {
@@ -90,7 +81,25 @@ export function getLegalPlayLabel(phase: CorePhase): string {
 }
 
 export function canVariantScore(variant: PrototypeVariantId): boolean {
-  return variant === 'concept4' || variant === 'concept5' || variant === 'concept6'
+  return variant === 'concept5' || variant === 'concept6'
+}
+
+const SETTER_ZONE_BY_ROTATION: Record<Rotation, 1 | 2 | 3 | 4 | 5 | 6> = {
+  1: 1,
+  2: 6,
+  3: 5,
+  4: 4,
+  5: 3,
+  6: 2,
+}
+
+export function getSetterZoneForRotation(rotation: Rotation): 1 | 2 | 3 | 4 | 5 | 6 {
+  return SETTER_ZONE_BY_ROTATION[rotation]
+}
+
+export function getRotationForSetterZone(zone: 1 | 2 | 3 | 4 | 5 | 6): Rotation {
+  const entry = Object.entries(SETTER_ZONE_BY_ROTATION).find(([, mappedZone]) => mappedZone === zone)
+  return entry ? (Number(entry[0]) as Rotation) : 1
 }
 
 function wrapRotation(rotation: Rotation, delta: -1 | 1): Rotation {

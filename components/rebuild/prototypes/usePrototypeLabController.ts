@@ -21,7 +21,7 @@ function wrapRotation(rotation: Rotation, delta: -1 | 1): Rotation {
 }
 
 export function usePrototypeLabController() {
-  const [activeVariant, setActiveVariant] = useState<PrototypeVariantId>('concept1')
+  const [activeVariant, setActiveVariant] = useState<PrototypeVariantId>('concept3')
   const [currentRotation, setCurrentRotation] = useState<Rotation>(1)
   const [currentCorePhase, setCurrentCorePhase] = useState<CorePhase>('SERVE')
   const [isOurServe, setIsOurServe] = useState(true)
