@@ -1,58 +1,69 @@
 'use client'
 
-import { useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { motion, useReducedMotion } from 'motion/react'
 import { cn } from '@/lib/utils'
 import type { SwitchMotionTuning } from '@/lib/rebuild/tactileTuning'
-
-interface PlayVector {
-  x: number
-  y: number
-}
+import type { CorePhase } from '@/lib/rebuild/prototypeFlow'
 
 interface TactilePlayJoystickProps {
+  currentPhase: CorePhase
+  nextPhase: CorePhase
   nextLabel: string
-  playVector: PlayVector
   switchMotion: SwitchMotionTuning
   onPlay: () => void
+  onPhaseSelect: (phase: CorePhase) => void
   className?: string
 }
 
-interface PointerOrigin {
-  x: number
-  y: number
+type PhaseChip = {
+  phase: CorePhase
+  shortLabel: string
 }
 
-function normalizeVector(vector: PlayVector): PlayVector {
-  const mag = Math.hypot(vector.x, vector.y)
-  if (mag < 0.0001) return { x: 1, y: 0 }
-  return { x: vector.x / mag, y: vector.y / mag }
-}
+const QUADRANT_PHASES: [PhaseChip, PhaseChip, PhaseChip, PhaseChip] = [
+  { phase: 'SERVE', shortLabel: 'Sv' },
+  { phase: 'DEFENSE', shortLabel: 'Df' },
+  { phase: 'RECEIVE', shortLabel: 'Rc' },
+  { phase: 'OFFENSE', shortLabel: 'At' },
+]
 
-function clampOffset(x: number, y: number, radius: number): PlayVector {
+function clampOffset(x: number, y: number, radius: number): { x: number; y: number } {
   const mag = Math.hypot(x, y)
   if (mag <= radius || mag < 0.0001) return { x, y }
   const k = radius / mag
   return { x: x * k, y: y * k }
 }
 
+function getPhaseFromVector(dx: number, dy: number, deadZone: number): CorePhase | null {
+  if (Math.hypot(dx, dy) < deadZone) {
+    return null
+  }
+  if (dy < 0) {
+    return dx < 0 ? 'SERVE' : 'DEFENSE'
+  }
+  return dx < 0 ? 'RECEIVE' : 'OFFENSE'
+}
+
 export function TactilePlayJoystick({
+  currentPhase,
+  nextPhase,
   nextLabel,
-  playVector,
   switchMotion,
   onPlay,
+  onPhaseSelect,
   className,
 }: TactilePlayJoystickProps) {
   const prefersReducedMotion = useReducedMotion()
-  const [offset, setOffset] = useState<PlayVector>({ x: 0, y: 0 })
+  const [offset, setOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
-  const pointerOriginRef = useRef<PointerOrigin | null>(null)
+  const [dragPhase, setDragPhase] = useState<CorePhase | null>(null)
+  const isPointerDownRef = useRef(false)
   const movedSinceDownRef = useRef(false)
+  const lastDragPhaseRef = useRef<CorePhase | null>(null)
 
   const MAX_TRAVEL = 16
-  const TRIGGER_PROJECTION = 10
-  const targetDirection = useMemo(() => normalizeVector(playVector), [playVector])
-  const indicatorDistance = 24
+  const DEAD_ZONE = 7
 
   const transition = prefersReducedMotion
     ? { duration: 0.001 }
@@ -63,50 +74,51 @@ export function TactilePlayJoystick({
         mass: switchMotion.spring.mass,
       }
 
-  const indicatorX = targetDirection.x * indicatorDistance
-  const indicatorY = targetDirection.y * indicatorDistance
+  const selectedPhase = dragPhase ?? currentPhase
 
   const resetStick = () => {
-    pointerOriginRef.current = null
+    isPointerDownRef.current = false
     movedSinceDownRef.current = false
+    lastDragPhaseRef.current = null
     setIsDragging(false)
+    setDragPhase(null)
     setOffset({ x: 0, y: 0 })
   }
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
-    pointerOriginRef.current = { x: event.clientX, y: event.clientY }
+    isPointerDownRef.current = true
     movedSinceDownRef.current = false
+    lastDragPhaseRef.current = null
     setIsDragging(true)
     event.currentTarget.setPointerCapture(event.pointerId)
   }
 
   const handlePointerMove = (event: ReactPointerEvent<HTMLButtonElement>) => {
-    const origin = pointerOriginRef.current
-    if (!origin) return
+    if (!isPointerDownRef.current) return
 
-    const dx = event.clientX - origin.x
-    const dy = event.clientY - origin.y
+    const rect = event.currentTarget.getBoundingClientRect()
+    const centerX = rect.left + rect.width / 2
+    const centerY = rect.top + rect.height / 2
+
+    const dx = event.clientX - centerX
+    const dy = event.clientY - centerY
     const clamped = clampOffset(dx, dy, MAX_TRAVEL)
     if (Math.hypot(clamped.x, clamped.y) > 2) {
       movedSinceDownRef.current = true
     }
     setOffset(clamped)
-  }
 
-  const maybeTriggerPlay = () => {
-    const projection = offset.x * targetDirection.x + offset.y * targetDirection.y
-    if (projection >= TRIGGER_PROJECTION) {
-      onPlay()
+    const hovered = getPhaseFromVector(dx, dy, DEAD_ZONE)
+    setDragPhase(hovered)
+    if (hovered && hovered !== lastDragPhaseRef.current) {
+      onPhaseSelect(hovered)
+      lastDragPhaseRef.current = hovered
     }
   }
 
   const handlePointerUp = (event: ReactPointerEvent<HTMLButtonElement>) => {
-    if (pointerOriginRef.current) {
-      if (movedSinceDownRef.current) {
-        maybeTriggerPlay()
-      } else {
-        onPlay()
-      }
+    if (isPointerDownRef.current && !movedSinceDownRef.current) {
+      onPlay()
     }
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId)
@@ -145,14 +157,24 @@ export function TactilePlayJoystick({
       >
         <div className="pointer-events-none absolute inset-3 rounded-full border border-border/45" />
 
-        <div
-          className="pointer-events-none absolute h-3 w-3 rounded-full bg-primary/35"
-          style={{
-            left: `calc(50% + ${indicatorX}px)`,
-            top: `calc(50% + ${indicatorY}px)`,
-            transform: 'translate(-50%, -50%)',
-          }}
-        />
+        <div className="pointer-events-none absolute inset-2 grid grid-cols-2 grid-rows-2 overflow-hidden rounded-full">
+          {QUADRANT_PHASES.map(({ phase, shortLabel }) => {
+            const isSelected = selectedPhase === phase
+            const isNext = !isDragging && nextPhase === phase
+            return (
+              <div
+                key={phase}
+                className={cn(
+                  'flex items-center justify-center text-[9px] font-semibold uppercase tracking-[0.04em] text-muted-foreground/80 transition-colors',
+                  isSelected ? 'bg-primary/18 text-foreground' : undefined,
+                  isNext && !isSelected ? 'bg-primary/10' : undefined
+                )}
+              >
+                {shortLabel}
+              </div>
+            )
+          })}
+        </div>
 
         <motion.div
           animate={{ x: offset.x, y: offset.y, scale: isDragging ? 0.97 : 1 }}
@@ -164,7 +186,7 @@ export function TactilePlayJoystick({
           </span>
         </motion.div>
       </button>
-      <div className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground">Push to {nextLabel}</div>
+      <div className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground">Tap: {nextLabel} | Drag: phase</div>
     </div>
   )
 }

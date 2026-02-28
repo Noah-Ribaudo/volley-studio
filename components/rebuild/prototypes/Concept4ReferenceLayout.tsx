@@ -12,21 +12,6 @@ function getPhaseLabel(phase: CorePhase): string {
   return formatCorePhaseLabel(phase)
 }
 
-function getPlayVector(currentCorePhase: CorePhase): { x: number; y: number } {
-  switch (currentCorePhase) {
-    case 'SERVE':
-      return { x: 1, y: -0.72 }
-    case 'RECEIVE':
-      return { x: 1, y: 0.72 }
-    case 'OFFENSE':
-      return { x: 0, y: -1 }
-    case 'DEFENSE':
-      return { x: 0, y: 1 }
-    default:
-      return { x: 1, y: 0 }
-  }
-}
-
 function TactilePhaseButton({
   phase,
   currentCorePhase,
@@ -88,7 +73,6 @@ export function Concept4ReferenceLayout({
   const topLinkActive = currentCorePhase === 'SERVE'
   const bottomLinkActive = currentCorePhase === 'RECEIVE'
   const loopLinkActive = currentCorePhase === 'OFFENSE' || currentCorePhase === 'DEFENSE'
-  const playVector = getPlayVector(currentCorePhase)
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
@@ -182,10 +166,12 @@ export function Concept4ReferenceLayout({
 
           <TactilePlayJoystick
             className="row-span-2"
+            currentPhase={currentCorePhase}
+            nextPhase={nextByPlay}
             nextLabel={getPhaseLabel(nextByPlay)}
-            playVector={playVector}
             switchMotion={switchMotion}
             onPlay={onPlay}
+            onPhaseSelect={onPhaseSelect}
           />
 
           <TactilePhaseButton
