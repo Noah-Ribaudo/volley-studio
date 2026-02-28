@@ -177,8 +177,8 @@ export default function RebuildPage() {
   const activePhaseName = getPhaseInfo(currentPhase as Phase).name
 
   return (
-    <div className="min-h-dvh bg-[radial-gradient(circle_at_top,oklch(27%_0.03_250)_0%,oklch(14%_0.01_260)_52%,oklch(10%_0.01_260)_100%)] text-foreground">
-      <div className="mx-auto flex min-h-dvh w-full max-w-[1280px] flex-col gap-4 px-4 py-4 md:px-6 md:py-6">
+    <div className="h-dvh overflow-hidden bg-background text-foreground">
+      <div className="mx-auto flex h-full w-full max-w-[1280px] flex-col gap-3 p-3 md:gap-4 md:p-4">
         <header className="flex shrink-0 flex-col gap-3 rounded-2xl border border-white/10 bg-black/25 px-4 py-3 shadow-[0_16px_40px_-24px_rgba(0,0,0,0.85)] backdrop-blur-md md:flex-row md:items-end md:justify-between">
           <div>
             <p className="text-xs uppercase tracking-[0.18em] text-white/60">Volley Studio Rebuild</p>

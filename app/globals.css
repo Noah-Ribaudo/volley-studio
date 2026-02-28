@@ -392,6 +392,9 @@
     font-family: var(--font-sans);
     /* Ensure background extends behind iOS status bar */
     min-height: 100%;
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
   }
 
   * {
@@ -403,6 +406,9 @@
     color: var(--foreground);
     /* Full height for iOS */
     min-height: 100dvh;
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
   }
 
   /* Athletic headings with condensed font */

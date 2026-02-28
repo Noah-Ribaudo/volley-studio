@@ -182,6 +182,13 @@ type ClientPoint = {
   y: number
 }
 
+type DragViewportLockSnapshot = {
+  htmlOverflow: string
+  bodyOverflow: string
+  htmlTouchAction: string
+  bodyTouchAction: string
+}
+
 export function VolleyballCourt({
   positions,
   awayPositions,
@@ -289,6 +296,52 @@ export function VolleyballCourt({
   const attackBallDragPositionRef = useRef<Position | null>(null)
   const attackBallRafRef = useRef<number | null>(null)
   const onAttackBallChangeRef = useRef(onAttackBallChange)
+  const dragViewportLockDepthRef = useRef(0)
+  const dragViewportLockSnapshotRef = useRef<DragViewportLockSnapshot | null>(null)
+
+  const lockViewportForDrag = useCallback(() => {
+    const html = document.documentElement
+    const body = document.body
+
+    if (dragViewportLockDepthRef.current === 0) {
+      dragViewportLockSnapshotRef.current = {
+        htmlOverflow: html.style.overflow,
+        bodyOverflow: body.style.overflow,
+        htmlTouchAction: html.style.touchAction,
+        bodyTouchAction: body.style.touchAction,
+      }
+    }
+
+    dragViewportLockDepthRef.current += 1
+    html.style.overflow = 'hidden'
+    body.style.overflow = 'hidden'
+    html.style.touchAction = 'none'
+    body.style.touchAction = 'none'
+  }, [])
+
+  const unlockViewportForDrag = useCallback(() => {
+    if (dragViewportLockDepthRef.current <= 0) return
+    dragViewportLockDepthRef.current -= 1
+    if (dragViewportLockDepthRef.current > 0) return
+
+    const snapshot = dragViewportLockSnapshotRef.current
+    const html = document.documentElement
+    const body = document.body
+
+    if (snapshot) {
+      html.style.overflow = snapshot.htmlOverflow
+      body.style.overflow = snapshot.bodyOverflow
+      html.style.touchAction = snapshot.htmlTouchAction
+      body.style.touchAction = snapshot.bodyTouchAction
+    } else {
+      html.style.overflow = ''
+      body.style.overflow = ''
+      html.style.touchAction = ''
+      body.style.touchAction = ''
+    }
+
+    dragViewportLockSnapshotRef.current = null
+  }, [])
 
   // Keep refs in sync
   useEffect(() => {
@@ -1535,9 +1588,8 @@ export function VolleyballCourt({
     setDragPosition(null) // Reset drag position
     didDragRef.current = false // Reset drag tracking
 
-    // Prevent page scroll during drag
-    document.body.style.overflow = 'hidden'
-    document.body.style.touchAction = 'none'
+    // Prevent viewport scroll/resize while dragging.
+    lockViewportForDrag()
 
     let latestClientPoint: ClientPoint | null = null
 
@@ -1572,9 +1624,8 @@ export function VolleyballCourt({
     }
 
     const handleEnd = () => {
-      // Re-enable page scroll
-      document.body.style.overflow = ''
-      document.body.style.touchAction = ''
+      // Re-enable viewport scroll once drag fully ends.
+      unlockViewportForDrag()
 
       latestClientPoint = null
       handleDragEnd()
@@ -1588,7 +1639,7 @@ export function VolleyballCourt({
     document.addEventListener('mouseup', handleEnd)
       document.addEventListener('touchmove', handleMove, { passive: false })
       document.addEventListener('touchend', handleEnd)
-    }, [isEditable, isPreviewingMovement, positions, getEventPosition, getClientPoint, clientToSvgCoords, handleDragEnd, toSvgCoords, toNormalizedCoords, clearAllPreviewState])
+    }, [isEditable, isPreviewingMovement, positions, getEventPosition, getClientPoint, clientToSvgCoords, handleDragEnd, toSvgCoords, toNormalizedCoords, clearAllPreviewState, lockViewportForDrag, unlockViewportForDrag])
 
   // Handle arrow drag (create, reposition, or delete movement arrows)
   const handleArrowDragStart = useCallback((
@@ -1618,9 +1669,8 @@ export function VolleyballCourt({
     const homeBasePos = displayPositions[role] || positions[role] || { x: 0.5, y: 0.75 }
     const dragStartSvg = toSvgCoords(homeBasePos)
 
-    // Prevent page scroll during drag
-    document.body.style.overflow = 'hidden'
-    document.body.style.touchAction = 'none'
+    // Prevent viewport scroll/resize while dragging.
+    lockViewportForDrag()
 
     // Initialize with preview position for seamless transition (no visual jump)
     if (initialEndSvg) {
@@ -1699,9 +1749,8 @@ export function VolleyballCourt({
     }
 
     const handleEnd = () => {
-      // Re-enable page scroll
-      document.body.style.overflow = ''
-      document.body.style.touchAction = ''
+      // Re-enable viewport scroll once drag fully ends.
+      unlockViewportForDrag()
       latestClientPoint = null
 
       // Use ref instead of state to get current value (avoids stale closure)
@@ -1743,7 +1792,7 @@ export function VolleyballCourt({
     document.addEventListener('mouseup', handleEnd)
       document.addEventListener('touchmove', handleMove, { passive: false })
       document.addEventListener('touchend', handleEnd)
-  }, [onArrowChange, onArrowCurveChange, getClientPoint, clientToSvgCoords, toNormalizedCoords, incrementDragCount, markNextStepDragLearned, markArrowDragLearned, isMobile, arrows, arrowCurves, isPreviewingMovement, displayPositions, positions, toSvgCoords, clearPreviewStateForRole])
+  }, [onArrowChange, onArrowCurveChange, getClientPoint, clientToSvgCoords, toNormalizedCoords, incrementDragCount, markNextStepDragLearned, markArrowDragLearned, isMobile, arrows, arrowCurves, isPreviewingMovement, displayPositions, positions, toSvgCoords, clearPreviewStateForRole, lockViewportForDrag, unlockViewportForDrag])
 
   // Handle curve drag - dragging the curve handle adjusts direction and intensity
   const handleCurveDragStart = useCallback((role: Role, e: React.MouseEvent | React.TouchEvent) => {
@@ -1971,9 +2020,8 @@ export function VolleyballCourt({
     dragAwayPositionRef.current = null
     setDragAwayPosition(null)
 
-    // Prevent page scroll during drag
-    document.body.style.overflow = 'hidden'
-    document.body.style.touchAction = 'none'
+    // Prevent viewport scroll/resize while dragging.
+    lockViewportForDrag()
 
     let latestClientPoint: ClientPoint | null = null
 
@@ -2007,8 +2055,7 @@ export function VolleyballCourt({
     }
 
     const handleEnd = () => {
-      document.body.style.overflow = ''
-      document.body.style.touchAction = ''
+      unlockViewportForDrag()
 
       latestClientPoint = null
       handleAwayDragEnd()
@@ -2022,7 +2069,7 @@ export function VolleyballCourt({
     document.addEventListener('mouseup', handleEnd)
     document.addEventListener('touchmove', handleMove, { passive: false })
     document.addEventListener('touchend', handleEnd)
-  }, [isEditable, awayPositions, getEventPosition, getClientPoint, clientToSvgCoords, handleAwayDragEnd, toSvgCoords, toNormalizedCoords])
+  }, [isEditable, awayPositions, getEventPosition, getClientPoint, clientToSvgCoords, handleAwayDragEnd, toSvgCoords, toNormalizedCoords, lockViewportForDrag, unlockViewportForDrag])
 
   // Constrain attack ball position: must stay on opponent side (y < 0.5) and near net
   const constrainAttackBallPosition = useCallback((pos: Position): Position => {
@@ -2076,9 +2123,8 @@ export function VolleyballCourt({
       onAttackBallChangeRef.current(DEFAULT_ATTACK_BALL_POSITION)
     }
 
-    // Prevent page scroll during drag
-    document.body.style.overflow = 'hidden'
-    document.body.style.touchAction = 'none'
+    // Prevent viewport scroll/resize while dragging.
+    lockViewportForDrag()
 
     let latestClientPoint: ClientPoint | null = null
 
@@ -2108,8 +2154,7 @@ export function VolleyballCourt({
     }
 
     const handleEnd = () => {
-      document.body.style.overflow = ''
-      document.body.style.touchAction = ''
+      unlockViewportForDrag()
 
       latestClientPoint = null
       handleAttackBallDragEnd()
@@ -2123,7 +2168,7 @@ export function VolleyballCourt({
     document.addEventListener('mouseup', handleEnd)
     document.addEventListener('touchmove', handleMove, { passive: false })
     document.addEventListener('touchend', handleEnd)
-  }, [mode, currentPhase, attackBallPosition, getClientPoint, clientToSvgCoords, constrainAttackBallPosition, toNormalizedCoords, handleAttackBallDragEnd, DEFAULT_ATTACK_BALL_POSITION])
+  }, [mode, currentPhase, attackBallPosition, getClientPoint, clientToSvgCoords, constrainAttackBallPosition, toNormalizedCoords, handleAttackBallDragEnd, DEFAULT_ATTACK_BALL_POSITION, lockViewportForDrag, unlockViewportForDrag])
 
   // Cleanup on unmount
   useEffect(() => {
@@ -2143,8 +2188,9 @@ export function VolleyballCourt({
       if (attackBallRafRef.current) {
         cancelAnimationFrame(attackBallRafRef.current)
       }
+      unlockViewportForDrag()
     }
-  }, [])
+  }, [unlockViewportForDrag])
 
   return (
     <WhiteboardDialProvider>

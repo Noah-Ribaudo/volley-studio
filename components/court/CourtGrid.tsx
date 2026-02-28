@@ -1,6 +1,6 @@
 'use client'
 
-import { memo, useId } from 'react'
+import { memo } from 'react'
 import { Rotation, Role, ROLES, ROLE_INFO } from '@/lib/types'
 import { getRoleZone } from '@/lib/rotations'
 import { useThemeStore } from '@/store/useThemeStore'
@@ -57,29 +57,15 @@ function CourtGridImpl({ width, height, showZones = true, rotation, baseOrder, f
     6: { x: width * 0.5000, y: height * 0.8333 }, // Back center
   }
 
-  // Generate unique IDs for gradients to avoid conflicts when multiple courts are rendered
-  // Using useId() for SSR-safe stable IDs
-  const id = useId()
-  const gradientId = `court-vignette-${id.replace(/:/g, '')}`
-
   return (
     <g className="court-grid">
-      {/* Radial gradient definition for vignette effect */}
-      <defs>
-        <radialGradient id={gradientId} cx="50%" cy="50%" r="70%" fx="50%" fy="50%">
-          <stop offset="0%" stopColor={courtBackgroundColor} stopOpacity="1" />
-          <stop offset="60%" stopColor={courtBackgroundColor} stopOpacity="1" />
-          <stop offset="100%" stopColor={isLightTheme ? '#d1d5db' : '#111827'} stopOpacity="1" />
-        </radialGradient>
-      </defs>
-
-      {/* Court background with radial vignette for depth */}
+      {/* Court background (flat fill, no surface gradient) */}
       <rect
         x={0}
         y={0}
         width={width}
         height={height}
-        fill={`url(#${gradientId})`}
+        fill={courtBackgroundColor}
         rx={4}
       />
 
