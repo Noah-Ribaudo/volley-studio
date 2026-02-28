@@ -11,9 +11,9 @@ export function RosterManagementCard() {
   const currentTeam = useAppStore((state) => state.currentTeam)
   const activeContext = useAppStore((state) => state.activeContext)
 
-  const modeLabel = activeContext.mode === 'savedCloud'
+  const modeLabel = activeContext?.mode === 'savedCloud'
     ? 'Saved (Cloud)'
-    : activeContext.mode === 'unsavedLocal'
+    : activeContext?.mode === 'unsavedLocal'
       ? 'Unsaved (Local)'
       : 'Practice (No Team)'
 

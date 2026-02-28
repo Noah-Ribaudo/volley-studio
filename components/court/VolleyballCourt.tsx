@@ -232,7 +232,7 @@ export function VolleyballCourt({
   const activeRoles = getActiveRoles(showLibero, rotation, resolvedBaseOrder)
 
   // Ensure all roles have positions (except in simulation mode where missing = inactive)
-  const ensureCompletePositions = (pos: PositionCoordinates): PositionCoordinates => {
+  const ensureCompletePositions = useCallback((pos: PositionCoordinates): PositionCoordinates => {
     const complete: PositionCoordinates = {} as PositionCoordinates
     for (const role of activeRoles) {
       // In simulation mode, don't fill in defaults - missing means inactive/substituted
@@ -254,7 +254,7 @@ export function VolleyballCourt({
       }
     }
     return complete
-  }
+  }, [activeRoles, mode, replacedMB])
 
   // Initialize with positions to match SSR, will update after mount if needed
   const [animatedPositions, setAnimatedPositions] = useState<PositionCoordinates>(() => ensureCompletePositions(positions))
@@ -265,7 +265,7 @@ export function VolleyballCourt({
     const complete = ensureCompletePositions(positions)
     // Only update if positions actually changed to avoid unnecessary re-renders
     const hasChanged = activeRoles.some(role => {
-      const current = animatedPositions[role]
+      const current = currentPositionsRef.current[role]
       const newPos = complete[role]
       // Handle undefined positions (inactive players in simulation mode)
       if (!newPos && !current) return false // Both undefined, no change
@@ -276,7 +276,7 @@ export function VolleyballCourt({
       setAnimatedPositions(complete)
       currentPositionsRef.current = complete
     }
-  }, [positions, showLibero, activeRoles]) // Update when positions, showLibero, or activeRoles change
+  }, [positions, showLibero, activeRoles, ensureCompletePositions]) // Update when positions, showLibero, or activeRoles change
   const [draggingArrowRole, setDraggingArrowRole] = useState<Role | null>(null)
   const [arrowDragPosition, setArrowDragPosition] = useState<Position | null>(null)
   const [isDraggingOffCourt, setIsDraggingOffCourt] = useState<Record<Role, boolean>>({} as Record<Role, boolean>)
@@ -500,7 +500,7 @@ export function VolleyballCourt({
   const collisionFreePositions = useMemo(() => {
     // Ensure all roles have positions before collision resolution
     return resolveCollisions(ensureCompletePositions(positions))
-  }, [positions, resolveCollisions])
+  }, [positions, resolveCollisions, ensureCompletePositions])
 
   // Track whether bezier animation is currently running
   const [isBezierAnimating, setIsBezierAnimating] = useState(false)

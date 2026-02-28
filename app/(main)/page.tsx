@@ -335,7 +335,7 @@ function HomePageContent() {
   const courtSetupTriggerRef = useRef<HTMLElement | null>(null)
   const [viewportWidth, setViewportWidth] = useState(0)
   const [createTeamDialogOpen, setCreateTeamDialogOpen] = useState(false)
-  const whiteboardMode = activeContext.mode
+  const whiteboardMode = activeContext?.mode ?? 'practice'
   const whiteboardModeLabel = whiteboardMode === 'savedCloud'
     ? 'Saved (Cloud)'
     : whiteboardMode === 'unsavedLocal'
@@ -588,9 +588,9 @@ function HomePageContent() {
     return updatedTeam
   }, [teamRepository])
 
-  const teamSelectValue = activeContext.mode === 'practice' || !activeContext.teamId
+  const teamSelectValue = activeContext?.mode === 'practice' || !activeContext?.teamId
     ? '__none__'
-    : `${activeContext.mode === 'savedCloud' ? 'cloud' : 'local'}:${activeContext.teamId}`
+    : `${activeContext?.mode === 'savedCloud' ? 'cloud' : 'local'}:${activeContext?.teamId}`
   const currentLineup = useMemo(() => {
     if (!currentTeam || !currentTeam.lineups?.length) {
       return null
