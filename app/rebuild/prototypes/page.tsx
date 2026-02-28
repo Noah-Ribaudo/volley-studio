@@ -20,13 +20,24 @@ import { getPrototypeSeed } from '@/lib/rebuild/prototypeSeeds'
 import { createRotationPhaseKey, getBackRowMiddle } from '@/lib/rotations'
 import { getCurrentArrows, getCurrentPositions, getCurrentTags } from '@/lib/whiteboardHelpers'
 import { ROLES, type Position, type Role, type Rotation } from '@/lib/types'
-import { useStoresHydrated } from '@/store/hydration'
 import { useDisplayPrefsStore } from '@/store/useDisplayPrefsStore'
+import { useStoreBootstrapReady } from '@/store/StoreProvider'
 import { useTeamStore } from '@/store/useTeamStore'
+import { useThemeStore } from '@/store/useThemeStore'
 import { useWhiteboardStore } from '@/store/useWhiteboardStore'
 
 export default function RebuildPrototypeLabPage() {
-  const isUiHydrated = useStoresHydrated()
+  const isBootstrapped = useStoreBootstrapReady()
+  const whiteboardHydrated = useWhiteboardStore((state) => state.isHydrated)
+  const teamHydrated = useTeamStore((state) => state.isHydrated)
+  const displayPrefsHydrated = useDisplayPrefsStore((state) => state.isHydrated)
+  const themeHydrated = useThemeStore((state) => state.isHydrated)
+  const isUiHydrated =
+    isBootstrapped &&
+    whiteboardHydrated &&
+    teamHydrated &&
+    displayPrefsHydrated &&
+    themeHydrated
   const didBootstrapSeedsRef = useRef(false)
 
   const {
@@ -201,7 +212,13 @@ export default function RebuildPrototypeLabPage() {
   const scoringEnabled = canVariantScore(activeVariant)
 
   if (!isUiHydrated) {
-    return <div className="h-dvh bg-background" />
+    return (
+      <div className="flex h-dvh w-full items-center justify-center overflow-hidden bg-background text-foreground">
+        <div className="rounded-xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
+          Loading prototype lab...
+        </div>
+      </div>
+    )
   }
 
   return (
