@@ -28,6 +28,44 @@ function withLibero(data: Omit<PhaseSeed, 'positions' | 'arrows'> & {
   }
 }
 
+// Linked phase anchors so phase transitions can hand off without coordinate jumps:
+// SERVE -> DEFENSE, RECEIVE -> OFFENSE, and OFFENSE <-> DEFENSE.
+const R1_DEFENSE_LINKED_POSITIONS: RolePositionMap = {
+  S: { x: 0.78, y: 0.86 },
+  OH1: { x: 0.24, y: 0.66 },
+  MB1: { x: 0.5, y: 0.6 },
+  OPP: { x: 0.84, y: 0.62 },
+  OH2: { x: 0.2, y: 0.84 },
+  MB2: { x: 0.56, y: 0.82 },
+}
+
+const R1_OFFENSE_LINKED_POSITIONS: RolePositionMap = {
+  S: { x: 0.55, y: 0.76 },
+  OH1: { x: 0.17, y: 0.79 },
+  MB1: { x: 0.47, y: 0.63 },
+  OPP: { x: 0.85, y: 0.66 },
+  OH2: { x: 0.3, y: 0.8 },
+  MB2: { x: 0.62, y: 0.78 },
+}
+
+const R4_DEFENSE_LINKED_POSITIONS: RolePositionMap = {
+  S: { x: 0.28, y: 0.74 },
+  OH1: { x: 0.84, y: 0.63 },
+  MB1: { x: 0.56, y: 0.56 },
+  OPP: { x: 0.22, y: 0.8 },
+  OH2: { x: 0.76, y: 0.84 },
+  MB2: { x: 0.48, y: 0.8 },
+}
+
+const R4_OFFENSE_LINKED_POSITIONS: RolePositionMap = {
+  S: { x: 0.52, y: 0.74 },
+  OH1: { x: 0.86, y: 0.64 },
+  MB1: { x: 0.57, y: 0.6 },
+  OPP: { x: 0.2, y: 0.79 },
+  OH2: { x: 0.71, y: 0.79 },
+  MB2: { x: 0.44, y: 0.79 },
+}
+
 export const PROTOTYPE_SEEDS: Partial<Record<Rotation, RotationSeed>> = {
   1: {
     SERVE: withLibero({
@@ -39,14 +77,7 @@ export const PROTOTYPE_SEEDS: Partial<Record<Rotation, RotationSeed>> = {
         OH2: { x: 0.18, y: 0.9 },
         MB2: { x: 0.5, y: 0.9 },
       },
-      arrows: {
-        S: { x: 0.78, y: 0.86 },
-        OH1: { x: 0.24, y: 0.66 },
-        MB1: { x: 0.5, y: 0.6 },
-        OPP: { x: 0.84, y: 0.62 },
-        OH2: { x: 0.2, y: 0.84 },
-        MB2: { x: 0.56, y: 0.82 },
-      },
+      arrows: { ...R1_DEFENSE_LINKED_POSITIONS },
     }),
     RECEIVE: withLibero({
       positions: {
@@ -57,44 +88,15 @@ export const PROTOTYPE_SEEDS: Partial<Record<Rotation, RotationSeed>> = {
         OH2: { x: 0.27, y: 0.88 },
         MB2: { x: 0.59, y: 0.86 },
       },
-      arrows: {
-        S: { x: 0.55, y: 0.76 },
-        OH1: { x: 0.17, y: 0.79 },
-        MB1: { x: 0.47, y: 0.63 },
-        OPP: { x: 0.85, y: 0.66 },
-        OH2: { x: 0.3, y: 0.8 },
-        MB2: { x: 0.62, y: 0.78 },
-      },
+      arrows: { ...R1_OFFENSE_LINKED_POSITIONS },
     }),
     OFFENSE: withLibero({
-      positions: {
-        S: { x: 0.56, y: 0.74 },
-        OH1: { x: 0.15, y: 0.61 },
-        MB1: { x: 0.45, y: 0.58 },
-        OPP: { x: 0.83, y: 0.6 },
-        OH2: { x: 0.25, y: 0.79 },
-        MB2: { x: 0.6, y: 0.81 },
-      },
-      arrows: {
-        S: { x: 0.53, y: 0.69 },
-        OH1: { x: 0.12, y: 0.54 },
-        OPP: { x: 0.86, y: 0.53 },
-      },
+      positions: { ...R1_OFFENSE_LINKED_POSITIONS },
+      arrows: { ...R1_DEFENSE_LINKED_POSITIONS },
     }),
     DEFENSE: withLibero({
-      positions: {
-        S: { x: 0.58, y: 0.82 },
-        OH1: { x: 0.17, y: 0.7 },
-        MB1: { x: 0.44, y: 0.69 },
-        OPP: { x: 0.79, y: 0.69 },
-        OH2: { x: 0.25, y: 0.88 },
-        MB2: { x: 0.58, y: 0.89 },
-      },
-      arrows: {
-        S: { x: 0.5, y: 0.85 },
-        OH1: { x: 0.2, y: 0.75 },
-        OPP: { x: 0.75, y: 0.74 },
-      },
+      positions: { ...R1_DEFENSE_LINKED_POSITIONS },
+      arrows: { ...R1_OFFENSE_LINKED_POSITIONS },
     }),
   },
   4: {
@@ -107,14 +109,7 @@ export const PROTOTYPE_SEEDS: Partial<Record<Rotation, RotationSeed>> = {
         OH2: { x: 0.8, y: 0.9 },
         MB2: { x: 0.5, y: 0.88 },
       },
-      arrows: {
-        S: { x: 0.28, y: 0.74 },
-        OH1: { x: 0.84, y: 0.63 },
-        MB1: { x: 0.56, y: 0.56 },
-        OPP: { x: 0.22, y: 0.8 },
-        OH2: { x: 0.76, y: 0.84 },
-        MB2: { x: 0.48, y: 0.8 },
-      },
+      arrows: { ...R4_DEFENSE_LINKED_POSITIONS },
     }),
     RECEIVE: withLibero({
       positions: {
@@ -125,44 +120,15 @@ export const PROTOTYPE_SEEDS: Partial<Record<Rotation, RotationSeed>> = {
         OH2: { x: 0.76, y: 0.86 },
         MB2: { x: 0.48, y: 0.88 },
       },
-      arrows: {
-        S: { x: 0.52, y: 0.74 },
-        OH1: { x: 0.86, y: 0.64 },
-        MB1: { x: 0.57, y: 0.6 },
-        OPP: { x: 0.2, y: 0.79 },
-        OH2: { x: 0.71, y: 0.79 },
-        MB2: { x: 0.44, y: 0.79 },
-      },
+      arrows: { ...R4_OFFENSE_LINKED_POSITIONS },
     }),
     OFFENSE: withLibero({
-      positions: {
-        S: { x: 0.55, y: 0.73 },
-        OH1: { x: 0.84, y: 0.6 },
-        MB1: { x: 0.58, y: 0.58 },
-        OPP: { x: 0.16, y: 0.76 },
-        OH2: { x: 0.75, y: 0.79 },
-        MB2: { x: 0.44, y: 0.8 },
-      },
-      arrows: {
-        S: { x: 0.51, y: 0.66 },
-        OH1: { x: 0.87, y: 0.54 },
-        MB1: { x: 0.56, y: 0.51 },
-      },
+      positions: { ...R4_OFFENSE_LINKED_POSITIONS },
+      arrows: { ...R4_DEFENSE_LINKED_POSITIONS },
     }),
     DEFENSE: withLibero({
-      positions: {
-        S: { x: 0.45, y: 0.84 },
-        OH1: { x: 0.79, y: 0.71 },
-        MB1: { x: 0.56, y: 0.69 },
-        OPP: { x: 0.21, y: 0.71 },
-        OH2: { x: 0.71, y: 0.89 },
-        MB2: { x: 0.42, y: 0.88 },
-      },
-      arrows: {
-        S: { x: 0.49, y: 0.86 },
-        OH1: { x: 0.75, y: 0.75 },
-        OPP: { x: 0.24, y: 0.75 },
-      },
+      positions: { ...R4_DEFENSE_LINKED_POSITIONS },
+      arrows: { ...R4_OFFENSE_LINKED_POSITIONS },
     }),
   },
 }
