@@ -3,12 +3,28 @@
 import { motion, useReducedMotion } from 'motion/react'
 import { formatCorePhaseLabel, type CorePhase } from '@/lib/rebuild/prototypeFlow'
 import { cn } from '@/lib/utils'
+import { TactilePlayJoystick } from './TactilePlayJoystick'
 import { TactileRotationSwitch } from './TactileRotationSwitch'
 import type { PrototypeControlProps } from './types'
 
 function getPhaseLabel(phase: CorePhase): string {
   if (phase === 'OFFENSE') return 'Attack'
   return formatCorePhaseLabel(phase)
+}
+
+function getPlayVector(currentCorePhase: CorePhase): { x: number; y: number } {
+  switch (currentCorePhase) {
+    case 'SERVE':
+      return { x: 1, y: -0.72 }
+    case 'RECEIVE':
+      return { x: 1, y: 0.72 }
+    case 'OFFENSE':
+      return { x: 0, y: -1 }
+    case 'DEFENSE':
+      return { x: 0, y: 1 }
+    default:
+      return { x: 1, y: 0 }
+  }
 }
 
 function TactilePhaseButton({
@@ -69,21 +85,10 @@ export function Concept4ReferenceLayout({
   onPhaseSelect,
   onPlay,
 }: PrototypeControlProps) {
-  const prefersReducedMotion = useReducedMotion()
-
-  const transition = prefersReducedMotion
-    ? { duration: 0.001 }
-    : {
-        type: 'spring' as const,
-        stiffness: switchMotion.spring.stiffness,
-        damping: switchMotion.spring.damping,
-        mass: switchMotion.spring.mass,
-      }
-
-  const pressTravel = prefersReducedMotion ? 0 : switchMotion.pressTravel
   const topLinkActive = currentCorePhase === 'SERVE'
   const bottomLinkActive = currentCorePhase === 'RECEIVE'
   const loopLinkActive = currentCorePhase === 'OFFENSE' || currentCorePhase === 'DEFENSE'
+  const playVector = getPlayVector(currentCorePhase)
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
@@ -175,21 +180,13 @@ export function Concept4ReferenceLayout({
             onPhaseSelect={onPhaseSelect}
           />
 
-          <motion.button
-            type="button"
-            aria-label={`Play to ${getPhaseLabel(nextByPlay)}`}
-            onClick={onPlay}
-            whileTap={prefersReducedMotion ? undefined : { y: pressTravel, scale: 0.985 }}
-            transition={transition}
-            className="lab-pressable lab-texture row-span-2 flex h-full min-h-[128px] w-16 items-center justify-center rounded-xl border border-border/60 px-2 outline-none transition-colors hover:border-border/80 focus-visible:ring-2 focus-visible:ring-primary/60"
-          >
-            <div className="flex flex-col items-center gap-2">
-              <div className="lab-raised flex h-10 w-10 items-center justify-center rounded-lg border border-border/70 text-center text-base font-semibold">
-                {'>'}
-              </div>
-              <div className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground">Play</div>
-            </div>
-          </motion.button>
+          <TactilePlayJoystick
+            className="row-span-2"
+            nextLabel={getPhaseLabel(nextByPlay)}
+            playVector={playVector}
+            switchMotion={switchMotion}
+            onPlay={onPlay}
+          />
 
           <TactilePhaseButton
             phase="DEFENSE"
