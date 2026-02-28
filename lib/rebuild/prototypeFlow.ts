@@ -1,7 +1,7 @@
 import type { RallyPhase, Rotation } from '@/lib/types'
 
 export type CorePhase = 'SERVE' | 'RECEIVE' | 'OFFENSE' | 'DEFENSE'
-export type PrototypeVariantId = 'concept3' | 'concept5' | 'concept6'
+export type PrototypeVariantId = 'concept3' | 'concept4' | 'concept5' | 'concept6'
 
 export type PointWinner = 'us' | 'them'
 
@@ -26,6 +26,7 @@ export const PROTOTYPE_VARIANTS: Array<{
   label: string
 }> = [
   { id: 'concept3', shortLabel: 'C3', label: 'Foundation Morph Deck' },
+  { id: 'concept4', shortLabel: 'C4', label: 'Reference Relay Layout' },
   { id: 'concept5', shortLabel: 'C5', label: 'Rotation Hub + Rally Map' },
   { id: 'concept6', shortLabel: 'C6', label: 'Live Match Console+' },
 ]

@@ -240,7 +240,7 @@ export default function RebuildPrototypeLabPage() {
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Volley Studio Rebuild Lab</p>
-              <h1 className="text-lg font-semibold">Three Experimental Control Prototypes</h1>
+              <h1 className="text-lg font-semibold">Experimental Control Prototypes</h1>
               <p className="text-xs text-muted-foreground">
                 Rotation {currentRotation} • {formatCorePhaseLabel(currentCorePhase)} • {isOurServe ? 'We Serve' : 'We Receive'}
               </p>
@@ -269,7 +269,10 @@ export default function RebuildPrototypeLabPage() {
           </div>
 
           <div className="lab-inset mt-2 rounded-lg p-1">
-            <div className="grid grid-cols-3 gap-1">
+            <div
+              className="grid gap-1"
+              style={{ gridTemplateColumns: `repeat(${PROTOTYPE_VARIANTS.length}, minmax(0, 1fr))` }}
+            >
               {PROTOTYPE_VARIANTS.map((variant) => (
                 <Button
                   key={variant.id}
