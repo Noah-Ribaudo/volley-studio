@@ -89,6 +89,22 @@ export interface C4LiteralPhaseSurfaceTuning {
   reactiveContrast: number
 }
 
+export interface PhasePadHardwareTuning {
+  trackInset: number
+  trackRadius: number
+  trackWidth: number
+  piecesPerQuarter: number
+  pieceLength: number
+  pieceThickness: number
+  pieceRadius: number
+  inactiveOpacity: number
+  activeOpacity: number
+  glow: number
+  bloom: number
+  channelShadow: number
+  channelHighlight: number
+}
+
 export interface C4LiteralTuning {
   clusterLayout: C4LiteralClusterLayoutTuning
   connectorGeometry: C4LiteralConnectorGeometryTuning
@@ -104,6 +120,7 @@ export interface TactileTuning {
   phaseEmphasis: PhaseEmphasisTuning
   connectors: ConnectorTuning
   c4Literal: C4LiteralTuning
+  phasePadHardware: PhasePadHardwareTuning
 }
 
 export const DEFAULT_TACTILE_TUNING: TactileTuning = {
@@ -187,6 +204,21 @@ export const DEFAULT_TACTILE_TUNING: TactileTuning = {
       foundationalContrast: 0.46,
       reactiveContrast: 0.36,
     },
+  },
+  phasePadHardware: {
+    trackInset: 8.5,
+    trackRadius: 10,
+    trackWidth: 6,
+    piecesPerQuarter: 8,
+    pieceLength: 8,
+    pieceThickness: 4.1,
+    pieceRadius: 1.5,
+    inactiveOpacity: 0.16,
+    activeOpacity: 0.96,
+    glow: 0.34,
+    bloom: 0.18,
+    channelShadow: 0.28,
+    channelHighlight: 0.14,
   },
 }
 
@@ -278,6 +310,21 @@ export function sanitizeTactileTuning(input: TactileTuning): TactileTuning {
         foundationalContrast: clamp(input.c4Literal.phaseSurface.foundationalContrast, 0, 1),
         reactiveContrast: clamp(input.c4Literal.phaseSurface.reactiveContrast, 0, 1),
       },
+    },
+    phasePadHardware: {
+      trackInset: clamp(input.phasePadHardware.trackInset, 4, 18),
+      trackRadius: clamp(input.phasePadHardware.trackRadius, 4, 18),
+      trackWidth: clamp(input.phasePadHardware.trackWidth, 2, 12),
+      piecesPerQuarter: clamp(Math.round(input.phasePadHardware.piecesPerQuarter), 4, 18),
+      pieceLength: clamp(input.phasePadHardware.pieceLength, 4, 18),
+      pieceThickness: clamp(input.phasePadHardware.pieceThickness, 1.5, 10),
+      pieceRadius: clamp(input.phasePadHardware.pieceRadius, 0.5, 6),
+      inactiveOpacity: clamp(input.phasePadHardware.inactiveOpacity, 0, 0.4),
+      activeOpacity: clamp(input.phasePadHardware.activeOpacity, 0.2, 1),
+      glow: clamp(input.phasePadHardware.glow, 0, 1.6),
+      bloom: clamp(input.phasePadHardware.bloom, 0, 1.6),
+      channelShadow: clamp(input.phasePadHardware.channelShadow, 0, 1),
+      channelHighlight: clamp(input.phasePadHardware.channelHighlight, 0, 1),
     },
   }
 }

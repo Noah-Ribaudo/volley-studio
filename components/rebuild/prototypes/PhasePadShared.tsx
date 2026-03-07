@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { type CorePhase, formatCorePhaseLabel } from '@/lib/rebuild/prototypeFlow'
-import type { PhaseEmphasisTuning } from '@/lib/rebuild/tactileTuning'
+import type { PhaseEmphasisTuning, PhasePadHardwareTuning } from '@/lib/rebuild/tactileTuning'
 import { TactilePlayJoystick } from './TactilePlayJoystick'
 import { TactileRotationSwitch } from './TactileRotationSwitch'
 import type { PrototypeControlProps } from './types'
@@ -214,6 +214,219 @@ export function getPerimeterSegmentState({
     totalLights,
     segmentStart: fromStart + travelDelta * transitionProgress,
   }
+}
+
+function getQuarterTrackSegmentStart(
+  phase: CorePhase,
+  positionsPerQuarter: number,
+  phaseOrder: readonly CorePhase[]
+) {
+  const phaseIndex = phaseOrder.indexOf(phase)
+  return (phaseIndex >= 0 ? phaseIndex : 0) * positionsPerQuarter
+}
+
+export function getQuarterTrackSegmentState({
+  currentCorePhase,
+  transitionFrom,
+  transitionTo,
+  transitionProgress,
+  isPreviewingMovement,
+  positionsPerQuarter,
+  phaseOrder,
+}: {
+  currentCorePhase: CorePhase
+  transitionFrom: CorePhase
+  transitionTo: CorePhase
+  transitionProgress: number
+  isPreviewingMovement: boolean
+  positionsPerQuarter: number
+  phaseOrder: readonly CorePhase[]
+}) {
+  const segmentLength = positionsPerQuarter
+  const totalLights = positionsPerQuarter * phaseOrder.length
+  const restingStart = getQuarterTrackSegmentStart(currentCorePhase, positionsPerQuarter, phaseOrder)
+
+  if (!isPreviewingMovement) {
+    return {
+      segmentLength,
+      totalLights,
+      segmentStart: restingStart,
+    }
+  }
+
+  const fromStart = getQuarterTrackSegmentStart(transitionFrom, positionsPerQuarter, phaseOrder)
+  const toStart = getQuarterTrackSegmentStart(transitionTo, positionsPerQuarter, phaseOrder)
+  const travelDelta = getShortestPerimeterDelta(fromStart, toStart, totalLights)
+
+  return {
+    segmentLength,
+    totalLights,
+    segmentStart: fromStart + travelDelta * transitionProgress,
+  }
+}
+
+function buildHardwareTrackPath(inset: number, radius: number) {
+  const min = inset
+  const max = 100 - inset
+  const innerMin = min + radius
+  const innerMax = max - radius
+
+  return `M 50 ${min} H ${innerMax} A ${radius} ${radius} 0 0 1 ${max} ${innerMin} V ${innerMax} A ${radius} ${radius} 0 0 1 ${innerMax} ${max} H ${innerMin} A ${radius} ${radius} 0 0 1 ${min} ${innerMax} V ${innerMin} A ${radius} ${radius} 0 0 1 ${innerMin} ${min} H 50`
+}
+
+type HardwareTrackPiece = {
+  x: number
+  y: number
+  angle: number
+}
+
+function useHardwareTrackPieces(pathD: string, pieceCount: number) {
+  const pathRef = useRef<SVGPathElement | null>(null)
+  const [pieces, setPieces] = useState<HardwareTrackPiece[]>([])
+
+  useLayoutEffect(() => {
+    const path = pathRef.current
+    if (!path || pieceCount <= 0) {
+      setPieces([])
+      return
+    }
+
+    const totalLength = path.getTotalLength()
+    const nextPieces = Array.from({ length: pieceCount }, (_, index) => {
+      const centerDistance = ((index + 0.5) / pieceCount) * totalLength
+      const sampleAhead = Math.min(centerDistance + 0.5, totalLength)
+      const sampleBehind = Math.max(centerDistance - 0.5, 0)
+      const point = path.getPointAtLength(centerDistance)
+      const ahead = path.getPointAtLength(sampleAhead)
+      const behind = path.getPointAtLength(sampleBehind)
+      const angle = (Math.atan2(ahead.y - behind.y, ahead.x - behind.x) * 180) / Math.PI
+
+      return {
+        x: point.x,
+        y: point.y,
+        angle,
+      }
+    })
+
+    setPieces(nextPieces)
+  }, [pathD, pieceCount])
+
+  return {
+    pathRef,
+    pieces,
+  }
+}
+
+export function PhasePadHardwareLane({
+  tuning,
+  segmentStart,
+  segmentLength,
+  totalLights,
+}: {
+  tuning: PhasePadHardwareTuning
+  segmentStart: number
+  segmentLength: number
+  totalLights: number
+}) {
+  const pathD = useMemo(
+    () => buildHardwareTrackPath(tuning.trackInset, tuning.trackRadius),
+    [tuning.trackInset, tuning.trackRadius]
+  )
+  const { pathRef, pieces } = useHardwareTrackPieces(pathD, totalLights)
+
+  return (
+    <svg
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 h-full w-full"
+      preserveAspectRatio="none"
+      viewBox="0 0 100 100"
+    >
+      <defs>
+        <filter id="phase-pad-hardware-shadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="0.7" stdDeviation="1.2" floodColor="rgba(0,0,0,0.42)" />
+        </filter>
+        <filter id="phase-pad-hardware-glow" x="-40%" y="-40%" width="180%" height="180%">
+          <feDropShadow
+            dx="0"
+            dy="0"
+            stdDeviation={1 + tuning.glow * 2.6}
+            floodColor={`rgba(255,255,255,${0.18 + tuning.bloom * 0.16})`}
+          />
+          <feDropShadow
+            dx="0"
+            dy="0"
+            stdDeviation={2 + tuning.bloom * 4.2}
+            floodColor={`rgba(244,244,244,${0.08 + tuning.bloom * 0.12})`}
+          />
+        </filter>
+      </defs>
+
+      <path
+        ref={pathRef}
+        d={pathD}
+        fill="none"
+        stroke={`rgba(0,0,0,${0.22 + tuning.channelShadow * 0.26})`}
+        strokeWidth={tuning.trackWidth + 3}
+        strokeLinecap="round"
+      />
+      <path
+        d={pathD}
+        fill="none"
+        stroke={`rgba(255,255,255,${0.04 + tuning.channelHighlight * 0.12})`}
+        strokeWidth={tuning.trackWidth + 0.75}
+        strokeLinecap="round"
+      />
+      <path
+        d={pathD}
+        fill="none"
+        stroke={`rgba(10,10,12,${0.38 + tuning.channelShadow * 0.24})`}
+        strokeWidth={tuning.trackWidth}
+        strokeLinecap="round"
+      />
+
+      {pieces.map((piece, index) => {
+        const strength = getPerimeterCoverage({
+          globalIndex: index,
+          segmentStart,
+          segmentLength,
+          totalLights,
+        })
+        const activeOpacity = strength > 0 ? tuning.inactiveOpacity + strength * (tuning.activeOpacity - tuning.inactiveOpacity) : tuning.inactiveOpacity
+        const fillTone = 84 + strength * 160
+
+        return (
+          <g key={`hardware-piece-${index}`} transform={`translate(${piece.x} ${piece.y}) rotate(${piece.angle})`}>
+            <rect
+              x={-tuning.pieceLength / 2}
+              y={-tuning.pieceThickness / 2}
+              width={tuning.pieceLength}
+              height={tuning.pieceThickness}
+              rx={tuning.pieceRadius}
+              fill={`rgba(128,128,132,${0.22 + tuning.inactiveOpacity * 0.2})`}
+              filter="url(#phase-pad-hardware-shadow)"
+            />
+            <rect
+              x={-tuning.pieceLength / 2}
+              y={-tuning.pieceThickness / 2}
+              width={tuning.pieceLength}
+              height={tuning.pieceThickness}
+              rx={tuning.pieceRadius}
+              fill={`rgba(${fillTone},${fillTone},${fillTone},${activeOpacity})`}
+              filter={strength > 0 ? 'url(#phase-pad-hardware-glow)' : undefined}
+            />
+            <rect
+              x={-tuning.pieceLength / 2 + 0.7}
+              y={-tuning.pieceThickness / 2 + 0.55}
+              width={Math.max(0, tuning.pieceLength - 1.4)}
+              height={Math.max(0, tuning.pieceThickness * 0.44)}
+              rx={Math.max(0.5, tuning.pieceRadius * 0.72)}
+              fill={`rgba(255,255,255,${strength > 0 ? 0.08 + tuning.channelHighlight * 0.12 + strength * 0.12 : 0.03})`}
+            />
+          </g>
+        )
+      })}
+    </svg>
+  )
 }
 
 export function getPhasePadJoystickEmphasis(props: PrototypeControlProps): PhaseEmphasisTuning {

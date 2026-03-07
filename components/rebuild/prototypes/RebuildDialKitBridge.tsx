@@ -20,6 +20,7 @@ const RESET_ACTIONS = new Set([
   'resetConnectorPath',
   'resetLoadingBar',
   'resetPhaseSurfaces',
+  'resetPhasePadHardware',
 ])
 
 export function RebuildDialKitBridge({
@@ -115,6 +116,26 @@ export function RebuildDialKitBridge({
             resetPhaseSurfaces: { type: 'action', label: 'Reset Phase Surfaces' },
           }
         : {}),
+      ...(activeVariant === 'concept8'
+        ? {
+            phasePadHardware: {
+              trackInset: [seed.phasePadHardware.trackInset, 4, 18, 0.25],
+              trackRadius: [seed.phasePadHardware.trackRadius, 4, 18, 0.25],
+              trackWidth: [seed.phasePadHardware.trackWidth, 2, 12, 0.1],
+              piecesPerQuarter: [seed.phasePadHardware.piecesPerQuarter, 4, 18, 1],
+              pieceLength: [seed.phasePadHardware.pieceLength, 4, 18, 0.25],
+              pieceThickness: [seed.phasePadHardware.pieceThickness, 1.5, 10, 0.1],
+              pieceRadius: [seed.phasePadHardware.pieceRadius, 0.5, 6, 0.1],
+              inactiveOpacity: [seed.phasePadHardware.inactiveOpacity, 0, 0.4, 0.01],
+              activeOpacity: [seed.phasePadHardware.activeOpacity, 0.2, 1, 0.01],
+              glow: [seed.phasePadHardware.glow, 0, 1.6, 0.01],
+              bloom: [seed.phasePadHardware.bloom, 0, 1.6, 0.01],
+              channelShadow: [seed.phasePadHardware.channelShadow, 0, 1, 0.01],
+              channelHighlight: [seed.phasePadHardware.channelHighlight, 0, 1, 0.01],
+            },
+            resetPhasePadHardware: { type: 'action', label: 'Reset Phase Hardware' },
+          }
+        : {}),
       resetLighting: { type: 'action', label: 'Reset Global Light' },
       resetPressFeel: { type: 'action', label: 'Reset Press Feel' },
       resetJoystick: { type: 'action', label: 'Reset Joystick' },
@@ -189,6 +210,13 @@ export function RebuildDialKitBridge({
           }
         }
 
+        if (actionPath === 'resetPhasePadHardware') {
+          next = {
+            ...latest,
+            phasePadHardware: DEFAULT_TACTILE_TUNING.phasePadHardware,
+          }
+        }
+
         const sanitized = sanitizeTactileTuning(next)
         latestTuningRef.current = sanitized
         setSeed(sanitized)
@@ -244,6 +272,24 @@ export function RebuildDialKitBridge({
       },
       phaseEmphasis: preserved.phaseEmphasis,
       connectors: preserved.connectors,
+      phasePadHardware:
+        activeVariant === 'concept8'
+          ? {
+              trackInset: params.phasePadHardware.trackInset,
+              trackRadius: params.phasePadHardware.trackRadius,
+              trackWidth: params.phasePadHardware.trackWidth,
+              piecesPerQuarter: params.phasePadHardware.piecesPerQuarter,
+              pieceLength: params.phasePadHardware.pieceLength,
+              pieceThickness: params.phasePadHardware.pieceThickness,
+              pieceRadius: params.phasePadHardware.pieceRadius,
+              inactiveOpacity: params.phasePadHardware.inactiveOpacity,
+              activeOpacity: params.phasePadHardware.activeOpacity,
+              glow: params.phasePadHardware.glow,
+              bloom: params.phasePadHardware.bloom,
+              channelShadow: params.phasePadHardware.channelShadow,
+              channelHighlight: params.phasePadHardware.channelHighlight,
+            }
+          : preserved.phasePadHardware,
       c4Literal:
         activeVariant === 'concept4'
           ? {
