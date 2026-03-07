@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { ArrowDownLeft, ArrowDownRight, ArrowUpLeft, ArrowUpRight } from 'lucide-react'
 import { motion, useReducedMotion } from 'motion/react'
 import type { CorePhase } from '@/lib/rebuild/prototypeFlow'
 import type { JoystickTuning, PhaseEmphasisTuning, SwitchMotionTuning } from '@/lib/rebuild/tactileTuning'
@@ -25,13 +26,13 @@ const JOYSTICK_FRAME = {
   radial: {
     frameSize: 148,
     knobSize: 44,
-    inset: 9,
+    inset: 10,
     labelClassName: 'text-[11px] tracking-[0.01em]',
   },
   literal: {
-    frameSize: 86,
-    knobSize: 38,
-    inset: 8,
+    frameSize: 92,
+    knobSize: 40,
+    inset: 10,
     labelClassName: 'text-[9px] tracking-[0.06em]',
   },
 } as const
@@ -49,6 +50,20 @@ const QUADRANT_PHASES: [PhaseChip, PhaseChip, PhaseChip, PhaseChip] = [
   { phase: 'DEFENSE', longLabel: 'Defense', shortLabel: 'Df' },
   { phase: 'RECEIVE', longLabel: 'Receive', shortLabel: 'Rc' },
   { phase: 'OFFENSE', longLabel: 'Attack', shortLabel: 'At' },
+]
+
+const PHASE_ICONS = {
+  SERVE: ArrowUpLeft,
+  DEFENSE: ArrowUpRight,
+  RECEIVE: ArrowDownLeft,
+  OFFENSE: ArrowDownRight,
+} as const
+
+const LITERAL_GUIDES: Array<{ phase: CorePhase; x: number; y: number }> = [
+  { phase: 'SERVE', x: 28, y: 28 },
+  { phase: 'DEFENSE', x: 72, y: 28 },
+  { phase: 'RECEIVE', x: 28, y: 72 },
+  { phase: 'OFFENSE', x: 72, y: 72 },
 ]
 
 interface TactilePlayJoystickProps {
@@ -107,6 +122,10 @@ function getQuadrantLabel(chip: PhaseChip, mode: JoystickMode): string {
   return mode === 'radial' ? chip.longLabel : chip.shortLabel
 }
 
+function getPhaseTint(phase: CorePhase): string {
+  return isFoundationalPhase(phase) ? 'oklch(78% 0.08 72)' : 'oklch(76% 0.03 255)'
+}
+
 export function TactilePlayJoystick({
   currentPhase,
   nextPhase,
@@ -129,6 +148,8 @@ export function TactilePlayJoystick({
 
   const frame = JOYSTICK_FRAME[mode]
   const selectedPhase = dragPhase ?? currentPhase
+  const indicatorPhase = dragPhase ?? nextPhase
+  const DirectionIcon = PHASE_ICONS[indicatorPhase]
 
   const quadrantTransition = prefersReducedMotion
     ? { duration: 0.001 }
@@ -256,43 +277,69 @@ export function TactilePlayJoystick({
             gap: mode === 'radial' ? 7 : 5,
           }}
         >
-          {QUADRANT_PHASES.map((chip) => {
-            const isSelected = selectedPhase === chip.phase
-            const isCurrent = currentPhase === chip.phase
-            const isNext = nextPhase === chip.phase
-            const contrast = getPhaseContrast(chip.phase, currentPhase, phaseEmphasis)
-            const selectedScale = isSelected ? phaseEmphasis.currentWeight : 1
-            const glowAlpha = isNext ? phaseEmphasis.nextGlow * 0.32 : 0
-            const fillAlpha = isSelected ? 0.12 + contrast * 0.12 : 0.03 + contrast * 0.04
+          {mode === 'radial'
+            ? QUADRANT_PHASES.map((chip) => {
+                const isSelected = selectedPhase === chip.phase
+                const isNext = nextPhase === chip.phase
+                const contrast = getPhaseContrast(chip.phase, currentPhase, phaseEmphasis)
+                const selectedScale = isSelected ? phaseEmphasis.currentWeight : 1
+                const tone = getPhaseTint(chip.phase)
 
-            return (
-              <motion.div
-                key={chip.phase}
-                animate={{
-                  scale: selectedScale,
-                  opacity: isSelected ? 1 : 0.84 + contrast * 0.1,
-                }}
-                transition={quadrantTransition}
-                className={cn(
-                  'relative flex items-center justify-center rounded-[999px] border border-transparent text-center font-medium text-foreground/88',
-                  frame.labelClassName,
-                  mode === 'literal' && 'uppercase'
-                )}
-                style={{
-                  background: `oklch(72% 0.14 55 / ${fillAlpha})`,
-                  boxShadow: isNext
-                    ? `0 0 ${10 + phaseEmphasis.nextGlow * 16}px oklch(72% 0.14 55 / ${glowAlpha})`
-                    : undefined,
-                }}
-              >
-                {isCurrent ? (
-                  <span className="absolute right-3 top-3 h-1.5 w-1.5 rounded-full bg-foreground/85" />
-                ) : null}
-                <span>{getQuadrantLabel(chip, mode)}</span>
-              </motion.div>
-            )
-          })}
+                return (
+                  <motion.div
+                    key={chip.phase}
+                    animate={{
+                      scale: selectedScale,
+                      opacity: isSelected ? 1 : 0.88 + contrast * 0.06,
+                    }}
+                    transition={quadrantTransition}
+                    className={cn(
+                      'relative flex items-center justify-center rounded-[999px] border text-center font-medium text-foreground/90',
+                      frame.labelClassName
+                    )}
+                    style={{
+                      background: isSelected
+                        ? `color-mix(in oklch, var(--card) 66%, ${tone} 34%)`
+                        : `color-mix(in oklch, var(--card) 84%, ${tone} 16%)`,
+                      borderColor: isSelected
+                        ? `color-mix(in oklch, var(--border) 36%, ${tone} 64%)`
+                        : `color-mix(in oklch, var(--border) 78%, ${tone} 22%)`,
+                      boxShadow: isNext
+                        ? `0 0 ${10 + phaseEmphasis.nextGlow * 16}px oklch(72% 0.14 55 / ${phaseEmphasis.nextGlow * 0.24})`
+                        : undefined,
+                    }}
+                  >
+                    <span>{getQuadrantLabel(chip, mode)}</span>
+                  </motion.div>
+                )
+              })
+            : null}
         </div>
+
+        {mode === 'literal' ? (
+          <svg
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-[18%]"
+            viewBox="0 0 100 100"
+          >
+            {LITERAL_GUIDES.map((guide) => {
+              const isSelected = selectedPhase === guide.phase
+              const isNext = nextPhase === guide.phase
+
+              return (
+                <path
+                  key={guide.phase}
+                  d={`M50 50 L${guide.x} ${guide.y}`}
+                  fill="none"
+                  stroke="var(--primary)"
+                  strokeLinecap="round"
+                  strokeOpacity={isSelected ? 0.52 : isNext ? 0.38 : 0.16}
+                  strokeWidth={isSelected ? 2.6 : isNext ? 2 : 1.2}
+                />
+              )
+            })}
+          </svg>
+        ) : null}
 
         <motion.div
           animate={{
@@ -301,18 +348,18 @@ export function TactilePlayJoystick({
             scale: isDragging ? 0.97 : 1,
           }}
           transition={knobTransition}
-          className="lab-pressable lab-texture absolute left-1/2 top-1/2 flex items-center justify-center rounded-full border border-border/70 text-sm font-semibold text-foreground"
+          className={cn(
+            'lab-raised lab-texture absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-border/70 text-sm font-semibold text-foreground',
+            isDragging && 'lab-pressed'
+          )}
           style={{
             width: frame.knobSize,
             height: frame.knobSize,
-            marginLeft: frame.knobSize / -2,
-            marginTop: frame.knobSize / -2,
             boxShadow: `0 0 ${14 + joystickTuning.haloIntensity * 18}px oklch(72% 0.14 55 / ${0.08 + joystickTuning.haloIntensity * 0.24})`,
           }}
         >
-          <span aria-hidden className="translate-x-[0.5px] text-base">
-            {'>'}
-          </span>
+          <div className="pointer-events-none absolute inset-[18%] rounded-full border border-white/18 bg-black/5" />
+          <DirectionIcon aria-hidden className="relative z-[1] h-4 w-4 text-foreground/85" strokeWidth={2.1} />
         </motion.div>
       </motion.button>
     </div>

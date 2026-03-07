@@ -28,6 +28,17 @@ const C4_LAYOUT = {
   controlPadding: 'var(--lab-dock-inner-padding)',
 }
 
+const LITERAL_STAGE = {
+  width: 312,
+  height: 176,
+  topCardY: 18,
+  bottomCardY: 106,
+  cardWidth: 112,
+  cardHeight: 52,
+  centerX: 156,
+  centerY: 88,
+}
+
 function getPhaseLabel(phase: CorePhase): string {
   if (phase === 'OFFENSE') return 'Attack'
   return formatCorePhaseLabel(phase)
@@ -35,6 +46,20 @@ function getPhaseLabel(phase: CorePhase): string {
 
 function isFoundational(phase: CorePhase): boolean {
   return phase === 'SERVE' || phase === 'RECEIVE'
+}
+
+function getPhaseTone(phase: CorePhase): { base: string; active: string } {
+  if (isFoundational(phase)) {
+    return {
+      base: 'oklch(78% 0.08 72)',
+      active: 'oklch(80% 0.11 72)',
+    }
+  }
+
+  return {
+    base: 'oklch(74% 0.03 255)',
+    active: 'oklch(76% 0.05 255)',
+  }
 }
 
 function getPhaseContrast(phase: CorePhase, currentPhase: CorePhase, props: PrototypeControlProps): number {
@@ -65,6 +90,7 @@ function PhaseCard({
   const isNext = props.nextByPlay === phase
   const contrast = getPhaseContrast(phase, props.currentCorePhase, props)
   const phaseEmphasis = props.tactileTuning.phaseEmphasis
+  const tone = getPhaseTone(phase)
 
   const transition = prefersReducedMotion
     ? { duration: 0.001 }
@@ -81,25 +107,35 @@ function PhaseCard({
       aria-pressed={isActive}
       onClick={() => props.onPhaseSelect(phase)}
       animate={{
-        y: isActive ? props.switchMotion.pressTravel : 0,
-        scale: isActive ? phaseEmphasis.currentWeight : 1,
+        y: isActive ? props.switchMotion.pressTravel * 0.72 : 0,
+        scale: isActive ? 1.01 : 1,
       }}
       transition={transition}
       className={cn(
-        'lab-pressable lab-texture relative flex items-center justify-center rounded-2xl border text-center font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary/60',
-        compact ? 'min-h-12 px-3 text-base' : 'min-h-14 px-4 text-lg',
+        'lab-raised lab-texture relative flex items-center justify-center overflow-hidden rounded-[18px] border text-center font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary/60',
+        compact ? 'min-h-[3.2rem] px-3.5 text-[1.1rem]' : 'min-h-14 px-4 text-lg',
         isActive ? 'lab-pressed border-border/85' : 'border-border/60'
       )}
       style={{
-        opacity: isActive ? 1 : 0.84 + contrast * 0.08,
-        background: `oklch(72% 0.14 55 / ${isActive ? 0.16 + contrast * 0.1 : 0.04 + contrast * 0.03})`,
-        boxShadow: isNext
-          ? `0 0 ${10 + phaseEmphasis.nextGlow * 18}px oklch(72% 0.14 55 / ${phaseEmphasis.nextGlow * 0.24})`
-          : undefined,
+        opacity: isActive ? 1 : 0.9 + contrast * 0.04,
+        background: isActive
+          ? `color-mix(in oklch, var(--card) 58%, ${tone.active} 42%)`
+          : `color-mix(in oklch, var(--card) 82%, ${tone.base} 18%)`,
+        borderColor: isActive
+          ? `color-mix(in oklch, var(--border) 32%, ${tone.active} 68%)`
+          : `color-mix(in oklch, var(--border) 78%, ${tone.base} 22%)`,
         transitionDuration: `${TIMING.emphasisSettle}s`,
       }}
     >
-      {isActive ? <span className="absolute right-3 top-3 h-1.5 w-1.5 rounded-full bg-foreground/85" /> : null}
+      {isNext ? (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0 rounded-[inherit]"
+          style={{
+            boxShadow: `0 0 ${10 + phaseEmphasis.nextGlow * 18}px oklch(72% 0.14 55 / ${phaseEmphasis.nextGlow * 0.22})`,
+          }}
+        />
+      ) : null}
       <span>{label}</span>
     </motion.button>
   )
@@ -258,20 +294,57 @@ function LiteralMode(props: PrototypeControlProps) {
 
   return (
     <div className="relative flex h-full min-h-0 items-center justify-center overflow-hidden">
-      <svg
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 h-full w-full"
-        viewBox="0 0 100 66"
-        preserveAspectRatio="none"
-      >
-        <ConnectorLine active={isServeLink} x1={24} x2={76} y1={18} y2={18} props={props} />
-        <ConnectorLine active={isReceiveLink} x1={24} x2={76} y1={48} y2={48} dashed props={props} />
-        <ConnectorLine active={isLiveLoop} x1={82} x2={82} y1={22} y2={44} props={props} vertical />
-      </svg>
+      <div className="relative w-full max-w-[320px] aspect-[312/176]">
+        <svg
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 h-full w-full"
+          viewBox={`0 0 ${LITERAL_STAGE.width} ${LITERAL_STAGE.height}`}
+        >
+          <ConnectorLine
+            active={isServeLink}
+            x1={LITERAL_STAGE.cardWidth}
+            x2={LITERAL_STAGE.width - LITERAL_STAGE.cardWidth}
+            y1={LITERAL_STAGE.topCardY + LITERAL_STAGE.cardHeight / 2}
+            y2={LITERAL_STAGE.topCardY + LITERAL_STAGE.cardHeight / 2}
+            props={props}
+          />
+          <ConnectorLine
+            active={isReceiveLink}
+            x1={LITERAL_STAGE.cardWidth}
+            x2={LITERAL_STAGE.width - LITERAL_STAGE.cardWidth}
+            y1={LITERAL_STAGE.bottomCardY + LITERAL_STAGE.cardHeight / 2}
+            y2={LITERAL_STAGE.bottomCardY + LITERAL_STAGE.cardHeight / 2}
+            dashed
+            props={props}
+          />
+          <ConnectorLine
+            active={isLiveLoop}
+            x1={LITERAL_STAGE.width - 55}
+            x2={LITERAL_STAGE.width - 55}
+            y1={LITERAL_STAGE.topCardY + LITERAL_STAGE.cardHeight / 2 + 12}
+            y2={LITERAL_STAGE.bottomCardY + LITERAL_STAGE.cardHeight / 2 - 12}
+            props={props}
+            vertical
+          />
+        </svg>
 
-      <div className="relative z-[2] grid w-full grid-cols-[1fr_auto_1fr] grid-rows-2 gap-2">
-        <PhaseCard label="Serve" phase="SERVE" compact props={props} />
-        <div className="row-span-2 flex items-center justify-center">
+        <div className="absolute left-0 top-[18px] w-[112px]">
+          <PhaseCard label="Serve" phase="SERVE" compact props={props} />
+        </div>
+
+        <div className="absolute right-0 top-[18px] w-[112px]">
+          <PhaseCard label="Defense" phase="DEFENSE" compact props={props} />
+        </div>
+
+        <div className="absolute left-0 top-[106px] w-[112px]">
+          <PhaseCard label="Receive" phase="RECEIVE" compact props={props} />
+        </div>
+
+        <div className="absolute right-0 top-[106px] w-[112px]">
+          <PhaseCard label="Attack" phase="OFFENSE" compact props={props} />
+        </div>
+
+        <div className="absolute left-1/2 top-1/2 z-[2] -translate-x-1/2 -translate-y-1/2">
           <TactilePlayJoystick
             currentPhase={props.currentCorePhase}
             nextPhase={props.nextByPlay}
@@ -284,9 +357,6 @@ function LiteralMode(props: PrototypeControlProps) {
             onPhaseSelect={props.onPhaseSelect}
           />
         </div>
-        <PhaseCard label="Defense" phase="DEFENSE" compact props={props} />
-        <PhaseCard label="Receive" phase="RECEIVE" compact props={props} />
-        <PhaseCard label="Attack" phase="OFFENSE" compact props={props} />
       </div>
     </div>
   )
