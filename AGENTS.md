@@ -102,4 +102,5 @@ Every completed task **must** result in a real GitHub PR. Do not rely on interna
 - Always run `npm run lint` before committing.
 - `npm run build` and `npm run dev` may fail in the Codex sandbox (Google Fonts blocked, Convex login prompt). This is expected — don't treat these as blockers.
 - Before final handoff, verify a local dev server is running and the changed page/flow is reachable.
+- Do not say something is fixed unless it is verifiably live on `http://localhost:3000` and the relevant page responds there.
 - Final handoff must include preview availability status, not just a completion note and PR link.
