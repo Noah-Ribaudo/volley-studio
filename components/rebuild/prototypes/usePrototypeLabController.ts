@@ -12,9 +12,7 @@ import {
 } from '@/lib/rebuild/prototypeFlow'
 import type { Rotation } from '@/lib/types'
 
-const PLAY_ADVANCE_DELAY_MS = 1050
-
-export function usePrototypeLabController() {
+export function usePrototypeLabController(playAdvanceDelayMs: number) {
   const [activeVariant, setActiveVariant] = useState<PrototypeVariantId>('concept4')
   const [currentRotation, setCurrentRotation] = useState<Rotation>(1)
   const [currentCorePhase, setCurrentCorePhase] = useState<CorePhase>('SERVE')
@@ -74,8 +72,8 @@ export function usePrototypeLabController() {
       setPreviewingMovement(false)
       setCurrentCorePhase(nextPhase)
       playTimerRef.current = null
-    }, PLAY_ADVANCE_DELAY_MS)
-  }, [clearPlayTimer, currentCorePhase, isPreviewingMovement, resetPreview])
+    }, playAdvanceDelayMs)
+  }, [clearPlayTimer, currentCorePhase, isPreviewingMovement, playAdvanceDelayMs, resetPreview])
 
   const handlePoint = useCallback(
     (winner: PointWinner) => {

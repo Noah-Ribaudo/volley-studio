@@ -75,13 +75,11 @@ export interface C4LiteralConnectorGeometryTuning {
 }
 
 export interface C4LiteralConnectorMotionTuning {
-  restCycleSpeed: number
-  playCycleSpeed: number
-  travelAmount: number
-  pulseGlow: number
+  playDurationMs: number
+  restProgress: number
+  headLength: number
+  glowStrength: number
   destinationFlash: number
-  segmentCount: number
-  dashDensity: number
 }
 
 export interface C4LiteralPhaseSurfaceTuning {
@@ -177,13 +175,11 @@ export const DEFAULT_TACTILE_TUNING: TactileTuning = {
       activeOpacity: 0.88,
     },
     connectorMotion: {
-      restCycleSpeed: 1.45,
-      playCycleSpeed: 0.62,
-      travelAmount: 0.34,
-      pulseGlow: 0.55,
+      playDurationMs: 500,
+      restProgress: 0.16,
+      headLength: 0.14,
+      glowStrength: 0.55,
       destinationFlash: 0.48,
-      segmentCount: 4,
-      dashDensity: 0.18,
     },
     phaseSurface: {
       activeLift: 2.1,
@@ -228,9 +224,9 @@ export function sanitizeTactileTuning(input: TactileTuning): TactileTuning {
       gap: clamp(input.dock.gap, 4, 24),
     },
     joystick: {
-      travel: clamp(input.joystick.travel, 8, 36),
-      deadZone: clamp(input.joystick.deadZone, 4, 36),
-      haloIntensity: clamp(input.joystick.haloIntensity, 0, 1),
+      travel: clamp(input.joystick.travel, 6, 52),
+      deadZone: clamp(input.joystick.deadZone, 0, 42),
+      haloIntensity: clamp(input.joystick.haloIntensity, 0, 1.25),
       settleSpring: {
         stiffness: clamp(input.joystick.settleSpring.stiffness, 120, 900),
         damping: clamp(input.joystick.settleSpring.damping, 8, 80),
@@ -250,33 +246,31 @@ export function sanitizeTactileTuning(input: TactileTuning): TactileTuning {
     },
     c4Literal: {
       clusterLayout: {
-        dockHeight: clamp(input.c4Literal.clusterLayout.dockHeight, 188, 280),
-        stageWidth: clamp(input.c4Literal.clusterLayout.stageWidth, 260, 340),
-        stageHeight: clamp(input.c4Literal.clusterLayout.stageHeight, 112, 168),
-        stageInset: clamp(input.c4Literal.clusterLayout.stageInset, 4, 20),
-        phaseButtonWidth: clamp(input.c4Literal.clusterLayout.phaseButtonWidth, 82, 120),
-        phaseButtonHeight: clamp(input.c4Literal.clusterLayout.phaseButtonHeight, 36, 56),
-        horizontalSpread: clamp(input.c4Literal.clusterLayout.horizontalSpread, 8, 56),
-        verticalSpread: clamp(input.c4Literal.clusterLayout.verticalSpread, 8, 40),
-        joystickSize: clamp(input.c4Literal.clusterLayout.joystickSize, 64, 96),
-        joystickClearance: clamp(input.c4Literal.clusterLayout.joystickClearance, 8, 28),
+        dockHeight: clamp(input.c4Literal.clusterLayout.dockHeight, 176, 320),
+        stageWidth: clamp(input.c4Literal.clusterLayout.stageWidth, 240, 420),
+        stageHeight: clamp(input.c4Literal.clusterLayout.stageHeight, 108, 220),
+        stageInset: clamp(input.c4Literal.clusterLayout.stageInset, 0, 28),
+        phaseButtonWidth: clamp(input.c4Literal.clusterLayout.phaseButtonWidth, 72, 160),
+        phaseButtonHeight: clamp(input.c4Literal.clusterLayout.phaseButtonHeight, 32, 72),
+        horizontalSpread: clamp(input.c4Literal.clusterLayout.horizontalSpread, 0, 104),
+        verticalSpread: clamp(input.c4Literal.clusterLayout.verticalSpread, 0, 68),
+        joystickSize: clamp(input.c4Literal.clusterLayout.joystickSize, 56, 132),
+        joystickClearance: clamp(input.c4Literal.clusterLayout.joystickClearance, 0, 40),
       },
       connectorGeometry: {
-        horizontalInset: clamp(input.c4Literal.connectorGeometry.horizontalInset, 0, 20),
-        joystickAvoidanceGap: clamp(input.c4Literal.connectorGeometry.joystickAvoidanceGap, 8, 28),
-        liveLoopOffset: clamp(input.c4Literal.connectorGeometry.liveLoopOffset, 8, 32),
-        strokeThickness: clamp(input.c4Literal.connectorGeometry.strokeThickness, 1, 4),
+        horizontalInset: clamp(input.c4Literal.connectorGeometry.horizontalInset, 0, 32),
+        joystickAvoidanceGap: clamp(input.c4Literal.connectorGeometry.joystickAvoidanceGap, 0, 42),
+        liveLoopOffset: clamp(input.c4Literal.connectorGeometry.liveLoopOffset, 0, 44),
+        strokeThickness: clamp(input.c4Literal.connectorGeometry.strokeThickness, 0.75, 6),
         idleOpacity: clamp(input.c4Literal.connectorGeometry.idleOpacity, 0, 1),
         activeOpacity: clamp(input.c4Literal.connectorGeometry.activeOpacity, 0, 1),
       },
       connectorMotion: {
-        restCycleSpeed: clamp(input.c4Literal.connectorMotion.restCycleSpeed, 0.4, 3),
-        playCycleSpeed: clamp(input.c4Literal.connectorMotion.playCycleSpeed, 0.2, 2),
-        travelAmount: clamp(input.c4Literal.connectorMotion.travelAmount, 0.12, 0.7),
-        pulseGlow: clamp(input.c4Literal.connectorMotion.pulseGlow, 0, 1),
+        playDurationMs: clamp(input.c4Literal.connectorMotion.playDurationMs, 180, 1600),
+        restProgress: clamp(input.c4Literal.connectorMotion.restProgress, 0, 0.45),
+        headLength: clamp(input.c4Literal.connectorMotion.headLength, 0.04, 0.28),
+        glowStrength: clamp(input.c4Literal.connectorMotion.glowStrength, 0, 1.2),
         destinationFlash: clamp(input.c4Literal.connectorMotion.destinationFlash, 0, 1),
-        segmentCount: clamp(input.c4Literal.connectorMotion.segmentCount, 2, 8),
-        dashDensity: clamp(input.c4Literal.connectorMotion.dashDensity, 0.08, 0.4),
       },
       phaseSurface: {
         activeLift: clamp(input.c4Literal.phaseSurface.activeLift, 0, 6),

@@ -50,6 +50,7 @@ export default function RebuildPrototypeLabPage() {
   const [isTuneOpen, setIsTuneOpen] = useState(false)
   const [tactileTuning, setTactileTuning] = useState<TactileTuning>(DEFAULT_TACTILE_TUNING)
   const tactileCssVariables = useMemo(() => toTactileCssVariables(tactileTuning), [tactileTuning])
+  const playDurationMs = tactileTuning.c4Literal.connectorMotion.playDurationMs
 
   const {
     activeVariant,
@@ -69,7 +70,7 @@ export default function RebuildPrototypeLabPage() {
     handlePoint,
     resetPreview,
     resetToBaseline,
-  } = usePrototypeLabController()
+  } = usePrototypeLabController(playDurationMs)
 
   const rallyPhase = toRallyPhase(currentCorePhase)
   const rotationPhaseKey = createRotationPhaseKey(currentRotation, rallyPhase)
@@ -277,6 +278,35 @@ export default function RebuildPrototypeLabPage() {
       </div>
     ) : null
 
+  const tuneGuide =
+    isTuneOpen && activeVariant === 'concept4' ? (
+      <div className="lab-inset mt-3 rounded-lg p-3">
+        <div className="pb-2 text-[10px] uppercase tracking-[0.08em] text-muted-foreground">Tune Guide</div>
+        <div className="grid gap-2 text-[11px] leading-[1.45] text-muted-foreground">
+          <div>
+            <span className="font-medium text-foreground">Global Light</span>
+            {' '}
+            controls the shared top-left light and overall surface depth.
+          </div>
+          <div>
+            <span className="font-medium text-foreground">Joystick</span>
+            {' '}
+            changes stick travel, dead zone, and settle feel.
+          </div>
+          <div>
+            <span className="font-medium text-foreground">Cluster Layout</span>
+            {' '}
+            changes the height, spacing, and button sizes of the literal control bank.
+          </div>
+          <div>
+            <span className="font-medium text-foreground">Loading Bar</span>
+            {' '}
+            controls how far the line rests, how fast it travels, how big the head is, and how hard the destination charges.
+          </div>
+        </div>
+      </div>
+    ) : null
+
   const labToolContent = (
     <>
       <div className="grid grid-cols-2 gap-2">
@@ -327,6 +357,7 @@ export default function RebuildPrototypeLabPage() {
         </div>
         {connectorStyleControls}
       </div>
+      {tuneGuide}
     </>
   )
 
@@ -366,6 +397,7 @@ export default function RebuildPrototypeLabPage() {
           <div className="h-full w-full overflow-hidden rounded-lg border border-border bg-background/70">
             <VolleyballCourt
               positions={positions}
+              animationConfig={{ durationMs: playDurationMs }}
               hideAwayTeam={hideAwayTeam}
               awayTeamHidePercent={awayTeamHidePercent}
               rotation={currentRotation}
@@ -508,7 +540,11 @@ export default function RebuildPrototypeLabPage() {
       )}
 
       {isDev && isTuneOpen ? (
-        <RebuildDialKitBridge onTuningChange={handleTuningChange} position={isMobile ? 'top-right' : 'top-left'} />
+        <RebuildDialKitBridge
+          activeVariant={activeVariant}
+          onTuningChange={handleTuningChange}
+          position={isMobile ? 'top-right' : 'top-left'}
+        />
       ) : null}
     </div>
   )

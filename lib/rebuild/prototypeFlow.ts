@@ -36,10 +36,10 @@ export const CONNECTOR_STYLE_OPTIONS: Array<{
   id: ConnectorStyle
   label: string
 }> = [
-  { id: 'static', label: 'Static' },
-  { id: 'sweep', label: 'Sweep' },
-  { id: 'relay', label: 'Relay' },
-  { id: 'pulse', label: 'Pulse' },
+  { id: 'static', label: 'Still' },
+  { id: 'sweep', label: 'Bar' },
+  { id: 'relay', label: 'Head' },
+  { id: 'pulse', label: 'Charge' },
 ]
 
 export const CORE_PHASE_TO_RALLY_PHASE: Record<CorePhase, RallyPhase> = {

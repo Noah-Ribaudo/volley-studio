@@ -18,15 +18,16 @@ import type { PrototypeControlProps } from './types'
  *
  * Read top-to-bottom. Each state is ms after interaction.
  *
- *    0ms   active connector wakes and starts pointing at the legal next phase
+ *    0ms   active path arms and shows a short resting fill
  *  120ms   phase surfaces and connector scaffolds settle into their new weight
- *  620ms   play burst finishes and destination phase glow resolves
+ *  500ms   loading bar reaches the destination in sync with court movement
+ *  620ms   destination phase glow resolves
  * ───────────────────────────────────────────────────────── */
 
 const TIMING = {
   surfaceSettle: 0.16,
   connectorSettle: 0.18,
-  playBurstMs: 620,
+  loadingBarTailMs: 120,
 }
 
 const C4_LAYOUT = {
@@ -255,8 +256,15 @@ function PhaseCard({
           transition={prefersReducedMotion ? { duration: 0.001 } : { duration: TIMING.connectorSettle }}
           className="pointer-events-none absolute inset-0 rounded-[inherit]"
           style={{
-            boxShadow: `0 0 ${12 + surface.nextGlow * 18}px oklch(72% 0.14 55 / ${
-              (boosted ? 0.34 : 0.2) + surface.nextGlow * 0.16
+            // Destination charge rides on the same path timing as the court transition.
+            boxShadow: `0 0 ${
+              12 +
+              surface.nextGlow * 18 +
+              props.tactileTuning.c4Literal.connectorMotion.destinationFlash * (boosted ? 18 : 6)
+            }px oklch(72% 0.14 55 / ${
+              (boosted ? 0.34 : 0.2) +
+              surface.nextGlow * 0.16 +
+              props.tactileTuning.c4Literal.connectorMotion.destinationFlash * (boosted ? 0.18 : 0.06)
             })`,
           }}
         />
@@ -281,200 +289,46 @@ function ConnectorScaffold({ d, props }: { d: string; props: PrototypeControlPro
   )
 }
 
-function SweepConnector({
-  d,
-  direction,
-  activeOpacity,
-  glow,
-  geometry,
-  speed,
-  segmentLength,
-  boosted,
-}: {
-  d: string
-  direction: 1 | -1
-  activeOpacity: number
-  glow: number
-  geometry: PrototypeControlProps['tactileTuning']['c4Literal']['connectorGeometry']
-  speed: number
-  segmentLength: number
-  boosted: boolean
-}) {
-  const startOffset = direction === 1 ? 0 : 1 - segmentLength
-  const endOffset = direction === 1 ? 1 - segmentLength : 0
+function getDirectionalBarState(progress: number, direction: 1 | -1) {
+  if (direction === 1) {
+    return {
+      pathLength: progress,
+      pathOffset: 0,
+      pathSpacing: 0,
+    }
+  }
 
-  return (
-    <>
-      <motion.path
-        initial={false}
-        d={d}
-        fill="none"
-        stroke="var(--primary)"
-        strokeLinecap="round"
-        strokeOpacity={activeOpacity * 0.36}
-        strokeWidth={geometry.strokeThickness + 0.5}
-      />
-      <motion.path
-        initial={false}
-        d={d}
-        fill="none"
-        stroke="var(--primary)"
-        strokeLinecap="round"
-        strokeWidth={geometry.strokeThickness + 0.9}
-        style={{
-          filter: `drop-shadow(0 0 ${2 + glow * 7}px oklch(72% 0.14 55 / ${0.2 + glow * 0.34}))`,
-          pathLength: segmentLength,
-          pathOffset: startOffset,
-          pathSpacing: 1,
-        }}
-        animate={{
-          pathOffset: endOffset,
-          opacity: boosted ? 1 : activeOpacity,
-        }}
-        transition={{
-          duration: speed,
-          ease: 'linear',
-          repeat: boosted ? 0 : Infinity,
-          repeatType: 'loop',
-        }}
-      />
-    </>
-  )
+  return {
+    pathLength: progress,
+    pathOffset: 1 - progress,
+    pathSpacing: 0,
+  }
 }
 
-function RelayConnector({
-  d,
-  direction,
-  activeOpacity,
-  geometry,
-  speed,
-  segmentCount,
-  dashDensity,
-  boosted,
-}: {
-  d: string
-  direction: 1 | -1
-  activeOpacity: number
-  geometry: PrototypeControlProps['tactileTuning']['c4Literal']['connectorGeometry']
-  speed: number
-  segmentCount: number
-  dashDensity: number
-  boosted: boolean
-}) {
-  const packetLength = clamp(dashDensity / Math.max(segmentCount, 1), 0.028, 0.08)
-  const packetGap = clamp(packetLength * 0.95, 0.026, 0.09)
+function getDirectionalHeadState(progress: number, direction: 1 | -1, headLength: number) {
+  const visibleLength = Math.max(0, Math.min(progress, headLength))
 
-  return (
-    <motion.path
-      initial={false}
-      d={d}
-      fill="none"
-      pathLength={1}
-      stroke="var(--primary)"
-      strokeDasharray={`${packetLength} ${packetGap}`}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={geometry.strokeThickness + 0.7}
-      animate={{
-        opacity: boosted ? 1 : activeOpacity,
-        strokeDashoffset: direction === 1 ? -1 : 1,
-      }}
-      transition={{
-        duration: speed,
-        ease: 'linear',
-        repeat: boosted ? 0 : Infinity,
-        repeatType: 'loop',
-      }}
-      style={{
-        filter: `drop-shadow(0 0 ${2.5 + packetLength * 34}px oklch(72% 0.14 55 / 0.26))`,
-      }}
-    />
-  )
-}
+  if (visibleLength <= 0.001) {
+    return {
+      pathLength: 0,
+      pathOffset: direction === 1 ? 0 : 1,
+      pathSpacing: 0,
+    }
+  }
 
-function PulseConnector({
-  d,
-  direction,
-  activeOpacity,
-  glow,
-  geometry,
-  speed,
-  segmentLength,
-  boosted,
-}: {
-  d: string
-  direction: 1 | -1
-  activeOpacity: number
-  glow: number
-  geometry: PrototypeControlProps['tactileTuning']['c4Literal']['connectorGeometry']
-  speed: number
-  segmentLength: number
-  boosted: boolean
-}) {
-  const pulseLength = clamp(segmentLength * 0.78, 0.14, 0.42)
-  const startOffset = direction === 1 ? 0 : 1 - pulseLength
-  const endOffset = direction === 1 ? 1 - pulseLength : 0
+  if (direction === 1) {
+    return {
+      pathLength: visibleLength,
+      pathOffset: Math.max(progress - visibleLength, 0),
+      pathSpacing: 0,
+    }
+  }
 
-  return (
-    <>
-      <motion.path
-        initial={false}
-        d={d}
-        fill="none"
-        stroke="var(--primary)"
-        strokeLinecap="round"
-        strokeOpacity={activeOpacity * 0.28}
-        strokeWidth={geometry.strokeThickness + 0.6}
-      />
-      <motion.path
-        initial={false}
-        d={d}
-        fill="none"
-        stroke="var(--primary)"
-        strokeLinecap="round"
-        strokeWidth={geometry.strokeThickness + 2.4}
-        style={{
-          filter: `blur(${1.8 + glow * 3.4}px)`,
-          pathLength: pulseLength,
-          pathOffset: startOffset,
-          pathSpacing: 1,
-        }}
-        animate={{
-          pathOffset: endOffset,
-          opacity: [0.16, 0.42 + glow * 0.22, 0.16],
-        }}
-        transition={{
-          duration: speed,
-          ease: 'easeInOut',
-          repeat: boosted ? 0 : Infinity,
-          repeatType: 'loop',
-        }}
-      />
-      <motion.path
-        initial={false}
-        d={d}
-        fill="none"
-        stroke="var(--primary)"
-        strokeLinecap="round"
-        strokeWidth={geometry.strokeThickness + 0.6}
-        style={{
-          pathLength: pulseLength * 0.82,
-          pathOffset: startOffset,
-          pathSpacing: 1,
-        }}
-        animate={{
-          pathOffset: endOffset,
-          opacity: boosted ? [0.6, 1, 0.6] : [0.48, activeOpacity, 0.48],
-        }}
-        transition={{
-          duration: speed,
-          ease: 'easeInOut',
-          repeat: boosted ? 0 : Infinity,
-          repeatType: 'loop',
-        }}
-      />
-    </>
-  )
+  return {
+    pathLength: visibleLength,
+    pathOffset: 1 - progress,
+    pathSpacing: 0,
+  }
 }
 
 function ActiveConnector({
@@ -498,14 +352,22 @@ function ActiveConnector({
 
   if (!active) return null
 
-  const segmentLength = clamp(
-    boosted ? motionTuning.travelAmount * 1.45 : motionTuning.travelAmount,
-    0.18,
-    0.66
-  )
-  const speed = boosted ? motionTuning.playCycleSpeed : motionTuning.restCycleSpeed
+  const progress = prefersReducedMotion || connectorStyle === 'static'
+    ? 1
+    : boosted
+      ? 1
+      : motionTuning.restProgress
+  const headLength = clamp(motionTuning.headLength, 0.04, 0.28)
   const activeOpacity = geometry.activeOpacity
-  const glow = motionTuning.pulseGlow
+  const glow = motionTuning.glowStrength
+  const baseTransition = prefersReducedMotion
+    ? { duration: 0.001 }
+    : {
+        duration: boosted ? motionTuning.playDurationMs / 1000 : TIMING.connectorSettle,
+        ease: boosted ? ('linear' as const) : ([0.22, 1, 0.36, 1] as [number, number, number, number]),
+      }
+  const showHead = connectorStyle === 'relay' || connectorStyle === 'pulse'
+  const showCharge = connectorStyle === 'pulse'
 
   if (prefersReducedMotion || connectorStyle === 'static') {
     return (
@@ -519,53 +381,69 @@ function ActiveConnector({
         animate={{ opacity: activeOpacity }}
         transition={{ duration: 0.001 }}
         style={{
-          filter: `drop-shadow(0 0 ${1.5 + glow * 5}px oklch(72% 0.14 55 / ${0.14 + glow * 0.22}))`,
+          filter: `drop-shadow(0 0 ${1.5 + glow * 6}px oklch(72% 0.14 55 / ${0.14 + glow * 0.22}))`,
         }}
       />
     )
   }
 
-  if (connectorStyle === 'relay') {
-    return (
-      <RelayConnector
-        d={d}
-        direction={direction}
-        activeOpacity={activeOpacity}
-        geometry={geometry}
-        speed={speed}
-        segmentCount={motionTuning.segmentCount}
-        dashDensity={motionTuning.dashDensity}
-        boosted={boosted}
-      />
-    )
-  }
-
-  if (connectorStyle === 'pulse') {
-    return (
-      <PulseConnector
-        d={d}
-        direction={direction}
-        activeOpacity={activeOpacity}
-        glow={glow}
-        geometry={geometry}
-        speed={speed}
-        segmentLength={segmentLength}
-        boosted={boosted}
-      />
-    )
-  }
-
   return (
-    <SweepConnector
-      d={d}
-      direction={direction}
-      activeOpacity={activeOpacity}
-      glow={glow}
-      geometry={geometry}
-      speed={speed}
-      segmentLength={segmentLength}
-      boosted={boosted}
-    />
+    <>
+      {showCharge ? (
+        <motion.path
+          initial={false}
+          d={d}
+          fill="none"
+          stroke="var(--primary)"
+          strokeLinecap="round"
+          strokeWidth={geometry.strokeThickness + 3}
+          animate={{
+            ...getDirectionalBarState(progress, direction),
+            opacity: boosted ? 0.22 + glow * 0.22 : 0.12 + glow * 0.12,
+          }}
+          transition={baseTransition}
+          style={{
+            filter: `blur(${1.4 + glow * 4.5}px)`,
+          }}
+        />
+      ) : null}
+      <motion.path
+        initial={false}
+        d={d}
+        fill="none"
+        stroke="var(--primary)"
+        strokeLinecap="round"
+        strokeWidth={geometry.strokeThickness + 0.95}
+        animate={{
+          ...getDirectionalBarState(progress, direction),
+          opacity: boosted ? 1 : activeOpacity,
+        }}
+        transition={baseTransition}
+        style={{
+          filter: `drop-shadow(0 0 ${2 + glow * (showCharge ? 8 : 4)}px oklch(72% 0.14 55 / ${
+            0.18 + glow * (showCharge ? 0.26 : 0.12)
+          }))`,
+        }}
+      />
+      {showHead ? (
+        <motion.path
+          initial={false}
+          d={d}
+          fill="none"
+          stroke="var(--primary)"
+          strokeLinecap="round"
+          strokeWidth={geometry.strokeThickness + (showCharge ? 2.2 : 1.6)}
+          animate={{
+            ...getDirectionalHeadState(progress, direction, headLength),
+            opacity: boosted ? 1 : 0.86,
+          }}
+          transition={baseTransition}
+          style={{
+            filter: `drop-shadow(0 0 ${3 + glow * 8}px oklch(72% 0.14 55 / ${0.24 + glow * 0.3}))`,
+          }}
+        />
+      ) : null}
+    </>
   )
 }
 
@@ -584,9 +462,12 @@ function LiteralMode(props: PrototypeControlProps) {
   useEffect(() => {
     if (props.playAnimationTrigger === 0) return
     setIsBursting(true)
-    const timeoutId = window.setTimeout(() => setIsBursting(false), TIMING.playBurstMs)
+    const timeoutId = window.setTimeout(
+      () => setIsBursting(false),
+      props.tactileTuning.c4Literal.connectorMotion.playDurationMs + TIMING.loadingBarTailMs
+    )
     return () => window.clearTimeout(timeoutId)
-  }, [props.playAnimationTrigger])
+  }, [props.playAnimationTrigger, props.tactileTuning.c4Literal.connectorMotion.playDurationMs])
 
   return (
     <div className="relative flex h-full min-h-0 w-full items-start justify-center overflow-hidden px-1 pt-0.5">
