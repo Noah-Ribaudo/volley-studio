@@ -358,6 +358,18 @@
   --lab-texture-strength: 0.02;
   --lab-switch-press-travel: 2.6;
   --lab-switch-knob-glow: 0.42;
+  --lab-dock-collapsed-height: 308px;
+  --lab-dock-expanded-height: 392px;
+  --lab-dock-inner-padding: 12px;
+  --lab-dock-gap: 10px;
+  --lab-joystick-halo-intensity: 0.58;
+  --lab-phase-current-weight: 1.06;
+  --lab-phase-next-glow: 0.52;
+  --lab-phase-foundational-contrast: 0.48;
+  --lab-phase-reactive-contrast: 0.42;
+  --lab-connector-idle-opacity: 0.22;
+  --lab-connector-active-opacity: 0.78;
+  --lab-connector-active-thickness: 2.25;
 }
 
 [data-rebuild-lab="tactile"] .lab-light-canvas {

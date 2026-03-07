@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   applyPointScored,
   canVariantScore,
+  type Concept4Mode,
   getNextByPlay,
   type CorePhase,
   type PointWinner,
@@ -22,11 +23,14 @@ function wrapRotation(rotation: Rotation, delta: -1 | 1): Rotation {
 
 export function usePrototypeLabController() {
   const [activeVariant, setActiveVariant] = useState<PrototypeVariantId>('concept4')
+  const [concept4Mode, setConcept4Mode] = useState<Concept4Mode>('radial')
   const [currentRotation, setCurrentRotation] = useState<Rotation>(1)
   const [currentCorePhase, setCurrentCorePhase] = useState<CorePhase>('SERVE')
   const [isOurServe, setIsOurServe] = useState(true)
   const [isPreviewingMovement, setPreviewingMovement] = useState(false)
   const [playAnimationTrigger, setPlayAnimationTrigger] = useState(0)
+  const [isLabTrayOpen, setIsLabTrayOpen] = useState(false)
+  const [isControlDockExpanded, setIsControlDockExpanded] = useState(false)
 
   const playTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -120,11 +124,17 @@ export function usePrototypeLabController() {
   return {
     activeVariant,
     setActiveVariant,
+    concept4Mode,
+    setConcept4Mode,
     currentRotation,
     currentCorePhase,
     isOurServe,
     isPreviewingMovement,
     playAnimationTrigger,
+    isLabTrayOpen,
+    setIsLabTrayOpen,
+    isControlDockExpanded,
+    setIsControlDockExpanded,
     handleRotationStep,
     handleRotationSelect,
     handlePhaseSelect,
