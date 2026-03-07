@@ -4,21 +4,13 @@ import { cn } from '@/lib/utils'
 import type { CorePhase } from '@/lib/rebuild/prototypeFlow'
 import {
   PHASE_PAD_LAYOUT,
+  PhasePadPerimeterRing,
   PhasePadJoystick,
   PhasePadRotationRail,
-  createPerimeterLights,
-  getPerimeterCoverage,
   getPerimeterSegmentState,
   usePhasePadTransition,
 } from './PhasePadShared'
 import type { PrototypeControlProps } from './types'
-
-const OUTER_RING_LIGHTS = createPerimeterLights({
-  ledsPerEdge: 14,
-  inset: 4,
-  startPercent: 5,
-  endPercent: 95,
-})
 
 function PhaseAreaTile({
   phase,
@@ -78,34 +70,12 @@ export function Concept8FullLedPerimeter(props: PrototypeControlProps) {
 
         <div className="rounded-[20px] border border-white/10 bg-[linear-gradient(180deg,rgba(114,114,114,0.18)_0%,rgba(64,64,64,0.26)_100%)] p-2">
           <div className="relative overflow-hidden rounded-[16px] border border-white/8 bg-[linear-gradient(180deg,rgba(64,64,64,0.55)_0%,rgba(38,38,40,0.88)_100%)] p-[10px] shadow-[inset_0_1px_0_rgba(255,255,255,0.06),inset_0_-18px_26px_rgba(0,0,0,0.16)]">
-            <div className="pointer-events-none absolute inset-0">
-              {OUTER_RING_LIGHTS.map((led) => {
-                const strength = getPerimeterCoverage({
-                  globalIndex: led.globalIndex,
-                  segmentStart: perimeterState.segmentStart,
-                  segmentLength: perimeterState.segmentLength,
-                  totalLights: perimeterState.totalLights,
-                })
-
-                return (
-                  <span
-                    key={led.key}
-                    className={cn(
-                      'absolute rounded-full bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(214,214,214,0.9)_100%)]',
-                      led.edge === 'top' || led.edge === 'bottom' ? 'h-[3px] w-[11px]' : 'h-[11px] w-[3px]'
-                    )}
-                    style={{
-                      ...led.style,
-                      opacity: strength > 0 ? 0.08 + strength * 0.92 : 0.02,
-                      boxShadow:
-                        strength > 0
-                          ? `0 0 ${2 + strength * 6}px rgba(255,255,255,${0.24 + strength * 0.3}), 0 0 ${7 + strength * 14}px rgba(245,245,245,${0.08 + strength * 0.14})`
-                          : 'none',
-                    }}
-                  />
-                )
-              })}
-            </div>
+            <PhasePadPerimeterRing
+              dense
+              segmentStart={perimeterState.segmentStart}
+              segmentLength={perimeterState.segmentLength}
+              totalLights={perimeterState.totalLights}
+            />
 
             <div className="grid grid-cols-2 gap-px overflow-hidden rounded-[12px] bg-black/40">
               {PHASE_PAD_LAYOUT.map((item) => (
