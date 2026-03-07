@@ -248,6 +248,7 @@ export default function RebuildPrototypeLabPage() {
       canScore={scoringEnabled}
       connectorStyle={connectorStyle}
       playAnimationTrigger={playAnimationTrigger}
+      isPreviewingMovement={isPreviewingMovement}
       switchMotion={tactileTuning.switchMotion}
       tactileTuning={tactileTuning}
       onRotationSelect={handleRotationSelect}

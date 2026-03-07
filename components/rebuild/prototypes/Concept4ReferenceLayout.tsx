@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion, useReducedMotion } from 'motion/react'
 import {
   type ConnectorStyle,
@@ -18,21 +18,59 @@ import type { PrototypeControlProps } from './types'
  *
  * Read top-to-bottom. Each state is ms after interaction.
  *
- *    0ms   active path arms and shows a short resting fill
- *  120ms   phase surfaces and connector scaffolds settle into their new weight
- *  500ms   loading bar reaches the destination in sync with court movement
- *  620ms   destination phase glow resolves
+ *    0ms   active connector shows a short resting fill
+ *  120ms   phase surfaces settle and the loading bar arms
+ *  500ms   bar fills source -> destination in sync with court movement
  * ───────────────────────────────────────────────────────── */
 
 const TIMING = {
   surfaceSettle: 0.16,
   connectorSettle: 0.18,
-  loadingBarTailMs: 120,
 }
 
 const C4_LAYOUT = {
   mobileGap: '4px',
   controlPadding: '6px',
+}
+
+const CONNECTOR_STYLE_VISUALS: Record<
+  ConnectorStyle,
+  {
+    fillWidthBoost: number
+    headWidthBoost: number
+    showHead: boolean
+    showAura: boolean
+    showGlowTail: boolean
+  }
+> = {
+  static: {
+    fillWidthBoost: 1.35,
+    headWidthBoost: 0,
+    showHead: false,
+    showAura: false,
+    showGlowTail: false,
+  },
+  sweep: {
+    fillWidthBoost: 1.55,
+    headWidthBoost: 0,
+    showHead: false,
+    showAura: true,
+    showGlowTail: false,
+  },
+  relay: {
+    fillWidthBoost: 1.42,
+    headWidthBoost: 1.9,
+    showHead: true,
+    showAura: true,
+    showGlowTail: false,
+  },
+  pulse: {
+    fillWidthBoost: 1.52,
+    headWidthBoost: 2.4,
+    showHead: true,
+    showAura: true,
+    showGlowTail: true,
+  },
 }
 
 type ConnectorId = 'serve' | 'receive' | 'live'
@@ -44,6 +82,12 @@ type PhaseGeometry = {
   height: number
 }
 
+type ConnectorPathSet = {
+  scaffold: string
+  forward: string
+  reverse: string
+}
+
 type LiteralStageGeometry = {
   stageWidth: number
   stageHeight: number
@@ -51,7 +95,7 @@ type LiteralStageGeometry = {
   centerY: number
   joystickSize: number
   phases: Record<'SERVE' | 'RECEIVE' | 'DEFENSE' | 'OFFENSE', PhaseGeometry>
-  paths: Record<ConnectorId, string>
+  paths: Record<ConnectorId, ConnectorPathSet>
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -143,26 +187,42 @@ function buildLiteralStage(
 
   const topMidY = topY + buttonHeight / 2
   const bottomMidY = bottomY + buttonHeight / 2
-  const topCurveY = clamp(
-    topMidY - Math.max(9, clusterLayout.joystickClearance * 0.85),
-    stageInset + 10,
-    centerY - clusterLayout.joystickClearance / 3
-  )
-  const bottomCurveY = clamp(
-    bottomMidY + Math.max(8, clusterLayout.joystickClearance * 0.72),
-    centerY + clusterLayout.joystickClearance / 4,
-    stageHeight - stageInset - 10
-  )
   const innerInset = connectorGeometry.horizontalInset
-  const topInnerLeft = clamp(serve.x + serve.width + innerInset, serve.x + serve.width, centerX - 6)
-  const topInnerRight = clamp(defense.x - innerInset, centerX + 6, defense.x)
-  const bottomInnerLeft = clamp(receive.x + receive.width + innerInset, receive.x + receive.width, centerX - 6)
-  const bottomInnerRight = clamp(offense.x - innerInset, centerX + 6, offense.x)
-  const liveX = clamp(
-    defense.x + defense.width / 2 + connectorGeometry.liveLoopOffset,
-    defense.x + 16,
-    defense.x + defense.width - 16
+  const laneStem = Math.max(8, innerInset)
+  const topInnerLeft = serve.x + serve.width + laneStem
+  const topInnerRight = defense.x - laneStem
+  const bottomInnerLeft = receive.x + receive.width + laneStem
+  const bottomInnerRight = offense.x - laneStem
+  const topLaneY = clamp(serve.y + 7, stageInset + 6, topMidY - 5)
+  const bottomLaneY = clamp(
+    offense.y + offense.height - 7,
+    bottomMidY + 5,
+    stageHeight - stageInset - 6
   )
+  const liveX = clamp(
+    defense.x + defense.width * 0.68 + connectorGeometry.liveLoopOffset,
+    defense.x + defense.width / 2 + 10,
+    defense.x + defense.width - 10
+  )
+
+  const servePath = [
+    `M ${serve.x + serve.width} ${topMidY}`,
+    `L ${topInnerLeft - 10} ${topMidY}`,
+    `Q ${topInnerLeft} ${topMidY} ${topInnerLeft} ${topLaneY}`,
+    `L ${topInnerRight} ${topLaneY}`,
+    `Q ${topInnerRight} ${topMidY} ${defense.x} ${topMidY}`,
+  ].join(' ')
+
+  const receivePath = [
+    `M ${receive.x + receive.width} ${bottomMidY}`,
+    `L ${bottomInnerLeft - 10} ${bottomMidY}`,
+    `Q ${bottomInnerLeft} ${bottomMidY} ${bottomInnerLeft} ${bottomLaneY}`,
+    `L ${bottomInnerRight} ${bottomLaneY}`,
+    `Q ${bottomInnerRight} ${bottomMidY} ${offense.x} ${bottomMidY}`,
+  ].join(' ')
+
+  const liveForward = `M ${liveX} ${defense.y + defense.height} L ${liveX} ${offense.y}`
+  const liveReverse = `M ${liveX} ${offense.y} L ${liveX} ${defense.y + defense.height}`
 
   return {
     stageWidth,
@@ -177,19 +237,21 @@ function buildLiteralStage(
       OFFENSE: offense,
     },
     paths: {
-      serve: [
-        `M ${serve.x + serve.width} ${topMidY}`,
-        `L ${topInnerLeft} ${topMidY}`,
-        `Q ${centerX} ${topCurveY} ${topInnerRight} ${topMidY}`,
-        `L ${defense.x} ${topMidY}`,
-      ].join(' '),
-      receive: [
-        `M ${receive.x + receive.width} ${bottomMidY}`,
-        `L ${bottomInnerLeft} ${bottomMidY}`,
-        `Q ${centerX} ${bottomCurveY} ${bottomInnerRight} ${bottomMidY}`,
-        `L ${offense.x} ${bottomMidY}`,
-      ].join(' '),
-      live: `M ${liveX} ${defense.y + defense.height} L ${liveX} ${offense.y}`,
+      serve: {
+        scaffold: servePath,
+        forward: servePath,
+        reverse: servePath,
+      },
+      receive: {
+        scaffold: receivePath,
+        forward: receivePath,
+        reverse: receivePath,
+      },
+      live: {
+        scaffold: liveForward,
+        forward: liveForward,
+        reverse: liveReverse,
+      },
     },
   }
 }
@@ -256,7 +318,6 @@ function PhaseCard({
           transition={prefersReducedMotion ? { duration: 0.001 } : { duration: TIMING.connectorSettle }}
           className="pointer-events-none absolute inset-0 rounded-[inherit]"
           style={{
-            // Destination charge rides on the same path timing as the court transition.
             boxShadow: `0 0 ${
               12 +
               surface.nextGlow * 18 +
@@ -274,12 +335,18 @@ function PhaseCard({
   )
 }
 
-function ConnectorScaffold({ d, props }: { d: string; props: PrototypeControlProps }) {
+function ConnectorScaffold({
+  path,
+  props,
+}: {
+  path: ConnectorPathSet
+  props: PrototypeControlProps
+}) {
   const geometry = props.tactileTuning.c4Literal.connectorGeometry
 
   return (
     <path
-      d={d}
+      d={path.scaffold}
       fill="none"
       stroke="var(--primary)"
       strokeLinecap="round"
@@ -289,155 +356,158 @@ function ConnectorScaffold({ d, props }: { d: string; props: PrototypeControlPro
   )
 }
 
-function getDirectionalBarState(progress: number, direction: 1 | -1) {
-  if (direction === 1) {
-    return {
-      pathLength: progress,
-      pathOffset: 0,
-      pathSpacing: 0,
-    }
-  }
+function getFillStroke(progress: number, totalLength: number) {
+  const visibleLength = clamp(progress, 0, 1) * totalLength
 
   return {
-    pathLength: progress,
-    pathOffset: 1 - progress,
-    pathSpacing: 0,
+    visibleLength,
+    dasharray: `${Math.max(visibleLength, 0.001)} ${Math.max(totalLength, 0.01)}`,
+    dashoffset: 0,
   }
 }
 
-function getDirectionalHeadState(progress: number, direction: 1 | -1, headLength: number) {
-  const visibleLength = Math.max(0, Math.min(progress, headLength))
-
-  if (visibleLength <= 0.001) {
-    return {
-      pathLength: 0,
-      pathOffset: direction === 1 ? 0 : 1,
-      pathSpacing: 0,
-    }
-  }
-
-  if (direction === 1) {
-    return {
-      pathLength: visibleLength,
-      pathOffset: Math.max(progress - visibleLength, 0),
-      pathSpacing: 0,
-    }
-  }
+function getHeadStroke(progress: number, totalLength: number, headRatio: number) {
+  const fillLength = clamp(progress, 0, 1) * totalLength
+  const visibleLength = Math.min(
+    fillLength,
+    Math.max(totalLength * clamp(headRatio, 0.05, 0.3), 12)
+  )
 
   return {
-    pathLength: visibleLength,
-    pathOffset: 1 - progress,
-    pathSpacing: 0,
+    visibleLength,
+    dasharray: `${visibleLength} ${Math.max(totalLength, 0.01)}`,
+    dashoffset: -Math.max(fillLength - visibleLength, 0),
   }
 }
 
 function ActiveConnector({
-  d,
+  path,
   active,
   direction,
   connectorStyle,
+  progress,
   boosted,
   props,
 }: {
-  d: string
+  path: ConnectorPathSet
   active: boolean
   direction: 1 | -1
   connectorStyle: ConnectorStyle
+  progress: number
   boosted: boolean
   props: PrototypeControlProps
 }) {
   const prefersReducedMotion = useReducedMotion()
+  const pathRef = useRef<SVGPathElement | null>(null)
+  const [totalLength, setTotalLength] = useState(0)
   const geometry = props.tactileTuning.c4Literal.connectorGeometry
   const motionTuning = props.tactileTuning.c4Literal.connectorMotion
+  const visuals = CONNECTOR_STYLE_VISUALS[connectorStyle]
+
+  useEffect(() => {
+    if (!pathRef.current) return
+    setTotalLength(pathRef.current.getTotalLength())
+  }, [direction, path.forward, path.reverse])
 
   if (!active) return null
 
-  const progress = prefersReducedMotion || connectorStyle === 'static'
-    ? 1
-    : boosted
-      ? 1
-      : motionTuning.restProgress
-  const headLength = clamp(motionTuning.headLength, 0.04, 0.28)
+  const animatedPath = direction === 1 ? path.forward : path.reverse
   const activeOpacity = geometry.activeOpacity
   const glow = motionTuning.glowStrength
-  const baseTransition = prefersReducedMotion
-    ? { duration: 0.001 }
-    : {
-        duration: boosted ? motionTuning.playDurationMs / 1000 : TIMING.connectorSettle,
-        ease: boosted ? ('linear' as const) : ([0.22, 1, 0.36, 1] as [number, number, number, number]),
-      }
-  const showHead = connectorStyle === 'relay' || connectorStyle === 'pulse'
-  const showCharge = connectorStyle === 'pulse'
 
-  if (prefersReducedMotion || connectorStyle === 'static') {
+  if (prefersReducedMotion || connectorStyle === 'static' || totalLength === 0) {
     return (
-      <motion.path
-        initial={false}
-        d={d}
-        fill="none"
-        stroke="var(--primary)"
-        strokeLinecap="round"
-        strokeWidth={geometry.strokeThickness + 0.85}
-        animate={{ opacity: activeOpacity }}
-        transition={{ duration: 0.001 }}
-        style={{
-          filter: `drop-shadow(0 0 ${1.5 + glow * 6}px oklch(72% 0.14 55 / ${0.14 + glow * 0.22}))`,
-        }}
-      />
+      <>
+        <path
+          ref={pathRef}
+          d={animatedPath}
+          fill="none"
+          stroke="transparent"
+          strokeWidth={geometry.strokeThickness + 6}
+        />
+        <path
+          d={animatedPath}
+          fill="none"
+          stroke="var(--primary)"
+          strokeLinecap="round"
+          strokeWidth={geometry.strokeThickness + visuals.fillWidthBoost}
+          strokeOpacity={activeOpacity}
+          style={{
+            filter: `drop-shadow(0 0 ${2 + glow * 6}px oklch(72% 0.14 55 / ${0.16 + glow * 0.2}))`,
+          }}
+        />
+      </>
     )
   }
 
+  const fillStroke = getFillStroke(progress, totalLength)
+  const headStroke = getHeadStroke(progress, totalLength, motionTuning.headLength)
+  const fillOpacity = boosted ? 1 : activeOpacity
+
   return (
     <>
-      {showCharge ? (
-        <motion.path
-          initial={false}
-          d={d}
+      <path
+        ref={pathRef}
+        d={animatedPath}
+        fill="none"
+        stroke="transparent"
+        strokeWidth={geometry.strokeThickness + 6}
+      />
+      {visuals.showGlowTail ? (
+        <path
+          d={animatedPath}
           fill="none"
           stroke="var(--primary)"
           strokeLinecap="round"
-          strokeWidth={geometry.strokeThickness + 3}
-          animate={{
-            ...getDirectionalBarState(progress, direction),
-            opacity: boosted ? 0.22 + glow * 0.22 : 0.12 + glow * 0.12,
-          }}
-          transition={baseTransition}
+          strokeWidth={geometry.strokeThickness + 3.8}
+          strokeOpacity={boosted ? 0.2 + glow * 0.2 : 0.1 + glow * 0.1}
+          strokeDasharray={fillStroke.dasharray}
+          strokeDashoffset={fillStroke.dashoffset}
           style={{
-            filter: `blur(${1.4 + glow * 4.5}px)`,
+            filter: `blur(${1.2 + glow * 4.2}px)`,
           }}
         />
       ) : null}
-      <motion.path
-        initial={false}
-        d={d}
-        fill="none"
-        stroke="var(--primary)"
-        strokeLinecap="round"
-        strokeWidth={geometry.strokeThickness + 0.95}
-        animate={{
-          ...getDirectionalBarState(progress, direction),
-          opacity: boosted ? 1 : activeOpacity,
-        }}
-        transition={baseTransition}
-        style={{
-          filter: `drop-shadow(0 0 ${2 + glow * (showCharge ? 8 : 4)}px oklch(72% 0.14 55 / ${
-            0.18 + glow * (showCharge ? 0.26 : 0.12)
-          }))`,
-        }}
-      />
-      {showHead ? (
-        <motion.path
-          initial={false}
-          d={d}
+      {visuals.showAura ? (
+        <path
+          d={animatedPath}
           fill="none"
           stroke="var(--primary)"
           strokeLinecap="round"
-          strokeWidth={geometry.strokeThickness + (showCharge ? 2.2 : 1.6)}
-          animate={{
-            ...getDirectionalHeadState(progress, direction, headLength),
-            opacity: boosted ? 1 : 0.86,
+          strokeWidth={geometry.strokeThickness + 2.8}
+          strokeOpacity={boosted ? 0.2 + glow * 0.18 : 0.1 + glow * 0.08}
+          strokeDasharray={fillStroke.dasharray}
+          strokeDashoffset={fillStroke.dashoffset}
+          style={{
+            filter: `blur(${1 + glow * 2.8}px)`,
           }}
-          transition={baseTransition}
+        />
+      ) : null}
+      <path
+        d={animatedPath}
+        fill="none"
+        stroke="var(--primary)"
+        strokeLinecap="round"
+        strokeWidth={geometry.strokeThickness + visuals.fillWidthBoost}
+        strokeOpacity={fillOpacity}
+        strokeDasharray={fillStroke.dasharray}
+        strokeDashoffset={fillStroke.dashoffset}
+        style={{
+          filter: `drop-shadow(0 0 ${2 + glow * (visuals.showGlowTail ? 8 : 4)}px oklch(72% 0.14 55 / ${
+            0.16 + glow * (visuals.showGlowTail ? 0.28 : 0.12)
+          }))`,
+        }}
+      />
+      {visuals.showHead && headStroke.visibleLength > 0.5 ? (
+        <path
+          d={animatedPath}
+          fill="none"
+          stroke="var(--primary)"
+          strokeLinecap="round"
+          strokeWidth={geometry.strokeThickness + visuals.headWidthBoost}
+          strokeOpacity={boosted ? 1 : 0.88}
+          strokeDasharray={headStroke.dasharray}
+          strokeDashoffset={headStroke.dashoffset}
           style={{
             filter: `drop-shadow(0 0 ${3 + glow * 8}px oklch(72% 0.14 55 / ${0.24 + glow * 0.3}))`,
           }}
@@ -448,10 +518,15 @@ function ActiveConnector({
 }
 
 function LiteralMode(props: PrototypeControlProps) {
+  const prefersReducedMotion = useReducedMotion()
   const geometry = useMemo(() => buildLiteralStage(props.tactileTuning.c4Literal), [props.tactileTuning.c4Literal])
-  const [isBursting, setIsBursting] = useState(false)
   const activeConnector = getActiveConnector(props.currentCorePhase)
   const liveDirection = getConnectorDirection(props.currentCorePhase)
+  const motionTuning = props.tactileTuning.c4Literal.connectorMotion
+  const restingProgress = props.connectorStyle === 'static' ? 1 : motionTuning.restProgress
+  const [connectorProgress, setConnectorProgress] = useState(restingProgress)
+  const [isConnectorPlaying, setIsConnectorPlaying] = useState(false)
+  const animationFrameRef = useRef<number | null>(null)
   const joystickPhaseEmphasis: PhaseEmphasisTuning = {
     currentWeight: props.tactileTuning.phaseEmphasis.currentWeight,
     nextGlow: props.tactileTuning.c4Literal.phaseSurface.nextGlow,
@@ -460,14 +535,79 @@ function LiteralMode(props: PrototypeControlProps) {
   }
 
   useEffect(() => {
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current)
+      animationFrameRef.current = null
+    }
+
+    setConnectorProgress(restingProgress)
+    setIsConnectorPlaying(false)
+  }, [activeConnector, liveDirection, restingProgress])
+
+  useEffect(() => {
+    if (props.isPreviewingMovement) return
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current)
+      animationFrameRef.current = null
+    }
+    setConnectorProgress(restingProgress)
+    setIsConnectorPlaying(false)
+  }, [props.isPreviewingMovement, restingProgress])
+
+  useEffect(() => {
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
     if (props.playAnimationTrigger === 0) return
-    setIsBursting(true)
-    const timeoutId = window.setTimeout(
-      () => setIsBursting(false),
-      props.tactileTuning.c4Literal.connectorMotion.playDurationMs + TIMING.loadingBarTailMs
-    )
-    return () => window.clearTimeout(timeoutId)
-  }, [props.playAnimationTrigger, props.tactileTuning.c4Literal.connectorMotion.playDurationMs])
+
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current)
+      animationFrameRef.current = null
+    }
+
+    if (prefersReducedMotion || props.connectorStyle === 'static') {
+      setIsConnectorPlaying(true)
+      setConnectorProgress(1)
+      return
+    }
+
+    const startProgress = restingProgress
+    const startTime = performance.now()
+    setIsConnectorPlaying(true)
+
+    const tick = (now: number) => {
+      const elapsed = now - startTime
+      const t = clamp(elapsed / motionTuning.playDurationMs, 0, 1)
+      setConnectorProgress(startProgress + (1 - startProgress) * t)
+
+      if (t < 1) {
+        animationFrameRef.current = requestAnimationFrame(tick)
+        return
+      }
+
+      animationFrameRef.current = null
+    }
+
+    animationFrameRef.current = requestAnimationFrame(tick)
+
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current)
+        animationFrameRef.current = null
+      }
+    }
+  }, [
+    motionTuning.playDurationMs,
+    prefersReducedMotion,
+    props.connectorStyle,
+    props.playAnimationTrigger,
+    restingProgress,
+  ])
 
   return (
     <div className="relative flex h-full min-h-0 w-full items-start justify-center overflow-hidden px-1 pt-0.5">
@@ -483,32 +623,35 @@ function LiteralMode(props: PrototypeControlProps) {
           className="pointer-events-none absolute inset-0 h-full w-full"
           viewBox={`0 0 ${geometry.stageWidth} ${geometry.stageHeight}`}
         >
-          <ConnectorScaffold d={geometry.paths.serve} props={props} />
-          <ConnectorScaffold d={geometry.paths.receive} props={props} />
-          <ConnectorScaffold d={geometry.paths.live} props={props} />
+          <ConnectorScaffold path={geometry.paths.serve} props={props} />
+          <ConnectorScaffold path={geometry.paths.receive} props={props} />
+          <ConnectorScaffold path={geometry.paths.live} props={props} />
 
           <ActiveConnector
-            d={geometry.paths.serve}
+            path={geometry.paths.serve}
             active={activeConnector === 'serve'}
             direction={1}
             connectorStyle={props.connectorStyle}
-            boosted={isBursting}
+            progress={connectorProgress}
+            boosted={isConnectorPlaying}
             props={props}
           />
           <ActiveConnector
-            d={geometry.paths.receive}
+            path={geometry.paths.receive}
             active={activeConnector === 'receive'}
             direction={1}
             connectorStyle={props.connectorStyle}
-            boosted={isBursting}
+            progress={connectorProgress}
+            boosted={isConnectorPlaying}
             props={props}
           />
           <ActiveConnector
-            d={geometry.paths.live}
+            path={geometry.paths.live}
             active={activeConnector === 'live'}
             direction={liveDirection}
             connectorStyle={props.connectorStyle}
-            boosted={isBursting}
+            progress={connectorProgress}
+            boosted={isConnectorPlaying}
             props={props}
           />
         </svg>
@@ -528,7 +671,7 @@ function LiteralMode(props: PrototypeControlProps) {
               label={phase === 'OFFENSE' ? 'Attack' : getPhaseLabel(phase)}
               phase={phase}
               props={props}
-              boosted={isBursting}
+              boosted={isConnectorPlaying}
             />
           </div>
         ))}

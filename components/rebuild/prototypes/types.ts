@@ -13,6 +13,7 @@ export interface PrototypeControlProps {
   canScore: boolean
   connectorStyle: ConnectorStyle
   playAnimationTrigger: number
+  isPreviewingMovement: boolean
   switchMotion: SwitchMotionTuning
   tactileTuning: TactileTuning
   onRotationSelect: (rotation: Rotation) => void
