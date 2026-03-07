@@ -64,6 +64,9 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
+const agentationEndpoint =
+  process.env.NEXT_PUBLIC_AGENTATION_ENDPOINT ?? "http://127.0.0.1:4747";
+
 // Inline script to apply theme before React hydrates (prevents flash)
 const themeScript = `
 (function() {
@@ -132,7 +135,9 @@ export default function RootLayout({
               }}
             />
             {children}
-            {process.env.NODE_ENV === "development" && <Agentation />}
+            {process.env.NODE_ENV === "development" && (
+              <Agentation endpoint={agentationEndpoint} />
+            )}
           </StoreProvider>
         </ConvexClientProvider>
       </body>
