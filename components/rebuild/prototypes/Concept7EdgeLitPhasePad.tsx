@@ -44,7 +44,7 @@ function PhaseTile({
       onClick={() => onPhaseSelect(phase)}
       className={cn(
         'relative flex min-h-[4.9rem] items-center justify-center overflow-hidden rounded-none border border-white/20 bg-[linear-gradient(180deg,rgba(196,196,196,0.3)_0%,rgba(138,138,138,0.3)_100%)] px-3 py-3 text-center text-xl font-medium text-white outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary/60',
-        isActive && 'bg-[linear-gradient(180deg,rgba(214,214,214,0.36)_0%,rgba(148,148,148,0.34)_100%)]'
+        emphasis > 0 && 'bg-[linear-gradient(180deg,rgba(214,214,214,0.36)_0%,rgba(148,148,148,0.34)_100%)]'
       )}
       style={{
         boxShadow:
