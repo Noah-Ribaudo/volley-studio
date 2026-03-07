@@ -230,6 +230,232 @@ export default function RebuildPrototypeLabPage() {
   const mobileDockHeight =
     activeVariant === 'concept4' ? tactileTuning.c4Literal.clusterLayout.dockHeight : tactileTuning.dock.collapsedHeight
 
+  const labStatusCopy = `Rotation ${currentRotation} • ${formatCorePhaseLabel(currentCorePhase)} • ${
+    isOurServe ? 'We Serve' : 'We Receive'
+  }`
+
+  const prototypeControlPanel = (
+    <PrototypeControlPanel
+      activeVariant={activeVariant}
+      variantId={activeVariant}
+      currentRotation={currentRotation}
+      currentCorePhase={currentCorePhase}
+      nextByPlay={nextByPlay}
+      legalPlayLabel={legalPlayLabel}
+      isFoundationalPhase={isFoundationalPhase(currentCorePhase)}
+      isOurServe={isOurServe}
+      canScore={scoringEnabled}
+      connectorStyle={connectorStyle}
+      playAnimationTrigger={playAnimationTrigger}
+      switchMotion={tactileTuning.switchMotion}
+      tactileTuning={tactileTuning}
+      onRotationSelect={handleRotationSelect}
+      onPhaseSelect={handlePhaseSelect}
+      onPlay={handlePlay}
+      onPoint={handlePoint}
+    />
+  )
+
+  const connectorStyleControls =
+    activeVariant === 'concept4' ? (
+      <div className="mt-2 border-t border-border/40 px-1 pt-2">
+        <div className="px-1 pb-1 text-[10px] uppercase tracking-[0.08em] text-muted-foreground">Connection Style</div>
+        <div className="grid grid-cols-4 gap-1">
+          {CONNECTOR_STYLE_OPTIONS.map((style) => (
+            <Button
+              key={style.id}
+              type="button"
+              variant={style.id === connectorStyle ? 'default' : 'outline'}
+              size="sm"
+              className="h-8 px-1 text-[10px]"
+              onClick={() => setConnectorStyle(style.id)}
+            >
+              {style.label}
+            </Button>
+          ))}
+        </div>
+      </div>
+    ) : null
+
+  const labToolContent = (
+    <>
+      <div className="grid grid-cols-2 gap-2">
+        <Button type="button" variant="outline" size="sm" className="h-9" onClick={handleLoadDemoSeeds}>
+          Load Demo Seeds
+        </Button>
+        <Button type="button" variant="outline" size="sm" className="h-9" onClick={handleResetCurrentPhase}>
+          Reset Current Phase
+        </Button>
+        {isDev ? (
+          <Button
+            type="button"
+            size="sm"
+            variant={isTuneOpen ? 'default' : 'outline'}
+            className={cn('h-9', isMobile ? 'col-span-2' : 'w-full')}
+            onClick={() => setIsTuneOpen((prev) => !prev)}
+          >
+            {isTuneOpen ? 'Tune On' : 'Tune'}
+          </Button>
+        ) : null}
+      </div>
+
+      <div className="lab-inset mt-3 rounded-lg p-1">
+        <div
+          className="grid gap-1"
+          style={{ gridTemplateColumns: `repeat(${PROTOTYPE_VARIANTS.length}, minmax(0, 1fr))` }}
+        >
+          {PROTOTYPE_VARIANTS.map((variant) => (
+            <Button
+              key={variant.id}
+              type="button"
+              variant={variant.id === activeVariant ? 'default' : 'outline'}
+              size="sm"
+              className="h-9 px-2 text-[11px]"
+              onClick={() => {
+                setActiveVariant(variant.id)
+                if (isMobile) {
+                  setIsLabTrayOpen(false)
+                }
+              }}
+            >
+              {variant.shortLabel}
+            </Button>
+          ))}
+        </div>
+        <div className="px-2 pt-1 text-[11px] text-muted-foreground">
+          {PROTOTYPE_VARIANTS.find((variant) => variant.id === activeVariant)?.label}
+        </div>
+        {connectorStyleControls}
+      </div>
+    </>
+  )
+
+  const phoneShell = (
+    <>
+      {isMobile ? (
+        <>
+          <div className="pointer-events-none absolute inset-x-2 top-2 z-20 flex justify-end">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="pointer-events-auto lab-panel lab-texture h-9 rounded-full px-4 text-[11px] uppercase tracking-[0.08em]"
+              onClick={() => setIsLabTrayOpen(true)}
+            >
+              Lab
+            </Button>
+          </div>
+
+          <Sheet open={isLabTrayOpen} onOpenChange={setIsLabTrayOpen}>
+            <SheetContent
+              side="top"
+              className="lab-panel lab-texture rounded-b-3xl border-b border-border/60 px-0 pb-0 pt-0"
+            >
+              <SheetHeader className="pb-2 pr-12">
+                <SheetTitle className="text-base">Prototype Lab</SheetTitle>
+                <SheetDescription>{labStatusCopy}</SheetDescription>
+              </SheetHeader>
+              <div className="px-4 pb-4">{labToolContent}</div>
+            </SheetContent>
+          </Sheet>
+        </>
+      ) : null}
+
+      <main className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
+        <section className="lab-panel min-h-0 flex-1 overflow-hidden rounded-xl p-1 sm:p-2">
+          <div className="h-full w-full overflow-hidden rounded-lg border border-border bg-background/70">
+            <VolleyballCourt
+              positions={positions}
+              hideAwayTeam={hideAwayTeam}
+              awayTeamHidePercent={awayTeamHidePercent}
+              rotation={currentRotation}
+              roster={currentTeam?.roster || []}
+              assignments={currentTeam?.position_assignments || {}}
+              onPositionChange={
+                isEditingAllowed
+                  ? (role, position) => {
+                      updateLocalPosition(currentRotation, rallyPhase, role, position)
+                    }
+                  : undefined
+              }
+              arrows={currentArrows}
+              onArrowChange={
+                isEditingAllowed
+                  ? (role, position) => {
+                      if (!position) {
+                        clearArrow(currentRotation, rallyPhase, role)
+                        return
+                      }
+
+                      updateArrow(currentRotation, rallyPhase, role, position)
+                    }
+                  : undefined
+              }
+              arrowCurves={currentArrowCurves}
+              onArrowCurveChange={
+                isEditingAllowed
+                  ? (role, curve) => {
+                      setArrowCurve(currentRotation, rallyPhase, role, curve)
+                    }
+                  : undefined
+              }
+              showPosition={showPosition}
+              showPlayer={showPlayer}
+              showNumber={showNumber}
+              circleTokens={circleTokens}
+              legalityViolations={violations}
+              showLibero={showLibero}
+              currentPhase={rallyPhase}
+              attackBallPosition={currentAttackBallPosition}
+              onAttackBallChange={
+                isEditingAllowed
+                  ? (position) => {
+                      if (!position) {
+                        clearAttackBallPosition(currentRotation, rallyPhase)
+                        return
+                      }
+
+                      setAttackBallPosition(currentRotation, rallyPhase, position)
+                    }
+                  : undefined
+              }
+              statusFlags={currentStatusFlags}
+              onStatusToggle={
+                isEditingAllowed
+                  ? (role, status) => {
+                      togglePlayerStatus(currentRotation, rallyPhase, role, status)
+                    }
+                  : undefined
+              }
+              fullStatusLabels={fullStatusLabels}
+              animationTrigger={playAnimationTrigger}
+              isPreviewingMovement={isPreviewingMovement}
+              tagFlags={currentTagFlags}
+              onTagsChange={
+                isEditingAllowed
+                  ? (role, tags) => {
+                      setTokenTags(currentRotation, rallyPhase, role, tags)
+                    }
+                  : undefined
+              }
+              onPlayerAssign={
+                isEditingAllowed
+                  ? (role, playerId) => {
+                      assignPlayerToRole(role, playerId)
+                    }
+                  : undefined
+              }
+            />
+          </div>
+        </section>
+
+        <section className="lab-panel shrink-0 overflow-hidden rounded-2xl p-1.5" style={{ height: mobileDockHeight }}>
+          <div className="h-full min-h-0 overflow-y-auto pr-1">{prototypeControlPanel}</div>
+        </section>
+      </main>
+    </>
+  )
+
   if (!isUiHydrated) {
     return (
       <div className="flex h-dvh w-full items-center justify-center overflow-hidden bg-background text-foreground">
@@ -246,326 +472,44 @@ export default function RebuildPrototypeLabPage() {
       data-rebuild-lab="tactile"
       style={tactileCssVariables}
     >
-      <div className="relative mx-auto flex h-full w-full max-w-[1280px] flex-col overflow-hidden p-2 sm:p-3">
-        {isMobile ? (
-          <>
-            <div className="pointer-events-none absolute inset-x-2 top-2 z-20 flex justify-end">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="pointer-events-auto lab-panel lab-texture h-9 rounded-full px-4 text-[11px] uppercase tracking-[0.08em]"
-                onClick={() => setIsLabTrayOpen(true)}
-              >
-                Lab
-              </Button>
-            </div>
-
-            <Sheet open={isLabTrayOpen} onOpenChange={setIsLabTrayOpen}>
-              <SheetContent
-                side="top"
-                className="lab-panel lab-texture rounded-b-3xl border-b border-border/60 px-0 pb-0 pt-0"
-              >
-                <SheetHeader className="pb-2 pr-12">
-                  <SheetTitle className="text-base">Prototype Lab</SheetTitle>
-                  <SheetDescription>
-                    Rotation {currentRotation} • {formatCorePhaseLabel(currentCorePhase)} • {isOurServe ? 'We Serve' : 'We Receive'}
-                  </SheetDescription>
-                </SheetHeader>
-                <div className="px-4 pb-4">
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button type="button" variant="outline" size="sm" className="h-9" onClick={handleLoadDemoSeeds}>
-                      Load Demo Seeds
-                    </Button>
-                    <Button type="button" variant="outline" size="sm" className="h-9" onClick={handleResetCurrentPhase}>
-                      Reset Current Phase
-                    </Button>
-                    {isDev ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant={isTuneOpen ? 'default' : 'outline'}
-                        className="col-span-2 h-9"
-                        onClick={() => setIsTuneOpen((prev) => !prev)}
-                      >
-                        {isTuneOpen ? 'Tune On' : 'Tune'}
-                      </Button>
-                    ) : null}
-                  </div>
-
-                  <div className="lab-inset mt-3 rounded-lg p-1">
-                    <div
-                      className="grid gap-1"
-                      style={{ gridTemplateColumns: `repeat(${PROTOTYPE_VARIANTS.length}, minmax(0, 1fr))` }}
-                    >
-                      {PROTOTYPE_VARIANTS.map((variant) => (
-                        <Button
-                          key={variant.id}
-                          type="button"
-                          variant={variant.id === activeVariant ? 'default' : 'outline'}
-                          size="sm"
-                          className="h-9 px-2 text-[11px]"
-                          onClick={() => {
-                            setActiveVariant(variant.id)
-                            setIsLabTrayOpen(false)
-                          }}
-                        >
-                          {variant.shortLabel}
-                        </Button>
-                      ))}
-                    </div>
-                    <div className="px-2 pt-1 text-[11px] text-muted-foreground">
-                      {PROTOTYPE_VARIANTS.find((variant) => variant.id === activeVariant)?.label}
-                    </div>
-                    {activeVariant === 'concept4' ? (
-                      <div className="mt-2 border-t border-border/40 px-1 pt-2">
-                        <div className="px-1 pb-1 text-[10px] uppercase tracking-[0.08em] text-muted-foreground">
-                          Connection Style
-                        </div>
-                        <div className="grid grid-cols-4 gap-1">
-                          {CONNECTOR_STYLE_OPTIONS.map((style) => (
-                            <Button
-                              key={style.id}
-                              type="button"
-                              variant={style.id === connectorStyle ? 'default' : 'outline'}
-                              size="sm"
-                              className="h-8 px-1 text-[10px]"
-                              onClick={() => setConnectorStyle(style.id)}
-                            >
-                              {style.label}
-                            </Button>
-                          ))}
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-              </SheetContent>
-            </Sheet>
-          </>
-        ) : (
-          <header className="lab-panel lab-texture shrink-0 rounded-xl p-2">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Volley Studio Rebuild Lab</p>
-                <h1 className="text-lg font-semibold">Experimental Control Prototypes</h1>
-                <p className="text-xs text-muted-foreground">
-                  Rotation {currentRotation} • {formatCorePhaseLabel(currentCorePhase)} • {isOurServe ? 'We Serve' : 'We Receive'}
-                </p>
-              </div>
-              <div className="flex items-center gap-1">
-                <Button type="button" variant="outline" size="sm" className="h-8" onClick={handleLoadDemoSeeds}>
-                  Load Demo Seeds
-                </Button>
-                <Button type="button" variant="outline" size="sm" className="h-8" onClick={handleResetCurrentPhase}>
-                  Reset Current Phase
-                </Button>
-                {isDev ? (
-                  <div className="w-[5.25rem]">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant={isTuneOpen ? 'default' : 'outline'}
-                      className="h-8 w-full"
-                      onClick={() => setIsTuneOpen((prev) => !prev)}
-                    >
-                      {isTuneOpen ? 'Tune On' : 'Tune'}
-                    </Button>
-                  </div>
-                ) : null}
-              </div>
-            </div>
-
-            <div className="lab-inset mt-2 rounded-lg p-1">
+      {isMobile ? (
+        <div className="relative mx-auto flex h-full w-full flex-col overflow-hidden p-2 sm:p-3">{phoneShell}</div>
+      ) : (
+        <div className="relative flex h-full w-full items-center justify-center overflow-hidden px-6 py-4">
+          <div className="flex h-full w-full max-w-[960px] items-center justify-center gap-8">
+            <div className="relative flex shrink-0 items-center justify-center">
               <div
-                className="grid gap-1"
-                style={{ gridTemplateColumns: `repeat(${PROTOTYPE_VARIANTS.length}, minmax(0, 1fr))` }}
+                className="relative rounded-[44px] border border-white/12 bg-[linear-gradient(180deg,rgba(18,18,22,0.98)_0%,rgba(8,8,10,0.98)_100%)] p-[10px] shadow-[0_32px_60px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.06)]"
+                style={{
+                  height: 'min(852px, calc(100dvh - 32px))',
+                  aspectRatio: '393 / 852',
+                }}
               >
-                {PROTOTYPE_VARIANTS.map((variant) => (
-                  <Button
-                    key={variant.id}
-                    type="button"
-                    variant={variant.id === activeVariant ? 'default' : 'outline'}
-                    size="sm"
-                    className="h-9 px-2 text-[11px]"
-                    onClick={() => setActiveVariant(variant.id)}
-                  >
-                    {variant.shortLabel}
-                  </Button>
-                ))}
-              </div>
-              <div className="px-2 pt-1 text-[11px] text-muted-foreground">
-                {PROTOTYPE_VARIANTS.find((variant) => variant.id === activeVariant)?.label}
-              </div>
-              {activeVariant === 'concept4' ? (
-                <div className="mt-2 border-t border-border/40 px-1 pt-2">
-                  <div className="px-1 pb-1 text-[10px] uppercase tracking-[0.08em] text-muted-foreground">
-                    Connection Style
-                  </div>
-                  <div className="grid grid-cols-4 gap-1">
-                    {CONNECTOR_STYLE_OPTIONS.map((style) => (
-                      <Button
-                        key={style.id}
-                        type="button"
-                        variant={style.id === connectorStyle ? 'default' : 'outline'}
-                        size="sm"
-                        className="h-8 px-1 text-[10px]"
-                        onClick={() => setConnectorStyle(style.id)}
-                      >
-                        {style.label}
-                      </Button>
-                    ))}
-                  </div>
+                <div className="pointer-events-none absolute left-1/2 top-[10px] h-[28px] w-[128px] -translate-x-1/2 rounded-full bg-black/55 ring-1 ring-white/10" />
+                <div className="relative h-full w-full overflow-hidden rounded-[34px] border border-white/6 bg-background">
+                  <div className="relative flex h-full w-full flex-col overflow-hidden p-2">{phoneShell}</div>
                 </div>
-              ) : null}
-            </div>
-          </header>
-        )}
-
-        <main className={cn('flex min-h-0 flex-1 flex-col gap-2 overflow-hidden', !isMobile && 'mt-2')}>
-          <section className="lab-panel min-h-0 flex-1 overflow-hidden rounded-xl p-1 sm:p-2">
-            <div className="h-full w-full overflow-hidden rounded-lg border border-border bg-background/70">
-              <VolleyballCourt
-                positions={positions}
-                hideAwayTeam={hideAwayTeam}
-                awayTeamHidePercent={awayTeamHidePercent}
-                rotation={currentRotation}
-                roster={currentTeam?.roster || []}
-                assignments={currentTeam?.position_assignments || {}}
-                onPositionChange={
-                  isEditingAllowed
-                    ? (role, position) => {
-                        updateLocalPosition(currentRotation, rallyPhase, role, position)
-                      }
-                    : undefined
-                }
-                arrows={currentArrows}
-                onArrowChange={
-                  isEditingAllowed
-                    ? (role, position) => {
-                        if (!position) {
-                          clearArrow(currentRotation, rallyPhase, role)
-                          return
-                        }
-
-                        updateArrow(currentRotation, rallyPhase, role, position)
-                      }
-                    : undefined
-                }
-                arrowCurves={currentArrowCurves}
-                onArrowCurveChange={
-                  isEditingAllowed
-                    ? (role, curve) => {
-                        setArrowCurve(currentRotation, rallyPhase, role, curve)
-                      }
-                    : undefined
-                }
-                showPosition={showPosition}
-                showPlayer={showPlayer}
-                showNumber={showNumber}
-                circleTokens={circleTokens}
-                legalityViolations={violations}
-                showLibero={showLibero}
-                currentPhase={rallyPhase}
-                attackBallPosition={currentAttackBallPosition}
-                onAttackBallChange={
-                  isEditingAllowed
-                    ? (position) => {
-                        if (!position) {
-                          clearAttackBallPosition(currentRotation, rallyPhase)
-                          return
-                        }
-
-                        setAttackBallPosition(currentRotation, rallyPhase, position)
-                      }
-                    : undefined
-                }
-                statusFlags={currentStatusFlags}
-                onStatusToggle={
-                  isEditingAllowed
-                    ? (role, status) => {
-                        togglePlayerStatus(currentRotation, rallyPhase, role, status)
-                      }
-                    : undefined
-                }
-                fullStatusLabels={fullStatusLabels}
-                animationTrigger={playAnimationTrigger}
-                isPreviewingMovement={isPreviewingMovement}
-                tagFlags={currentTagFlags}
-                onTagsChange={
-                  isEditingAllowed
-                    ? (role, tags) => {
-                        setTokenTags(currentRotation, rallyPhase, role, tags)
-                      }
-                    : undefined
-                }
-                onPlayerAssign={
-                  isEditingAllowed
-                    ? (role, playerId) => {
-                        assignPlayerToRole(role, playerId)
-                      }
-                    : undefined
-                }
-              />
-            </div>
-          </section>
-
-          {isMobile ? (
-            <section
-              className="lab-panel shrink-0 overflow-hidden rounded-2xl p-1.5"
-              style={{ height: mobileDockHeight }}
-            >
-              <div className="h-full min-h-0 overflow-y-auto pr-1">
-                <PrototypeControlPanel
-                  activeVariant={activeVariant}
-                  variantId={activeVariant}
-                  currentRotation={currentRotation}
-                  currentCorePhase={currentCorePhase}
-                  nextByPlay={nextByPlay}
-                  legalPlayLabel={legalPlayLabel}
-                  isFoundationalPhase={isFoundationalPhase(currentCorePhase)}
-                  isOurServe={isOurServe}
-                  canScore={scoringEnabled}
-                  connectorStyle={connectorStyle}
-                  playAnimationTrigger={playAnimationTrigger}
-                  switchMotion={tactileTuning.switchMotion}
-                  tactileTuning={tactileTuning}
-                  onRotationSelect={handleRotationSelect}
-                  onPhaseSelect={handlePhaseSelect}
-                  onPlay={handlePlay}
-                  onPoint={handlePoint}
-                />
+                <div className="pointer-events-none absolute bottom-[7px] left-1/2 h-[4px] w-[120px] -translate-x-1/2 rounded-full bg-white/10" />
               </div>
-            </section>
-          ) : (
-            <section className="lab-panel h-[38dvh] min-h-[240px] max-h-[360px] shrink-0 overflow-hidden rounded-xl p-2">
-              <div className="h-full min-h-0 overflow-y-auto pr-1">
-                <PrototypeControlPanel
-                  activeVariant={activeVariant}
-                  variantId={activeVariant}
-                  currentRotation={currentRotation}
-                  currentCorePhase={currentCorePhase}
-                  nextByPlay={nextByPlay}
-                  legalPlayLabel={legalPlayLabel}
-                  isFoundationalPhase={isFoundationalPhase(currentCorePhase)}
-                  isOurServe={isOurServe}
-                  canScore={scoringEnabled}
-                  connectorStyle={connectorStyle}
-                  playAnimationTrigger={playAnimationTrigger}
-                  switchMotion={tactileTuning.switchMotion}
-                  tactileTuning={tactileTuning}
-                  onRotationSelect={handleRotationSelect}
-                  onPhaseSelect={handlePhaseSelect}
-                  onPlay={handlePlay}
-                  onPoint={handlePoint}
-                />
-              </div>
-            </section>
-          )}
-        </main>
+            </div>
 
-        {isDev && isTuneOpen ? <RebuildDialKitBridge onTuningChange={handleTuningChange} /> : null}
-      </div>
+            <aside className="w-[340px] max-w-[340px] shrink-0">
+              <div className="lab-panel lab-texture rounded-[30px] p-4">
+                <div className="pb-3">
+                  <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Mobile Simulator</p>
+                  <h1 className="text-lg font-semibold">Prototype Lab</h1>
+                  <p className="text-xs text-muted-foreground">{labStatusCopy}</p>
+                </div>
+                {labToolContent}
+              </div>
+            </aside>
+          </div>
+        </div>
+      )}
+
+      {isDev && isTuneOpen ? (
+        <RebuildDialKitBridge onTuningChange={handleTuningChange} position={isMobile ? 'top-right' : 'top-left'} />
+      ) : null}
     </div>
   )
 }

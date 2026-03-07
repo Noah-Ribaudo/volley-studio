@@ -1,11 +1,13 @@
 'use client'
 
+import type { DialPosition } from 'dialkit'
 import { DialRoot, useDialKit } from 'dialkit'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { DEFAULT_TACTILE_TUNING, sanitizeTactileTuning, type TactileTuning } from '@/lib/rebuild/tactileTuning'
 
 interface RebuildDialKitBridgeProps {
   onTuningChange: (tuning: TactileTuning) => void
+  position?: DialPosition
 }
 
 const RESET_ACTIONS = new Set([
@@ -21,7 +23,7 @@ const RESET_ACTIONS = new Set([
   'resetPhaseSurface',
 ])
 
-export function RebuildDialKitBridge({ onTuningChange }: RebuildDialKitBridgeProps) {
+export function RebuildDialKitBridge({ onTuningChange, position = 'top-right' }: RebuildDialKitBridgeProps) {
   const [seed, setSeed] = useState<TactileTuning>(DEFAULT_TACTILE_TUNING)
   const [panelVersion, setPanelVersion] = useState(0)
   const latestTuningRef = useRef<TactileTuning>(DEFAULT_TACTILE_TUNING)
@@ -336,5 +338,5 @@ export function RebuildDialKitBridge({ onTuningChange }: RebuildDialKitBridgePro
     onTuningChange(nextTuning)
   }, [nextTuning, onTuningChange])
 
-  return <DialRoot defaultOpen position="top-right" />
+  return <DialRoot defaultOpen position={position} />
 }
