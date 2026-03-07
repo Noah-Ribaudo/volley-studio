@@ -119,7 +119,7 @@ export function RebuildDialKitBridge({
       ...(activeVariant === 'concept8'
         ? {
             phasePadHardware: {
-              trackInset: [seed.phasePadHardware.trackInset, 4, 18, 0.25],
+              trackInset: [seed.phasePadHardware.trackInset, 0, 18, 0.1],
               trackRadius: [seed.phasePadHardware.trackRadius, 4, 18, 0.25],
               trackWidth: [seed.phasePadHardware.trackWidth, 2, 12, 0.1],
               piecesPerQuarter: [seed.phasePadHardware.piecesPerQuarter, 4, 18, 1],

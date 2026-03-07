@@ -312,7 +312,7 @@ export function sanitizeTactileTuning(input: TactileTuning): TactileTuning {
       },
     },
     phasePadHardware: {
-      trackInset: clamp(input.phasePadHardware.trackInset, 4, 18),
+      trackInset: clamp(input.phasePadHardware.trackInset, 0, 18),
       trackRadius: clamp(input.phasePadHardware.trackRadius, 4, 18),
       trackWidth: clamp(input.phasePadHardware.trackWidth, 2, 12),
       piecesPerQuarter: clamp(Math.round(input.phasePadHardware.piecesPerQuarter), 4, 18),
