@@ -341,26 +341,34 @@ export function TactilePlayJoystick({
           </svg>
         ) : null}
 
-        <motion.div
-          animate={{
-            x: offset.x,
-            y: offset.y,
-            scale: isDragging ? 0.97 : 1,
-          }}
-          transition={knobTransition}
-          className={cn(
-            'lab-raised lab-texture absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-border/70 text-sm font-semibold text-foreground',
-            isDragging && 'lab-pressed'
-          )}
+        <div
+          className="pointer-events-none absolute left-1/2 top-1/2"
           style={{
             width: frame.knobSize,
             height: frame.knobSize,
-            boxShadow: `0 0 ${14 + joystickTuning.haloIntensity * 18}px oklch(72% 0.14 55 / ${0.08 + joystickTuning.haloIntensity * 0.24})`,
+            marginLeft: frame.knobSize / -2,
+            marginTop: frame.knobSize / -2,
           }}
         >
-          <div className="pointer-events-none absolute inset-[18%] rounded-full border border-white/18 bg-black/5" />
-          <DirectionIcon aria-hidden className="relative z-[1] h-4 w-4 text-foreground/85" strokeWidth={2.1} />
-        </motion.div>
+          <motion.div
+            animate={{
+              x: offset.x,
+              y: offset.y,
+              scale: isDragging ? 0.97 : 1,
+            }}
+            transition={knobTransition}
+            className={cn(
+              'lab-raised lab-texture flex h-full w-full items-center justify-center rounded-full border border-border/70 text-sm font-semibold text-foreground',
+              isDragging && 'lab-pressed'
+            )}
+            style={{
+              boxShadow: `0 0 ${14 + joystickTuning.haloIntensity * 18}px oklch(72% 0.14 55 / ${0.08 + joystickTuning.haloIntensity * 0.24})`,
+            }}
+          >
+            <div className="pointer-events-none absolute inset-[18%] rounded-full border border-white/18 bg-black/5" />
+            <DirectionIcon aria-hidden className="relative z-[1] h-4 w-4 text-foreground/85" strokeWidth={2.1} />
+          </motion.div>
+        </div>
       </motion.button>
     </div>
   )
