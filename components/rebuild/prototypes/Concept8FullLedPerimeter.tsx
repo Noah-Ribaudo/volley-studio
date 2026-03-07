@@ -47,7 +47,7 @@ function PhaseAreaTile({
 export function Concept8FullLedPerimeter(props: PrototypeControlProps) {
   const { transitionFrom, transitionTo, transitionProgress, liveStatus } = usePhasePadTransition(props)
   const hardwareTuning = props.tactileTuning.phasePadHardware
-  const tileInset = Math.max(14, hardwareTuning.trackInset + hardwareTuning.trackWidth + hardwareTuning.pieceThickness * 1.9)
+  const lanePadding = Math.max(8, hardwareTuning.trackWidth + 4.5)
   const perimeterState = getQuarterTrackSegmentState({
     currentCorePhase: props.currentCorePhase,
     transitionFrom,
@@ -73,23 +73,22 @@ export function Concept8FullLedPerimeter(props: PrototypeControlProps) {
       <div className="rounded-[22px] border border-border/70 bg-[linear-gradient(180deg,rgba(58,58,60,0.94)_0%,rgba(22,22,26,0.99)_100%)] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
         <PhasePadRotationRail {...props} />
 
-        <div className="rounded-[20px] border border-white/10 bg-[linear-gradient(180deg,rgba(114,114,114,0.18)_0%,rgba(64,64,64,0.26)_100%)] p-2">
-          <div className="relative overflow-visible rounded-[18px] border border-white/8 bg-[rgba(14,14,16,0.38)] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),inset_0_-8px_14px_rgba(0,0,0,0.22)]">
-            <div className="absolute inset-0 z-[1] overflow-visible rounded-[18px]">
+        <div className="overflow-visible rounded-[20px] border border-white/10 bg-[linear-gradient(180deg,rgba(114,114,114,0.18)_0%,rgba(64,64,64,0.26)_100%)] p-2">
+          <div className="relative z-[1] overflow-visible rounded-[16px] border border-white/8 bg-[linear-gradient(180deg,rgba(64,64,64,0.55)_0%,rgba(38,38,40,0.88)_100%)] p-[10px] shadow-[inset_0_1px_0_rgba(255,255,255,0.06),inset_0_-18px_26px_rgba(0,0,0,0.16)]">
+            <div
+              className="relative z-[3] rounded-[14px]"
+              style={{
+                padding: `${lanePadding}px`,
+              }}
+            >
               <PhasePadHardwareLane
                 tuning={hardwareTuning}
                 segmentStart={perimeterState.segmentStart}
                 segmentLength={perimeterState.segmentLength}
                 totalLights={perimeterState.totalLights}
               />
-            </div>
 
-            <div
-              className="relative z-[2] grid grid-cols-2 gap-px overflow-hidden rounded-[16px] bg-black/35"
-              style={{
-                padding: `${tileInset}px`,
-              }}
-            >
+              <div className="relative z-[1] grid grid-cols-2 gap-px overflow-hidden rounded-[12px] bg-black/40">
               {PHASE_PAD_LAYOUT.map((item) => (
                 <PhaseAreaTile
                   key={item.phase}
@@ -99,11 +98,10 @@ export function Concept8FullLedPerimeter(props: PrototypeControlProps) {
                   onPhaseSelect={props.onPhaseSelect}
                 />
               ))}
+              </div>
             </div>
 
-            <div className="absolute inset-0 z-[3]">
-              <PhasePadJoystick props={props} />
-            </div>
+            <PhasePadJoystick props={props} />
           </div>
         </div>
       </div>
