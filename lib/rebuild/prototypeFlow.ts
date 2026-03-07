@@ -2,7 +2,6 @@ import type { RallyPhase, Rotation } from '@/lib/types'
 
 export type CorePhase = 'SERVE' | 'RECEIVE' | 'OFFENSE' | 'DEFENSE'
 export type PrototypeVariantId = 'concept3' | 'concept4' | 'concept5' | 'concept6'
-export type Concept4Mode = 'radial' | 'literal'
 
 export type PointWinner = 'us' | 'them'
 

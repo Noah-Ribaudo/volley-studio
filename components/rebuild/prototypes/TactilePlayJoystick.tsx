@@ -30,9 +30,9 @@ const JOYSTICK_FRAME = {
     labelClassName: 'text-[11px] tracking-[0.01em]',
   },
   literal: {
-    frameSize: 92,
-    knobSize: 40,
-    inset: 10,
+    frameSize: 84,
+    knobSize: 36,
+    inset: 8,
     labelClassName: 'text-[9px] tracking-[0.06em]',
   },
 } as const

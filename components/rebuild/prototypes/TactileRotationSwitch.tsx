@@ -35,7 +35,7 @@ export function TactileRotationSwitch({
       }
 
   const pressTravel = prefersReducedMotion ? 0 : switchMotion.pressTravel
-  const itemHeight = density === 'compact' ? 'h-8' : 'h-10'
+  const itemHeight = density === 'compact' ? 'h-[1.8rem]' : 'h-10'
 
   return (
     <RadioGroup.Root
@@ -59,7 +59,7 @@ export function TactileRotationSwitch({
                 y: isActive ? pressTravel : 0,
               }}
               className={cn(
-                'lab-pressable flex w-full items-center justify-center rounded-lg border text-center text-[11px] font-semibold tracking-[0.08em] text-foreground/90 transition-colors',
+                'lab-pressable flex w-full items-center justify-center rounded-lg border text-center text-[10px] font-semibold tracking-[0.08em] text-foreground/90 transition-colors',
                 itemHeight,
                 isActive ? 'lab-pressed border-border/80 text-foreground' : 'border-border/55 text-muted-foreground'
               )}

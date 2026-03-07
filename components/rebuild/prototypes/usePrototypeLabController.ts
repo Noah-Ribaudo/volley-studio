@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   applyPointScored,
   canVariantScore,
-  type Concept4Mode,
   getNextByPlay,
   type CorePhase,
   type PointWinner,
@@ -14,23 +13,14 @@ import type { Rotation } from '@/lib/types'
 
 const PLAY_ADVANCE_DELAY_MS = 1050
 
-function wrapRotation(rotation: Rotation, delta: -1 | 1): Rotation {
-  if (delta === 1) {
-    return rotation === 6 ? 1 : ((rotation + 1) as Rotation)
-  }
-  return rotation === 1 ? 6 : ((rotation - 1) as Rotation)
-}
-
 export function usePrototypeLabController() {
   const [activeVariant, setActiveVariant] = useState<PrototypeVariantId>('concept4')
-  const [concept4Mode, setConcept4Mode] = useState<Concept4Mode>('radial')
   const [currentRotation, setCurrentRotation] = useState<Rotation>(1)
   const [currentCorePhase, setCurrentCorePhase] = useState<CorePhase>('SERVE')
   const [isOurServe, setIsOurServe] = useState(true)
   const [isPreviewingMovement, setPreviewingMovement] = useState(false)
   const [playAnimationTrigger, setPlayAnimationTrigger] = useState(0)
   const [isLabTrayOpen, setIsLabTrayOpen] = useState(false)
-  const [isControlDockExpanded, setIsControlDockExpanded] = useState(false)
 
   const playTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -50,14 +40,6 @@ export function usePrototypeLabController() {
     clearPlayTimer()
     setPreviewingMovement(false)
   }, [clearPlayTimer])
-
-  const handleRotationStep = useCallback(
-    (delta: -1 | 1) => {
-      resetPreview()
-      setCurrentRotation((prev) => wrapRotation(prev, delta))
-    },
-    [resetPreview]
-  )
 
   const handleRotationSelect = useCallback(
     (rotation: Rotation) => {
@@ -124,8 +106,6 @@ export function usePrototypeLabController() {
   return {
     activeVariant,
     setActiveVariant,
-    concept4Mode,
-    setConcept4Mode,
     currentRotation,
     currentCorePhase,
     isOurServe,
@@ -133,9 +113,6 @@ export function usePrototypeLabController() {
     playAnimationTrigger,
     isLabTrayOpen,
     setIsLabTrayOpen,
-    isControlDockExpanded,
-    setIsControlDockExpanded,
-    handleRotationStep,
     handleRotationSelect,
     handlePhaseSelect,
     handlePlay,

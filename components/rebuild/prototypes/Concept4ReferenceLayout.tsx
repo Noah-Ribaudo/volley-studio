@@ -12,31 +12,27 @@ import type { PrototypeControlProps } from './types'
  *
  * Read top-to-bottom. Each state is ms after interaction.
  *
- *    0ms   dock content mounts in compact mobile footprint
- *   90ms   mode toggle shifts between radial and literal
- *  140ms   phase emphasis and connector strokes settle
+ *    0ms   compact control bank mounts with no extra chrome
+ *  120ms   phase emphasis and connector strokes settle
  *  180ms   active control finishes tactile press travel
  * ───────────────────────────────────────────────────────── */
 
 const TIMING = {
-  modeSwap: 0.09, // mode toggle moves between radial and literal
   emphasisSettle: 0.14, // phase cards and connectors settle after state changes
 }
 
 const C4_LAYOUT = {
-  mobileGap: 'var(--lab-dock-gap)',
-  controlPadding: 'var(--lab-dock-inner-padding)',
+  mobileGap: '6px',
+  controlPadding: '8px',
 }
 
 const LITERAL_STAGE = {
-  width: 312,
-  height: 176,
-  topCardY: 18,
-  bottomCardY: 106,
-  cardWidth: 112,
-  cardHeight: 52,
-  centerX: 156,
-  centerY: 88,
+  width: 300,
+  height: 144,
+  topCardY: 10,
+  bottomCardY: 92,
+  cardWidth: 102,
+  cardHeight: 42,
 }
 
 function getPhaseLabel(phase: CorePhase): string {
@@ -113,7 +109,7 @@ function PhaseCard({
       transition={transition}
       className={cn(
         'lab-raised lab-texture relative flex items-center justify-center overflow-hidden rounded-[18px] border text-center font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary/60',
-        compact ? 'min-h-[3.2rem] px-3.5 text-[1.1rem]' : 'min-h-14 px-4 text-lg',
+        compact ? 'min-h-[2.625rem] px-3 text-[1rem]' : 'min-h-14 px-4 text-lg',
         isActive ? 'lab-pressed border-border/85' : 'border-border/60'
       )}
       style={{
@@ -138,53 +134,6 @@ function PhaseCard({
       ) : null}
       <span>{label}</span>
     </motion.button>
-  )
-}
-
-function ModeToggle({
-  value,
-  onValueChange,
-  props,
-}: {
-  value: PrototypeControlProps['concept4Mode']
-  onValueChange: PrototypeControlProps['onConcept4ModeChange']
-  props: PrototypeControlProps
-}) {
-  const prefersReducedMotion = useReducedMotion()
-  const transition = prefersReducedMotion
-    ? { duration: 0.001 }
-    : {
-        type: 'spring' as const,
-        stiffness: props.switchMotion.spring.stiffness,
-        damping: props.switchMotion.spring.damping,
-        mass: props.switchMotion.spring.mass,
-      }
-
-  return (
-    <div className="lab-inset flex rounded-xl p-1">
-      {(['radial', 'literal'] as const).map((mode) => {
-        const isActive = value === mode
-        return (
-          <motion.button
-            key={mode}
-            type="button"
-            animate={{
-              y: isActive ? props.switchMotion.pressTravel * 0.8 : 0,
-              scale: isActive ? 0.985 : 1,
-            }}
-            transition={transition}
-            className={cn(
-              'lab-pressable min-w-[3.7rem] rounded-lg border px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-foreground/90',
-              isActive ? 'lab-pressed border-border/80' : 'border-border/50'
-            )}
-            style={{ transitionDuration: `${TIMING.modeSwap}s` }}
-            onClick={() => onValueChange(mode)}
-          >
-            {mode}
-          </motion.button>
-        )
-      })}
-    </div>
   )
 }
 
@@ -225,68 +174,6 @@ function ConnectorLine({
   )
 }
 
-function RadialMode(props: PrototypeControlProps) {
-  const connectors = props.tactileTuning.connectors
-
-  return (
-    <div className="flex h-full min-h-0 items-center justify-center overflow-hidden">
-      <div className="relative flex w-full max-w-[240px] items-center justify-center">
-        <svg
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 h-full w-full"
-          viewBox="0 0 240 240"
-        >
-          <path
-            d="M48 80 C82 32, 158 32, 192 80"
-            fill="none"
-            stroke="var(--primary)"
-            strokeOpacity={props.currentCorePhase === 'SERVE' ? connectors.activeOpacity : connectors.idleOpacity}
-            strokeWidth={props.currentCorePhase === 'SERVE' ? connectors.activeThickness : 1.2}
-            strokeLinecap="round"
-          />
-          <path
-            d="M48 160 C82 208, 158 208, 192 160"
-            fill="none"
-            stroke="var(--primary)"
-            strokeOpacity={props.currentCorePhase === 'RECEIVE' ? connectors.activeOpacity : connectors.idleOpacity}
-            strokeWidth={props.currentCorePhase === 'RECEIVE' ? connectors.activeThickness : 1.2}
-            strokeLinecap="round"
-            strokeDasharray="4 3"
-          />
-          <path
-            d="M192 88 C210 110, 210 130, 192 152"
-            fill="none"
-            stroke="var(--primary)"
-            strokeOpacity={
-              props.currentCorePhase === 'OFFENSE' || props.currentCorePhase === 'DEFENSE'
-                ? connectors.activeOpacity
-                : connectors.idleOpacity
-            }
-            strokeWidth={
-              props.currentCorePhase === 'OFFENSE' || props.currentCorePhase === 'DEFENSE'
-                ? connectors.activeThickness
-                : 1.2
-            }
-            strokeLinecap="round"
-          />
-        </svg>
-
-        <TactilePlayJoystick
-          currentPhase={props.currentCorePhase}
-          nextPhase={props.nextByPlay}
-          nextLabel={getPhaseLabel(props.nextByPlay)}
-          mode="radial"
-          switchMotion={props.switchMotion}
-          joystickTuning={props.tactileTuning.joystick}
-          phaseEmphasis={props.tactileTuning.phaseEmphasis}
-          onPlay={props.onPlay}
-          onPhaseSelect={props.onPhaseSelect}
-        />
-      </div>
-    </div>
-  )
-}
-
 function LiteralMode(props: PrototypeControlProps) {
   const isServeLink = props.currentCorePhase === 'SERVE'
   const isReceiveLink = props.currentCorePhase === 'RECEIVE'
@@ -294,7 +181,7 @@ function LiteralMode(props: PrototypeControlProps) {
 
   return (
     <div className="relative flex h-full min-h-0 items-center justify-center overflow-hidden">
-      <div className="relative w-full max-w-[320px] aspect-[312/176]">
+      <div className="relative w-full max-w-[300px] aspect-[300/144]">
         <svg
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 h-full w-full"
@@ -328,19 +215,19 @@ function LiteralMode(props: PrototypeControlProps) {
           />
         </svg>
 
-        <div className="absolute left-0 top-[18px] w-[112px]">
+        <div className="absolute left-0 top-[10px] w-[102px]">
           <PhaseCard label="Serve" phase="SERVE" compact props={props} />
         </div>
 
-        <div className="absolute right-0 top-[18px] w-[112px]">
+        <div className="absolute right-0 top-[10px] w-[102px]">
           <PhaseCard label="Defense" phase="DEFENSE" compact props={props} />
         </div>
 
-        <div className="absolute left-0 top-[106px] w-[112px]">
+        <div className="absolute left-0 top-[92px] w-[102px]">
           <PhaseCard label="Receive" phase="RECEIVE" compact props={props} />
         </div>
 
-        <div className="absolute right-0 top-[106px] w-[112px]">
+        <div className="absolute right-0 top-[92px] w-[102px]">
           <PhaseCard label="Attack" phase="OFFENSE" compact props={props} />
         </div>
 
@@ -370,18 +257,6 @@ export function Concept4ReferenceLayout(props: PrototypeControlProps) {
         gap: C4_LAYOUT.mobileGap,
       }}
     >
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 flex-1 items-center gap-2">
-          <div className="hidden text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground sm:block">
-            Concept 4
-          </div>
-          <div className="rounded-full border border-border/55 bg-card/70 px-2.5 py-1 text-[9px] uppercase tracking-[0.08em] text-muted-foreground">
-            Next: {getPhaseLabel(props.nextByPlay)}
-          </div>
-        </div>
-        <ModeToggle value={props.concept4Mode} onValueChange={props.onConcept4ModeChange} props={props} />
-      </div>
-
       <TactileRotationSwitch
         className="w-full"
         density="compact"
@@ -396,7 +271,7 @@ export function Concept4ReferenceLayout(props: PrototypeControlProps) {
           padding: C4_LAYOUT.controlPadding,
         }}
       >
-        {props.concept4Mode === 'radial' ? <RadialMode {...props} /> : <LiteralMode {...props} />}
+        <LiteralMode {...props} />
       </div>
     </div>
   )

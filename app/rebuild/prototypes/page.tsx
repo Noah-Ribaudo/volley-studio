@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { motion } from 'motion/react'
 import { VolleyballCourt } from '@/components/court'
 import { PrototypeControlPanel } from '@/components/rebuild/prototypes'
 import { RebuildDialKitBridge } from '@/components/rebuild/prototypes/RebuildDialKitBridge'
@@ -54,8 +53,6 @@ export default function RebuildPrototypeLabPage() {
   const {
     activeVariant,
     setActiveVariant,
-    concept4Mode,
-    setConcept4Mode,
     currentRotation,
     currentCorePhase,
     isOurServe,
@@ -63,8 +60,6 @@ export default function RebuildPrototypeLabPage() {
     playAnimationTrigger,
     isLabTrayOpen,
     setIsLabTrayOpen,
-    isControlDockExpanded,
-    setIsControlDockExpanded,
     handleRotationSelect,
     handlePhaseSelect,
     handlePlay,
@@ -229,9 +224,7 @@ export default function RebuildPrototypeLabPage() {
   const handleTuningChange = useCallback((next: TactileTuning) => {
     setTactileTuning(next)
   }, [])
-  const mobileDockHeight = isControlDockExpanded
-    ? tactileTuning.dock.expandedHeight
-    : tactileTuning.dock.collapsedHeight
+  const mobileDockHeight = activeVariant === 'concept4' ? 238 : tactileTuning.dock.collapsedHeight
 
   if (!isUiHydrated) {
     return (
@@ -472,54 +465,30 @@ export default function RebuildPrototypeLabPage() {
           </section>
 
           {isMobile ? (
-            <motion.section
-              animate={{ height: mobileDockHeight }}
-              transition={{
-                type: 'spring',
-                stiffness: tactileTuning.switchMotion.spring.stiffness,
-                damping: tactileTuning.switchMotion.spring.damping,
-                mass: tactileTuning.switchMotion.spring.mass,
-              }}
-              className="lab-panel shrink-0 overflow-hidden rounded-2xl p-2"
+            <section
+              className="lab-panel shrink-0 overflow-hidden rounded-2xl p-1.5"
+              style={{ height: mobileDockHeight }}
             >
-              <div className="flex h-full min-h-0 flex-col">
-                <button
-                  type="button"
-                  className="lab-inset flex h-9 items-center justify-between rounded-xl px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground"
-                  onClick={() => setIsControlDockExpanded((prev) => !prev)}
-                >
-                  <span>
-                    {PROTOTYPE_VARIANTS.find((variant) => variant.id === activeVariant)?.shortLabel} • R{currentRotation} •{' '}
-                    {formatCorePhaseLabel(currentCorePhase)}
-                  </span>
-                  <span>{isControlDockExpanded ? 'Collapse' : 'Expand'}</span>
-                </button>
-
-                <div className="mt-2 min-h-0 flex-1 overflow-hidden">
-                  <div className="h-full min-h-0 overflow-y-auto pr-1">
-                    <PrototypeControlPanel
-                      activeVariant={activeVariant}
-                      variantId={activeVariant}
-                      currentRotation={currentRotation}
-                      currentCorePhase={currentCorePhase}
-                      nextByPlay={nextByPlay}
-                      legalPlayLabel={legalPlayLabel}
-                      isFoundationalPhase={isFoundationalPhase(currentCorePhase)}
-                      isOurServe={isOurServe}
-                      canScore={scoringEnabled}
-                      switchMotion={tactileTuning.switchMotion}
-                      tactileTuning={tactileTuning}
-                      concept4Mode={concept4Mode}
-                      onRotationSelect={handleRotationSelect}
-                      onPhaseSelect={handlePhaseSelect}
-                      onConcept4ModeChange={setConcept4Mode}
-                      onPlay={handlePlay}
-                      onPoint={handlePoint}
-                    />
-                  </div>
-                </div>
+              <div className="h-full min-h-0 overflow-y-auto pr-1">
+                <PrototypeControlPanel
+                  activeVariant={activeVariant}
+                  variantId={activeVariant}
+                  currentRotation={currentRotation}
+                  currentCorePhase={currentCorePhase}
+                  nextByPlay={nextByPlay}
+                  legalPlayLabel={legalPlayLabel}
+                  isFoundationalPhase={isFoundationalPhase(currentCorePhase)}
+                  isOurServe={isOurServe}
+                  canScore={scoringEnabled}
+                  switchMotion={tactileTuning.switchMotion}
+                  tactileTuning={tactileTuning}
+                  onRotationSelect={handleRotationSelect}
+                  onPhaseSelect={handlePhaseSelect}
+                  onPlay={handlePlay}
+                  onPoint={handlePoint}
+                />
               </div>
-            </motion.section>
+            </section>
           ) : (
             <section className="lab-panel h-[38dvh] min-h-[240px] max-h-[360px] shrink-0 overflow-hidden rounded-xl p-2">
               <div className="h-full min-h-0 overflow-y-auto pr-1">
@@ -535,10 +504,8 @@ export default function RebuildPrototypeLabPage() {
                   canScore={scoringEnabled}
                   switchMotion={tactileTuning.switchMotion}
                   tactileTuning={tactileTuning}
-                  concept4Mode={concept4Mode}
                   onRotationSelect={handleRotationSelect}
                   onPhaseSelect={handlePhaseSelect}
-                  onConcept4ModeChange={setConcept4Mode}
                   onPlay={handlePlay}
                   onPoint={handlePoint}
                 />
