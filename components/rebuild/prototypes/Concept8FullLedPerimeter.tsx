@@ -4,7 +4,6 @@ import { cn } from '@/lib/utils'
 import { formatCorePhaseLabel, type CorePhase } from '@/lib/rebuild/prototypeFlow'
 import {
   PHASE_PAD_LAYOUT,
-  PhasePadHardwareLane,
   PhasePadRotationRail,
   getPhasePadJoystickEmphasis,
   getQuarterTrackSegmentState,
@@ -14,7 +13,60 @@ import { TactilePlayJoystick } from './TactilePlayJoystick'
 import type { PrototypeControlProps } from './types'
 
 const C8_PHASE_ORDER: CorePhase[] = ['DEFENSE', 'OFFENSE', 'RECEIVE', 'SERVE']
+
+const TRACK_DESIGN_WIDTH = 302
+const TRACK_DESIGN_HEIGHT = 192
 const PHASE_PAD_INSET = 18
+
+const TRACK_PIECES: Array<{
+  axis: 'x' | 'y'
+  offsetX?: number
+  offsetY?: number
+  edge?: 'left' | 'right'
+  width: number
+  height: number
+}> = [
+  { axis: 'x', offsetX: 16, offsetY: 6, width: 18, height: 6 },
+  { axis: 'x', offsetX: 38, offsetY: 6, width: 18, height: 6 },
+  { axis: 'x', offsetX: 60, offsetY: 6, width: 18, height: 6 },
+  { axis: 'x', offsetX: 82, offsetY: 6, width: 18, height: 6 },
+  { axis: 'x', offsetX: 104, offsetY: 6, width: 18, height: 6 },
+  { axis: 'x', offsetX: 126, offsetY: 6, width: 18, height: 6 },
+  { axis: 'y', edge: 'right', offsetY: 16, width: 6, height: 18 },
+  { axis: 'y', edge: 'right', offsetY: 38, width: 6, height: 18 },
+  { axis: 'y', edge: 'right', offsetY: 60, width: 6, height: 18 },
+  { axis: 'y', edge: 'right', offsetY: 82, width: 6, height: 18 },
+  { axis: 'y', edge: 'right', offsetY: 104, width: 6, height: 18 },
+  { axis: 'y', edge: 'right', offsetY: 126, width: 6, height: 18 },
+  { axis: 'x', offsetX: 214, offsetY: 186, width: 18, height: 6 },
+  { axis: 'x', offsetX: 192, offsetY: 186, width: 18, height: 6 },
+  { axis: 'x', offsetX: 170, offsetY: 186, width: 18, height: 6 },
+  { axis: 'x', offsetX: 148, offsetY: 186, width: 18, height: 6 },
+  { axis: 'y', edge: 'left', offsetY: 126, width: 6, height: 18 },
+  { axis: 'y', edge: 'left', offsetY: 104, width: 6, height: 18 },
+  { axis: 'y', edge: 'left', offsetY: 82, width: 6, height: 18 },
+  { axis: 'y', edge: 'left', offsetY: 60, width: 6, height: 18 },
+  { axis: 'y', edge: 'left', offsetY: 38, width: 6, height: 18 },
+  { axis: 'y', edge: 'left', offsetY: 16, width: 6, height: 18 },
+  { axis: 'x', offsetX: 24, offsetY: 179, width: 18, height: 6 },
+  { axis: 'x', offsetX: 46, offsetY: 179, width: 18, height: 6 },
+  { axis: 'x', offsetX: 68, offsetY: 179, width: 18, height: 6 },
+  { axis: 'x', offsetX: 90, offsetY: 179, width: 18, height: 6 },
+]
+
+function getTrackPieceStyle(piece: (typeof TRACK_PIECES)[number]) {
+  const left =
+    piece.edge === 'right'
+      ? `calc(100% - ${(piece.width / TRACK_DESIGN_WIDTH) * 100}% - ${(6 / TRACK_DESIGN_WIDTH) * 100}%)`
+      : `${((piece.offsetX ?? 6) / TRACK_DESIGN_WIDTH) * 100}%`
+
+  return {
+    left,
+    top: `${((piece.offsetY ?? 0) / TRACK_DESIGN_HEIGHT) * 100}%`,
+    width: `${(piece.width / TRACK_DESIGN_WIDTH) * 100}%`,
+    height: `${(piece.height / TRACK_DESIGN_HEIGHT) * 100}%`,
+  }
+}
 
 function PhaseAreaTile({
   phase,
@@ -55,7 +107,7 @@ export function Concept8FullLedPerimeter(props: PrototypeControlProps) {
     transitionTo,
     transitionProgress,
     isPreviewingMovement: props.isPreviewingMovement,
-    positionsPerQuarter: hardwareTuning.piecesPerQuarter,
+    positionsPerQuarter: 6,
     phaseOrder: C8_PHASE_ORDER,
   })
 
@@ -75,13 +127,30 @@ export function Concept8FullLedPerimeter(props: PrototypeControlProps) {
         <PhasePadRotationRail {...props} />
 
         <div className="relative mt-1.5 h-[192px] overflow-visible rounded-[18px] border border-white/5 bg-[rgba(14,14,16,0.38)] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),inset_0_-8px_14px_rgba(0,0,0,0.22)]">
-          <div className="absolute inset-0 z-[1] overflow-visible rounded-[18px]">
-            <PhasePadHardwareLane
-              tuning={hardwareTuning}
-              segmentStart={trackState.segmentStart}
-              segmentLength={trackState.segmentLength}
-              totalLights={trackState.totalLights}
-            />
+          <div className="absolute inset-0 z-[1]">
+            {TRACK_PIECES.map((piece, index) => {
+              const strength = index >= trackState.segmentStart && index < trackState.segmentStart + trackState.segmentLength
+                ? 1
+                : 0
+
+              return (
+                <span
+                  key={`c8-track-piece-${index}`}
+                  className="absolute rounded-[3px]"
+                  style={{
+                    ...getTrackPieceStyle(piece),
+                    background:
+                      strength > 0
+                        ? `rgba(255,255,255,${hardwareTuning.activeOpacity})`
+                        : `rgba(255,255,255,${0.08 + hardwareTuning.inactiveOpacity * 0.2})`,
+                    boxShadow:
+                      strength > 0
+                        ? `0 0 ${6 + hardwareTuning.glow * 4}px rgba(255,255,255,${0.18 + hardwareTuning.glow * 0.18}), 0 0 ${12 + hardwareTuning.bloom * 8}px rgba(255,255,255,${0.06 + hardwareTuning.bloom * 0.1})`
+                        : 'none',
+                  }}
+                />
+              )
+            })}
           </div>
 
           <div
