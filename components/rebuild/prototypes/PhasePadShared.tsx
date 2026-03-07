@@ -456,7 +456,7 @@ export function PhasePadJoystick({
   props: PrototypeControlProps
 }) {
   return (
-    <div className="pointer-events-none absolute inset-0 z-[2] flex items-center justify-center">
+    <div className="pointer-events-none absolute inset-0 z-[5] flex items-center justify-center">
       <div className="pointer-events-auto">
         <TactilePlayJoystick
           currentPhase={props.currentCorePhase}
