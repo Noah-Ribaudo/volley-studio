@@ -1,13 +1,21 @@
 'use client'
 
-import { useEffect, useId, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { type CorePhase, formatCorePhaseLabel } from '@/lib/rebuild/prototypeFlow'
 import type { PhaseEmphasisTuning } from '@/lib/rebuild/tactileTuning'
 import { TactilePlayJoystick } from './TactilePlayJoystick'
 import { TactileRotationSwitch } from './TactileRotationSwitch'
 import type { PrototypeControlProps } from './types'
 
-const PHASE_PAD_PERIMETER_PATH = 'M 50 6 H 86 A 8 8 0 0 1 94 14 V 86 A 8 8 0 0 1 86 94 H 14 A 8 8 0 0 1 6 86 V 14 A 8 8 0 0 1 14 6 H 50'
+export type PerimeterEdgeId = 'top' | 'right' | 'bottom' | 'left'
+
+export type PerimeterLight = {
+  key: string
+  edge: PerimeterEdgeId
+  index: number
+  globalIndex: number
+  style: React.CSSProperties
+}
 
 export const PHASE_PAD_LAYOUT: Array<{
   phase: CorePhase
@@ -73,6 +81,42 @@ export function usePhasePadTransition(props: PrototypeControlProps) {
     transitionProgress,
     liveStatus,
   }
+}
+
+export function createPerimeterLights({
+  ledsPerEdge,
+  inset,
+  startPercent = 8,
+  endPercent = 92,
+}: {
+  ledsPerEdge: number
+  inset: number
+  startPercent?: number
+  endPercent?: number
+}) {
+  const span = endPercent - startPercent
+  const step = span / (ledsPerEdge - 1)
+  const offsetForIndex = (index: number) => `${startPercent + index * step}%`
+  const edgeOrder: PerimeterEdgeId[] = ['top', 'right', 'bottom', 'left']
+
+  return edgeOrder.flatMap((edge, edgeOffset) =>
+    Array.from({ length: ledsPerEdge }, (_, index) => {
+      const styleByEdge: Record<PerimeterEdgeId, React.CSSProperties> = {
+        top: { top: inset, left: offsetForIndex(index) },
+        right: { right: inset, top: offsetForIndex(index) },
+        bottom: { bottom: inset, right: offsetForIndex(index) },
+        left: { left: inset, bottom: offsetForIndex(index) },
+      }
+
+      return {
+        key: `${edge}-${index}`,
+        edge,
+        index,
+        globalIndex: edgeOffset * ledsPerEdge + index,
+        style: styleByEdge[edge],
+      }
+    })
+  )
 }
 
 export function getPerimeterSegmentLength(ledsPerEdge: number) {
@@ -170,77 +214,6 @@ export function getPerimeterSegmentState({
     totalLights,
     segmentStart: fromStart + travelDelta * transitionProgress,
   }
-}
-
-export function PhasePadPerimeterRing({
-  segmentStart,
-  segmentLength,
-  totalLights,
-  dense = false,
-}: {
-  segmentStart: number
-  segmentLength: number
-  totalLights: number
-  dense?: boolean
-}) {
-  const maskId = useId().replace(/:/g, '-')
-  const segmentLengthPercent = (segmentLength / totalLights) * 100
-  const segmentStartPercent = ((segmentStart / totalLights) * 100 - segmentLengthPercent / 2 + 100) % 100
-  const dash = dense ? 1.2 : 2.6
-  const gap = dense ? 1.05 : 2
-  const baseOpacity = dense ? 0.22 : 0.26
-  const strokeWidth = dense ? 2.6 : 3.6
-
-  return (
-    <svg
-      aria-hidden="true"
-      className="pointer-events-none absolute inset-[2px] h-[calc(100%-4px)] w-[calc(100%-4px)]"
-      preserveAspectRatio="none"
-      viewBox="0 0 100 100"
-    >
-      <defs>
-        <mask id={maskId}>
-          <rect x="0" y="0" width="100" height="100" fill="black" />
-          <path
-            d={PHASE_PAD_PERIMETER_PATH}
-            pathLength={100}
-            fill="none"
-            stroke="white"
-            strokeWidth={strokeWidth + 2}
-            strokeLinecap="round"
-            strokeDasharray={`${segmentLengthPercent} ${100 - segmentLengthPercent}`}
-            strokeDashoffset={-segmentStartPercent}
-          />
-        </mask>
-      </defs>
-
-      <path
-        d={PHASE_PAD_PERIMETER_PATH}
-        pathLength={100}
-        fill="none"
-        stroke="rgba(255,255,255,0.28)"
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        strokeDasharray={`${dash} ${gap}`}
-        style={{ opacity: baseOpacity }}
-      />
-      <path
-        d={PHASE_PAD_PERIMETER_PATH}
-        pathLength={100}
-        fill="none"
-        stroke="rgba(255,255,255,0.98)"
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        strokeDasharray={`${dash} ${gap}`}
-        mask={`url(#${maskId})`}
-        style={{
-          filter: dense
-            ? 'drop-shadow(0 0 5px rgba(255,255,255,0.34)) drop-shadow(0 0 10px rgba(245,245,245,0.2))'
-            : 'drop-shadow(0 0 4px rgba(255,255,255,0.3)) drop-shadow(0 0 8px rgba(245,245,245,0.18))',
-        }}
-      />
-    </svg>
-  )
 }
 
 export function getPhasePadJoystickEmphasis(props: PrototypeControlProps): PhaseEmphasisTuning {
