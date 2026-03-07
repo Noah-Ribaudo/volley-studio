@@ -1,7 +1,7 @@
 import type { RallyPhase, Rotation } from '@/lib/types'
 
 export type CorePhase = 'SERVE' | 'RECEIVE' | 'OFFENSE' | 'DEFENSE'
-export type PrototypeVariantId = 'concept3' | 'concept4' | 'concept5' | 'concept6'
+export type PrototypeVariantId = 'concept4' | 'concept7'
 export type ConnectorStyle = 'static' | 'sweep' | 'relay' | 'pulse'
 
 export type PointWinner = 'us' | 'them'
@@ -26,10 +26,8 @@ export const PROTOTYPE_VARIANTS: Array<{
   shortLabel: string
   label: string
 }> = [
-  { id: 'concept3', shortLabel: 'C3', label: 'Foundation Morph Deck' },
   { id: 'concept4', shortLabel: 'C4', label: 'Reference Relay Layout' },
-  { id: 'concept5', shortLabel: 'C5', label: 'Rotation Hub + Rally Map' },
-  { id: 'concept6', shortLabel: 'C6', label: 'Live Match Console+' },
+  { id: 'concept7', shortLabel: 'C7', label: 'Edge-Lit Phase Pad' },
 ]
 
 export const CONNECTOR_STYLE_OPTIONS: Array<{
@@ -93,7 +91,7 @@ export function getLegalPlayLabel(phase: CorePhase): string {
 }
 
 export function canVariantScore(variant: PrototypeVariantId): boolean {
-  return variant === 'concept5' || variant === 'concept6'
+  return false
 }
 
 const SETTER_ZONE_BY_ROTATION: Record<Rotation, 1 | 2 | 3 | 4 | 5 | 6> = {
