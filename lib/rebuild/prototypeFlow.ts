@@ -1,7 +1,7 @@
 import type { RallyPhase, Rotation } from '@/lib/types'
 
 export type CorePhase = 'SERVE' | 'RECEIVE' | 'OFFENSE' | 'DEFENSE'
-export type PrototypeVariantId = 'concept4' | 'concept7'
+export type PrototypeVariantId = 'concept4' | 'concept7' | 'concept8'
 export type ConnectorStyle = 'static' | 'sweep' | 'relay' | 'pulse'
 
 export type PointWinner = 'us' | 'them'
@@ -28,6 +28,7 @@ export const PROTOTYPE_VARIANTS: Array<{
 }> = [
   { id: 'concept4', shortLabel: 'C4', label: 'Reference Relay Layout' },
   { id: 'concept7', shortLabel: 'C7', label: 'Edge-Lit Phase Pad' },
+  { id: 'concept8', shortLabel: 'C8', label: 'Full LED Perimeter' },
 ]
 
 export const CONNECTOR_STYLE_OPTIONS: Array<{

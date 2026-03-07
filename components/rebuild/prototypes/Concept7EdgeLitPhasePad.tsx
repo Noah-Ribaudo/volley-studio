@@ -1,13 +1,17 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
-import { Button } from '@/components/ui/button'
-import {
-  type CorePhase,
-  formatCorePhaseLabel,
-} from '@/lib/rebuild/prototypeFlow'
+import { type CorePhase } from '@/lib/rebuild/prototypeFlow'
 import { cn } from '@/lib/utils'
+import {
+  PHASE_PAD_LAYOUT,
+  PhasePadJoystick,
+  PhasePadRotationRail,
+  getSourceEdge,
+  getTargetEdge,
+  getTravelDirection,
+  usePhasePadTransition,
+} from './PhasePadShared'
 import type { PrototypeControlProps } from './types'
 
 type EdgeId = 'top' | 'right' | 'bottom' | 'left'
@@ -17,18 +21,6 @@ type EdgeLight = {
   edge: EdgeId
   style: CSSProperties
 }
-
-const PHASE_LAYOUT: Array<{
-  phase: CorePhase
-  label: string
-  row: 'top' | 'bottom'
-  column: 'left' | 'right'
-}> = [
-  { phase: 'SERVE', label: 'Serve', row: 'top', column: 'left' },
-  { phase: 'DEFENSE', label: 'Defense', row: 'top', column: 'right' },
-  { phase: 'RECEIVE', label: 'Receive', row: 'bottom', column: 'left' },
-  { phase: 'OFFENSE', label: 'Attack', row: 'bottom', column: 'right' },
-]
 
 const EDGE_LIGHTS: EdgeLight[] = [
   { key: 'top-0', edge: 'top', style: { top: 4, left: '18%' } },
@@ -44,20 +36,6 @@ const EDGE_LIGHTS: EdgeLight[] = [
   { key: 'left-1', edge: 'left', style: { left: 4, top: '50%', transform: 'translateY(-50%)' } },
   { key: 'left-2', edge: 'left', style: { left: 4, bottom: '18%' } },
 ]
-
-function getTravelDirection(from: CorePhase, to: CorePhase): 1 | -1 {
-  const fromColumn = PHASE_LAYOUT.find((item) => item.phase === from)?.column ?? 'left'
-  const toColumn = PHASE_LAYOUT.find((item) => item.phase === to)?.column ?? fromColumn
-  return fromColumn === toColumn ? 1 : toColumn === 'right' ? 1 : -1
-}
-
-function getSourceEdge(direction: 1 | -1): EdgeId {
-  return direction === 1 ? 'right' : 'left'
-}
-
-function getTargetEdge(direction: 1 | -1): EdgeId {
-  return direction === 1 ? 'left' : 'right'
-}
 
 function getPhaseRingProgress({
   phase,
@@ -224,50 +202,7 @@ function PhaseTile({
 }
 
 export function Concept7EdgeLitPhasePad(props: PrototypeControlProps) {
-  const [transitionFrom, setTransitionFrom] = useState<CorePhase>(props.currentCorePhase)
-  const [transitionTo, setTransitionTo] = useState<CorePhase>(props.nextByPlay)
-  const [transitionProgress, setTransitionProgress] = useState(0)
-
-  const playDurationMs = props.tactileTuning.c4Literal.connectorMotion.playDurationMs
-
-  useEffect(() => {
-    if (!props.isPreviewingMovement) {
-      setTransitionProgress(0)
-      setTransitionFrom(props.currentCorePhase)
-      setTransitionTo(props.nextByPlay)
-      return
-    }
-
-    setTransitionFrom(props.currentCorePhase)
-    setTransitionTo(props.nextByPlay)
-    setTransitionProgress(0)
-
-    let frameId = 0
-    const start = performance.now()
-
-    const tick = (now: number) => {
-      const elapsed = now - start
-      const progress = Math.min(elapsed / playDurationMs, 1)
-      setTransitionProgress(progress)
-      if (progress < 1) {
-        frameId = window.requestAnimationFrame(tick)
-      }
-    }
-
-    frameId = window.requestAnimationFrame(tick)
-
-    return () => {
-      window.cancelAnimationFrame(frameId)
-    }
-  }, [playDurationMs, props.currentCorePhase, props.isPreviewingMovement, props.nextByPlay, props.playAnimationTrigger])
-
-  const liveStatus = useMemo(() => {
-    if (props.isPreviewingMovement) {
-      return `${formatCorePhaseLabel(transitionFrom)} -> ${formatCorePhaseLabel(transitionTo)}`
-    }
-
-    return formatCorePhaseLabel(props.currentCorePhase)
-  }, [props.currentCorePhase, props.isPreviewingMovement, transitionFrom, transitionTo])
+  const { transitionFrom, transitionTo, transitionProgress, liveStatus } = usePhasePadTransition(props)
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
@@ -282,26 +217,11 @@ export function Concept7EdgeLitPhasePad(props: PrototypeControlProps) {
       </div>
 
       <div className="rounded-[22px] border border-border/70 bg-[linear-gradient(180deg,rgba(58,58,60,0.94)_0%,rgba(28,28,32,0.98)_100%)] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-        <div className="mb-2 rounded-[14px] border border-white/6 bg-black/20 p-1">
-          <div className="grid grid-cols-6 gap-1">
-            {[1, 2, 3, 4, 5, 6].map((rotation) => (
-              <Button
-                key={rotation}
-                type="button"
-                size="sm"
-                variant={rotation === props.currentRotation ? 'default' : 'outline'}
-                className="h-8 min-w-0 px-0 text-base font-semibold tracking-[-0.03em]"
-                onClick={() => props.onRotationSelect(rotation as 1 | 2 | 3 | 4 | 5 | 6)}
-              >
-                R{rotation}
-              </Button>
-            ))}
-          </div>
-        </div>
+        <PhasePadRotationRail {...props} />
 
         <div className="relative overflow-hidden rounded-[18px] border border-white/10 bg-[linear-gradient(180deg,rgba(122,122,122,0.22)_0%,rgba(92,92,92,0.22)_100%)] p-1">
           <div className="grid grid-cols-2 gap-px overflow-hidden rounded-[14px] bg-black/35">
-            {PHASE_LAYOUT.map((item) => (
+            {PHASE_PAD_LAYOUT.map((item) => (
               <PhaseTile
                 key={item.phase}
                 phase={item.phase}
@@ -316,34 +236,12 @@ export function Concept7EdgeLitPhasePad(props: PrototypeControlProps) {
             ))}
           </div>
 
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <Button
-              type="button"
-              onClick={props.onPlay}
-              className="pointer-events-auto h-16 w-16 rounded-full border border-white/30 bg-[linear-gradient(180deg,rgba(245,245,245,0.96)_0%,rgba(188,188,188,0.92)_100%)] px-0 text-foreground shadow-[0_12px_24px_rgba(0,0,0,0.28)]"
-            >
-              <span
-                aria-hidden
-                className="ml-1 h-0 w-0 border-y-[12px] border-l-[18px] border-r-0 border-y-transparent border-l-foreground/80"
-              />
-              <span className="sr-only">Play transition</span>
-            </Button>
-          </div>
+          <PhasePadJoystick props={props} />
         </div>
       </div>
 
-      <div className="grid gap-2 text-[11px] text-muted-foreground sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
-        <div className="rounded-lg border border-border bg-card/70 px-3 py-2">
+      <div className="rounded-lg border border-border bg-card/70 px-3 py-2 text-[11px] text-muted-foreground">
           Active lights hold the current phase. On play, the border glow collapses toward the exit edge and rebuilds around the destination phase.
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          className="h-9 min-w-[9rem] text-[11px] uppercase tracking-[0.08em]"
-          onClick={props.onPlay}
-        >
-          Play {formatCorePhaseLabel(props.nextByPlay)}
-        </Button>
       </div>
     </div>
   )
