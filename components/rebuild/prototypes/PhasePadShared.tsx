@@ -115,23 +115,24 @@ export function createPerimeterLights({
 }
 
 export function getPerimeterSegmentLength(ledsPerEdge: number) {
-  return ledsPerEdge * 2
+  return ledsPerEdge
 }
 
 export function getPerimeterSegmentStart(phase: CorePhase, ledsPerEdge: number) {
   const totalLights = ledsPerEdge * 4
+  const halfEdge = Math.floor(ledsPerEdge / 2)
 
   switch (phase) {
     case 'SERVE':
-      return totalLights - ledsPerEdge
+      return totalLights - halfEdge
     case 'DEFENSE':
-      return 0
+      return halfEdge
     case 'OFFENSE':
-      return ledsPerEdge
+      return ledsPerEdge + halfEdge
     case 'RECEIVE':
-      return ledsPerEdge * 2
+      return ledsPerEdge * 2 + halfEdge
     default:
-      return totalLights - ledsPerEdge
+      return totalLights - halfEdge
   }
 }
 
