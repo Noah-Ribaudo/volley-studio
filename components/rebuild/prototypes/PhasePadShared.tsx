@@ -1,10 +1,10 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Button } from '@/components/ui/button'
 import { type CorePhase, formatCorePhaseLabel } from '@/lib/rebuild/prototypeFlow'
 import type { PhaseEmphasisTuning } from '@/lib/rebuild/tactileTuning'
 import { TactilePlayJoystick } from './TactilePlayJoystick'
+import { TactileRotationSwitch } from './TactileRotationSwitch'
 import type { PrototypeControlProps } from './types'
 
 export type PerimeterEdgeId = 'top' | 'right' | 'bottom' | 'left'
@@ -86,12 +86,17 @@ export function usePhasePadTransition(props: PrototypeControlProps) {
 export function createPerimeterLights({
   ledsPerEdge,
   inset,
+  startPercent = 8,
+  endPercent = 92,
 }: {
   ledsPerEdge: number
   inset: number
+  startPercent?: number
+  endPercent?: number
 }) {
-  const step = 84 / (ledsPerEdge - 1)
-  const offsetForIndex = (index: number) => `${8 + index * step}%`
+  const span = endPercent - startPercent
+  const step = span / (ledsPerEdge - 1)
+  const offsetForIndex = (index: number) => `${startPercent + index * step}%`
   const edgeOrder: PerimeterEdgeId[] = ['top', 'right', 'bottom', 'left']
 
   return edgeOrder.flatMap((edge, edgeOffset) =>
@@ -222,22 +227,13 @@ export function getPhasePadJoystickEmphasis(props: PrototypeControlProps): Phase
 
 export function PhasePadRotationRail(props: PrototypeControlProps) {
   return (
-    <div className="mb-2 rounded-[14px] border border-white/6 bg-black/20 p-1">
-      <div className="grid grid-cols-6 gap-1">
-        {[1, 2, 3, 4, 5, 6].map((rotation) => (
-          <Button
-            key={rotation}
-            type="button"
-            size="sm"
-            variant={rotation === props.currentRotation ? 'default' : 'outline'}
-            className="h-8 min-w-0 px-0 text-base font-semibold tracking-[-0.03em]"
-            onClick={() => props.onRotationSelect(rotation as 1 | 2 | 3 | 4 | 5 | 6)}
-          >
-            R{rotation}
-          </Button>
-        ))}
-      </div>
-    </div>
+    <TactileRotationSwitch
+      value={props.currentRotation}
+      onValueChange={props.onRotationSelect}
+      switchMotion={props.switchMotion}
+      density="compact"
+      className="mb-2"
+    />
   )
 }
 

@@ -13,7 +13,12 @@ import {
 } from './PhasePadShared'
 import type { PrototypeControlProps } from './types'
 
-const OUTER_LIGHTS = createPerimeterLights({ ledsPerEdge: 6, inset: 7 })
+const OUTER_LIGHTS = createPerimeterLights({
+  ledsPerEdge: 6,
+  inset: 5,
+  startPercent: 6.5,
+  endPercent: 93.5,
+})
 
 function PhaseTile({
   phase,
@@ -84,7 +89,7 @@ export function Concept7EdgeLitPhasePad(props: PrototypeControlProps) {
       <div className="rounded-[22px] border border-border/70 bg-[linear-gradient(180deg,rgba(58,58,60,0.94)_0%,rgba(28,28,32,0.98)_100%)] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
         <PhasePadRotationRail {...props} />
 
-        <div className="relative overflow-hidden rounded-[18px] border border-white/10 bg-[linear-gradient(180deg,rgba(122,122,122,0.22)_0%,rgba(92,92,92,0.22)_100%)] p-2">
+        <div className="relative overflow-hidden rounded-[18px] border border-white/10 bg-[linear-gradient(180deg,rgba(122,122,122,0.22)_0%,rgba(92,92,92,0.22)_100%)] p-[10px] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
           <div className="pointer-events-none absolute inset-0">
             {OUTER_LIGHTS.map((light) => {
               const strength = getPerimeterCoverage({
@@ -99,14 +104,14 @@ export function Concept7EdgeLitPhasePad(props: PrototypeControlProps) {
                   key={light.key}
                   className={cn(
                     'absolute rounded-full bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(218,218,218,0.9)_100%)]',
-                    light.edge === 'top' || light.edge === 'bottom' ? 'h-[5px] w-[16px]' : 'h-[16px] w-[5px]'
+                    light.edge === 'top' || light.edge === 'bottom' ? 'h-[4px] w-[15px]' : 'h-[15px] w-[4px]'
                   )}
                   style={{
                     ...light.style,
                     opacity: strength > 0 ? 0.08 + strength * 0.92 : 0.03,
                     boxShadow:
                       strength > 0
-                        ? `0 0 ${3 + strength * 7}px rgba(255,255,255,${0.24 + strength * 0.32}), 0 0 ${8 + strength * 14}px rgba(248,248,248,${0.08 + strength * 0.14})`
+                        ? `0 0 ${2 + strength * 6}px rgba(255,255,255,${0.24 + strength * 0.28}), 0 0 ${7 + strength * 12}px rgba(248,248,248,${0.08 + strength * 0.12})`
                         : 'none',
                   }}
                 />
