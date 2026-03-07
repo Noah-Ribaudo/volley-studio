@@ -1,18 +1,72 @@
 'use client'
 
 import { cn } from '@/lib/utils'
-import type { CorePhase } from '@/lib/rebuild/prototypeFlow'
+import { formatCorePhaseLabel, type CorePhase } from '@/lib/rebuild/prototypeFlow'
 import {
   PHASE_PAD_LAYOUT,
-  PhasePadHardwareLane,
-  PhasePadJoystick,
   PhasePadRotationRail,
+  getPhasePadJoystickEmphasis,
   getQuarterTrackSegmentState,
   usePhasePadTransition,
 } from './PhasePadShared'
+import { TactilePlayJoystick } from './TactilePlayJoystick'
 import type { PrototypeControlProps } from './types'
 
 const C8_PHASE_ORDER: CorePhase[] = ['DEFENSE', 'OFFENSE', 'RECEIVE', 'SERVE']
+
+const TRACK_DESIGN_WIDTH = 302
+const TRACK_DESIGN_HEIGHT = 192
+const PHASE_PAD_INSET = 18
+
+const TRACK_PIECES: Array<{
+  axis: 'x' | 'y'
+  offsetX?: number
+  offsetY?: number
+  edge?: 'left' | 'right'
+  width: number
+  height: number
+}> = [
+  { axis: 'x', offsetX: 16, offsetY: 6, width: 18, height: 6 },
+  { axis: 'x', offsetX: 38, offsetY: 6, width: 18, height: 6 },
+  { axis: 'x', offsetX: 60, offsetY: 6, width: 18, height: 6 },
+  { axis: 'x', offsetX: 82, offsetY: 6, width: 18, height: 6 },
+  { axis: 'x', offsetX: 104, offsetY: 6, width: 18, height: 6 },
+  { axis: 'x', offsetX: 126, offsetY: 6, width: 18, height: 6 },
+  { axis: 'y', edge: 'right', offsetY: 16, width: 6, height: 18 },
+  { axis: 'y', edge: 'right', offsetY: 38, width: 6, height: 18 },
+  { axis: 'y', edge: 'right', offsetY: 60, width: 6, height: 18 },
+  { axis: 'y', edge: 'right', offsetY: 82, width: 6, height: 18 },
+  { axis: 'y', edge: 'right', offsetY: 104, width: 6, height: 18 },
+  { axis: 'y', edge: 'right', offsetY: 126, width: 6, height: 18 },
+  { axis: 'x', offsetX: 214, offsetY: 186, width: 18, height: 6 },
+  { axis: 'x', offsetX: 192, offsetY: 186, width: 18, height: 6 },
+  { axis: 'x', offsetX: 170, offsetY: 186, width: 18, height: 6 },
+  { axis: 'x', offsetX: 148, offsetY: 186, width: 18, height: 6 },
+  { axis: 'y', edge: 'left', offsetY: 126, width: 6, height: 18 },
+  { axis: 'y', edge: 'left', offsetY: 104, width: 6, height: 18 },
+  { axis: 'y', edge: 'left', offsetY: 82, width: 6, height: 18 },
+  { axis: 'y', edge: 'left', offsetY: 60, width: 6, height: 18 },
+  { axis: 'y', edge: 'left', offsetY: 38, width: 6, height: 18 },
+  { axis: 'y', edge: 'left', offsetY: 16, width: 6, height: 18 },
+  { axis: 'x', offsetX: 24, offsetY: 179, width: 18, height: 6 },
+  { axis: 'x', offsetX: 46, offsetY: 179, width: 18, height: 6 },
+  { axis: 'x', offsetX: 68, offsetY: 179, width: 18, height: 6 },
+  { axis: 'x', offsetX: 90, offsetY: 179, width: 18, height: 6 },
+]
+
+function getTrackPieceStyle(piece: (typeof TRACK_PIECES)[number]) {
+  const left =
+    piece.edge === 'right'
+      ? `calc(100% - ${(piece.width / TRACK_DESIGN_WIDTH) * 100}% - ${(6 / TRACK_DESIGN_WIDTH) * 100}%)`
+      : `${((piece.offsetX ?? 6) / TRACK_DESIGN_WIDTH) * 100}%`
+
+  return {
+    left,
+    top: `${((piece.offsetY ?? 0) / TRACK_DESIGN_HEIGHT) * 100}%`,
+    width: `${(piece.width / TRACK_DESIGN_WIDTH) * 100}%`,
+    height: `${(piece.height / TRACK_DESIGN_HEIGHT) * 100}%`,
+  }
+}
 
 function PhaseAreaTile({
   phase,
@@ -30,16 +84,16 @@ function PhaseAreaTile({
       type="button"
       onClick={() => onPhaseSelect(phase)}
       className={cn(
-        'relative flex min-h-[5.2rem] items-center justify-center border border-white/12 bg-[linear-gradient(180deg,rgba(198,198,198,0.28)_0%,rgba(126,126,126,0.25)_100%)] px-3 py-3 text-center text-[1.05rem] font-medium text-white outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary/60',
-        isActive && 'bg-[linear-gradient(180deg,rgba(220,220,220,0.34)_0%,rgba(138,138,138,0.3)_100%)]'
+        'relative flex min-h-0 items-center justify-center bg-[linear-gradient(180deg,rgba(158,158,160,0.5)_0%,rgba(102,102,106,0.42)_100%)] text-center text-[1.72rem] font-medium text-white outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary/60',
+        isActive && 'bg-[linear-gradient(180deg,rgba(172,172,174,0.56)_0%,rgba(112,112,116,0.48)_100%)]'
       )}
       style={{
         boxShadow: isActive
-          ? 'inset 0 0 0 1px rgba(255,255,255,0.2), inset 0 14px 22px rgba(255,255,255,0.04)'
+          ? 'inset 0 0 0 1px rgba(255,255,255,0.18), inset 0 12px 18px rgba(255,255,255,0.05)'
           : 'inset 0 0 0 1px rgba(255,255,255,0.08)',
       }}
     >
-      <span className="relative z-[1] tracking-[-0.02em]">{label}</span>
+      <span className="relative z-[1] tracking-[-0.03em]">{label}</span>
     </button>
   )
 }
@@ -47,14 +101,13 @@ function PhaseAreaTile({
 export function Concept8FullLedPerimeter(props: PrototypeControlProps) {
   const { transitionFrom, transitionTo, transitionProgress, liveStatus } = usePhasePadTransition(props)
   const hardwareTuning = props.tactileTuning.phasePadHardware
-  const tileInset = Math.max(14, hardwareTuning.trackInset + hardwareTuning.trackWidth + hardwareTuning.pieceThickness * 1.9)
-  const perimeterState = getQuarterTrackSegmentState({
+  const trackState = getQuarterTrackSegmentState({
     currentCorePhase: props.currentCorePhase,
     transitionFrom,
     transitionTo,
     transitionProgress,
     isPreviewingMovement: props.isPreviewingMovement,
-    positionsPerQuarter: hardwareTuning.piecesPerQuarter,
+    positionsPerQuarter: 6,
     phaseOrder: C8_PHASE_ORDER,
   })
 
@@ -70,39 +123,76 @@ export function Concept8FullLedPerimeter(props: PrototypeControlProps) {
         </div>
       </div>
 
-      <div className="rounded-[22px] border border-border/70 bg-[linear-gradient(180deg,rgba(58,58,60,0.94)_0%,rgba(22,22,26,0.99)_100%)] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+      <div className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(54,54,58,0.96)_0%,rgba(24,24,28,0.98)_100%)] p-2 shadow-[0_24px_60px_rgba(0,0,0,0.38),inset_0_1px_0_rgba(255,255,255,0.06)]">
         <PhasePadRotationRail {...props} />
 
-        <div className="rounded-[20px] border border-white/10 bg-[linear-gradient(180deg,rgba(114,114,114,0.18)_0%,rgba(64,64,64,0.26)_100%)] p-2">
-          <div className="relative overflow-visible rounded-[18px] border border-white/8 bg-[rgba(14,14,16,0.38)] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),inset_0_-8px_14px_rgba(0,0,0,0.22)]">
-            <div className="absolute inset-0 z-[1] overflow-visible rounded-[18px]">
-              <PhasePadHardwareLane
-                tuning={hardwareTuning}
-                segmentStart={perimeterState.segmentStart}
-                segmentLength={perimeterState.segmentLength}
-                totalLights={perimeterState.totalLights}
-              />
-            </div>
+        <div className="relative mt-1.5 h-[192px] overflow-visible rounded-[18px] border border-white/5 bg-[rgba(14,14,16,0.38)] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),inset_0_-8px_14px_rgba(0,0,0,0.22)]">
+          <div className="absolute inset-0 z-[1]">
+            {TRACK_PIECES.map((piece, index) => {
+              const strength = index >= trackState.segmentStart && index < trackState.segmentStart + trackState.segmentLength
+                ? 1
+                : 0
 
-            <div
-              className="relative z-[2] grid grid-cols-2 gap-px overflow-hidden rounded-[16px] bg-black/35"
-              style={{
-                padding: `${tileInset}px`,
-              }}
-            >
-              {PHASE_PAD_LAYOUT.map((item) => (
-                <PhaseAreaTile
-                  key={item.phase}
-                  phase={item.phase}
-                  label={item.label}
-                  isActive={item.phase === props.currentCorePhase && !props.isPreviewingMovement}
-                  onPhaseSelect={props.onPhaseSelect}
+              return (
+                <span
+                  key={`c8-track-piece-${index}`}
+                  className="absolute rounded-[3px]"
+                  style={{
+                    ...getTrackPieceStyle(piece),
+                    background:
+                      strength > 0
+                        ? `rgba(255,255,255,${hardwareTuning.activeOpacity})`
+                        : `rgba(255,255,255,${0.08 + hardwareTuning.inactiveOpacity * 0.2})`,
+                    boxShadow:
+                      strength > 0
+                        ? `0 0 ${6 + hardwareTuning.glow * 4}px rgba(255,255,255,${0.18 + hardwareTuning.glow * 0.18}), 0 0 ${12 + hardwareTuning.bloom * 8}px rgba(255,255,255,${0.06 + hardwareTuning.bloom * 0.1})`
+                        : 'none',
+                  }}
                 />
-              ))}
-            </div>
+              )
+            })}
+          </div>
 
-            <div className="absolute inset-0 z-[3]">
-              <PhasePadJoystick props={props} />
+          <div
+            className="relative z-[2] grid h-full grid-cols-2 gap-px overflow-hidden rounded-[16px] bg-black/35"
+            style={{
+              padding: `${PHASE_PAD_INSET}px`,
+            }}
+          >
+            {PHASE_PAD_LAYOUT.map((item) => (
+              <PhaseAreaTile
+                key={item.phase}
+                phase={item.phase}
+                label={item.label}
+                isActive={item.phase === props.currentCorePhase && !props.isPreviewingMovement}
+                onPhaseSelect={props.onPhaseSelect}
+              />
+            ))}
+          </div>
+
+          <div
+            className="pointer-events-none absolute z-[3]"
+            style={{
+              width: '62px',
+              height: '62px',
+              left: '50%',
+              top: '50%',
+              transform: 'translate(-50%, -50%)',
+            }}
+          >
+            <div className="pointer-events-auto">
+              <TactilePlayJoystick
+                currentPhase={props.currentCorePhase}
+                nextPhase={props.nextByPlay}
+                nextLabel={formatCorePhaseLabel(props.nextByPlay)}
+                mode="literal"
+                frameSizeOverride={62}
+                switchMotion={props.switchMotion}
+                joystickTuning={props.tactileTuning.joystick}
+                phaseEmphasis={getPhasePadJoystickEmphasis(props)}
+                onPlay={props.onPlay}
+                onPhaseSelect={props.onPhaseSelect}
+              />
             </div>
           </div>
         </div>
