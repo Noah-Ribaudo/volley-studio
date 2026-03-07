@@ -71,6 +71,7 @@ interface TactilePlayJoystickProps {
   nextPhase: CorePhase
   nextLabel: string
   mode?: JoystickMode
+  frameSizeOverride?: number
   switchMotion: SwitchMotionTuning
   joystickTuning: JoystickTuning
   phaseEmphasis: PhaseEmphasisTuning
@@ -131,6 +132,7 @@ export function TactilePlayJoystick({
   nextPhase,
   nextLabel,
   mode = 'radial',
+  frameSizeOverride,
   switchMotion,
   joystickTuning,
   phaseEmphasis,
@@ -146,7 +148,16 @@ export function TactilePlayJoystick({
   const movedSinceDownRef = useRef(false)
   const lastDragPhaseRef = useRef<CorePhase | null>(null)
 
-  const frame = JOYSTICK_FRAME[mode]
+  const defaultFrame = JOYSTICK_FRAME[mode]
+  const frame =
+    mode === 'literal' && frameSizeOverride
+      ? {
+          ...defaultFrame,
+          frameSize: frameSizeOverride,
+          knobSize: Math.round(frameSizeOverride * 0.43),
+          inset: Math.max(6, Math.round(frameSizeOverride * 0.1)),
+        }
+      : defaultFrame
   const selectedPhase = dragPhase ?? currentPhase
   const indicatorPhase = dragPhase ?? nextPhase
   const DirectionIcon = PHASE_ICONS[indicatorPhase]

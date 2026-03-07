@@ -2,6 +2,7 @@ import type { RallyPhase, Rotation } from '@/lib/types'
 
 export type CorePhase = 'SERVE' | 'RECEIVE' | 'OFFENSE' | 'DEFENSE'
 export type PrototypeVariantId = 'concept3' | 'concept4' | 'concept5' | 'concept6'
+export type ConnectorStyle = 'static' | 'sweep' | 'relay' | 'pulse'
 
 export type PointWinner = 'us' | 'them'
 
@@ -29,6 +30,16 @@ export const PROTOTYPE_VARIANTS: Array<{
   { id: 'concept4', shortLabel: 'C4', label: 'Reference Relay Layout' },
   { id: 'concept5', shortLabel: 'C5', label: 'Rotation Hub + Rally Map' },
   { id: 'concept6', shortLabel: 'C6', label: 'Live Match Console+' },
+]
+
+export const CONNECTOR_STYLE_OPTIONS: Array<{
+  id: ConnectorStyle
+  label: string
+}> = [
+  { id: 'static', label: 'Static' },
+  { id: 'sweep', label: 'Sweep' },
+  { id: 'relay', label: 'Relay' },
+  { id: 'pulse', label: 'Pulse' },
 ]
 
 export const CORE_PHASE_TO_RALLY_PHASE: Record<CorePhase, RallyPhase> = {

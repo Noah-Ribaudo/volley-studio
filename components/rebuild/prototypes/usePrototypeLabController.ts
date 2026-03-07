@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   applyPointScored,
   canVariantScore,
+  type ConnectorStyle,
   getNextByPlay,
   type CorePhase,
   type PointWinner,
@@ -21,6 +22,7 @@ export function usePrototypeLabController() {
   const [isPreviewingMovement, setPreviewingMovement] = useState(false)
   const [playAnimationTrigger, setPlayAnimationTrigger] = useState(0)
   const [isLabTrayOpen, setIsLabTrayOpen] = useState(false)
+  const [connectorStyle, setConnectorStyle] = useState<ConnectorStyle>('sweep')
 
   const playTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -113,6 +115,8 @@ export function usePrototypeLabController() {
     playAnimationTrigger,
     isLabTrayOpen,
     setIsLabTrayOpen,
+    connectorStyle,
+    setConnectorStyle,
     handleRotationSelect,
     handlePhaseSelect,
     handlePlay,

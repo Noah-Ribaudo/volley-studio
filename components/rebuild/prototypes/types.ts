@@ -1,5 +1,5 @@
 import type { Rotation } from '@/lib/types'
-import type { CorePhase, PointWinner, PrototypeVariantId } from '@/lib/rebuild/prototypeFlow'
+import type { ConnectorStyle, CorePhase, PointWinner, PrototypeVariantId } from '@/lib/rebuild/prototypeFlow'
 import type { SwitchMotionTuning, TactileTuning } from '@/lib/rebuild/tactileTuning'
 
 export interface PrototypeControlProps {
@@ -11,6 +11,8 @@ export interface PrototypeControlProps {
   isFoundationalPhase: boolean
   isOurServe: boolean
   canScore: boolean
+  connectorStyle: ConnectorStyle
+  playAnimationTrigger: number
   switchMotion: SwitchMotionTuning
   tactileTuning: TactileTuning
   onRotationSelect: (rotation: Rotation) => void

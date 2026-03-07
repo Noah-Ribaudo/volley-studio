@@ -11,6 +11,7 @@ import { useIsMobile } from '@/hooks/useIsMobile'
 import { validateRotationLegality } from '@/lib/model/legality'
 import {
   canVariantScore,
+  CONNECTOR_STYLE_OPTIONS,
   CORE_PHASES,
   formatCorePhaseLabel,
   getLegalPlayLabel,
@@ -60,6 +61,8 @@ export default function RebuildPrototypeLabPage() {
     playAnimationTrigger,
     isLabTrayOpen,
     setIsLabTrayOpen,
+    connectorStyle,
+    setConnectorStyle,
     handleRotationSelect,
     handlePhaseSelect,
     handlePlay,
@@ -224,7 +227,8 @@ export default function RebuildPrototypeLabPage() {
   const handleTuningChange = useCallback((next: TactileTuning) => {
     setTactileTuning(next)
   }, [])
-  const mobileDockHeight = activeVariant === 'concept4' ? 238 : tactileTuning.dock.collapsedHeight
+  const mobileDockHeight =
+    activeVariant === 'concept4' ? tactileTuning.c4Literal.clusterLayout.dockHeight : tactileTuning.dock.collapsedHeight
 
   if (!isUiHydrated) {
     return (
@@ -313,6 +317,27 @@ export default function RebuildPrototypeLabPage() {
                     <div className="px-2 pt-1 text-[11px] text-muted-foreground">
                       {PROTOTYPE_VARIANTS.find((variant) => variant.id === activeVariant)?.label}
                     </div>
+                    {activeVariant === 'concept4' ? (
+                      <div className="mt-2 border-t border-border/40 px-1 pt-2">
+                        <div className="px-1 pb-1 text-[10px] uppercase tracking-[0.08em] text-muted-foreground">
+                          Connection Style
+                        </div>
+                        <div className="grid grid-cols-4 gap-1">
+                          {CONNECTOR_STYLE_OPTIONS.map((style) => (
+                            <Button
+                              key={style.id}
+                              type="button"
+                              variant={style.id === connectorStyle ? 'default' : 'outline'}
+                              size="sm"
+                              className="h-8 px-1 text-[10px]"
+                              onClick={() => setConnectorStyle(style.id)}
+                            >
+                              {style.label}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               </SheetContent>
@@ -372,6 +397,27 @@ export default function RebuildPrototypeLabPage() {
               <div className="px-2 pt-1 text-[11px] text-muted-foreground">
                 {PROTOTYPE_VARIANTS.find((variant) => variant.id === activeVariant)?.label}
               </div>
+              {activeVariant === 'concept4' ? (
+                <div className="mt-2 border-t border-border/40 px-1 pt-2">
+                  <div className="px-1 pb-1 text-[10px] uppercase tracking-[0.08em] text-muted-foreground">
+                    Connection Style
+                  </div>
+                  <div className="grid grid-cols-4 gap-1">
+                    {CONNECTOR_STYLE_OPTIONS.map((style) => (
+                      <Button
+                        key={style.id}
+                        type="button"
+                        variant={style.id === connectorStyle ? 'default' : 'outline'}
+                        size="sm"
+                        className="h-8 px-1 text-[10px]"
+                        onClick={() => setConnectorStyle(style.id)}
+                      >
+                        {style.label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </div>
           </header>
         )}
@@ -480,6 +526,8 @@ export default function RebuildPrototypeLabPage() {
                   isFoundationalPhase={isFoundationalPhase(currentCorePhase)}
                   isOurServe={isOurServe}
                   canScore={scoringEnabled}
+                  connectorStyle={connectorStyle}
+                  playAnimationTrigger={playAnimationTrigger}
                   switchMotion={tactileTuning.switchMotion}
                   tactileTuning={tactileTuning}
                   onRotationSelect={handleRotationSelect}
@@ -502,6 +550,8 @@ export default function RebuildPrototypeLabPage() {
                   isFoundationalPhase={isFoundationalPhase(currentCorePhase)}
                   isOurServe={isOurServe}
                   canScore={scoringEnabled}
+                  connectorStyle={connectorStyle}
+                  playAnimationTrigger={playAnimationTrigger}
                   switchMotion={tactileTuning.switchMotion}
                   tactileTuning={tactileTuning}
                   onRotationSelect={handleRotationSelect}
