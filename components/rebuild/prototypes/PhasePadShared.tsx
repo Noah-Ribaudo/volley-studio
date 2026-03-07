@@ -9,8 +9,6 @@ import type { PrototypeControlProps } from './types'
 
 export type PerimeterEdgeId = 'top' | 'right' | 'bottom' | 'left'
 
-type PerimeterPhaseOrder = 'SERVE' | 'DEFENSE' | 'OFFENSE' | 'RECEIVE'
-
 export type PerimeterLight = {
   key: string
   edge: PerimeterEdgeId
@@ -30,8 +28,6 @@ export const PHASE_PAD_LAYOUT: Array<{
   { phase: 'RECEIVE', label: 'Receive', row: 'bottom', column: 'left' },
   { phase: 'OFFENSE', label: 'Attack', row: 'bottom', column: 'right' },
 ]
-
-const PERIMETER_PHASE_ORDER: PerimeterPhaseOrder[] = ['SERVE', 'DEFENSE', 'OFFENSE', 'RECEIVE']
 
 export function usePhasePadTransition(props: PrototypeControlProps) {
   const [transitionFrom, setTransitionFrom] = useState<CorePhase>(props.currentCorePhase)
@@ -122,19 +118,21 @@ export function getPerimeterSegmentLength(ledsPerEdge: number) {
   return ledsPerEdge * 2
 }
 
-function getPhaseOrderIndex(phase: CorePhase) {
-  return PERIMETER_PHASE_ORDER.indexOf(phase as PerimeterPhaseOrder)
-}
-
 export function getPerimeterSegmentStart(phase: CorePhase, ledsPerEdge: number) {
-  return getPhaseOrderIndex(phase) * getPerimeterSegmentLength(ledsPerEdge)
-}
+  const totalLights = ledsPerEdge * 4
 
-export function getPerimeterTravelDirection(from: CorePhase, to: CorePhase): 1 | -1 {
-  const fromIndex = getPhaseOrderIndex(from)
-  const toIndex = getPhaseOrderIndex(to)
-  const phaseDelta = (toIndex - fromIndex + PERIMETER_PHASE_ORDER.length) % PERIMETER_PHASE_ORDER.length
-  return phaseDelta === 1 ? 1 : -1
+  switch (phase) {
+    case 'SERVE':
+      return totalLights - ledsPerEdge
+    case 'DEFENSE':
+      return 0
+    case 'OFFENSE':
+      return ledsPerEdge
+    case 'RECEIVE':
+      return ledsPerEdge * 2
+    default:
+      return totalLights - ledsPerEdge
+  }
 }
 
 function normalizeIndex(value: number, total: number) {
@@ -143,6 +141,12 @@ function normalizeIndex(value: number, total: number) {
 
 function getIntervalOverlap(startA: number, endA: number, startB: number, endB: number) {
   return Math.max(0, Math.min(endA, endB) - Math.max(startA, startB))
+}
+
+function getShortestPerimeterDelta(fromStart: number, toStart: number, totalLights: number) {
+  const forward = normalizeIndex(toStart - fromStart, totalLights)
+  const backward = forward - totalLights
+  return Math.abs(forward) <= Math.abs(backward) ? forward : backward
 }
 
 export function getPerimeterCoverage({
@@ -196,12 +200,13 @@ export function getPerimeterSegmentState({
   }
 
   const fromStart = getPerimeterSegmentStart(transitionFrom, ledsPerEdge)
-  const direction = getPerimeterTravelDirection(transitionFrom, transitionTo)
+  const toStart = getPerimeterSegmentStart(transitionTo, ledsPerEdge)
+  const travelDelta = getShortestPerimeterDelta(fromStart, toStart, totalLights)
 
   return {
     segmentLength,
     totalLights,
-    segmentStart: fromStart + direction * segmentLength * transitionProgress,
+    segmentStart: fromStart + travelDelta * transitionProgress,
   }
 }
 
