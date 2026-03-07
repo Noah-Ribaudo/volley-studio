@@ -82,31 +82,26 @@ export function Concept7EdgeLitPhasePad(props: PrototypeControlProps) {
         <PhasePadRotationRail {...props} />
 
         <div className="relative overflow-hidden rounded-[18px] border border-white/10 bg-[linear-gradient(180deg,rgba(122,122,122,0.22)_0%,rgba(92,92,92,0.22)_100%)] p-[10px] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-          <div className="relative rounded-[16px] p-[8px]">
-            <PhasePadPerimeterRing
-              solid
-              inset={8}
-              radius={10}
-              segmentStart={perimeterState.segmentStart}
-              segmentLength={perimeterState.segmentLength}
-              totalLights={perimeterState.totalLights}
-            />
+          <PhasePadPerimeterRing
+            segmentStart={perimeterState.segmentStart}
+            segmentLength={perimeterState.segmentLength}
+            totalLights={perimeterState.totalLights}
+          />
 
-            <div className="relative z-[1] grid grid-cols-2 gap-px overflow-hidden rounded-[14px] bg-black/35">
-              {PHASE_PAD_LAYOUT.map((item) => (
-                <PhaseTile
-                  key={item.phase}
-                  phase={item.phase}
-                  label={item.label}
-                  currentCorePhase={props.currentCorePhase}
-                  transitionFrom={transitionFrom}
-                  transitionTo={transitionTo}
-                  transitionProgress={transitionProgress}
-                  isPreviewingMovement={props.isPreviewingMovement}
-                  onPhaseSelect={props.onPhaseSelect}
-                />
-              ))}
-            </div>
+          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-[14px] bg-black/35">
+            {PHASE_PAD_LAYOUT.map((item) => (
+              <PhaseTile
+                key={item.phase}
+                phase={item.phase}
+                label={item.label}
+                currentCorePhase={props.currentCorePhase}
+                transitionFrom={transitionFrom}
+                transitionTo={transitionTo}
+                transitionProgress={transitionProgress}
+                isPreviewingMovement={props.isPreviewingMovement}
+                onPhaseSelect={props.onPhaseSelect}
+              />
+            ))}
           </div>
 
           <PhasePadJoystick props={props} />

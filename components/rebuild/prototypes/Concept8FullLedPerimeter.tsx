@@ -70,28 +70,23 @@ export function Concept8FullLedPerimeter(props: PrototypeControlProps) {
 
         <div className="rounded-[20px] border border-white/10 bg-[linear-gradient(180deg,rgba(114,114,114,0.18)_0%,rgba(64,64,64,0.26)_100%)] p-2">
           <div className="relative overflow-hidden rounded-[16px] border border-white/8 bg-[linear-gradient(180deg,rgba(64,64,64,0.55)_0%,rgba(38,38,40,0.88)_100%)] p-[10px] shadow-[inset_0_1px_0_rgba(255,255,255,0.06),inset_0_-18px_26px_rgba(0,0,0,0.16)]">
-            <div className="relative rounded-[14px] p-[9px]">
-              <PhasePadPerimeterRing
-                dense
-                solid
-                inset={7.5}
-                radius={9}
-                segmentStart={perimeterState.segmentStart}
-                segmentLength={perimeterState.segmentLength}
-                totalLights={perimeterState.totalLights}
-              />
+            <PhasePadPerimeterRing
+              dense
+              segmentStart={perimeterState.segmentStart}
+              segmentLength={perimeterState.segmentLength}
+              totalLights={perimeterState.totalLights}
+            />
 
-              <div className="relative z-[1] grid grid-cols-2 gap-px overflow-hidden rounded-[12px] bg-black/40">
-                {PHASE_PAD_LAYOUT.map((item) => (
-                  <PhaseAreaTile
-                    key={item.phase}
-                    phase={item.phase}
-                    label={item.label}
-                    isActive={item.phase === props.currentCorePhase && !props.isPreviewingMovement}
-                    onPhaseSelect={props.onPhaseSelect}
-                  />
-                ))}
-              </div>
+            <div className="grid grid-cols-2 gap-px overflow-hidden rounded-[12px] bg-black/40">
+              {PHASE_PAD_LAYOUT.map((item) => (
+                <PhaseAreaTile
+                  key={item.phase}
+                  phase={item.phase}
+                  label={item.label}
+                  isActive={item.phase === props.currentCorePhase && !props.isPreviewingMovement}
+                  onPhaseSelect={props.onPhaseSelect}
+                />
+              ))}
             </div>
 
             <PhasePadJoystick props={props} />

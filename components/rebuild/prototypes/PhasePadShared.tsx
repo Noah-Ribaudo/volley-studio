@@ -7,13 +7,7 @@ import { TactilePlayJoystick } from './TactilePlayJoystick'
 import { TactileRotationSwitch } from './TactileRotationSwitch'
 import type { PrototypeControlProps } from './types'
 
-function getRoundedInsetPath(inset: number, radius: number) {
-  const min = inset
-  const max = 100 - inset
-  const innerMin = min + radius
-  const innerMax = max - radius
-  return `M 50 ${min} H ${innerMax} A ${radius} ${radius} 0 0 1 ${max} ${innerMin} V ${innerMax} A ${radius} ${radius} 0 0 1 ${innerMax} ${max} H ${innerMin} A ${radius} ${radius} 0 0 1 ${min} ${innerMax} V ${innerMin} A ${radius} ${radius} 0 0 1 ${innerMin} ${min} H 50`
-}
+const PHASE_PAD_PERIMETER_PATH = 'M 50 6 H 86 A 8 8 0 0 1 94 14 V 86 A 8 8 0 0 1 86 94 H 14 A 8 8 0 0 1 6 86 V 14 A 8 8 0 0 1 14 6 H 50'
 
 export const PHASE_PAD_LAYOUT: Array<{
   phase: CorePhase
@@ -183,33 +177,24 @@ export function PhasePadPerimeterRing({
   segmentLength,
   totalLights,
   dense = false,
-  solid = false,
-  className,
-  inset = 10,
-  radius = 8,
 }: {
   segmentStart: number
   segmentLength: number
   totalLights: number
   dense?: boolean
-  solid?: boolean
-  className?: string
-  inset?: number
-  radius?: number
 }) {
   const maskId = useId().replace(/:/g, '-')
-  const path = getRoundedInsetPath(inset, radius)
   const segmentLengthPercent = (segmentLength / totalLights) * 100
   const segmentStartPercent = ((segmentStart / totalLights) * 100 - segmentLengthPercent / 2 + 100) % 100
   const dash = dense ? 1.2 : 2.6
   const gap = dense ? 1.05 : 2
-  const baseOpacity = solid ? 0.1 : dense ? 0.22 : 0.26
-  const strokeWidth = solid ? (dense ? 4.2 : 4.8) : dense ? 2.6 : 3.6
+  const baseOpacity = dense ? 0.22 : 0.26
+  const strokeWidth = dense ? 2.6 : 3.6
 
   return (
     <svg
       aria-hidden="true"
-      className={className ?? 'pointer-events-none absolute inset-0 h-full w-full'}
+      className="pointer-events-none absolute inset-[2px] h-[calc(100%-4px)] w-[calc(100%-4px)]"
       preserveAspectRatio="none"
       viewBox="0 0 100 100"
     >
@@ -217,7 +202,7 @@ export function PhasePadPerimeterRing({
         <mask id={maskId}>
           <rect x="0" y="0" width="100" height="100" fill="black" />
           <path
-            d={path}
+            d={PHASE_PAD_PERIMETER_PATH}
             pathLength={100}
             fill="none"
             stroke="white"
@@ -230,23 +215,23 @@ export function PhasePadPerimeterRing({
       </defs>
 
       <path
-        d={path}
+        d={PHASE_PAD_PERIMETER_PATH}
         pathLength={100}
         fill="none"
         stroke="rgba(255,255,255,0.28)"
         strokeWidth={strokeWidth}
         strokeLinecap="round"
-        strokeDasharray={solid ? undefined : `${dash} ${gap}`}
+        strokeDasharray={`${dash} ${gap}`}
         style={{ opacity: baseOpacity }}
       />
       <path
-        d={path}
+        d={PHASE_PAD_PERIMETER_PATH}
         pathLength={100}
         fill="none"
         stroke="rgba(255,255,255,0.98)"
         strokeWidth={strokeWidth}
         strokeLinecap="round"
-        strokeDasharray={solid ? undefined : `${dash} ${gap}`}
+        strokeDasharray={`${dash} ${gap}`}
         mask={`url(#${maskId})`}
         style={{
           filter: dense
