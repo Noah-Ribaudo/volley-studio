@@ -7,6 +7,18 @@ import type { PhaseEmphasisTuning } from '@/lib/rebuild/tactileTuning'
 import { TactilePlayJoystick } from './TactilePlayJoystick'
 import type { PrototypeControlProps } from './types'
 
+export type PerimeterEdgeId = 'top' | 'right' | 'bottom' | 'left'
+
+type PerimeterPhaseOrder = 'SERVE' | 'DEFENSE' | 'OFFENSE' | 'RECEIVE'
+
+export type PerimeterLight = {
+  key: string
+  edge: PerimeterEdgeId
+  index: number
+  globalIndex: number
+  style: React.CSSProperties
+}
+
 export const PHASE_PAD_LAYOUT: Array<{
   phase: CorePhase
   label: string
@@ -18,6 +30,8 @@ export const PHASE_PAD_LAYOUT: Array<{
   { phase: 'RECEIVE', label: 'Receive', row: 'bottom', column: 'left' },
   { phase: 'OFFENSE', label: 'Attack', row: 'bottom', column: 'right' },
 ]
+
+const PERIMETER_PHASE_ORDER: PerimeterPhaseOrder[] = ['SERVE', 'DEFENSE', 'OFFENSE', 'RECEIVE']
 
 export function usePhasePadTransition(props: PrototypeControlProps) {
   const [transitionFrom, setTransitionFrom] = useState<CorePhase>(props.currentCorePhase)
@@ -73,18 +87,122 @@ export function usePhasePadTransition(props: PrototypeControlProps) {
   }
 }
 
-export function getTravelDirection(from: CorePhase, to: CorePhase): 1 | -1 {
-  const fromColumn = PHASE_PAD_LAYOUT.find((item) => item.phase === from)?.column ?? 'left'
-  const toColumn = PHASE_PAD_LAYOUT.find((item) => item.phase === to)?.column ?? fromColumn
-  return fromColumn === toColumn ? 1 : toColumn === 'right' ? 1 : -1
+export function createPerimeterLights({
+  ledsPerEdge,
+  inset,
+}: {
+  ledsPerEdge: number
+  inset: number
+}) {
+  const step = 84 / (ledsPerEdge - 1)
+  const offsetForIndex = (index: number) => `${8 + index * step}%`
+  const edgeOrder: PerimeterEdgeId[] = ['top', 'right', 'bottom', 'left']
+
+  return edgeOrder.flatMap((edge, edgeOffset) =>
+    Array.from({ length: ledsPerEdge }, (_, index) => {
+      const styleByEdge: Record<PerimeterEdgeId, React.CSSProperties> = {
+        top: { top: inset, left: offsetForIndex(index) },
+        right: { right: inset, top: offsetForIndex(index) },
+        bottom: { bottom: inset, right: offsetForIndex(index) },
+        left: { left: inset, bottom: offsetForIndex(index) },
+      }
+
+      return {
+        key: `${edge}-${index}`,
+        edge,
+        index,
+        globalIndex: edgeOffset * ledsPerEdge + index,
+        style: styleByEdge[edge],
+      }
+    })
+  )
 }
 
-export function getSourceEdge(direction: 1 | -1) {
-  return direction === 1 ? 'right' : 'left'
+export function getPerimeterSegmentLength(ledsPerEdge: number) {
+  return ledsPerEdge * 2
 }
 
-export function getTargetEdge(direction: 1 | -1) {
-  return direction === 1 ? 'left' : 'right'
+function getPhaseOrderIndex(phase: CorePhase) {
+  return PERIMETER_PHASE_ORDER.indexOf(phase as PerimeterPhaseOrder)
+}
+
+export function getPerimeterSegmentStart(phase: CorePhase, ledsPerEdge: number) {
+  return getPhaseOrderIndex(phase) * getPerimeterSegmentLength(ledsPerEdge)
+}
+
+export function getPerimeterTravelDirection(from: CorePhase, to: CorePhase): 1 | -1 {
+  const fromIndex = getPhaseOrderIndex(from)
+  const toIndex = getPhaseOrderIndex(to)
+  const phaseDelta = (toIndex - fromIndex + PERIMETER_PHASE_ORDER.length) % PERIMETER_PHASE_ORDER.length
+  return phaseDelta === 1 ? 1 : -1
+}
+
+function normalizeIndex(value: number, total: number) {
+  return ((value % total) + total) % total
+}
+
+function getIntervalOverlap(startA: number, endA: number, startB: number, endB: number) {
+  return Math.max(0, Math.min(endA, endB) - Math.max(startA, startB))
+}
+
+export function getPerimeterCoverage({
+  globalIndex,
+  segmentStart,
+  segmentLength,
+  totalLights,
+}: {
+  globalIndex: number
+  segmentStart: number
+  segmentLength: number
+  totalLights: number
+}) {
+  const normalizedStart = normalizeIndex(segmentStart, totalLights)
+  const normalizedEnd = normalizedStart + segmentLength
+  const slotIntervals: Array<[number, number]> = [
+    [globalIndex, globalIndex + 1],
+    [globalIndex + totalLights, globalIndex + totalLights + 1],
+  ]
+
+  return slotIntervals.reduce((maxOverlap, [slotStart, slotEnd]) => {
+    return Math.max(maxOverlap, getIntervalOverlap(slotStart, slotEnd, normalizedStart, normalizedEnd))
+  }, 0)
+}
+
+export function getPerimeterSegmentState({
+  currentCorePhase,
+  transitionFrom,
+  transitionTo,
+  transitionProgress,
+  isPreviewingMovement,
+  ledsPerEdge,
+}: {
+  currentCorePhase: CorePhase
+  transitionFrom: CorePhase
+  transitionTo: CorePhase
+  transitionProgress: number
+  isPreviewingMovement: boolean
+  ledsPerEdge: number
+}) {
+  const segmentLength = getPerimeterSegmentLength(ledsPerEdge)
+  const totalLights = ledsPerEdge * 4
+  const restingStart = getPerimeterSegmentStart(currentCorePhase, ledsPerEdge)
+
+  if (!isPreviewingMovement) {
+    return {
+      segmentLength,
+      totalLights,
+      segmentStart: restingStart,
+    }
+  }
+
+  const fromStart = getPerimeterSegmentStart(transitionFrom, ledsPerEdge)
+  const direction = getPerimeterTravelDirection(transitionFrom, transitionTo)
+
+  return {
+    segmentLength,
+    totalLights,
+    segmentStart: fromStart + direction * segmentLength * transitionProgress,
+  }
 }
 
 export function getPhasePadJoystickEmphasis(props: PrototypeControlProps): PhaseEmphasisTuning {
