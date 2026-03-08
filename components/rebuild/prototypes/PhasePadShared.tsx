@@ -350,13 +350,13 @@ export function PhasePadHardwareLane({
             dx="0"
             dy="0"
             stdDeviation={1 + tuning.glow * 2.6}
-            floodColor={`rgba(255,255,255,${0.18 + tuning.bloom * 0.16})`}
+            floodColor={`rgba(255,176,73,${0.2 + tuning.bloom * 0.18})`}
           />
           <feDropShadow
             dx="0"
             dy="0"
             stdDeviation={2 + tuning.bloom * 4.2}
-            floodColor={`rgba(244,244,244,${0.08 + tuning.bloom * 0.12})`}
+            floodColor={`rgba(255,128,32,${0.1 + tuning.bloom * 0.14})`}
           />
         </filter>
       </defs>
@@ -392,7 +392,17 @@ export function PhasePadHardwareLane({
           totalLights,
         })
         const activeOpacity = strength > 0 ? tuning.inactiveOpacity + strength * (tuning.activeOpacity - tuning.inactiveOpacity) : tuning.inactiveOpacity
-        const fillTone = 84 + strength * 160
+        const activeColor = strength > 0
+          ? {
+              r: 255,
+              g: Math.round(186 - strength * 28),
+              b: Math.round(92 - strength * 40),
+            }
+          : {
+              r: 132,
+              g: 132,
+              b: 136,
+            }
 
         return (
           <g key={`hardware-piece-${index}`} transform={`translate(${piece.x} ${piece.y}) rotate(${piece.angle})`}>
@@ -411,7 +421,7 @@ export function PhasePadHardwareLane({
               width={tuning.pieceLength}
               height={tuning.pieceThickness}
               rx={tuning.pieceRadius}
-              fill={`rgba(${fillTone},${fillTone},${fillTone},${activeOpacity})`}
+              fill={`rgba(${activeColor.r},${activeColor.g},${activeColor.b},${activeOpacity})`}
               filter={strength > 0 ? 'url(#phase-pad-hardware-glow)' : undefined}
             />
             <rect
@@ -420,7 +430,9 @@ export function PhasePadHardwareLane({
               width={Math.max(0, tuning.pieceLength - 1.4)}
               height={Math.max(0, tuning.pieceThickness * 0.44)}
               rx={Math.max(0.5, tuning.pieceRadius * 0.72)}
-              fill={`rgba(255,255,255,${strength > 0 ? 0.08 + tuning.channelHighlight * 0.12 + strength * 0.12 : 0.03})`}
+              fill={strength > 0
+                ? `rgba(255,228,184,${0.14 + tuning.channelHighlight * 0.12 + strength * 0.16})`
+                : 'rgba(255,255,255,0.03)'}
             />
           </g>
         )

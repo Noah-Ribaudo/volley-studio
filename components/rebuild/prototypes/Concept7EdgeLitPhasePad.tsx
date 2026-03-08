@@ -24,18 +24,14 @@ function PhaseTile({
   phase,
   label,
   currentCorePhase,
-  transitionFrom,
   transitionTo,
-  transitionProgress,
   isPreviewingMovement,
   onPhaseSelect,
 }: {
   phase: CorePhase
   label: string
   currentCorePhase: CorePhase
-  transitionFrom: CorePhase
   transitionTo: CorePhase
-  transitionProgress: number
   isPreviewingMovement: boolean
   onPhaseSelect: (phase: CorePhase) => void
 }) {
@@ -48,14 +44,14 @@ function PhaseTile({
       type="button"
       onClick={() => onPhaseSelect(phase)}
       className={cn(
-        'relative flex min-h-[4.9rem] items-center justify-center overflow-hidden rounded-none border border-white/20 bg-[linear-gradient(180deg,rgba(196,196,196,0.3)_0%,rgba(138,138,138,0.3)_100%)] px-3 py-3 text-center text-xl font-medium text-white outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary/60',
-        emphasis > 0 && 'bg-[linear-gradient(180deg,rgba(214,214,214,0.36)_0%,rgba(148,148,148,0.34)_100%)]'
+        'relative flex min-h-[4.9rem] items-center justify-center overflow-hidden rounded-none border border-[rgba(135,154,170,0.22)] bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(236,241,245,0.96)_100%)] px-3 py-3 text-center text-xl font-medium text-slate-800 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary/60',
+        emphasis > 0 && 'bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(228,236,242,0.98)_100%)] text-slate-900'
       )}
       style={{
         boxShadow:
           emphasis > 0
-            ? `inset 0 0 0 1px rgba(255,255,255,${0.1 + emphasis * 0.12}), 0 0 ${4 + emphasis * 6}px rgba(255,255,255,${0.04 + emphasis * 0.04})`
-            : 'inset 0 0 0 1px rgba(255,255,255,0.08)',
+            ? `inset 0 0 0 1px rgba(255,255,255,${0.62 + emphasis * 0.12}), 0 10px ${10 + emphasis * 10}px rgba(123,140,156,${0.12 + emphasis * 0.06})`
+            : 'inset 0 0 0 1px rgba(255,255,255,0.52), 0 8px 18px rgba(148,163,184,0.1)',
       }}
     >
       <span className="relative z-[1] tracking-[-0.02em]">{label}</span>
@@ -86,10 +82,10 @@ export function Concept7EdgeLitPhasePad(props: PrototypeControlProps) {
         </div>
       </div>
 
-      <div className="rounded-[22px] border border-border/70 bg-[linear-gradient(180deg,rgba(58,58,60,0.94)_0%,rgba(28,28,32,0.98)_100%)] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+      <div className="rounded-[22px] border border-[rgba(160,174,189,0.45)] bg-[linear-gradient(180deg,rgba(250,251,252,0.98)_0%,rgba(231,236,241,0.98)_100%)] p-2 shadow-[0_16px_30px_rgba(148,163,184,0.16),inset_0_1px_0_rgba(255,255,255,0.88)]">
         <PhasePadRotationRail {...props} />
 
-        <div className="relative overflow-hidden rounded-[18px] border border-white/10 bg-[linear-gradient(180deg,rgba(122,122,122,0.22)_0%,rgba(92,92,92,0.22)_100%)] p-[10px] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+        <div className="relative overflow-hidden rounded-[18px] border border-[rgba(160,174,189,0.32)] bg-[linear-gradient(180deg,rgba(245,248,250,0.98)_0%,rgba(223,230,236,0.98)_100%)] p-[10px] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
           <div className="pointer-events-none absolute inset-0">
             {OUTER_LIGHTS.map((light) => {
               const strength = getPerimeterCoverage({
@@ -103,15 +99,15 @@ export function Concept7EdgeLitPhasePad(props: PrototypeControlProps) {
                 <span
                   key={light.key}
                   className={cn(
-                    'absolute rounded-full bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(218,218,218,0.9)_100%)]',
+                    'absolute rounded-full bg-[linear-gradient(180deg,rgba(255,205,132,0.98)_0%,rgba(255,148,41,0.94)_100%)]',
                     light.edge === 'top' || light.edge === 'bottom' ? 'h-[4px] w-[15px]' : 'h-[15px] w-[4px]'
                   )}
                   style={{
                     ...light.style,
-                    opacity: strength > 0 ? 0.08 + strength * 0.92 : 0.03,
+                    opacity: strength > 0 ? 0.1 + strength * 0.9 : 0.04,
                     boxShadow:
                       strength > 0
-                        ? `0 0 ${2 + strength * 6}px rgba(255,255,255,${0.24 + strength * 0.28}), 0 0 ${7 + strength * 12}px rgba(248,248,248,${0.08 + strength * 0.12})`
+                        ? `0 0 ${2 + strength * 6}px rgba(255,179,77,${0.42 + strength * 0.24}), 0 0 ${7 + strength * 12}px rgba(255,126,33,${0.14 + strength * 0.2})`
                         : 'none',
                   }}
                 />
@@ -119,16 +115,14 @@ export function Concept7EdgeLitPhasePad(props: PrototypeControlProps) {
             })}
           </div>
 
-          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-[14px] bg-black/35">
+          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-[14px] bg-[rgba(186,198,208,0.55)]">
             {PHASE_PAD_LAYOUT.map((item) => (
               <PhaseTile
                 key={item.phase}
                 phase={item.phase}
                 label={item.label}
                 currentCorePhase={props.currentCorePhase}
-                transitionFrom={transitionFrom}
                 transitionTo={transitionTo}
-                transitionProgress={transitionProgress}
                 isPreviewingMovement={props.isPreviewingMovement}
                 onPhaseSelect={props.onPhaseSelect}
               />

@@ -28,6 +28,7 @@ import { ROLES, type Position, type Role, type Rotation } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { useDisplayPrefsStore } from '@/store/useDisplayPrefsStore'
 import { useTeamStore } from '@/store/useTeamStore'
+import { useThemeStore } from '@/store/useThemeStore'
 import { useWhiteboardStore } from '@/store/useWhiteboardStore'
 
 export default function RebuildPrototypeLabPage() {
@@ -226,7 +227,12 @@ export default function RebuildPrototypeLabPage() {
   useEffect(() => {
     const root = document.documentElement
     const previousTheme = root.getAttribute('data-theme')
+    const previousThemeState = useThemeStore.getState()
     root.setAttribute('data-theme', 'light')
+    useThemeStore.setState({
+      theme: 'light',
+      themePreference: 'light',
+    })
 
     return () => {
       if (previousTheme) {
@@ -234,6 +240,11 @@ export default function RebuildPrototypeLabPage() {
       } else {
         root.removeAttribute('data-theme')
       }
+
+      useThemeStore.setState({
+        theme: previousThemeState.theme,
+        themePreference: previousThemeState.themePreference,
+      })
     }
   }, [])
 
