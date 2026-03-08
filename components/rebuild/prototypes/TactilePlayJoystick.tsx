@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
-import { ArrowDownLeft, ArrowDownRight, ArrowUpLeft, ArrowUpRight } from 'lucide-react'
+import { ArrowUpRight } from 'lucide-react'
 import { motion, useReducedMotion } from 'motion/react'
 import type { CorePhase } from '@/lib/rebuild/prototypeFlow'
 import type { JoystickTuning, PhaseEmphasisTuning, SwitchMotionTuning } from '@/lib/rebuild/tactileTuning'
@@ -52,11 +52,11 @@ const QUADRANT_PHASES: [PhaseChip, PhaseChip, PhaseChip, PhaseChip] = [
   { phase: 'OFFENSE', longLabel: 'Attack', shortLabel: 'At' },
 ]
 
-const PHASE_ICONS = {
-  SERVE: ArrowUpLeft,
-  DEFENSE: ArrowUpRight,
-  RECEIVE: ArrowDownLeft,
-  OFFENSE: ArrowDownRight,
+const PHASE_ICON_ROTATION = {
+  SERVE: -90,
+  DEFENSE: 0,
+  RECEIVE: 180,
+  OFFENSE: 90,
 } as const
 
 const LITERAL_GUIDES: Array<{ phase: CorePhase; x: number; y: number }> = [
@@ -159,8 +159,8 @@ export function TactilePlayJoystick({
         }
       : defaultFrame
   const selectedPhase = dragPhase ?? currentPhase
-  const indicatorPhase = dragPhase ?? nextPhase
-  const DirectionIcon = PHASE_ICONS[indicatorPhase]
+  const indicatorPhase = dragPhase ?? currentPhase
+  const indicatorRotation = PHASE_ICON_ROTATION[indicatorPhase]
 
   const quadrantTransition = prefersReducedMotion
     ? { duration: 0.001 }
@@ -184,6 +184,15 @@ export function TactilePlayJoystick({
         stiffness: switchMotion.spring.stiffness,
         damping: switchMotion.spring.damping,
         mass: switchMotion.spring.mass,
+      }
+
+  const indicatorTransition = prefersReducedMotion
+    ? { duration: 0.001 }
+    : {
+        type: 'spring' as const,
+        stiffness: 320,
+        damping: 26,
+        mass: 0.7,
       }
 
   const resetStick = () => {
@@ -377,7 +386,14 @@ export function TactilePlayJoystick({
             }}
           >
             <div className="pointer-events-none absolute inset-[18%] rounded-full border border-white/18 bg-black/5" />
-            <DirectionIcon aria-hidden className="relative z-[1] h-4 w-4 text-foreground/85" strokeWidth={2.1} />
+            <motion.div
+              aria-hidden="true"
+              animate={{ rotate: indicatorRotation }}
+              transition={indicatorTransition}
+              className="relative z-[1] flex items-center justify-center"
+            >
+              <ArrowUpRight className="h-4 w-4 text-foreground/85" strokeWidth={2.1} />
+            </motion.div>
           </motion.div>
         </div>
       </motion.button>
