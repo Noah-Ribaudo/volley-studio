@@ -59,7 +59,7 @@ export function Concept8FullLedPerimeter(props: PrototypeControlProps) {
   })
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="flex h-full min-h-0 flex-col justify-end">
       <div className="rounded-[22px] border border-border/70 bg-[linear-gradient(180deg,rgba(58,58,60,0.94)_0%,rgba(22,22,26,0.99)_100%)] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
         <PhasePadRotationRail {...props} />
 
