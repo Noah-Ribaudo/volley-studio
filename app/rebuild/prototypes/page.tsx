@@ -394,7 +394,7 @@ export default function RebuildPrototypeLabPage() {
         </>
       ) : null}
 
-      <main className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
+      <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <section className="min-h-0 flex-1 overflow-hidden">
           <VolleyballCourt
             positions={positions}
@@ -481,7 +481,7 @@ export default function RebuildPrototypeLabPage() {
           />
         </section>
 
-        <section className="shrink-0 overflow-hidden" style={{ height: mobileDockHeight }}>
+        <section className="mt-auto shrink-0 overflow-hidden" style={{ height: mobileDockHeight }}>
           <div className="h-full min-h-0 overflow-y-auto">{prototypeControlPanel}</div>
         </section>
       </main>
