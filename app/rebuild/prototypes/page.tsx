@@ -222,6 +222,20 @@ export default function RebuildPrototypeLabPage() {
     isOurServe ? 'We Serve' : 'We Receive'
   }`
 
+  useEffect(() => {
+    const root = document.documentElement
+    const previousTheme = root.getAttribute('data-theme')
+    root.setAttribute('data-theme', 'light')
+
+    return () => {
+      if (previousTheme) {
+        root.setAttribute('data-theme', previousTheme)
+      } else {
+        root.removeAttribute('data-theme')
+      }
+    }
+  }, [])
+
   const prototypeControlPanel = (
     <PrototypeControlPanel
       activeVariant={activeVariant}
@@ -358,7 +372,7 @@ export default function RebuildPrototypeLabPage() {
               type="button"
               size="sm"
               variant="outline"
-              className="pointer-events-auto lab-panel lab-texture h-9 rounded-full px-4 text-[11px] uppercase tracking-[0.08em]"
+              className="pointer-events-auto h-9 rounded-full border border-border bg-card px-4 text-[11px] uppercase tracking-[0.08em] shadow-[0_10px_24px_rgba(0,0,0,0.08)]"
               onClick={() => setIsLabTrayOpen(true)}
             >
               Lab
@@ -368,7 +382,7 @@ export default function RebuildPrototypeLabPage() {
           <Sheet open={isLabTrayOpen} onOpenChange={setIsLabTrayOpen}>
             <SheetContent
               side="top"
-              className="lab-panel lab-texture rounded-b-3xl border-b border-border/60 px-0 pb-0 pt-0"
+              className="rounded-b-3xl border-b border-border/60 bg-card px-0 pb-0 pt-0 shadow-[0_18px_40px_rgba(0,0,0,0.12)]"
             >
               <SheetHeader className="pb-2 pr-12">
                 <SheetTitle className="text-base">Prototype Lab</SheetTitle>
@@ -467,7 +481,7 @@ export default function RebuildPrototypeLabPage() {
           />
         </section>
 
-        <section className="lab-panel shrink-0 overflow-hidden rounded-2xl p-1.5" style={{ height: mobileDockHeight }}>
+        <section className="shrink-0 overflow-hidden rounded-2xl border border-border bg-card/92 p-1.5 shadow-[0_14px_30px_rgba(0,0,0,0.08)]" style={{ height: mobileDockHeight }}>
           <div className="h-full min-h-0 overflow-y-auto pr-1">{prototypeControlPanel}</div>
         </section>
       </main>
@@ -502,7 +516,7 @@ export default function RebuildPrototypeLabPage() {
             </div>
 
             <aside className="w-[340px] max-w-[340px] shrink-0">
-              <div className="lab-panel lab-texture rounded-[30px] p-4">
+              <div className="rounded-[30px] border border-border bg-card/94 p-4 shadow-[0_18px_40px_rgba(0,0,0,0.1)]">
                 <div className="pb-3">
                   <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Mobile Simulator</p>
                   <h1 className="text-lg font-semibold">Prototype Lab</h1>
