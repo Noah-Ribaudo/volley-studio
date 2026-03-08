@@ -23,6 +23,12 @@
       }
     ],
     "paths": {
+      "@hugeicons/core-free-icons": [
+        "./lib/hugeicons-core-free-icons-shim.ts"
+      ],
+      "@hugeicons/react": [
+        "./lib/hugeicons-react-shim.tsx"
+      ],
       "@/*": [
         "./*"
       ]

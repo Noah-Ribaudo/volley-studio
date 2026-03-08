@@ -10,6 +10,7 @@ import {
   GeistPixelLine,
 } from "geist/font/pixel";
 import "./globals.css";
+import "dialkit/styles.css";
 import TextureModeLoader from "@/components/TextureModeLoader";
 import ThemeInitializer from "@/components/ThemeInitializer";
 import { ConvexClientProvider } from "@/components/ConvexClientProvider";
@@ -62,6 +63,9 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
 };
+
+const agentationEndpoint =
+  process.env.NEXT_PUBLIC_AGENTATION_ENDPOINT ?? "http://127.0.0.1:4747";
 
 // Inline script to apply theme before React hydrates (prevents flash)
 const themeScript = `
@@ -131,7 +135,9 @@ export default function RootLayout({
               }}
             />
             {children}
-            {process.env.NODE_ENV === "development" && <Agentation />}
+            {process.env.NODE_ENV === "development" && (
+              <Agentation endpoint={agentationEndpoint} />
+            )}
           </StoreProvider>
         </ConvexClientProvider>
       </body>
