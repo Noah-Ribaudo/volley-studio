@@ -481,8 +481,8 @@ export default function RebuildPrototypeLabPage() {
           />
         </section>
 
-        <section className="shrink-0 overflow-hidden rounded-2xl border border-border bg-card/92 p-1.5 shadow-[0_14px_30px_rgba(0,0,0,0.08)]" style={{ height: mobileDockHeight }}>
-          <div className="h-full min-h-0 overflow-y-auto pr-1">{prototypeControlPanel}</div>
+        <section className="shrink-0 overflow-hidden" style={{ height: mobileDockHeight }}>
+          <div className="h-full min-h-0 overflow-y-auto">{prototypeControlPanel}</div>
         </section>
       </main>
     </>
