@@ -499,20 +499,18 @@ export default function RebuildPrototypeLabPage() {
       ) : (
         <div className="relative flex h-full w-full items-center justify-center overflow-hidden px-6 py-4">
           <div className="flex h-full w-full max-w-[960px] items-center justify-center gap-8">
-            <div className="relative flex shrink-0 items-center justify-center">
-              <div
-                className="relative rounded-[44px] border border-white/12 bg-[linear-gradient(180deg,rgba(18,18,22,0.98)_0%,rgba(8,8,10,0.98)_100%)] p-[10px] shadow-[0_32px_60px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.06)]"
-                style={{
-                  height: 'min(852px, calc(100dvh - 32px))',
-                  aspectRatio: '393 / 852',
-                }}
-              >
-                <div className="pointer-events-none absolute left-1/2 top-[10px] h-[28px] w-[128px] -translate-x-1/2 rounded-full bg-black/55 ring-1 ring-white/10" />
-                <div className="relative h-full w-full overflow-hidden rounded-[34px] border border-white/6 bg-background">
-                  <div className="relative flex h-full w-full flex-col overflow-hidden p-2">{phoneShell}</div>
-                </div>
-                <div className="pointer-events-none absolute bottom-[7px] left-1/2 h-[4px] w-[120px] -translate-x-1/2 rounded-full bg-white/10" />
+            <div
+              className="relative shrink-0 rounded-[44px] border border-white/12 bg-[linear-gradient(180deg,rgba(18,18,22,0.98)_0%,rgba(8,8,10,0.98)_100%)] p-[10px] shadow-[0_32px_60px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.06)]"
+              style={{
+                height: 'min(852px, calc(100dvh - 32px))',
+                aspectRatio: '393 / 852',
+              }}
+            >
+              <div className="pointer-events-none absolute left-1/2 top-[10px] h-[28px] w-[128px] -translate-x-1/2 rounded-full bg-black/55 ring-1 ring-white/10" />
+              <div className="relative h-full w-full overflow-hidden rounded-[34px] border border-white/6 bg-background">
+                <div className="relative flex h-full w-full flex-col overflow-hidden p-2">{phoneShell}</div>
               </div>
+              <div className="pointer-events-none absolute bottom-[7px] left-1/2 h-[4px] w-[120px] -translate-x-1/2 rounded-full bg-white/10" />
             </div>
 
             <aside className="w-[340px] max-w-[340px] shrink-0">
