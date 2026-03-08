@@ -218,7 +218,7 @@ export default function RebuildPrototypeLabPage() {
   }, [])
   const mobileDockHeight =
     activeVariant === 'concept4' ? tactileTuning.c4Literal.clusterLayout.dockHeight : tactileTuning.dock.collapsedHeight
-  const mobileCourtAspectRatio = '6 / 11'
+  const mobileCourtAspectRatio = '393 / 696'
 
   const labStatusCopy = `Rotation ${currentRotation} • ${formatCorePhaseLabel(currentCorePhase)} • ${
     isOurServe ? 'We Serve' : 'We Receive'
