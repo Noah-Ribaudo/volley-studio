@@ -217,6 +217,7 @@ export default function RebuildPrototypeLabPage() {
   }, [])
   const mobileDockHeight =
     activeVariant === 'concept4' ? tactileTuning.c4Literal.clusterLayout.dockHeight : tactileTuning.dock.collapsedHeight
+  const mobileCourtAspectRatio = '6 / 11'
 
   const labStatusCopy = `Rotation ${currentRotation} • ${formatCorePhaseLabel(currentCorePhase)} • ${
     isOurServe ? 'We Serve' : 'We Receive'
@@ -394,8 +395,8 @@ export default function RebuildPrototypeLabPage() {
         </>
       ) : null}
 
-      <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <section className="min-h-0 flex-1 overflow-hidden">
+      <main className="flex min-h-0 flex-1 flex-col justify-end overflow-hidden">
+        <section className="relative w-full shrink-0 overflow-visible" style={{ aspectRatio: mobileCourtAspectRatio }}>
           <VolleyballCourt
             positions={positions}
             animationConfig={{ durationMs: playDurationMs }}
@@ -481,7 +482,7 @@ export default function RebuildPrototypeLabPage() {
           />
         </section>
 
-        <section className="mt-auto shrink-0 overflow-hidden" style={{ height: mobileDockHeight }}>
+        <section className="w-full shrink-0 overflow-hidden" style={{ height: mobileDockHeight }}>
           <div className="h-full min-h-0 overflow-y-auto">{prototypeControlPanel}</div>
         </section>
       </main>
@@ -495,7 +496,7 @@ export default function RebuildPrototypeLabPage() {
       style={tactileCssVariables}
     >
       {isMobile ? (
-        <div className="relative mx-auto flex h-full w-full flex-col overflow-hidden p-2 sm:p-3">{phoneShell}</div>
+        <div className="relative mx-auto flex h-full w-full flex-col overflow-hidden">{phoneShell}</div>
       ) : (
         <div className="relative flex h-full w-full items-center justify-center overflow-hidden px-6 py-4">
           <div className="flex h-full w-full max-w-[960px] items-center justify-center gap-8">
@@ -509,7 +510,7 @@ export default function RebuildPrototypeLabPage() {
               >
                 <div className="pointer-events-none absolute left-1/2 top-[10px] h-[28px] w-[128px] -translate-x-1/2 rounded-full bg-black/55 ring-1 ring-white/10" />
                 <div className="relative h-full w-full overflow-hidden rounded-[34px] border border-white/6 bg-background">
-                  <div className="relative flex h-full w-full flex-col overflow-hidden p-2">{phoneShell}</div>
+                  <div className="relative flex h-full w-full flex-col overflow-hidden">{phoneShell}</div>
                 </div>
                 <div className="pointer-events-none absolute bottom-[7px] left-1/2 h-[4px] w-[120px] -translate-x-1/2 rounded-full bg-white/10" />
               </div>
