@@ -99,6 +99,8 @@ function MovementArrowLayerImpl({
           !isNaN(chosenControl.x) && !isNaN(chosenControl.y)
           ? chosenControl : null
         const controlSvg = validControl ? toSvgCoords(validControl) : null
+        const endpointLabel = arrowEndpointLabels?.[role] ?? null
+        const labelWidth = endpointLabel ? Math.max(44, Math.min(96, endpointLabel.length * 6.2 + 18)) : 0
 
         const hasValidPositions = arrowEndPos &&
           !isNaN(homeSvgPos.x) && !isNaN(homeSvgPos.y) &&
@@ -131,15 +133,15 @@ function MovementArrowLayerImpl({
               onMouseLeave={() => onArrowHoverChange(null)}
               debugHitboxes={debugHitboxes}
             />
-            {arrowEndpointLabels?.[role] ? (
+            {endpointLabel ? (
               <g
                 transform={`translate(${arrowEndSvg.x + (arrowEndSvg.x >= homeSvgPos.x ? 14 : -14)} ${arrowEndSvg.y + ((controlSvg?.y ?? homeSvgPos.y) >= arrowEndSvg.y ? -12 : 12)})`}
                 style={{ pointerEvents: 'none' }}
               >
                 <rect
-                  x={arrowEndSvg.x >= homeSvgPos.x ? 0 : -88}
+                  x={arrowEndSvg.x >= homeSvgPos.x ? 0 : -labelWidth}
                   y={-10}
-                  width={88}
+                  width={labelWidth}
                   height={20}
                   rx={10}
                   fill="rgba(255,255,255,0.92)"
@@ -151,7 +153,7 @@ function MovementArrowLayerImpl({
                   textAnchor={arrowEndSvg.x >= homeSvgPos.x ? 'start' : 'end'}
                   className="fill-slate-600 text-[10px] font-semibold select-none"
                 >
-                  {arrowEndpointLabels[role]}
+                  {endpointLabel}
                 </text>
               </g>
             ) : null}
