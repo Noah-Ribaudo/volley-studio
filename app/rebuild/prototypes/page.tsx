@@ -144,6 +144,10 @@ export default function RebuildPrototypeLabPage() {
     () => prototypeCourtState.getArrowCurves(currentRotation, currentCorePhase),
     [currentCorePhase, currentRotation, prototypeCourtState]
   )
+  const currentSecondaryArrowCurves = useMemo(
+    () => prototypeCourtState.getSecondaryArrowCurves(currentRotation, currentCorePhase),
+    [currentCorePhase, currentRotation, prototypeCourtState]
+  )
   const currentStatusFlags = localStatusFlags[rotationPhaseKey] || {}
   const currentTagFlags = currentCorePhase === 'FIRST_ATTACK' ? {} : getCurrentTags(currentRotation, rallyPhase, localTagFlags)
 
@@ -375,6 +379,7 @@ export default function RebuildPrototypeLabPage() {
               secondaryArrows={currentSecondaryArrows}
               secondaryArrowSources={currentSecondaryArrowSources}
               secondaryArrowEndpointLabels={currentSecondaryArrowLabels}
+              secondaryArrowCurves={currentSecondaryArrowCurves}
               arrowTagFontSize={tactileTuning.arrowTags.fontSize}
               onCreateSecondaryArrow={
                 isEditingAllowed && currentCorePhase === 'RECEIVE'
@@ -401,7 +406,12 @@ export default function RebuildPrototypeLabPage() {
               arrowCurves={currentArrowCurves}
               onArrowCurveChange={
                 isEditingAllowed
-                  ? (role, curve) => {
+                  ? (role, curve, options) => {
+                      if (options?.variant === 'secondary') {
+                        prototypeCourtState.setSecondaryArrowCurve(currentRotation, currentCorePhase, role, curve)
+                        return
+                      }
+
                       prototypeCourtState.setArrowCurve(currentRotation, currentCorePhase, role, curve)
                     }
                   : undefined

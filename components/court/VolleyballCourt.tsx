@@ -99,7 +99,8 @@ interface VolleyballCourtProps {
   secondaryArrowEndpointLabels?: Partial<Record<Role, string>>
   arrowTagFontSize?: number
   arrowCurves?: Partial<Record<Role, ArrowCurveConfig>>
-  onArrowCurveChange?: (role: Role, curve: ArrowCurveConfig | null) => void
+  secondaryArrowCurves?: Partial<Record<Role, ArrowCurveConfig>>
+  onArrowCurveChange?: (role: Role, curve: ArrowCurveConfig | null, options?: { variant?: 'primary' | 'secondary' }) => void
   baseOrder?: Role[]
   showPosition?: boolean
   showPlayer?: boolean
@@ -218,6 +219,7 @@ export function VolleyballCourt({
   secondaryArrowEndpointLabels = {},
   arrowTagFontSize = 10,
   arrowCurves = {},
+  secondaryArrowCurves = {},
   onArrowCurveChange,
   baseOrder = DEFAULT_BASE_ORDER,
   showPosition = true,
@@ -1651,12 +1653,16 @@ export function VolleyballCourt({
     if (initialEndSvg) {
       const normalizedEnd = constrainHomePosition(toNormalizedCoords(initialEndSvg.x, initialEndSvg.y))
       arrowDragPositionRef.current = normalizedEnd
-      curveControlRef.current = variant === 'primary' ? arrowCurves[role] ?? null : null
+      curveControlRef.current = variant === 'primary'
+        ? arrowCurves[role] ?? null
+        : secondaryArrowCurves[role] ?? null
       setArrowDragPosition(normalizedEnd)
     } else if (activeArrowSet[role]) {
       const currentArrow = activeArrowSet[role]
       arrowDragPositionRef.current = currentArrow
-      curveControlRef.current = variant === 'primary' ? arrowCurves[role] ?? null : null
+      curveControlRef.current = variant === 'primary'
+        ? arrowCurves[role] ?? null
+        : secondaryArrowCurves[role] ?? null
       setArrowDragPosition(currentArrow)
     } else {
       arrowDragPositionRef.current = null
@@ -1709,7 +1715,7 @@ export function VolleyballCourt({
 
         // Keep the persisted curve synced with the live helper arrow while creating
         // a brand new arrow from the preview affordance.
-        if (variant === 'primary' && isCreatingNewArrow && onArrowCurveChange) {
+        if (isCreatingNewArrow && onArrowCurveChange) {
           const controlSvg = {
             x: (dragStartSvg.x + pos.x) / 2,
             y: Math.min(dragStartSvg.y, pos.y) - (previewCurveHeight * 0.65),
@@ -1717,7 +1723,7 @@ export function VolleyballCourt({
           const nextControl = toNormalizedCoords(controlSvg.x, controlSvg.y)
           if (hasMeaningfulCurveDelta(curveControlRef.current, nextControl)) {
             curveControlRef.current = nextControl
-            onArrowCurveChange(role, nextControl)
+            onArrowCurveChange(role, nextControl, { variant })
           }
         }
       })
@@ -1771,10 +1777,10 @@ export function VolleyballCourt({
     document.addEventListener('mouseup', handleEnd)
       document.addEventListener('touchmove', handleMove, { passive: false })
       document.addEventListener('touchend', handleEnd)
-  }, [onArrowChange, onArrowCurveChange, getClientPoint, clientToSvgCoords, toNormalizedCoords, incrementDragCount, markNextStepDragLearned, markArrowDragLearned, isMobile, arrows, secondaryArrows, secondaryArrowSources, arrowCurves, isPreviewingMovement, displayPositions, positions, toSvgCoords, clearPreviewStateForRole])
+  }, [onArrowChange, onArrowCurveChange, getClientPoint, clientToSvgCoords, toNormalizedCoords, incrementDragCount, markNextStepDragLearned, markArrowDragLearned, isMobile, arrows, secondaryArrows, secondaryArrowSources, arrowCurves, secondaryArrowCurves, isPreviewingMovement, displayPositions, positions, toSvgCoords, clearPreviewStateForRole])
 
   // Handle curve drag - dragging the curve handle adjusts direction and intensity
-  const handleCurveDragStart = useCallback((role: Role, e: React.MouseEvent | React.TouchEvent) => {
+  const handleCurveDragStart = useCallback((role: Role, e: React.MouseEvent | React.TouchEvent, variant: 'primary' | 'secondary' = 'primary') => {
     if (!onArrowCurveChange || isPreviewingMovement) return
 
     if (e.type === 'mousedown') {
@@ -1783,12 +1789,15 @@ export function VolleyballCourt({
     e.stopPropagation()
 
     // Get arrow start and end positions
-    const startPos = positions[role]
-    const endPos = arrows[role]
+    const startPos = variant === 'secondary'
+      ? secondaryArrowSources[role] || arrows[role]
+      : positions[role]
+    const endPos = variant === 'secondary' ? secondaryArrows[role] : arrows[role]
     if (!startPos || !endPos) return
 
     setDraggingCurveRole(role)
-    curveControlRef.current = arrowCurves[role] ?? null
+    setHoveredArrow({ role, variant })
+    curveControlRef.current = variant === 'secondary' ? secondaryArrowCurves[role] ?? null : arrowCurves[role] ?? null
 
     let latestClientPoint: ClientPoint | null = null
 
@@ -1823,7 +1832,7 @@ export function VolleyballCourt({
           return
         }
         curveControlRef.current = nextControl
-        onArrowCurveChange(role, nextControl)
+        onArrowCurveChange(role, nextControl, { variant })
       })
     }
 
@@ -1845,7 +1854,7 @@ export function VolleyballCourt({
     document.addEventListener('mouseup', handleEnd)
     document.addEventListener('touchmove', handleMove, { passive: false })
     document.addEventListener('touchend', handleEnd)
-  }, [onArrowCurveChange, positions, arrows, arrowCurves, getClientPoint, clientToSvgCoords, toNormalizedCoords, isPreviewingMovement])
+  }, [onArrowCurveChange, positions, arrows, secondaryArrows, secondaryArrowSources, arrowCurves, secondaryArrowCurves, getClientPoint, clientToSvgCoords, toNormalizedCoords, isPreviewingMovement])
 
   // Handle mobile touch - drag to move, tap to open context menu
   const handleMobileTouchStart = useCallback((role: Role, e: React.TouchEvent) => {
@@ -2323,6 +2332,7 @@ export function VolleyballCourt({
           secondaryArrows={secondaryArrows}
           secondaryArrowSources={secondaryArrowSources}
           secondaryArrowEndpointLabels={secondaryArrowEndpointLabels}
+          secondaryArrowCurves={secondaryArrowCurves}
           arrowTagFontSize={arrowTagFontSize}
           hoveredArrowRole={hoveredArrow.role}
           hoveredArrowVariant={hoveredArrow.variant}
@@ -2637,7 +2647,10 @@ export function VolleyballCourt({
           draggingArrowRole={draggingArrowRole}
           arrowDragPosition={arrowDragPosition}
           arrows={arrows}
+          secondaryArrows={secondaryArrows}
+          secondaryArrowSources={secondaryArrowSources}
           arrowCurves={arrowCurves}
+          secondaryArrowCurves={secondaryArrowCurves}
           draggingRole={draggingRole}
           dragPosition={dragPosition}
           curveStrength={playTuning.curveStrength}
@@ -2646,8 +2659,9 @@ export function VolleyballCourt({
           easingCss={cfg.easingCss}
           debugHitboxes={debugHitboxes}
           toSvgCoords={toSvgCoords}
+          hoveredArrowVariant={hoveredArrow.variant}
           onCurveDragStart={handleCurveDragStart}
-          onArrowHoverChange={(role) => setHoveredArrow({ role, variant: role ? 'primary' : null })}
+          onArrowHoverChange={(role, variant) => setHoveredArrow({ role, variant: role ? (variant ?? 'primary') : null })}
         />
 
         <SimulationBallLayer

@@ -49,6 +49,7 @@ interface MovementArrowLayerProps {
   secondaryArrows?: ArrowPositions
   secondaryArrowSources?: ArrowPositions
   secondaryArrowEndpointLabels?: Partial<Record<Role, string>>
+  secondaryArrowCurves?: Partial<Record<Role, ArrowCurveConfig>>
   arrowTagFontSize?: number
   hoveredArrowRole: Role | null
   hoveredArrowVariant?: 'primary' | 'secondary' | null
@@ -83,6 +84,7 @@ function MovementArrowLayerImpl({
   secondaryArrows,
   secondaryArrowSources,
   secondaryArrowEndpointLabels,
+  secondaryArrowCurves,
   arrowTagFontSize = 10,
   hoveredArrowRole,
   hoveredArrowVariant = null,
@@ -224,6 +226,19 @@ function MovementArrowLayerImpl({
           !isNaN(chosenControl.x) && !isNaN(chosenControl.y)
           ? chosenControl : null
         const controlSvg = validControl ? toSvgCoords(validControl) : null
+        const secondaryChosenControl = (() => {
+          if (!secondaryArrowTarget) return null
+          if (secondaryArrowCurves?.[role]) {
+            return secondaryArrowCurves[role]
+          }
+
+          return computeDefaultControlPoint(secondaryArrowStartPos, secondaryArrowTarget, curveStrength)
+        })()
+        const validSecondaryControl = secondaryChosenControl &&
+          !isNaN(secondaryChosenControl.x) && !isNaN(secondaryChosenControl.y)
+          ? secondaryChosenControl
+          : null
+        const secondaryControlSvg = validSecondaryControl ? toSvgCoords(validSecondaryControl) : null
         const endpointLabel = arrowEndpointLabels?.[role] ?? null
         const secondaryEndpointLabel = secondaryArrowEndpointLabels?.[role] ?? null
         const showPrimaryLabel = Boolean(endpointLabel && hoveredArrowRole === role && hoveredArrowVariant === 'primary')
@@ -265,7 +280,7 @@ function MovementArrowLayerImpl({
                 isDraggable={true}
                 onDragStart={(e) => onArrowDragStart(role, e, undefined, undefined, 'primary')}
                 showCurveHandle={false}
-                onMouseEnter={() => onArrowHoverChange(role, 'primary')}
+                  onMouseEnter={() => onArrowHoverChange(role, 'primary')}
                 onMouseLeave={() => onArrowHoverChange(null)}
                 debugHitboxes={debugHitboxes}
               />
@@ -329,7 +344,7 @@ function MovementArrowLayerImpl({
                 <MovementArrow
                   start={{ x: secondaryArrowStartSvg.x, y: secondaryArrowStartSvg.y }}
                   end={secondaryArrowEndSvg}
-                  control={null}
+                  control={secondaryControlSvg}
                   color={getRoleColor(role)}
                   strokeWidth={2.5}
                   opacity={0.62}
@@ -372,13 +387,17 @@ interface CurveHandleLayerProps {
   isMobile: boolean
   tappedRole: Role | null
   hoveredArrowRole: Role | null
+  hoveredArrowVariant?: 'primary' | 'secondary' | null
   draggingCurveRole: Role | null
   canEditCurves: boolean
   playLockedPaths: Partial<Record<Role, LockedPath>>
   draggingArrowRole: Role | null
   arrowDragPosition: Position | null
   arrows: ArrowPositions
+  secondaryArrows?: ArrowPositions
+  secondaryArrowSources?: ArrowPositions
   arrowCurves: Partial<Record<Role, ArrowCurveConfig>>
+  secondaryArrowCurves?: Partial<Record<Role, ArrowCurveConfig>>
   draggingRole: Role | null
   dragPosition: Position | null
   curveStrength: number
@@ -387,7 +406,7 @@ interface CurveHandleLayerProps {
   easingCss: string
   debugHitboxes: boolean
   toSvgCoords: (position: Position) => { x: number; y: number }
-  onCurveDragStart: (role: Role, e: React.MouseEvent | React.TouchEvent) => void
+  onCurveDragStart: (role: Role, e: React.MouseEvent | React.TouchEvent, variant?: 'primary' | 'secondary') => void
   onArrowHoverChange: (role: Role | null, variant?: 'primary' | 'secondary') => void
 }
 
@@ -400,13 +419,17 @@ function CurveHandleLayerImpl({
   isMobile,
   tappedRole,
   hoveredArrowRole,
+  hoveredArrowVariant = null,
   draggingCurveRole,
   canEditCurves,
   playLockedPaths,
   draggingArrowRole,
   arrowDragPosition,
   arrows,
+  secondaryArrows,
+  secondaryArrowSources,
   arrowCurves,
+  secondaryArrowCurves,
   draggingRole,
   dragPosition,
   curveStrength,
@@ -433,28 +456,47 @@ function CurveHandleLayerImpl({
         )
         if (!showCurveHandleForRole) return null
 
+        const activeVariant = draggingCurveRole === role
+          ? (hoveredArrowVariant ?? 'primary')
+          : (hoveredArrowRole === role ? (hoveredArrowVariant ?? 'primary') : 'primary')
+
         const homeBasePos = displayPositions[role] || { x: 0.5, y: 0.75 }
-        const homeSvgPos = toSvgCoords(draggingRole === role && dragPosition ? dragPosition : homeBasePos)
+        const primaryStartPos = draggingRole === role && dragPosition ? dragPosition : homeBasePos
+        const homeSvgPos = toSvgCoords(primaryStartPos)
         const lockedPath = playLockedPaths[role]
-        const activeArrowTarget = lockedPath?.end ?? (draggingArrowRole === role && arrowDragPosition ? arrowDragPosition : arrows[role])
+        const secondaryStartPos = secondaryArrowSources?.[role] ?? arrows[role]
+        const secondarySvgStart = secondaryStartPos ? toSvgCoords(secondaryStartPos) : homeSvgPos
+        const activeArrowTarget = activeVariant === 'secondary'
+          ? (
+              draggingArrowRole === role && arrowDragPosition
+                ? arrowDragPosition
+                : secondaryArrows?.[role]
+            )
+          : (
+              lockedPath?.end ?? (draggingArrowRole === role && arrowDragPosition ? arrowDragPosition : arrows[role])
+            )
         if (!activeArrowTarget) return null
 
         const arrowEndSvg = toSvgCoords(activeArrowTarget)
-        const curveConfig = arrowCurves[role]
+        const curveConfig = activeVariant === 'secondary' ? secondaryArrowCurves?.[role] : arrowCurves[role]
         const controlSvg = (() => {
-          if (lockedPath) {
+          if (activeVariant === 'primary' && lockedPath) {
             return lockedPath.control ? toSvgCoords(lockedPath.control) : null
           }
           if (curveConfig) {
             return toSvgCoords({ x: curveConfig.x, y: curveConfig.y })
           }
-          const startPct = draggingRole === role && dragPosition ? dragPosition : homeBasePos
+          const startPct = activeVariant === 'secondary'
+            ? secondaryStartPos
+            : primaryStartPos
+          if (!startPct) return null
           const fallback = computeDefaultControlPoint(startPct, activeArrowTarget, curveStrength)
           return fallback ? toSvgCoords(fallback) : null
         })()
 
         if (
-          isNaN(homeSvgPos.x) || isNaN(homeSvgPos.y) ||
+          isNaN((activeVariant === 'secondary' ? secondarySvgStart : homeSvgPos).x) ||
+          isNaN((activeVariant === 'secondary' ? secondarySvgStart : homeSvgPos).y) ||
           isNaN(arrowEndSvg.x) || isNaN(arrowEndSvg.y)
         ) {
           return null
@@ -465,12 +507,12 @@ function CurveHandleLayerImpl({
 
         const curveMidpoint = validControlSvg
           ? {
-              x: 0.25 * homeSvgPos.x + 0.5 * validControlSvg.x + 0.25 * arrowEndSvg.x,
-              y: 0.25 * homeSvgPos.y + 0.5 * validControlSvg.y + 0.25 * arrowEndSvg.y,
+              x: 0.25 * (activeVariant === 'secondary' ? secondarySvgStart.x : homeSvgPos.x) + 0.5 * validControlSvg.x + 0.25 * arrowEndSvg.x,
+              y: 0.25 * (activeVariant === 'secondary' ? secondarySvgStart.y : homeSvgPos.y) + 0.5 * validControlSvg.y + 0.25 * arrowEndSvg.y,
             }
           : {
-              x: (homeSvgPos.x + arrowEndSvg.x) / 2,
-              y: (homeSvgPos.y + arrowEndSvg.y) / 2,
+              x: ((activeVariant === 'secondary' ? secondarySvgStart.x : homeSvgPos.x) + arrowEndSvg.x) / 2,
+              y: ((activeVariant === 'secondary' ? secondarySvgStart.y : homeSvgPos.y) + arrowEndSvg.y) / 2,
             }
 
         return (
@@ -509,15 +551,15 @@ function CurveHandleLayerImpl({
                 pointerEvents: 'auto',
                 touchAction: 'none',
               }}
-              onMouseEnter={() => onArrowHoverChange(role)}
+              onMouseEnter={() => onArrowHoverChange(role, activeVariant)}
               onMouseDown={(e) => {
                 e.preventDefault()
                 e.stopPropagation()
-                onCurveDragStart(role, e)
+                onCurveDragStart(role, e, activeVariant)
               }}
               onTouchStart={(e) => {
                 e.stopPropagation()
-                onCurveDragStart(role, e)
+                onCurveDragStart(role, e, activeVariant)
               }}
             />
           </g>

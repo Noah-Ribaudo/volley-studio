@@ -19,6 +19,7 @@ type PositionState = Partial<Record<string, RolePositionMap>>
 type CurveState = Partial<Record<string, RoleCurveMap>>
 type PrimaryArrowState = Partial<Record<string, RolePositionMap>>
 type ChainedAttackState = Partial<Record<Rotation, RolePositionMap>>
+type SecondaryCurveState = Partial<Record<Rotation, RoleCurveMap>>
 
 function getPhaseKey(rotation: Rotation, phase: PrototypePhase) {
   return `${rotation}:${phase}`
@@ -57,6 +58,7 @@ export function usePrototypeCourtState({
   const [arrowCurvesByPhase, setArrowCurvesByPhase] = useState<CurveState>({})
   const [primaryArrowsByPhase, setPrimaryArrowsByPhase] = useState<PrimaryArrowState>({})
   const [chainedAttackTargetsByRotation, setChainedAttackTargetsByRotation] = useState<ChainedAttackState>({})
+  const [secondaryArrowCurvesByRotation, setSecondaryArrowCurvesByRotation] = useState<SecondaryCurveState>({})
 
   const getBasePositions = useCallback(
     (rotation: Rotation, phase: PrototypePhase): PositionCoordinates => {
@@ -82,6 +84,17 @@ export function usePrototypeCourtState({
       return arrowCurvesByPhase[getPhaseKey(rotation, phase)] ?? {}
     },
     [arrowCurvesByPhase]
+  )
+
+  const getSecondaryArrowCurves = useCallback(
+    (rotation: Rotation, phase: PrototypePhase): Partial<Record<Role, ArrowCurveConfig>> => {
+      if (phase !== 'RECEIVE') {
+        return {}
+      }
+
+      return secondaryArrowCurvesByRotation[rotation] ?? {}
+    },
+    [secondaryArrowCurvesByRotation]
   )
 
   const hasFirstAttackTargets = useCallback(
@@ -405,6 +418,38 @@ export function usePrototypeCourtState({
     []
   )
 
+  const setSecondaryArrowCurve = useCallback(
+    (rotation: Rotation, phase: PrototypePhase, role: Role, curve: ArrowCurveConfig | null) => {
+      if (phase !== 'RECEIVE') {
+        return
+      }
+
+      setSecondaryArrowCurvesByRotation((current) => {
+        const nextRotationCurves = {
+          ...(current[rotation] ?? {}),
+        }
+
+        if (curve) {
+          nextRotationCurves[role] = curve
+        } else {
+          delete nextRotationCurves[role]
+        }
+
+        if (Object.keys(nextRotationCurves).length === 0) {
+          const nextState = { ...current }
+          delete nextState[rotation]
+          return nextState
+        }
+
+        return {
+          ...current,
+          [rotation]: nextRotationCurves,
+        }
+      })
+    },
+    []
+  )
+
   const resetPhase = useCallback((rotation: Rotation, phase: PrototypePhase) => {
     setPositionsByPhase((current) => {
       const next = { ...current }
@@ -426,6 +471,11 @@ export function usePrototypeCourtState({
 
     if (phase === 'RECEIVE') {
       setChainedAttackTargetsByRotation((current) => {
+        const next = { ...current }
+        delete next[rotation]
+        return next
+      })
+      setSecondaryArrowCurvesByRotation((current) => {
         const next = { ...current }
         delete next[rotation]
         return next
@@ -506,6 +556,7 @@ export function usePrototypeCourtState({
       getPositions,
       getDerivedArrows,
       getArrowCurves,
+      getSecondaryArrowCurves,
       getArrowEndpointLabels,
       getSecondaryArrowEndpointLabels,
       getSecondaryDerivedArrows,
@@ -515,6 +566,7 @@ export function usePrototypeCourtState({
       updateSecondaryArrowTarget,
       createSecondaryArrowTarget,
       setArrowCurve,
+      setSecondaryArrowCurve,
       resetPhase,
       loadDemoSeeds,
     }),
@@ -523,6 +575,7 @@ export function usePrototypeCourtState({
       getDerivedArrows,
       getPositions,
       hasFirstAttackTargets,
+      getSecondaryArrowCurves,
       getArrowEndpointLabels,
       getSecondaryArrowEndpointLabels,
       getSecondaryDerivedArrows,
@@ -533,6 +586,7 @@ export function usePrototypeCourtState({
       updateSecondaryArrowTarget,
       createSecondaryArrowTarget,
       updatePosition,
+      setSecondaryArrowCurve,
     ]
   )
 }
