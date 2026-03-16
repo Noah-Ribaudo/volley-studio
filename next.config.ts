@@ -1,6 +1,23 @@
 import type { NextConfig } from "next";
 
 const isProd = process.env.NODE_ENV === "production";
+const agentationEndpoint = process.env.NEXT_PUBLIC_AGENTATION_ENDPOINT;
+const agentationOrigin = agentationEndpoint
+  ? (() => {
+      try {
+        return new URL(agentationEndpoint).origin;
+      } catch {
+        return null;
+      }
+    })()
+  : null;
+const devConnectSources = [
+  "http://127.0.0.1:4747",
+  "http://localhost:4747",
+  agentationOrigin,
+]
+  .filter((value): value is string => Boolean(value))
+  .join(" ");
 const scriptSrc = isProd
   ? "script-src 'self' 'unsafe-inline'"
   : "script-src 'self' 'unsafe-inline' 'unsafe-eval'";
@@ -14,7 +31,7 @@ const contentSecurityPolicy = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  "connect-src 'self' https: wss: ws:",
+  `connect-src 'self' https: wss: ws:${!isProd && devConnectSources ? ` ${devConnectSources}` : ""}`,
 ].join("; ");
 
 const nextConfig: NextConfig = {

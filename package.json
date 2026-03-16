@@ -7,9 +7,11 @@
     "npm": "10.x"
   },
   "scripts": {
-    "dev": "npm-run-all --parallel dev:convex dev:next",
+    "dev": "npm-run-all --parallel dev:convex dev:next dev:agentation",
+    "dev:agentation": "agentation-mcp server",
     "dev:convex": "convex dev",
     "dev:next": "rm -rf .next && next dev",
+    "agentation:doctor": "agentation-mcp doctor",
     "build": "next build",
     "build:prod": "convex deploy --cmd 'next build'",
     "start": "next start",
