@@ -419,11 +419,22 @@ function getInnerCornerPosition(row: 'top' | 'bottom', column: 'left' | 'right',
 function PhaseTileShader({
   shader,
   isActive,
+  row,
+  column,
 }: {
   shader: SurfaceShaderId
   isActive: boolean
+  row: 'top' | 'bottom'
+  column: 'left' | 'right'
 }) {
+  // Per-tile offset so the 2×2 grid doesn't look like four clones
+  const ri = row === 'bottom' ? 1 : 0
+  const ci = column === 'right' ? 1 : 0
+  const ox = ci * 0.31 + ri * 0.13
+  const oy = ri * 0.47 + ci * 0.17
+
   if (shader === 'dithering') {
+    // Machined steel — each button milled at a slightly different angle
     return (
       <div className="pointer-events-none absolute inset-[1px] overflow-hidden rounded-[inherit] opacity-60 mix-blend-multiply">
         <LazyDithering
@@ -436,12 +447,16 @@ function PhaseTileShader({
           size={1.5}
           scale={2.4}
           speed={0.08}
+          offsetX={ox}
+          offsetY={oy}
+          rotation={ci * 4 + ri * -3}
         />
       </div>
     )
   }
 
   if (shader === 'neuro-noise') {
+    // Nixie tube glow — each tile is a window into the same glowing field
     return (
       <div className="pointer-events-none absolute inset-[1px] overflow-hidden rounded-[inherit] opacity-80 mix-blend-screen">
         <LazyNeuroNoise
@@ -454,12 +469,15 @@ function PhaseTileShader({
           contrast={0.6}
           scale={1.6}
           speed={0.18}
+          offsetX={ox}
+          offsetY={oy}
         />
       </div>
     )
   }
 
   if (shader === 'fluted-glass') {
+    // Lab glass — refraction shifted per pane
     return (
       <div className="pointer-events-none absolute inset-[1px] overflow-hidden rounded-[inherit] opacity-90 mix-blend-screen">
         <LazyFlutedGlass
@@ -470,12 +488,15 @@ function PhaseTileShader({
           speed={0.14}
           distortion={0.22}
           scale={1.3}
+          offsetX={ox}
+          offsetY={oy}
         />
       </div>
     )
   }
 
   if (shader === 'voronoi') {
+    // Silicone — each button is its own piece with different cell pattern
     return (
       <div className="pointer-events-none absolute inset-[1px] overflow-hidden rounded-[inherit] opacity-30 mix-blend-overlay">
         <LazyVoronoi
@@ -483,17 +504,20 @@ function PhaseTileShader({
           style={{ width: '100%', height: '100%' }}
           colors={isActive ? ['#2e2e32', '#3a3a3e', '#444448'] : ['#48484e', '#54545a', '#606066']}
           colorGap={isActive ? '#1a1a1e' : '#2a2a2e'}
-          scale={3.2}
+          scale={3.2 + (ci + ri * 2) * 0.12}
           gap={0.02}
           glow={0.15}
           speed={0.04}
           distortion={0.08}
+          offsetX={ox}
+          offsetY={oy}
         />
       </div>
     )
   }
 
   if (shader === 'waves') {
+    // Scan-lines — offset vertically so lines don't align across tiles
     return (
       <div className="pointer-events-none absolute inset-[1px] overflow-hidden rounded-[inherit] opacity-40 mix-blend-multiply">
         <LazyWaves
@@ -509,12 +533,15 @@ function PhaseTileShader({
           softness={0.35}
           scale={4.0}
           rotation={0}
+          offsetX={ox * 0.5}
+          offsetY={oy}
         />
       </div>
     )
   }
 
   if (shader === 'warp') {
+    // Nebula — each tile reveals a different part of the same cosmic field
     return (
       <div className="pointer-events-none absolute inset-[1px] overflow-hidden rounded-[inherit] opacity-65 mix-blend-screen">
         <LazyWarp
@@ -534,6 +561,8 @@ function PhaseTileShader({
           proportion={0.5}
           speed={0.06}
           scale={1.2}
+          offsetX={ox}
+          offsetY={oy}
         />
       </div>
     )
@@ -625,7 +654,7 @@ function PhaseAreaTile({
           style={{ background: theme.topGloss }}
         />
         {/* Shader layer */}
-        <PhaseTileShader shader={theme.shader} isActive={isActive} />
+        <PhaseTileShader shader={theme.shader} isActive={isActive} row={row} column={column} />
         {/* Specular highlight — directional light catch */}
         {theme.tileSpecularHighlight && (
           <span
