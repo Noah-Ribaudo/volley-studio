@@ -655,12 +655,16 @@ function PhaseAreaTile({
         />
         {/* Shader layer */}
         <PhaseTileShader shader={theme.shader} isActive={isActive} row={row} column={column} />
-        {/* Specular highlight — directional light catch */}
+        {/* Specular highlight — one continuous sweep across the 2×2 grid */}
         {theme.tileSpecularHighlight && (
           <span
             aria-hidden
             className="pointer-events-none absolute inset-0 rounded-[inherit]"
-            style={{ background: theme.tileSpecularHighlight }}
+            style={{
+              background: theme.tileSpecularHighlight,
+              backgroundSize: '200% 200%',
+              backgroundPosition: `${column === 'left' ? '0%' : '100%'} ${row === 'top' ? '0%' : '100%'}`,
+            }}
           />
         )}
         {/* Edge light — rim lighting */}
