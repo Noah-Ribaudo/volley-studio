@@ -27,6 +27,8 @@ export function usePrototypeLabController(playAdvanceDelayMs: number) {
 
   const playTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const phaseCommitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const manualNudgeClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const manualNudgeTriggerRef = useRef(0)
 
   const clearPlayTimer = useCallback(() => {
     if (!playTimerRef.current) return
@@ -40,12 +42,19 @@ export function usePrototypeLabController(playAdvanceDelayMs: number) {
     phaseCommitTimerRef.current = null
   }, [])
 
+  const clearManualNudgeTimer = useCallback(() => {
+    if (!manualNudgeClearTimerRef.current) return
+    clearTimeout(manualNudgeClearTimerRef.current)
+    manualNudgeClearTimerRef.current = null
+  }, [])
+
   useEffect(() => {
     return () => {
       clearPlayTimer()
       clearPhaseCommitTimer()
+      clearManualNudgeTimer()
     }
-  }, [clearPhaseCommitTimer, clearPlayTimer])
+  }, [clearManualNudgeTimer, clearPhaseCommitTimer, clearPlayTimer])
 
   const resetPreview = useCallback(() => {
     clearPlayTimer()
@@ -117,13 +126,21 @@ export function usePrototypeLabController(playAdvanceDelayMs: number) {
 
   const handleManualPhaseSelect = useCallback(
     (phase: PrototypePhase) => {
-      setManualJoystickNudge((prev) => ({
+      clearManualNudgeTimer()
+      const trigger = manualNudgeTriggerRef.current + 1
+      manualNudgeTriggerRef.current = trigger
+
+      setManualJoystickNudge({
         phase: toDisplayCorePhase(phase),
-        trigger: (prev?.trigger ?? 0) + 1,
-      }))
+        trigger,
+      })
+      manualNudgeClearTimerRef.current = setTimeout(() => {
+        setManualJoystickNudge((current) => (current?.trigger === trigger ? null : current))
+        manualNudgeClearTimerRef.current = null
+      }, 24)
       queuePhaseTravel(phase)
     },
-    [queuePhaseTravel]
+    [clearManualNudgeTimer, queuePhaseTravel]
   )
 
   const handlePlay = useCallback((nextPhase: PrototypePhase) => {
