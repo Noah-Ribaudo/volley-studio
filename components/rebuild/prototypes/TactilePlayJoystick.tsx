@@ -153,6 +153,9 @@ export function TactilePlayJoystick({
         }
       : defaultFrame
   const selectedPhase = dragPhase ?? currentPhase
+  const textureSize = `${joystickTuning.ringTextureScale}px ${Math.max(3, joystickTuning.ringTextureScale * 0.86)}px`
+  const textureStroke = `oklch(96% 0.02 90 / ${0.1 + joystickTuning.ringTextureOpacity * 0.45})`
+  const textureShadow = `oklch(45% 0.12 42 / ${joystickTuning.ringTextureDepth * 0.34})`
 
   const quadrantTransition = prefersReducedMotion
     ? { duration: 0.001 }
@@ -374,9 +377,13 @@ export function TactilePlayJoystick({
             <div
               className="pointer-events-none absolute inset-[7%] rounded-full opacity-70"
               style={{
-                backgroundImage:
-                  'radial-gradient(circle, oklch(94% 0.02 90 / 0.32) 0 1px, transparent 1.4px)',
-                backgroundSize: '6px 6px',
+                backgroundImage: [
+                  `linear-gradient(30deg, ${textureStroke} 12%, transparent 12.5%, transparent 87%, ${textureStroke} 87.5%, ${textureStroke} 100%)`,
+                  `linear-gradient(150deg, ${textureStroke} 12%, transparent 12.5%, transparent 87%, ${textureStroke} 87.5%, ${textureStroke} 100%)`,
+                  `linear-gradient(90deg, ${textureShadow} 2%, transparent 2.5%, transparent 97%, ${textureShadow} 98%)`,
+                ].join(', '),
+                backgroundSize: `${textureSize}, ${textureSize}, ${textureSize}`,
+                backgroundPosition: '0 0, 0 0, 0 0',
                 WebkitMaskImage:
                   'radial-gradient(circle, transparent 52%, black 58%, black 76%, transparent 82%)',
                 maskImage:

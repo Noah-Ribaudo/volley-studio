@@ -64,6 +64,9 @@ export function RebuildDialKitBridge({
         travel: [seed.joystick.travel, 6, 52, 1],
         deadZone: [seed.joystick.deadZone, 0, 42, 1],
         haloIntensity: [seed.joystick.haloIntensity, 0, 1.25, 0.01],
+        ringTextureScale: [seed.joystick.ringTextureScale, 3, 12, 0.1],
+        ringTextureOpacity: [seed.joystick.ringTextureOpacity, 0, 1, 0.01],
+        ringTextureDepth: [seed.joystick.ringTextureDepth, 0, 1, 0.01],
         settleSpring: {
           type: 'spring',
           stiffness: seed.joystick.settleSpring.stiffness,
@@ -264,6 +267,9 @@ export function RebuildDialKitBridge({
         travel: params.joystick.travel,
         deadZone: params.joystick.deadZone,
         haloIntensity: params.joystick.haloIntensity,
+        ringTextureScale: params.joystick.ringTextureScale,
+        ringTextureOpacity: params.joystick.ringTextureOpacity,
+        ringTextureDepth: params.joystick.ringTextureDepth,
         settleSpring: {
           stiffness: joystickSpring.stiffness ?? DEFAULT_TACTILE_TUNING.joystick.settleSpring.stiffness,
           damping: joystickSpring.damping ?? DEFAULT_TACTILE_TUNING.joystick.settleSpring.damping,
