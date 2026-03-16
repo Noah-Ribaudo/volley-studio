@@ -35,6 +35,8 @@ export interface JoystickTuning {
   scale: number
   highlightIntensity: number
   whiteRingOpacity: number
+  showKnobBorderRing: boolean
+  showDialShellRing: boolean
   offsetTexture: boolean
   ringTextureScale: number
   ringTextureSpacingX: number
@@ -165,6 +167,8 @@ export const DEFAULT_TACTILE_TUNING: TactileTuning = {
     scale: 1.5,
     highlightIntensity: 0.8,
     whiteRingOpacity: 0.34,
+    showKnobBorderRing: true,
+    showDialShellRing: true,
     offsetTexture: true,
     ringTextureScale: 12,
     ringTextureSpacingX: 3.9,
@@ -280,6 +284,8 @@ export function sanitizeTactileTuning(input: TactileTuning): TactileTuning {
       scale: clamp(input.joystick.scale, 0.65, 1.5),
       highlightIntensity: clamp(input.joystick.highlightIntensity, 0, 1),
       whiteRingOpacity: clamp(input.joystick.whiteRingOpacity, 0, 1),
+      showKnobBorderRing: input.joystick.showKnobBorderRing,
+      showDialShellRing: input.joystick.showDialShellRing,
       offsetTexture: input.joystick.offsetTexture,
       ringTextureScale: clamp(input.joystick.ringTextureScale, 3, 12),
       ringTextureSpacingX: clamp(input.joystick.ringTextureSpacingX, 3, 16),
