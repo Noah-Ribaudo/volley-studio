@@ -109,8 +109,7 @@ export interface PhasePadHardwareTuning {
   trackHeight: number
   trackCornerRadius: number
   channelWidth: number
-  piecesPerHorizontalEdge: number
-  piecesPerVerticalEdge: number
+  piecesPerQuarter: number
   pieceLength: number
   pieceThickness: number
   pieceRadius: number
@@ -247,8 +246,7 @@ export const DEFAULT_TACTILE_TUNING: TactileTuning = {
     trackHeight: 92.4,
     trackCornerRadius: 4.1,
     channelWidth: 5.2,
-    piecesPerHorizontalEdge: 6,
-    piecesPerVerticalEdge: 6,
+    piecesPerQuarter: 6,
     pieceLength: 14.1,
     pieceThickness: 3.25,
     pieceRadius: 1.3,
@@ -373,8 +371,7 @@ export function sanitizeTactileTuning(input: TactileTuning): TactileTuning {
       trackHeight: clamp(input.phasePadHardware.trackHeight, 44, 116),
       trackCornerRadius: clamp(input.phasePadHardware.trackCornerRadius, 0, 28),
       channelWidth: clamp(input.phasePadHardware.channelWidth, 0.5, 18),
-      piecesPerHorizontalEdge: clamp(Math.round(input.phasePadHardware.piecesPerHorizontalEdge), 2, 32),
-      piecesPerVerticalEdge: clamp(Math.round(input.phasePadHardware.piecesPerVerticalEdge), 2, 32),
+      piecesPerQuarter: clamp(Math.round(input.phasePadHardware.piecesPerQuarter), 2, 32),
       pieceLength: clamp(input.phasePadHardware.pieceLength, 1, 28),
       pieceThickness: clamp(input.phasePadHardware.pieceThickness, 0.75, 16),
       pieceRadius: clamp(input.phasePadHardware.pieceRadius, 0, 10),

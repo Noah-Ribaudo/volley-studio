@@ -707,13 +707,8 @@ export function Concept8FullLedPerimeter(props: PrototypeControlProps) {
   const theme = PHASE_PAD_VARIANT_THEMES[props.variantId]
   const lanePadding = Math.max(8, hardwareTuning.channelWidth + 4.5)
   const piecesPerEdge = useMemo(
-    () => [
-      hardwareTuning.piecesPerHorizontalEdge, // DEFENSE — top
-      hardwareTuning.piecesPerVerticalEdge,    // OFFENSE — right
-      hardwareTuning.piecesPerHorizontalEdge, // RECEIVE — bottom
-      hardwareTuning.piecesPerVerticalEdge,    // SERVE — left
-    ],
-    [hardwareTuning.piecesPerHorizontalEdge, hardwareTuning.piecesPerVerticalEdge]
+    () => Array.from({ length: C8_PHASE_ORDER.length }, () => hardwareTuning.piecesPerQuarter),
+    [hardwareTuning.piecesPerQuarter]
   )
   const perimeterState = useQuarterTrackTravelState({
     currentCorePhase: props.displayCurrentCorePhase,

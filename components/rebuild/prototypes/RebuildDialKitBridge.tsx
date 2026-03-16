@@ -29,6 +29,7 @@ export function RebuildDialKitBridge({
   onTuningChange,
   position = 'top-right',
 }: RebuildDialKitBridgeProps) {
+  const defaultHardware = DEFAULT_TACTILE_TUNING.phasePadHardware
   const usesPhasePadHardware =
     activeVariant === 'clean' ||
     activeVariant === 'machined' ||
@@ -151,8 +152,7 @@ export function RebuildDialKitBridge({
               trackHeight: [seed.phasePadHardware.trackHeight, 44, 116],
               trackCornerRadius: [seed.phasePadHardware.trackCornerRadius, 0, 28],
               channelWidth: [seed.phasePadHardware.channelWidth, 0.5, 18],
-              piecesPerHorizontalEdge: [seed.phasePadHardware.piecesPerHorizontalEdge, 2, 32],
-              piecesPerVerticalEdge: [seed.phasePadHardware.piecesPerVerticalEdge, 2, 32],
+              piecesPerQuarter: [seed.phasePadHardware.piecesPerQuarter, 2, 32],
               pieceLength: [seed.phasePadHardware.pieceLength, 1, 28],
               pieceThickness: [seed.phasePadHardware.pieceThickness, 0.75, 16],
               pieceRadius: [seed.phasePadHardware.pieceRadius, 0, 10],
@@ -335,21 +335,20 @@ export function RebuildDialKitBridge({
       phasePadHardware:
         usesPhasePadHardware
           ? {
-              trackWidth: params.phasePadHardware.trackWidth,
-              trackHeight: params.phasePadHardware.trackHeight,
-              trackCornerRadius: params.phasePadHardware.trackCornerRadius,
-              channelWidth: params.phasePadHardware.channelWidth,
-              piecesPerHorizontalEdge: params.phasePadHardware.piecesPerHorizontalEdge,
-              piecesPerVerticalEdge: params.phasePadHardware.piecesPerVerticalEdge,
-              pieceLength: params.phasePadHardware.pieceLength,
-              pieceThickness: params.phasePadHardware.pieceThickness,
-              pieceRadius: params.phasePadHardware.pieceRadius,
-              inactiveOpacity: params.phasePadHardware.inactiveOpacity,
-              activeOpacity: params.phasePadHardware.activeOpacity,
-              glow: params.phasePadHardware.glow,
-              bloom: params.phasePadHardware.bloom,
-              channelShadow: params.phasePadHardware.channelShadow,
-              channelHighlight: params.phasePadHardware.channelHighlight,
+              trackWidth: params.phasePadHardware.trackWidth ?? defaultHardware.trackWidth,
+              trackHeight: params.phasePadHardware.trackHeight ?? defaultHardware.trackHeight,
+              trackCornerRadius: params.phasePadHardware.trackCornerRadius ?? defaultHardware.trackCornerRadius,
+              channelWidth: params.phasePadHardware.channelWidth ?? defaultHardware.channelWidth,
+              piecesPerQuarter: params.phasePadHardware.piecesPerQuarter ?? defaultHardware.piecesPerQuarter,
+              pieceLength: params.phasePadHardware.pieceLength ?? defaultHardware.pieceLength,
+              pieceThickness: params.phasePadHardware.pieceThickness ?? defaultHardware.pieceThickness,
+              pieceRadius: params.phasePadHardware.pieceRadius ?? defaultHardware.pieceRadius,
+              inactiveOpacity: params.phasePadHardware.inactiveOpacity ?? defaultHardware.inactiveOpacity,
+              activeOpacity: params.phasePadHardware.activeOpacity ?? defaultHardware.activeOpacity,
+              glow: params.phasePadHardware.glow ?? defaultHardware.glow,
+              bloom: params.phasePadHardware.bloom ?? defaultHardware.bloom,
+              channelShadow: params.phasePadHardware.channelShadow ?? defaultHardware.channelShadow,
+              channelHighlight: params.phasePadHardware.channelHighlight ?? defaultHardware.channelHighlight,
             }
           : preserved.phasePadHardware,
       c4Literal:

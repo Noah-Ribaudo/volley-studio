@@ -398,17 +398,17 @@ export function getQuarterTrackSegmentState({
   }
 }
 
-function buildHardwareTrackPath(insetX: number, insetY: number, radiusX: number, radiusY: number) {
+function buildHardwareTrackPath(insetX: number, insetY: number, radius: number) {
   const minX = insetX
   const maxX = 100 - insetX
   const minY = insetY
   const maxY = 100 - insetY
-  const innerMinX = minX + radiusX
-  const innerMaxX = maxX - radiusX
-  const innerMinY = minY + radiusY
-  const innerMaxY = maxY - radiusY
+  const innerMinX = minX + radius
+  const innerMaxX = maxX - radius
+  const innerMinY = minY + radius
+  const innerMaxY = maxY - radius
 
-  return `M 50 ${minY} H ${innerMaxX} A ${radiusX} ${radiusY} 0 0 1 ${maxX} ${innerMinY} V ${innerMaxY} A ${radiusX} ${radiusY} 0 0 1 ${innerMaxX} ${maxY} H ${innerMinX} A ${radiusX} ${radiusY} 0 0 1 ${minX} ${innerMaxY} V ${innerMinY} A ${radiusX} ${radiusY} 0 0 1 ${innerMinX} ${minY} H 50`
+  return `M 50 ${minY} H ${innerMaxX} A ${radius} ${radius} 0 0 1 ${maxX} ${innerMinY} V ${innerMaxY} A ${radius} ${radius} 0 0 1 ${innerMaxX} ${maxY} H ${innerMinX} A ${radius} ${radius} 0 0 1 ${minX} ${innerMaxY} V ${innerMinY} A ${radius} ${radius} 0 0 1 ${innerMinX} ${minY} H 50`
 }
 
 type HardwareTrackPiece = {
@@ -454,46 +454,6 @@ function useHardwareTrackPieces(pathD: string, pieceCount: number) {
   }
 }
 
-function useEdgeBasedTrackPieces(
-  insetX: number,
-  insetY: number,
-  radiusX: number,
-  radiusY: number,
-  piecesPerH: number,
-  piecesPerV: number
-) {
-  return useMemo(() => {
-    const minX = insetX, maxX = 100 - insetX
-    const minY = insetY, maxY = 100 - insetY
-    const innerMinX = minX + radiusX, innerMaxX = maxX - radiusX
-    const innerMinY = minY + radiusY, innerMaxY = maxY - radiusY
-    const pieces: HardwareTrackPiece[] = []
-
-    // Top edge: left → right
-    for (let i = 0; i < piecesPerH; i++) {
-      const t = (i + 0.5) / piecesPerH
-      pieces.push({ x: innerMinX + t * (innerMaxX - innerMinX), y: minY, angle: 0 })
-    }
-    // Right edge: top → bottom
-    for (let i = 0; i < piecesPerV; i++) {
-      const t = (i + 0.5) / piecesPerV
-      pieces.push({ x: maxX, y: innerMinY + t * (innerMaxY - innerMinY), angle: 90 })
-    }
-    // Bottom edge: right → left
-    for (let i = 0; i < piecesPerH; i++) {
-      const t = (i + 0.5) / piecesPerH
-      pieces.push({ x: innerMaxX - t * (innerMaxX - innerMinX), y: maxY, angle: 180 })
-    }
-    // Left edge: bottom → top
-    for (let i = 0; i < piecesPerV; i++) {
-      const t = (i + 0.5) / piecesPerV
-      pieces.push({ x: minX, y: innerMaxY - t * (innerMaxY - innerMinY), angle: 270 })
-    }
-
-    return pieces
-  }, [insetX, insetY, radiusX, radiusY, piecesPerH, piecesPerV])
-}
-
 export function PhasePadHardwareLane({
   tuning,
   segmentStart,
@@ -505,45 +465,18 @@ export function PhasePadHardwareLane({
   segmentLength: number
   totalLights: number
 }) {
-  const svgRef = useRef<SVGSVGElement>(null)
-  const [aspectRatio, setAspectRatio] = useState(1)
-
-  useLayoutEffect(() => {
-    const el = svgRef.current
-    if (!el) return
-    const measure = () => {
-      const { width, height } = el.getBoundingClientRect()
-      if (height > 0) setAspectRatio(width / height)
-    }
-    measure()
-    const observer = new ResizeObserver(measure)
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [])
-
-  // Convert track width/height to viewBox insets, correct corner radius for aspect ratio
-  const insetX = (100 - tuning.channelWidth) / 2
+  const insetX = (100 - tuning.trackWidth) / 2
   const insetY = (100 - tuning.trackHeight) / 2
-  const sqrtAr = Math.sqrt(aspectRatio)
-  const radiusX = tuning.trackCornerRadius / sqrtAr
-  const radiusY = tuning.trackCornerRadius * sqrtAr
+  const radius = Math.min(tuning.trackCornerRadius, tuning.trackWidth / 2, tuning.trackHeight / 2)
 
   const pathD = useMemo(
-    () => buildHardwareTrackPath(insetX, insetY, radiusX, radiusY),
-    [insetX, insetY, radiusX, radiusY]
+    () => buildHardwareTrackPath(insetX, insetY, radius),
+    [insetX, insetY, radius]
   )
-  const pieces = useEdgeBasedTrackPieces(
-    insetX,
-    insetY,
-    radiusX,
-    radiusY,
-    tuning.piecesPerHorizontalEdge,
-    tuning.piecesPerVerticalEdge
-  )
+  const { pathRef, pieces } = useHardwareTrackPieces(pathD, totalLights)
 
   return (
     <svg
-      ref={svgRef}
       aria-hidden="true"
       className="pointer-events-none absolute inset-0 h-full w-full"
       preserveAspectRatio="none"
@@ -570,6 +503,7 @@ export function PhasePadHardwareLane({
       </defs>
 
       <path
+        ref={pathRef}
         d={pathD}
         fill="none"
         stroke={`rgba(0,0,0,${0.22 + tuning.channelShadow * 0.26})`}
@@ -611,18 +545,8 @@ export function PhasePadHardwareLane({
               b: 136,
             }
 
-        // Counteract the non-uniform viewBox scaling so every piece
-        // appears the same shape regardless of which edge it sits on
-        const θ = piece.angle * Math.PI / 180
-        const cosθ = Math.cos(θ)
-        const sinθ = Math.sin(θ)
-        const rx = Math.sqrt((cosθ * aspectRatio) ** 2 + sinθ ** 2)
-        const ry = Math.sqrt((sinθ * aspectRatio) ** 2 + cosθ ** 2)
-        const sx = Math.sqrt(ry / rx)
-        const sy = Math.sqrt(rx / ry)
-
         return (
-          <g key={`hardware-piece-${index}`} transform={`translate(${piece.x} ${piece.y}) rotate(${piece.angle}) scale(${sx.toFixed(4)},${sy.toFixed(4)})`}>
+          <g key={`hardware-piece-${index}`} transform={`translate(${piece.x} ${piece.y}) rotate(${piece.angle})`}>
             <rect
               x={-tuning.pieceLength / 2}
               y={-tuning.pieceThickness / 2}
