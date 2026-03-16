@@ -41,7 +41,7 @@ export function RebuildDialKitBridge({
     activeVariant === 'midnight'
   const usesLegacyClusterControls = false
   const [seed, setSeed] = useState<TactileTuning>(DEFAULT_TACTILE_TUNING)
-  const [panelVersion, setPanelVersion] = useState(0)
+  const [panelVersion, setPanelVersion] = useState(1)
   const latestTuningRef = useRef<TactileTuning>(DEFAULT_TACTILE_TUNING)
   const lastSerializedRef = useRef<string>(JSON.stringify(DEFAULT_TACTILE_TUNING))
 
