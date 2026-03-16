@@ -159,6 +159,7 @@ export function TactilePlayJoystick({
   const textureShadow = `oklch(20% 0.01 255 / ${0.14 + joystickTuning.ringTextureDepth * 0.36})`
   const capHighlight = joystickTuning.highlightIntensity
   const shellGlow = 0.08 + joystickTuning.haloIntensity * 0.12
+  const knobSize = frame.knobSize * joystickTuning.scale
 
   const quadrantTransition = prefersReducedMotion
     ? { duration: 0.001 }
@@ -368,10 +369,10 @@ export function TactilePlayJoystick({
         <div
           className="pointer-events-none absolute left-1/2 top-1/2"
           style={{
-            width: frame.knobSize,
-            height: frame.knobSize,
-            marginLeft: frame.knobSize / -2,
-            marginTop: frame.knobSize / -2,
+            width: knobSize,
+            height: knobSize,
+            marginLeft: knobSize / -2,
+            marginTop: knobSize / -2,
           }}
         >
           <motion.div
@@ -387,15 +388,16 @@ export function TactilePlayJoystick({
             )}
             style={{
               background: [
-                `radial-gradient(circle at 34% 26%, oklch(82% 0.01 255 / ${capHighlight * 0.42}) 0%, transparent 28%)`,
-                'linear-gradient(180deg, oklch(31% 0.008 255) 0%, oklch(24% 0.008 255) 46%, oklch(17% 0.008 255) 100%)',
+                `radial-gradient(circle at 34% 26%, oklch(92% 0.05 72 / ${capHighlight * 0.34}) 0%, transparent 28%)`,
+                'linear-gradient(180deg, oklch(72% 0.18 55) 0%, oklch(64% 0.2 45) 44%, oklch(48% 0.17 35) 100%)',
               ].join(', '),
               boxShadow: [
                 `0 14px 22px oklch(8% 0.01 255 / ${0.22 + joystickTuning.haloIntensity * 0.18})`,
                 `0 0 ${10 + joystickTuning.haloIntensity * 16}px oklch(88% 0.01 250 / ${shellGlow})`,
-                `inset 0 1px 0 oklch(86% 0.01 255 / ${0.06 + capHighlight * 0.18})`,
-                'inset 0 -10px 14px oklch(6% 0.01 255 / 0.54)',
-                'inset 0 0 0 1px oklch(36% 0.01 255 / 0.9)',
+                `0 0 0 1.5px oklch(98% 0.01 250 / ${joystickTuning.outerRingOpacity * 0.88})`,
+                `inset 0 1px 0 oklch(94% 0.03 78 / ${0.05 + capHighlight * 0.14})`,
+                'inset 0 -10px 14px oklch(30% 0.1 28 / 0.46)',
+                'inset 0 0 0 1px oklch(48% 0.11 36 / 0.9)',
               ].join(', '),
             }}
           >
@@ -419,15 +421,15 @@ export function TactilePlayJoystick({
               className="pointer-events-none absolute inset-[16%] rounded-full"
               style={{
                 background: [
-                  `radial-gradient(circle at 50% 68%, oklch(62% 0.01 255 / ${0.1 + capHighlight * 0.12}) 0%, transparent 18%)`,
-                  `radial-gradient(circle at 50% 50%, oklch(6% 0.01 255) 0%, oklch(11% 0.01 255) 58%, oklch(18% 0.01 255) 100%)`,
+                  `radial-gradient(circle at 50% 68%, oklch(88% 0.04 72 / ${0.08 + capHighlight * 0.1}) 0%, transparent 18%)`,
+                  `radial-gradient(circle at 50% 50%, oklch(28% 0.08 34) 0%, oklch(36% 0.1 40) 58%, oklch(48% 0.13 48) 100%)`,
                 ].join(', '),
                 boxShadow: [
-                  'inset 0 7px 10px oklch(2% 0.01 255 / 0.62)',
-                  `inset 0 -3px 5px oklch(78% 0.01 255 / ${0.05 + capHighlight * 0.08})`,
-                  'inset 0 0 0 1px oklch(48% 0.01 255 / 0.82)',
+                  'inset 0 7px 10px oklch(26% 0.08 32 / 0.52)',
+                  `inset 0 -3px 5px oklch(90% 0.04 78 / ${0.04 + capHighlight * 0.06})`,
+                  'inset 0 0 0 1px oklch(58% 0.11 42 / 0.7)',
                 ].join(', '),
-                border: '1px solid oklch(55% 0.01 255 / 0.52)',
+                border: '1px solid oklch(62% 0.12 44 / 0.48)',
               }}
             />
           </motion.div>

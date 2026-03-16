@@ -32,7 +32,9 @@ export interface JoystickTuning {
   travel: number
   deadZone: number
   haloIntensity: number
+  scale: number
   highlightIntensity: number
+  outerRingOpacity: number
   ringTextureScale: number
   ringTextureSpacingX: number
   ringTextureSpacingY: number
@@ -159,7 +161,9 @@ export const DEFAULT_TACTILE_TUNING: TactileTuning = {
     travel: 18,
     deadZone: 16,
     haloIntensity: 0.58,
+    scale: 1,
     highlightIntensity: 0.18,
+    outerRingOpacity: 0.78,
     ringTextureScale: 5.4,
     ringTextureSpacingX: 5.4,
     ringTextureSpacingY: 4.8,
@@ -271,7 +275,9 @@ export function sanitizeTactileTuning(input: TactileTuning): TactileTuning {
       travel: clamp(input.joystick.travel, 6, 52),
       deadZone: clamp(input.joystick.deadZone, 0, 42),
       haloIntensity: clamp(input.joystick.haloIntensity, 0, 1.25),
+      scale: clamp(input.joystick.scale, 0.65, 1.5),
       highlightIntensity: clamp(input.joystick.highlightIntensity, 0, 1),
+      outerRingOpacity: clamp(input.joystick.outerRingOpacity, 0, 1),
       ringTextureScale: clamp(input.joystick.ringTextureScale, 3, 12),
       ringTextureSpacingX: clamp(input.joystick.ringTextureSpacingX, 3, 16),
       ringTextureSpacingY: clamp(input.joystick.ringTextureSpacingY, 3, 16),
