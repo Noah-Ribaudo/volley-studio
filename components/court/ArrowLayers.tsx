@@ -1,5 +1,6 @@
 'use client'
 
+import { motion, useReducedMotion } from 'motion/react'
 import { memo } from 'react'
 import { MovementArrow } from './MovementArrow'
 import { computeDefaultControlPoint } from '@/lib/whiteboard-motion'
@@ -92,12 +93,23 @@ function MovementArrowLayerImpl({
   onArrowHoverChange,
   getRoleColor,
 }: MovementArrowLayerProps) {
+  const prefersReducedMotion = useReducedMotion()
+  const labelTransition = prefersReducedMotion
+    ? { duration: 0.001 }
+    : {
+        type: 'spring' as const,
+        stiffness: 420,
+        damping: 34,
+        mass: 0.7,
+      }
+
   const renderEndpointLabel = ({
     anchorX,
     anchorY,
     align,
     tone,
     text,
+    visible,
     dashed = false,
   }: {
     anchorX: number
@@ -105,6 +117,7 @@ function MovementArrowLayerImpl({
     align: 'start' | 'end'
     tone: 'primary' | 'secondary'
     text: string
+    visible: boolean
     dashed?: boolean
   }) => {
     const fontSize = arrowTagFontSize
@@ -117,7 +130,17 @@ function MovementArrowLayerImpl({
     const textX = align === 'start' ? padX : -padX
 
     return (
-      <g transform={`translate(${anchorX} ${anchorY})`} style={{ pointerEvents: 'none' }}>
+      <motion.g
+        initial={false}
+        animate={{
+          opacity: visible ? 1 : 0,
+          x: anchorX,
+          y: anchorY,
+          scale: visible ? 1 : 0.98,
+        }}
+        transition={labelTransition}
+        style={{ pointerEvents: 'none' }}
+      >
         <rect
           x={x}
           y={-labelHeight / 2}
@@ -143,7 +166,7 @@ function MovementArrowLayerImpl({
         >
           {text}
         </text>
-      </g>
+      </motion.g>
     )
   }
 
@@ -233,13 +256,14 @@ function MovementArrowLayerImpl({
                 debugHitboxes={debugHitboxes}
               />
             ) : null}
-            {hasValidPositions && endpointLabel && showPrimaryLabel ? (
+            {hasValidPositions && endpointLabel ? (
               renderEndpointLabel({
                 anchorX: arrowEndSvg.x + (arrowEndSvg.x >= homeSvgPos.x ? 14 : -14),
                 anchorY: arrowEndSvg.y + ((controlSvg?.y ?? homeSvgPos.y) >= arrowEndSvg.y ? -12 : 12),
                 align: arrowEndSvg.x >= homeSvgPos.x ? 'start' : 'end',
                 tone: 'primary',
                 text: endpointLabel,
+                visible: showPrimaryLabel,
               })
             ) : null}
             {hasValidSecondaryPositions && secondaryArrowEndSvg ? (
@@ -261,13 +285,14 @@ function MovementArrowLayerImpl({
                   onMouseLeave={() => onArrowHoverChange(null)}
                   debugHitboxes={debugHitboxes}
                 />
-                {secondaryEndpointLabel && showSecondaryLabel ? (
+                {secondaryEndpointLabel ? (
                   renderEndpointLabel({
                     anchorX: secondaryArrowEndSvg.x + (secondaryArrowEndSvg.x >= homeSvgPos.x ? 14 : -14),
                     anchorY: secondaryArrowEndSvg.y + (secondaryArrowEndSvg.y >= homeSvgPos.y ? 12 : -12),
                     align: secondaryArrowEndSvg.x >= homeSvgPos.x ? 'start' : 'end',
                     tone: 'secondary',
                     text: secondaryEndpointLabel,
+                    visible: showSecondaryLabel,
                     dashed: true,
                   })
                 ) : null}
