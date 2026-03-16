@@ -154,9 +154,9 @@ export function TactilePlayJoystick({
       : defaultFrame
   const selectedPhase = dragPhase ?? currentPhase
   const bumpSize = joystickTuning.ringTextureScale
-  const textureSize = `${joystickTuning.ringTextureSpacingX}px ${joystickTuning.ringTextureSpacingY}px`
+  const textureRepeatSize = `${joystickTuning.ringTextureSpacingX}px ${joystickTuning.ringTextureSpacingY * 2}px`
   const textureOffsetX = joystickTuning.offsetTexture ? joystickTuning.ringTextureSpacingX / 2 : 0
-  const textureOffsetY = joystickTuning.offsetTexture ? joystickTuning.ringTextureSpacingY / 2 : 0
+  const textureRowOffsetY = joystickTuning.ringTextureSpacingY
   const textureStroke = `oklch(68% 0.01 255 / ${0.12 + joystickTuning.ringTextureOpacity * 0.28})`
   const textureShadow = `oklch(20% 0.01 255 / ${0.14 + joystickTuning.ringTextureDepth * 0.36})`
   const capHighlight = joystickTuning.highlightIntensity
@@ -406,12 +406,29 @@ export function TactilePlayJoystick({
               className="pointer-events-none absolute inset-0 rounded-full opacity-70"
               style={{
                 backgroundImage: [
-                  `radial-gradient(circle at 25% 25%, ${textureStroke} 0 ${Math.max(18, bumpSize * 3.5)}%, transparent ${Math.max(19, bumpSize * 3.5 + 1)}%)`,
-                  `radial-gradient(circle at 75% 75%, ${textureShadow} 0 ${Math.max(16, bumpSize * 3.1)}%, transparent ${Math.max(17, bumpSize * 3.1 + 1)}%)`,
-                  `radial-gradient(circle at 75% 25%, ${textureStroke} 0 ${Math.max(10, bumpSize * 2.2)}%, transparent ${Math.max(11, bumpSize * 2.2 + 1)}%)`,
+                  `radial-gradient(circle at 50% 50%, ${textureStroke} 0 ${Math.max(18, bumpSize * 3.5)}%, transparent ${Math.max(19, bumpSize * 3.5 + 1)}%)`,
+                  `radial-gradient(circle at 50% 50%, ${textureStroke} 0 ${Math.max(18, bumpSize * 3.5)}%, transparent ${Math.max(19, bumpSize * 3.5 + 1)}%)`,
+                  `radial-gradient(circle at 50% 50%, ${textureShadow} 0 ${Math.max(16, bumpSize * 3.1)}%, transparent ${Math.max(17, bumpSize * 3.1 + 1)}%)`,
+                  `radial-gradient(circle at 50% 50%, ${textureShadow} 0 ${Math.max(16, bumpSize * 3.1)}%, transparent ${Math.max(17, bumpSize * 3.1 + 1)}%)`,
+                  `radial-gradient(circle at 50% 50%, ${textureStroke} 0 ${Math.max(10, bumpSize * 2.2)}%, transparent ${Math.max(11, bumpSize * 2.2 + 1)}%)`,
+                  `radial-gradient(circle at 50% 50%, ${textureStroke} 0 ${Math.max(10, bumpSize * 2.2)}%, transparent ${Math.max(11, bumpSize * 2.2 + 1)}%)`,
                 ].join(', '),
-                backgroundSize: `${textureSize}, ${textureSize}, ${textureSize}`,
-                backgroundPosition: `0 0, ${textureOffsetX}px ${textureOffsetY}px, ${textureOffsetX}px ${textureOffsetY}px`,
+                backgroundSize: [
+                  textureRepeatSize,
+                  textureRepeatSize,
+                  textureRepeatSize,
+                  textureRepeatSize,
+                  textureRepeatSize,
+                  textureRepeatSize,
+                ].join(', '),
+                backgroundPosition: [
+                  '0 0',
+                  `${textureOffsetX}px ${textureRowOffsetY}px`,
+                  '1px 1px',
+                  `${textureOffsetX + 1}px ${textureRowOffsetY + 1}px`,
+                  '-1px -1px',
+                  `${textureOffsetX - 1}px ${textureRowOffsetY - 1}px`,
+                ].join(', '),
                 WebkitMaskImage:
                   `radial-gradient(circle, transparent 49%, black 54%, black 100%)`,
                 maskImage:
