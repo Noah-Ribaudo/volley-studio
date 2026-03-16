@@ -152,7 +152,8 @@ export function RebuildDialKitBridge({
               trackHeight: [seed.phasePadHardware.trackHeight, 44, 116],
               trackCornerRadius: [seed.phasePadHardware.trackCornerRadius, 0, 28],
               channelWidth: [seed.phasePadHardware.channelWidth, 0.5, 18],
-              piecesPerQuarter: [seed.phasePadHardware.piecesPerQuarter, 2, 32],
+              piecesPerLongSide: [seed.phasePadHardware.piecesPerLongSide, 2, 32],
+              piecesPerShortSide: [seed.phasePadHardware.piecesPerShortSide, 2, 32],
               pieceLength: [seed.phasePadHardware.pieceLength, 1, 28],
               pieceThickness: [seed.phasePadHardware.pieceThickness, 0.75, 16],
               pieceRadius: [seed.phasePadHardware.pieceRadius, 0, 10],
@@ -339,7 +340,14 @@ export function RebuildDialKitBridge({
               trackHeight: params.phasePadHardware.trackHeight ?? defaultHardware.trackHeight,
               trackCornerRadius: params.phasePadHardware.trackCornerRadius ?? defaultHardware.trackCornerRadius,
               channelWidth: params.phasePadHardware.channelWidth ?? defaultHardware.channelWidth,
-              piecesPerQuarter: params.phasePadHardware.piecesPerQuarter ?? defaultHardware.piecesPerQuarter,
+              piecesPerLongSide:
+                params.phasePadHardware.piecesPerLongSide ??
+                params.phasePadHardware.piecesPerQuarter ??
+                defaultHardware.piecesPerLongSide,
+              piecesPerShortSide:
+                params.phasePadHardware.piecesPerShortSide ??
+                params.phasePadHardware.piecesPerQuarter ??
+                defaultHardware.piecesPerShortSide,
               pieceLength: params.phasePadHardware.pieceLength ?? defaultHardware.pieceLength,
               pieceThickness: params.phasePadHardware.pieceThickness ?? defaultHardware.pieceThickness,
               pieceRadius: params.phasePadHardware.pieceRadius ?? defaultHardware.pieceRadius,
@@ -390,7 +398,7 @@ export function RebuildDialKitBridge({
             }
           : preserved.c4Literal,
     })
-  }, [params, usesLegacyClusterControls, usesPhasePadHardware])
+  }, [defaultHardware, params, usesLegacyClusterControls, usesPhasePadHardware])
 
   useEffect(() => {
     const serialized = JSON.stringify(nextTuning)

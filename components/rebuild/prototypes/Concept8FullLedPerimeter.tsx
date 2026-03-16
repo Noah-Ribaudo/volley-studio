@@ -706,9 +706,17 @@ export function Concept8FullLedPerimeter(props: PrototypeControlProps) {
   const hardwareTuning = props.tactileTuning.phasePadHardware
   const theme = PHASE_PAD_VARIANT_THEMES[props.variantId]
   const lanePadding = Math.max(8, hardwareTuning.channelWidth + 4.5)
+  const horizontalLong = hardwareTuning.trackWidth >= hardwareTuning.trackHeight
+  const horizontalPieces = horizontalLong ? hardwareTuning.piecesPerLongSide : hardwareTuning.piecesPerShortSide
+  const verticalPieces = horizontalLong ? hardwareTuning.piecesPerShortSide : hardwareTuning.piecesPerLongSide
   const piecesPerEdge = useMemo(
-    () => Array.from({ length: C8_PHASE_ORDER.length }, () => hardwareTuning.piecesPerQuarter),
-    [hardwareTuning.piecesPerQuarter]
+    () => [
+      horizontalPieces,
+      verticalPieces,
+      horizontalPieces,
+      verticalPieces,
+    ],
+    [horizontalPieces, verticalPieces]
   )
   const perimeterState = useQuarterTrackTravelState({
     currentCorePhase: props.displayCurrentCorePhase,
@@ -781,7 +789,7 @@ export function Concept8FullLedPerimeter(props: PrototypeControlProps) {
               />
 
               <div
-                className="relative z-[1] grid grid-cols-2 gap-px overflow-hidden"
+                className="relative z-[1] grid grid-cols-2 gap-px overflow-visible"
                 style={{ background: theme.dividerColor, borderRadius: theme.frameRadius, boxShadow: theme.dividerInset }}
               >
                 {PHASE_PAD_LAYOUT.map((item) => (

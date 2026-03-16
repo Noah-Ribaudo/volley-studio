@@ -417,6 +417,48 @@ type HardwareTrackPiece = {
   angle: number
 }
 
+function useEdgeBasedTrackPieces(
+  insetX: number,
+  insetY: number,
+  radius: number,
+  piecesPerHorizontalEdge: number,
+  piecesPerVerticalEdge: number
+) {
+  return useMemo(() => {
+    const minX = insetX
+    const maxX = 100 - insetX
+    const minY = insetY
+    const maxY = 100 - insetY
+    const innerMinX = minX + radius
+    const innerMaxX = maxX - radius
+    const innerMinY = minY + radius
+    const innerMaxY = maxY - radius
+    const pieces: HardwareTrackPiece[] = []
+
+    for (let i = 0; i < piecesPerHorizontalEdge; i++) {
+      const t = (i + 0.5) / piecesPerHorizontalEdge
+      pieces.push({ x: innerMinX + t * (innerMaxX - innerMinX), y: minY, angle: 0 })
+    }
+
+    for (let i = 0; i < piecesPerVerticalEdge; i++) {
+      const t = (i + 0.5) / piecesPerVerticalEdge
+      pieces.push({ x: maxX, y: innerMinY + t * (innerMaxY - innerMinY), angle: 90 })
+    }
+
+    for (let i = 0; i < piecesPerHorizontalEdge; i++) {
+      const t = (i + 0.5) / piecesPerHorizontalEdge
+      pieces.push({ x: innerMaxX - t * (innerMaxX - innerMinX), y: maxY, angle: 180 })
+    }
+
+    for (let i = 0; i < piecesPerVerticalEdge; i++) {
+      const t = (i + 0.5) / piecesPerVerticalEdge
+      pieces.push({ x: minX, y: innerMaxY - t * (innerMaxY - innerMinY), angle: 270 })
+    }
+
+    return pieces
+  }, [insetX, insetY, radius, piecesPerHorizontalEdge, piecesPerVerticalEdge])
+}
+
 function useHardwareTrackPieces(pathD: string, pieceCount: number) {
   const pathRef = useRef<SVGPathElement | null>(null)
   const [pieces, setPieces] = useState<HardwareTrackPiece[]>([])
@@ -468,19 +510,30 @@ export function PhasePadHardwareLane({
   const insetX = (100 - tuning.trackWidth) / 2
   const insetY = (100 - tuning.trackHeight) / 2
   const radius = Math.min(tuning.trackCornerRadius, tuning.trackWidth / 2, tuning.trackHeight / 2)
+  const horizontalLong = tuning.trackWidth >= tuning.trackHeight
+  const piecesPerHorizontalEdge = horizontalLong ? tuning.piecesPerLongSide : tuning.piecesPerShortSide
+  const piecesPerVerticalEdge = horizontalLong ? tuning.piecesPerShortSide : tuning.piecesPerLongSide
 
   const pathD = useMemo(
     () => buildHardwareTrackPath(insetX, insetY, radius),
     [insetX, insetY, radius]
   )
-  const { pathRef, pieces } = useHardwareTrackPieces(pathD, totalLights)
+  const { pathRef } = useHardwareTrackPieces(pathD, totalLights)
+  const pieces = useEdgeBasedTrackPieces(
+    insetX,
+    insetY,
+    radius,
+    piecesPerHorizontalEdge,
+    piecesPerVerticalEdge
+  )
 
   return (
     <svg
       aria-hidden="true"
-      className="pointer-events-none absolute inset-0 h-full w-full"
+      className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
       preserveAspectRatio="none"
       viewBox="0 0 100 100"
+      style={{ overflow: 'visible' }}
     >
       <defs>
         <filter id="phase-pad-hardware-shadow" x="-20%" y="-20%" width="140%" height="140%">
