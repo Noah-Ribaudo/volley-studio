@@ -234,7 +234,7 @@ export function formatCorePhaseLabel(phase: CorePhase): string {
     case 'RECEIVE':
       return 'Receive'
     case 'OFFENSE':
-      return 'Offense'
+      return 'Attack'
     case 'DEFENSE':
       return 'Defense'
     default:

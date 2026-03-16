@@ -24,6 +24,8 @@ interface MovementArrowLayerProps {
   arrowDragPosition: Position | null
   arrows: ArrowPositions
   arrowEndpointLabels?: Partial<Record<Role, string>>
+  secondaryArrows?: ArrowPositions
+  secondaryArrowEndpointLabels?: Partial<Record<Role, string>>
   arrowCurves: Partial<Record<Role, ArrowCurveConfig>>
   curveStrength: number
   showArrows: boolean
@@ -31,7 +33,7 @@ interface MovementArrowLayerProps {
   easingCss: string
   debugHitboxes: boolean
   toSvgCoords: (position: Position) => { x: number; y: number }
-  onArrowDragStart: (role: Role, e: React.MouseEvent | React.TouchEvent) => void
+  onArrowDragStart: (role: Role, e: React.MouseEvent | React.TouchEvent, initialEndSvg?: { x: number; y: number }, initialControlSvg?: { x: number; y: number }, variant?: 'primary' | 'secondary') => void
   onArrowHoverChange: (role: Role | null) => void
   getRoleColor: (role: Role) => string
 }
@@ -49,6 +51,8 @@ function MovementArrowLayerImpl({
   arrowDragPosition,
   arrows,
   arrowEndpointLabels,
+  secondaryArrows,
+  secondaryArrowEndpointLabels,
   arrowCurves,
   curveStrength,
   showArrows,
@@ -76,9 +80,11 @@ function MovementArrowLayerImpl({
         const homeSvgPos = toSvgCoords(draggingRole === role && dragPosition ? dragPosition : basePosForArrow)
 
         const activeArrowTarget = lockedPath?.end ?? (draggingArrowRole === role && arrowDragPosition ? arrowDragPosition : arrows[role])
+        const secondaryArrowTarget = secondaryArrows?.[role]
         const defaultHandleSvg = { x: homeSvgPos.x, y: Math.max(12, homeSvgPos.y - 28) }
         const arrowEndPos = lockedPath?.end ?? activeArrowTarget
         const arrowEndSvg = arrowEndPos ? toSvgCoords(arrowEndPos) : defaultHandleSvg
+        const secondaryArrowEndSvg = secondaryArrowTarget ? toSvgCoords(secondaryArrowTarget) : null
 
         const curveConfig = arrowCurves[role]
         const chosenControl = (() => {
@@ -101,12 +107,16 @@ function MovementArrowLayerImpl({
         const controlSvg = validControl ? toSvgCoords(validControl) : null
         const endpointLabel = arrowEndpointLabels?.[role] ?? null
         const labelWidth = endpointLabel ? Math.max(44, Math.min(96, endpointLabel.length * 6.2 + 18)) : 0
+        const secondaryEndpointLabel = secondaryArrowEndpointLabels?.[role] ?? null
+        const secondaryLabelWidth = secondaryEndpointLabel ? Math.max(44, Math.min(96, secondaryEndpointLabel.length * 6.2 + 18)) : 0
 
         const hasValidPositions = arrowEndPos &&
           !isNaN(homeSvgPos.x) && !isNaN(homeSvgPos.y) &&
           !isNaN(arrowEndSvg.x) && !isNaN(arrowEndSvg.y)
+        const hasValidSecondaryPositions = secondaryArrowTarget && secondaryArrowEndSvg &&
+          !isNaN(secondaryArrowEndSvg.x) && !isNaN(secondaryArrowEndSvg.y)
 
-        if (!hasValidPositions) return null
+        if (!hasValidPositions && !hasValidSecondaryPositions) return null
 
         return (
           <g
@@ -116,24 +126,26 @@ function MovementArrowLayerImpl({
               opacity: showArrows ? 1 : 0,
             }}
           >
-            <MovementArrow
-              start={{ x: homeSvgPos.x, y: homeSvgPos.y }}
-              end={arrowEndSvg}
-              control={controlSvg}
-              color={getRoleColor(role)}
-              strokeWidth={3}
-              opacity={isTraversingPath ? 0.45 : 0.85}
-              dashPattern={isTraversingPath ? '8 6' : undefined}
-              startDotOpacityScale={isTraversingPath ? 0.75 : 1}
-              arrowheadOpacityScale={isTraversingPath ? 0.85 : 1}
-              isDraggable={true}
-              onDragStart={(e) => onArrowDragStart(role, e)}
-              showCurveHandle={false}
-              onMouseEnter={() => onArrowHoverChange(role)}
-              onMouseLeave={() => onArrowHoverChange(null)}
-              debugHitboxes={debugHitboxes}
-            />
-            {endpointLabel ? (
+            {hasValidPositions ? (
+              <MovementArrow
+                start={{ x: homeSvgPos.x, y: homeSvgPos.y }}
+                end={arrowEndSvg}
+                control={controlSvg}
+                color={getRoleColor(role)}
+                strokeWidth={3}
+                opacity={isTraversingPath ? 0.45 : 0.85}
+                dashPattern={isTraversingPath ? '8 6' : undefined}
+                startDotOpacityScale={isTraversingPath ? 0.75 : 1}
+                arrowheadOpacityScale={isTraversingPath ? 0.85 : 1}
+                isDraggable={true}
+                onDragStart={(e) => onArrowDragStart(role, e, undefined, undefined, 'primary')}
+                showCurveHandle={false}
+                onMouseEnter={() => onArrowHoverChange(role)}
+                onMouseLeave={() => onArrowHoverChange(null)}
+                debugHitboxes={debugHitboxes}
+              />
+            ) : null}
+            {hasValidPositions && endpointLabel ? (
               <g
                 transform={`translate(${arrowEndSvg.x + (arrowEndSvg.x >= homeSvgPos.x ? 14 : -14)} ${arrowEndSvg.y + ((controlSvg?.y ?? homeSvgPos.y) >= arrowEndSvg.y ? -12 : 12)})`}
                 style={{ pointerEvents: 'none' }}
@@ -155,6 +167,51 @@ function MovementArrowLayerImpl({
                 >
                   {endpointLabel}
                 </text>
+              </g>
+            ) : null}
+            {hasValidSecondaryPositions && secondaryArrowEndSvg ? (
+              <g>
+                <MovementArrow
+                  start={{ x: homeSvgPos.x, y: homeSvgPos.y }}
+                  end={secondaryArrowEndSvg}
+                  control={null}
+                  color={getRoleColor(role)}
+                  strokeWidth={2.5}
+                  opacity={0.62}
+                  dashPattern="6 5"
+                  startDotOpacityScale={0.7}
+                  arrowheadOpacityScale={0.75}
+                  isDraggable={true}
+                  onDragStart={(e) => onArrowDragStart(role, e, undefined, undefined, 'secondary')}
+                  showCurveHandle={false}
+                  onMouseEnter={() => onArrowHoverChange(role)}
+                  onMouseLeave={() => onArrowHoverChange(null)}
+                  debugHitboxes={debugHitboxes}
+                />
+                {secondaryEndpointLabel ? (
+                  <g
+                    transform={`translate(${secondaryArrowEndSvg.x + (secondaryArrowEndSvg.x >= homeSvgPos.x ? 14 : -14)} ${secondaryArrowEndSvg.y + (secondaryArrowEndSvg.y >= homeSvgPos.y ? 12 : -12)})`}
+                    style={{ pointerEvents: 'none' }}
+                  >
+                    <rect
+                      x={secondaryArrowEndSvg.x >= homeSvgPos.x ? 0 : -secondaryLabelWidth}
+                      y={-10}
+                      width={secondaryLabelWidth}
+                      height={20}
+                      rx={10}
+                      fill="rgba(255,255,255,0.88)"
+                      stroke="rgba(148,163,184,0.24)"
+                    />
+                    <text
+                      x={secondaryArrowEndSvg.x >= homeSvgPos.x ? 8 : -8}
+                      y={4}
+                      textAnchor={secondaryArrowEndSvg.x >= homeSvgPos.x ? 'start' : 'end'}
+                      className="fill-slate-500 text-[10px] font-semibold select-none"
+                    >
+                      {secondaryEndpointLabel}
+                    </text>
+                  </g>
+                ) : null}
               </g>
             ) : null}
           </g>

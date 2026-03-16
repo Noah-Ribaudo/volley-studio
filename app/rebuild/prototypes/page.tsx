@@ -128,6 +128,14 @@ export default function RebuildPrototypeLabPage() {
     () => prototypeCourtState.getArrowEndpointLabels(currentRotation, currentCorePhase),
     [currentCorePhase, currentRotation, prototypeCourtState]
   )
+  const currentSecondaryArrows = useMemo(
+    () => prototypeCourtState.getSecondaryDerivedArrows(currentRotation, currentCorePhase),
+    [currentCorePhase, currentRotation, prototypeCourtState]
+  )
+  const currentSecondaryArrowLabels = useMemo(
+    () => prototypeCourtState.getSecondaryArrowEndpointLabels(currentRotation, currentCorePhase),
+    [currentCorePhase, currentRotation, prototypeCourtState]
+  )
 
   const currentArrowCurves = useMemo(
     () => prototypeCourtState.getArrowCurves(currentRotation, currentCorePhase),
@@ -370,9 +378,16 @@ export default function RebuildPrototypeLabPage() {
               }
               arrows={currentArrows}
               arrowEndpointLabels={currentArrowLabels}
+              secondaryArrows={currentSecondaryArrows}
+              secondaryArrowEndpointLabels={currentSecondaryArrowLabels}
               onArrowChange={
                 isEditingAllowed
-                  ? (role, position) => {
+                  ? (role, position, options) => {
+                      if (options?.variant === 'secondary') {
+                        prototypeCourtState.updateSecondaryArrowTarget(currentRotation, currentCorePhase, role, position)
+                        return
+                      }
+
                       prototypeCourtState.updateArrowTarget(currentRotation, currentCorePhase, role, position)
                       if (!position) {
                         prototypeCourtState.setArrowCurve(currentRotation, currentCorePhase, role, null)
