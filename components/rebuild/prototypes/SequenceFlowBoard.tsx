@@ -25,6 +25,8 @@ type FlowEdge = {
   source: string
   target: string
   label: string
+  labelOffsetX?: number
+  labelOffsetY?: number
 }
 
 type FlowDocument = {
@@ -145,6 +147,7 @@ export function SequenceFlowBoard({ className }: { className?: string }) {
   const [copyState, setCopyState] = useState<'idle' | 'summary' | 'json'>('idle')
   const [isFocused, setIsFocused] = useState(false)
   const dragStateRef = useRef<{ nodeId: string; offsetX: number; offsetY: number } | null>(null)
+  const labelDragStateRef = useRef<{ edgeId: string; startX: number; startY: number; originOffsetX: number; originOffsetY: number } | null>(null)
   const boardRef = useRef<HTMLDivElement | null>(null)
   const canvasWidth = isFocused ? FOCUSED_CANVAS_WIDTH : CANVAS_WIDTH
   const canvasHeight = isFocused ? FOCUSED_CANVAS_HEIGHT : CANVAS_HEIGHT
@@ -175,26 +178,47 @@ export function SequenceFlowBoard({ className }: { className?: string }) {
   useEffect(() => {
     const handlePointerMove = (event: PointerEvent) => {
       const drag = dragStateRef.current
+      const labelDrag = labelDragStateRef.current
       const board = boardRef.current
-      if (!drag || !board) return
+      if (!board) return
 
       const rect = board.getBoundingClientRect()
-      setDocument((current) => ({
-        ...current,
-        nodes: current.nodes.map((node) => {
-          if (node.id !== drag.nodeId) return node
-          const size = getNodeSize(node.kind)
-          return {
-            ...node,
-            x: clamp(event.clientX - rect.left - drag.offsetX, 0, canvasWidth - size.width),
-            y: clamp(event.clientY - rect.top - drag.offsetY, 0, canvasHeight - size.height),
-          }
-        }),
-      }))
+      if (drag) {
+        setDocument((current) => ({
+          ...current,
+          nodes: current.nodes.map((node) => {
+            if (node.id !== drag.nodeId) return node
+            const size = getNodeSize(node.kind)
+            return {
+              ...node,
+              x: clamp(event.clientX - rect.left - drag.offsetX, 0, canvasWidth - size.width),
+              y: clamp(event.clientY - rect.top - drag.offsetY, 0, canvasHeight - size.height),
+            }
+          }),
+        }))
+      }
+
+      if (labelDrag) {
+        const nextOffsetX = labelDrag.originOffsetX + (event.clientX - labelDrag.startX)
+        const nextOffsetY = labelDrag.originOffsetY + (event.clientY - labelDrag.startY)
+        setDocument((current) => ({
+          ...current,
+          edges: current.edges.map((edge) =>
+            edge.id === labelDrag.edgeId
+              ? {
+                  ...edge,
+                  labelOffsetX: nextOffsetX,
+                  labelOffsetY: nextOffsetY,
+                }
+              : edge
+          ),
+        }))
+      }
     }
 
     const handlePointerUp = () => {
       dragStateRef.current = null
+      labelDragStateRef.current = null
     }
 
     window.addEventListener('pointermove', handlePointerMove)
@@ -222,14 +246,28 @@ export function SequenceFlowBoard({ className }: { className?: string }) {
         const startY = source.y + sourceSize.height / 2
         const endX = target.x
         const endY = target.y + targetSize.height / 2
-        const deltaX = Math.max(64, Math.abs(endX - startX) * 0.45)
-        const path = `M ${startX} ${startY} C ${startX + deltaX} ${startY}, ${endX - deltaX} ${endY}, ${endX} ${endY}`
-        const labelX = startX + (endX - startX) / 2
-        const labelY = startY + (endY - startY) / 2
+        const defaultControlX = startX + Math.max(64, Math.abs(endX - startX) * 0.45)
+        const defaultControlY = startY + (endY - startY) / 2
+        const controlX = defaultControlX + (edge.labelOffsetX ?? 0)
+        const controlY = defaultControlY + (edge.labelOffsetY ?? 0)
+        const path = `M ${startX} ${startY} Q ${controlX} ${controlY}, ${endX} ${endY}`
+        const labelX = 0.25 * startX + 0.5 * controlX + 0.25 * endX
+        const labelY = 0.25 * startY + 0.5 * controlY + 0.25 * endY
 
-        return { edge, path, labelX, labelY }
+        return { edge, path, labelX, labelY, startX, startY, endX, endY, defaultControlX, defaultControlY }
       })
-      .filter(Boolean) as Array<{ edge: FlowEdge; path: string; labelX: number; labelY: number }>
+      .filter(Boolean) as Array<{
+        edge: FlowEdge
+        path: string
+        labelX: number
+        labelY: number
+        startX: number
+        startY: number
+        endX: number
+        endY: number
+        defaultControlX: number
+        defaultControlY: number
+      }>
   }, [document.edges, nodeMap])
 
   const updateSelectedNode = (patch: Partial<FlowNode>) => {
@@ -512,7 +550,7 @@ export function SequenceFlowBoard({ className }: { className?: string }) {
             </marker>
           </defs>
 
-          {edgePaths.map(({ edge, path, labelX, labelY }) => {
+          {edgePaths.map(({ edge, path, labelX, labelY, startX, startY, endX, endY, defaultControlX, defaultControlY }) => {
             const selected = selectedEdgeId === edge.id
             return (
               <g key={edge.id}>
@@ -535,22 +573,44 @@ export function SequenceFlowBoard({ className }: { className?: string }) {
                   }}
                 />
                 <g transform={`translate(${labelX} ${labelY})`}>
-                  <rect
-                    x={-56}
-                    y={-11}
-                    width={112}
-                    height={22}
-                    rx={11}
-                    fill={selected ? 'rgba(255,237,213,0.94)' : 'rgba(255,255,255,0.92)'}
-                    stroke={selected ? 'rgba(234,88,12,0.3)' : 'rgba(148,163,184,0.24)'}
-                  />
-                  <text
-                    textAnchor="middle"
-                    dominantBaseline="middle"
-                    className="fill-slate-600 text-[11px] font-medium"
+                  <g
+                    className="cursor-grab active:cursor-grabbing"
+                    onPointerDown={(event) => {
+                      event.stopPropagation()
+                      setSelectedEdgeId(edge.id)
+                      setSelectedNodeId(null)
+                      const board = boardRef.current
+                      const rect = board?.getBoundingClientRect()
+                      const boardX = rect ? event.clientX - rect.left : labelX
+                      const boardY = rect ? event.clientY - rect.top : labelY
+                      const targetControlX = 2 * boardX - 0.5 * (startX + endX)
+                      const targetControlY = 2 * boardY - 0.5 * (startY + endY)
+                      labelDragStateRef.current = {
+                        edgeId: edge.id,
+                        startX: event.clientX,
+                        startY: event.clientY,
+                        originOffsetX: targetControlX - defaultControlX,
+                        originOffsetY: targetControlY - defaultControlY,
+                      }
+                    }}
                   >
-                    {edge.label || 'unlabeled'}
-                  </text>
+                    <rect
+                      x={-56}
+                      y={-11}
+                      width={112}
+                      height={22}
+                      rx={11}
+                      fill={selected ? 'rgba(255,237,213,0.94)' : 'rgba(255,255,255,0.92)'}
+                      stroke={selected ? 'rgba(234,88,12,0.3)' : 'rgba(148,163,184,0.24)'}
+                    />
+                    <text
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      className="fill-slate-600 text-[11px] font-medium select-none"
+                    >
+                      {edge.label || 'unlabeled'}
+                    </text>
+                  </g>
                 </g>
               </g>
             )
