@@ -36,6 +36,8 @@ type FlowDocument = {
 const STORAGE_KEY = 'volley-studio-sequence-flow-board-v1'
 const CANVAS_WIDTH = 880
 const CANVAS_HEIGHT = 360
+const FOCUSED_CANVAS_WIDTH = 1680
+const FOCUSED_CANVAS_HEIGHT = 980
 
 const NODE_SIZE: Record<FlowNodeKind, { width: number; height: number }> = {
   start: { width: 152, height: 74 },
@@ -144,6 +146,8 @@ export function SequenceFlowBoard({ className }: { className?: string }) {
   const [isFocused, setIsFocused] = useState(false)
   const dragStateRef = useRef<{ nodeId: string; offsetX: number; offsetY: number } | null>(null)
   const boardRef = useRef<HTMLDivElement | null>(null)
+  const canvasWidth = isFocused ? FOCUSED_CANVAS_WIDTH : CANVAS_WIDTH
+  const canvasHeight = isFocused ? FOCUSED_CANVAS_HEIGHT : CANVAS_HEIGHT
 
   useEffect(() => {
     try {
@@ -182,8 +186,8 @@ export function SequenceFlowBoard({ className }: { className?: string }) {
           const size = getNodeSize(node.kind)
           return {
             ...node,
-            x: clamp(event.clientX - rect.left - drag.offsetX, 0, CANVAS_WIDTH - size.width),
-            y: clamp(event.clientY - rect.top - drag.offsetY, 0, CANVAS_HEIGHT - size.height),
+            x: clamp(event.clientX - rect.left - drag.offsetX, 0, canvasWidth - size.width),
+            y: clamp(event.clientY - rect.top - drag.offsetY, 0, canvasHeight - size.height),
           }
         }),
       }))
@@ -199,7 +203,7 @@ export function SequenceFlowBoard({ className }: { className?: string }) {
       window.removeEventListener('pointermove', handlePointerMove)
       window.removeEventListener('pointerup', handlePointerUp)
     }
-  }, [])
+  }, [canvasHeight, canvasWidth])
 
   const nodeMap = useMemo(() => new Map(document.nodes.map((node) => [node.id, node])), [document.nodes])
   const selectedNode = selectedNodeId ? nodeMap.get(selectedNodeId) ?? null : null
@@ -252,8 +256,8 @@ export function SequenceFlowBoard({ className }: { className?: string }) {
       kind,
       label: `${KIND_LABEL[kind]} ${document.nodes.length + 1}`,
       notes: '',
-      x: clamp(40 + document.nodes.length * 18, 0, CANVAS_WIDTH - size.width),
-      y: clamp(40 + document.nodes.length * 14, 0, CANVAS_HEIGHT - size.height),
+      x: clamp(40 + document.nodes.length * 18, 0, canvasWidth - size.width),
+      y: clamp(40 + document.nodes.length * 14, 0, canvasHeight - size.height),
     }
 
     setDocument((current) => ({ ...current, nodes: [...current.nodes, nextNode] }))
@@ -486,19 +490,19 @@ export function SequenceFlowBoard({ className }: { className?: string }) {
       <div
         ref={boardRef}
         className="relative"
-        style={{ width: CANVAS_WIDTH, height: CANVAS_HEIGHT }}
+          style={{ width: canvasWidth, height: canvasHeight }}
         onClick={() => {
           setSelectedNodeId(null)
           setSelectedEdgeId(null)
         }}
       >
         <div
-          className="absolute inset-0 opacity-60"
-          style={{
-            backgroundImage:
-              'linear-gradient(rgba(120,120,120,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(120,120,120,0.08) 1px, transparent 1px)',
-            backgroundSize: '24px 24px',
-          }}
+            className="absolute inset-0 opacity-60"
+            style={{
+              backgroundImage:
+                'linear-gradient(rgba(120,120,120,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(120,120,120,0.08) 1px, transparent 1px)',
+              backgroundSize: '24px 24px',
+            }}
         />
 
         <svg className="absolute inset-0 h-full w-full">
@@ -634,7 +638,7 @@ export function SequenceFlowBoard({ className }: { className?: string }) {
       <Dialog open={isFocused} onOpenChange={setIsFocused}>
         <DialogContent
           showCloseButton={false}
-          className="h-[100dvh] w-[100dvw] max-w-none translate-x-[-50%] translate-y-[-50%] gap-0 rounded-none border-0 p-0"
+          className="inset-0 left-0 top-0 h-[100dvh] w-[100dvw] max-w-none translate-x-0 translate-y-0 gap-0 rounded-none border-0 p-0 sm:max-w-none"
         >
           <DialogHeader className="sr-only">
             <DialogTitle>Focused Flow Board</DialogTitle>
@@ -661,8 +665,8 @@ export function SequenceFlowBoard({ className }: { className?: string }) {
               </div>
             ) : null}
 
-            <div className="grid min-h-0 flex-1 gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_340px]">
-              <div className="min-h-0">{boardCanvas}</div>
+            <div className="grid min-h-0 flex-1 gap-4 p-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+              <div className="min-h-0 overflow-hidden">{boardCanvas}</div>
               <div className="flex min-h-0 flex-col gap-4 overflow-auto">
                 {inspector}
                 {importPanel}
