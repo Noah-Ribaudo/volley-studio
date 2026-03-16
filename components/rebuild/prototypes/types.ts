@@ -12,6 +12,7 @@ export interface PrototypeControlProps {
   displayCurrentCorePhase: CorePhase
   displayTargetCorePhase: CorePhase
   nextByPlay: PrototypePhase
+  canPlayAdvance: boolean
   displayNextByPlay: CorePhase
   legalPlayLabel: string
   isFoundationalPhase: boolean

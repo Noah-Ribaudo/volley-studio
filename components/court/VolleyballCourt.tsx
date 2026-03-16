@@ -92,6 +92,7 @@ interface VolleyballCourtProps {
   }
   arrows?: ArrowPositions
   onArrowChange?: (role: Role, position: Position | null) => void
+  arrowEndpointLabels?: Partial<Record<Role, string>>
   arrowCurves?: Partial<Record<Role, ArrowCurveConfig>>
   onArrowCurveChange?: (role: Role, curve: ArrowCurveConfig | null) => void
   baseOrder?: Role[]
@@ -205,6 +206,7 @@ export function VolleyballCourt({
   animationConfig,
   arrows = {},
   onArrowChange,
+  arrowEndpointLabels = {},
   arrowCurves = {},
   onArrowCurveChange,
   baseOrder = DEFAULT_BASE_ORDER,
@@ -2293,6 +2295,7 @@ export function VolleyballCourt({
           draggingArrowRole={draggingArrowRole}
           arrowDragPosition={arrowDragPosition}
           arrows={arrows}
+          arrowEndpointLabels={arrowEndpointLabels}
           arrowCurves={arrowCurves}
           curveStrength={playTuning.curveStrength}
           showArrows={showArrows}

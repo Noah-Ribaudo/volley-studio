@@ -23,7 +23,7 @@ export interface PointOutcome {
 
 export interface PrototypeMovementLink {
   sourcePhase: PrototypePhase
-  targetPhase: PrototypePhase
+  targetPhase: PrototypePhase | null
 }
 
 export const CORE_PHASES: CorePhase[] = ['SERVE', 'RECEIVE', 'OFFENSE', 'DEFENSE']
@@ -109,13 +109,35 @@ export function getLinkedTargetPhase(
   }
 }
 
+export function getAdvanceTargetPhase(
+  phase: PrototypePhase,
+  options?: { hasFirstAttack?: boolean }
+): PrototypePhase | null {
+  const hasFirstAttack = options?.hasFirstAttack ?? false
+
+  switch (phase) {
+    case 'SERVE':
+      return 'DEFENSE'
+    case 'RECEIVE':
+      return getReceiveLinkTarget(hasFirstAttack)
+    case 'FIRST_ATTACK':
+      return 'DEFENSE'
+    case 'OFFENSE':
+      return 'DEFENSE'
+    case 'DEFENSE':
+      return null
+    default:
+      return null
+  }
+}
+
 export function getMovementLink(
   phase: PrototypePhase,
   options?: { hasFirstAttack?: boolean }
 ): PrototypeMovementLink {
   return {
     sourcePhase: phase,
-    targetPhase: getLinkedTargetPhase(phase, options),
+    targetPhase: getAdvanceTargetPhase(phase, options),
   }
 }
 
@@ -123,11 +145,22 @@ export function getNextByPlay(
   phase: PrototypePhase,
   options?: { hasFirstAttack?: boolean }
 ): PrototypePhase {
-  return getLinkedTargetPhase(phase, options)
+  return getAdvanceTargetPhase(phase, options) ?? phase
+}
+
+export function canAdvanceByPlay(
+  phase: PrototypePhase,
+  options?: { hasFirstAttack?: boolean }
+): boolean {
+  return getAdvanceTargetPhase(phase, options) !== null
 }
 
 export function getLegalPlayLabel(phase: PrototypePhase, options?: { hasFirstAttack?: boolean }): string {
-  const next = getNextByPlay(phase, options)
+  const next = getAdvanceTargetPhase(phase, options)
+  if (!next) {
+    return `${formatPrototypePhaseLabel(phase)} -> Rally End`
+  }
+
   return `${formatPrototypePhaseLabel(phase)} -> ${formatPrototypePhaseLabel(next)}`
 }
 

@@ -2,7 +2,8 @@
 
 import { useCallback, useMemo, useState } from 'react'
 import {
-  getLinkedTargetPhase,
+  formatPrototypePhaseLabel,
+  getAdvanceTargetPhase,
   type CorePhase,
   type PrototypePhase,
 } from '@/lib/rebuild/prototypeFlow'
@@ -13,6 +14,7 @@ import {
   type RolePositionMap,
 } from '@/lib/rebuild/prototypeSeeds'
 import type { ArrowCurveConfig, ArrowPositions, PositionCoordinates, Role, Rotation } from '@/lib/types'
+import { ROLES } from '@/lib/types'
 
 type PositionState = Partial<Record<string, RolePositionMap>>
 type CurveState = Partial<Record<string, RoleCurveMap>>
@@ -85,10 +87,10 @@ export function usePrototypeCourtState({
       const arrows: ArrowPositions = {}
 
       for (const role of Object.keys(currentPositions) as Role[]) {
-        const nextPhase =
-          phase === 'RECEIVE'
-            ? getLinkedTargetPhase(phase, { hasFirstAttack: Boolean(receiveMap[role]) })
-            : getLinkedTargetPhase(phase)
+        const nextPhase = getAdvanceTargetPhase(phase, { hasFirstAttack: Boolean(receiveMap[role]) })
+        if (!nextPhase) {
+          continue
+        }
         const endPosition = getPositions(rotation, nextPhase)[role]
         const startPosition = currentPositions[role]
 
@@ -109,6 +111,25 @@ export function usePrototypeCourtState({
     [getPositions, getReceiveFirstAttackMap]
   )
 
+  const getArrowEndpointLabels = useCallback(
+    (rotation: Rotation, phase: PrototypePhase): Partial<Record<Role, string>> => {
+      const receiveMap = getReceiveFirstAttackMap(rotation)
+      const labels: Partial<Record<Role, string>> = {}
+
+      for (const role of ROLES) {
+        const nextPhase = getAdvanceTargetPhase(phase, { hasFirstAttack: Boolean(receiveMap[role]) })
+        if (!nextPhase) {
+          continue
+        }
+
+        labels[role] = formatPrototypePhaseLabel(nextPhase)
+      }
+
+      return labels
+    },
+    [getReceiveFirstAttackMap]
+  )
+
   const updatePosition = useCallback(
     (rotation: Rotation, phase: PrototypePhase, role: Role, position: PositionCoordinates[Role]) => {
       setPositionsByPhase((current) => {
@@ -123,6 +144,50 @@ export function usePrototypeCourtState({
       })
     },
     []
+  )
+
+  const updateArrowTarget = useCallback(
+    (rotation: Rotation, phase: PrototypePhase, role: Role, position: PositionCoordinates[Role] | null) => {
+      const receiveMap = getReceiveFirstAttackMap(rotation)
+      const nextPhase = getAdvanceTargetPhase(phase, { hasFirstAttack: Boolean(receiveMap[role]) })
+      if (!nextPhase) {
+        return
+      }
+
+      setPositionsByPhase((current) => {
+        const key = getPhaseKey(rotation, nextPhase)
+        const currentPhasePositions = current[key] ?? {}
+
+        if (!position) {
+          if (!(role in currentPhasePositions)) {
+            return current
+          }
+
+          const nextPhasePositions = { ...currentPhasePositions }
+          delete nextPhasePositions[role]
+
+          if (Object.keys(nextPhasePositions).length === 0) {
+            const nextState = { ...current }
+            delete nextState[key]
+            return nextState
+          }
+
+          return {
+            ...current,
+            [key]: nextPhasePositions,
+          }
+        }
+
+        return {
+          ...current,
+          [key]: {
+            ...currentPhasePositions,
+            [role]: position,
+          },
+        }
+      })
+    },
+    [getReceiveFirstAttackMap]
   )
 
   const setArrowCurve = useCallback(
@@ -216,9 +281,11 @@ export function usePrototypeCourtState({
       getPositions,
       getDerivedArrows,
       getArrowCurves,
+      getArrowEndpointLabels,
       getReceiveFirstAttackMap,
       hasFirstAttackTargets,
       updatePosition,
+      updateArrowTarget,
       setArrowCurve,
       resetPhase,
       toggleReceiveFirstAttack,
@@ -231,11 +298,13 @@ export function usePrototypeCourtState({
       getPositions,
       getReceiveFirstAttackMap,
       hasFirstAttackTargets,
+      getArrowEndpointLabels,
       loadDemoSeeds,
       resetPhase,
       setArrowCurve,
       setReceiveFirstAttack,
       toggleReceiveFirstAttack,
+      updateArrowTarget,
       updatePosition,
     ]
   )

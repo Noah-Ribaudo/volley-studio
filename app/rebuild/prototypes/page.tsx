@@ -12,6 +12,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { validateRotationLegality } from '@/lib/model/legality'
 import {
+  canAdvanceByPlay,
   canVariantScore,
   formatPrototypePhaseLabel,
   getLegalPlayLabel,
@@ -123,6 +124,10 @@ export default function RebuildPrototypeLabPage() {
     () => prototypeCourtState.getDerivedArrows(currentRotation, currentCorePhase),
     [currentCorePhase, currentRotation, prototypeCourtState]
   )
+  const currentArrowLabels = useMemo(
+    () => prototypeCourtState.getArrowEndpointLabels(currentRotation, currentCorePhase),
+    [currentCorePhase, currentRotation, prototypeCourtState]
+  )
 
   const currentArrowCurves = useMemo(
     () => prototypeCourtState.getArrowCurves(currentRotation, currentCorePhase),
@@ -178,6 +183,7 @@ export default function RebuildPrototypeLabPage() {
     : currentCorePhase
   const displayNextByPlay = toDisplayCorePhase(getNextByPlay(controlCorePhase, { hasFirstAttack: hasFirstAttackTargets }))
   const nextByPlay = getNextByPlay(controlCorePhase, { hasFirstAttack: hasFirstAttackTargets })
+  const canPlayAdvance = canAdvanceByPlay(controlCorePhase, { hasFirstAttack: hasFirstAttackTargets })
   const legalPlayLabel = getLegalPlayLabel(controlCorePhase, { hasFirstAttack: hasFirstAttackTargets })
   const scoringEnabled = canVariantScore(activeVariant)
   const handleTuningChange = useCallback((next: TactileTuning) => {
@@ -224,6 +230,7 @@ export default function RebuildPrototypeLabPage() {
       displayCurrentCorePhase={displayCurrentCorePhase}
       displayTargetCorePhase={displayTargetCorePhase}
       nextByPlay={nextByPlay}
+      canPlayAdvance={canPlayAdvance}
       displayNextByPlay={displayNextByPlay}
       legalPlayLabel={legalPlayLabel}
       isFoundationalPhase={isFoundationalPhase(displayCurrentCorePhase)}
@@ -247,7 +254,10 @@ export default function RebuildPrototypeLabPage() {
           prototypeCourtState.setReceiveFirstAttack(currentRotation, role, enabled)
         }
       }}
-      onPlay={() => handlePlay(nextByPlay)}
+      onPlay={() => {
+        if (!canPlayAdvance) return
+        handlePlay(nextByPlay)
+      }}
       onPoint={handlePoint}
     />
   )
@@ -359,6 +369,17 @@ export default function RebuildPrototypeLabPage() {
                   : undefined
               }
               arrows={currentArrows}
+              arrowEndpointLabels={currentArrowLabels}
+              onArrowChange={
+                isEditingAllowed
+                  ? (role, position) => {
+                      prototypeCourtState.updateArrowTarget(currentRotation, currentCorePhase, role, position)
+                      if (!position) {
+                        prototypeCourtState.setArrowCurve(currentRotation, currentCorePhase, role, null)
+                      }
+                    }
+                  : undefined
+              }
               arrowCurves={currentArrowCurves}
               onArrowCurveChange={
                 isEditingAllowed

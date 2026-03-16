@@ -23,6 +23,7 @@ interface MovementArrowLayerProps {
   draggingArrowRole: Role | null
   arrowDragPosition: Position | null
   arrows: ArrowPositions
+  arrowEndpointLabels?: Partial<Record<Role, string>>
   arrowCurves: Partial<Record<Role, ArrowCurveConfig>>
   curveStrength: number
   showArrows: boolean
@@ -47,6 +48,7 @@ function MovementArrowLayerImpl({
   draggingArrowRole,
   arrowDragPosition,
   arrows,
+  arrowEndpointLabels,
   arrowCurves,
   curveStrength,
   showArrows,
@@ -96,6 +98,7 @@ function MovementArrowLayerImpl({
         const validControl = chosenControl &&
           !isNaN(chosenControl.x) && !isNaN(chosenControl.y)
           ? chosenControl : null
+        const controlSvg = validControl ? toSvgCoords(validControl) : null
 
         const hasValidPositions = arrowEndPos &&
           !isNaN(homeSvgPos.x) && !isNaN(homeSvgPos.y) &&
@@ -114,7 +117,7 @@ function MovementArrowLayerImpl({
             <MovementArrow
               start={{ x: homeSvgPos.x, y: homeSvgPos.y }}
               end={arrowEndSvg}
-              control={validControl ? toSvgCoords(validControl) : null}
+              control={controlSvg}
               color={getRoleColor(role)}
               strokeWidth={3}
               opacity={isTraversingPath ? 0.45 : 0.85}
@@ -128,6 +131,30 @@ function MovementArrowLayerImpl({
               onMouseLeave={() => onArrowHoverChange(null)}
               debugHitboxes={debugHitboxes}
             />
+            {arrowEndpointLabels?.[role] ? (
+              <g
+                transform={`translate(${arrowEndSvg.x + (arrowEndSvg.x >= homeSvgPos.x ? 14 : -14)} ${arrowEndSvg.y + ((controlSvg?.y ?? homeSvgPos.y) >= arrowEndSvg.y ? -12 : 12)})`}
+                style={{ pointerEvents: 'none' }}
+              >
+                <rect
+                  x={arrowEndSvg.x >= homeSvgPos.x ? 0 : -88}
+                  y={-10}
+                  width={88}
+                  height={20}
+                  rx={10}
+                  fill="rgba(255,255,255,0.92)"
+                  stroke="rgba(148,163,184,0.28)"
+                />
+                <text
+                  x={arrowEndSvg.x >= homeSvgPos.x ? 8 : -8}
+                  y={4}
+                  textAnchor={arrowEndSvg.x >= homeSvgPos.x ? 'start' : 'end'}
+                  className="fill-slate-600 text-[10px] font-semibold select-none"
+                >
+                  {arrowEndpointLabels[role]}
+                </text>
+              </g>
+            ) : null}
           </g>
         )
       })}

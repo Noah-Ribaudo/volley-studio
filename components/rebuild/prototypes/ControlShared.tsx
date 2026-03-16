@@ -88,15 +88,17 @@ export function PhaseQuartet({
 
 export function PlayButton({
   legalPlayLabel,
+  canPlayAdvance = true,
   onPlay,
   className,
 }: {
   legalPlayLabel: string
+  canPlayAdvance?: boolean
   onPlay: () => void
   className?: string
 }) {
   return (
-    <Button type="button" className={cn('h-9 min-w-[7.5rem]', className)} onClick={onPlay}>
+    <Button type="button" className={cn('h-9 min-w-[7.5rem]', className)} onClick={onPlay} disabled={!canPlayAdvance}>
       Play ({legalPlayLabel})
     </Button>
   )

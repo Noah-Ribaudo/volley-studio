@@ -62,6 +62,7 @@ interface TactilePlayJoystickProps {
   currentPhase: CorePhase
   nextPhase: CorePhase
   nextLabel: string
+  canPlayAdvance?: boolean
   isPreviewingMovement?: boolean
   transitionProgress?: number
   mode?: JoystickMode
@@ -125,6 +126,7 @@ export function TactilePlayJoystick({
   currentPhase,
   nextPhase,
   nextLabel,
+  canPlayAdvance = true,
   mode = 'radial',
   frameSizeOverride,
   switchMotion,
@@ -234,7 +236,9 @@ export function TactilePlayJoystick({
 
   const handlePointerUp = (event: ReactPointerEvent<HTMLButtonElement>) => {
     if (isPointerDownRef.current && !movedSinceDownRef.current) {
-      onPlay()
+      if (canPlayAdvance) {
+        onPlay()
+      }
     }
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId)
@@ -254,6 +258,7 @@ export function TactilePlayJoystick({
       <motion.button
         type="button"
         aria-label={`Advance play to ${nextLabel}`}
+        aria-disabled={!canPlayAdvance}
         animate={{
           scale: isDragging ? 0.992 : 1,
           y: isDragging ? switchMotion.pressTravel * 0.2 : 0,
@@ -261,7 +266,7 @@ export function TactilePlayJoystick({
         transition={shellTransition}
         className={cn(
           'relative shrink-0 rounded-full p-0 outline-none focus-visible:ring-2 focus-visible:ring-primary/70',
-          isDragging ? 'cursor-grabbing' : 'cursor-grab'
+          !canPlayAdvance ? 'cursor-default opacity-80' : isDragging ? 'cursor-grabbing' : 'cursor-grab'
         )}
         style={{
           width: frame.frameSize * joystickTuning.shellScale,
@@ -287,7 +292,9 @@ export function TactilePlayJoystick({
         onKeyDown={(event) => {
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault()
-            onPlay()
+            if (canPlayAdvance) {
+              onPlay()
+            }
           }
         }}
       >
