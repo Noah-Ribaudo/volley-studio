@@ -89,10 +89,10 @@ export function Concept8FullLedPerimeter(props: PrototypeControlProps) {
 
   return (
     <div className="flex w-full flex-col justify-end">
-      <div className="rounded-[22px] border border-[rgba(160,174,189,0.45)] bg-[linear-gradient(180deg,rgba(250,251,252,0.98)_0%,rgba(231,236,241,0.98)_100%)] p-2 shadow-[0_16px_30px_rgba(148,163,184,0.16),inset_0_1px_0_rgba(255,255,255,0.88)]">
+      <div className="rounded-[22px] border border-[rgba(160,174,189,0.45)] bg-[linear-gradient(180deg,rgba(249,250,252,0.98)_0%,rgba(229,235,240,0.98)_100%)] p-2 shadow-[0_16px_30px_rgba(148,163,184,0.16),inset_0_1px_0_rgba(255,255,255,0.88)]">
         <PhasePadRotationRail {...props} />
 
-        <div className="relative overflow-visible rounded-[16px] border border-[rgba(160,174,189,0.26)] bg-[linear-gradient(180deg,rgba(250,252,253,0.98)_0%,rgba(234,239,243,0.98)_100%)] p-[10px] shadow-[inset_0_1px_0_rgba(255,255,255,0.9),inset_0_-14px_22px_rgba(181,197,210,0.16)]">
+        <div className="relative overflow-visible rounded-[18px] border border-[rgba(160,174,189,0.28)] bg-[linear-gradient(180deg,rgba(246,249,251,0.98)_0%,rgba(232,237,242,0.98)_100%)] p-[10px] shadow-[inset_0_1px_0_rgba(255,255,255,0.84),inset_0_-10px_18px_rgba(181,197,210,0.12)]">
           <div
             className="relative z-[1] rounded-[14px]"
             style={{
@@ -106,7 +106,7 @@ export function Concept8FullLedPerimeter(props: PrototypeControlProps) {
               totalLights={perimeterState.totalLights}
             />
 
-            <div className="relative z-[1] grid grid-cols-2 gap-px overflow-hidden rounded-[12px] bg-[rgba(186,198,208,0.55)]">
+            <div className="relative z-[1] grid grid-cols-2 gap-px overflow-hidden rounded-[13px] border border-[rgba(170,181,191,0.22)] bg-[rgba(190,201,210,0.42)] shadow-[inset_0_1px_0_rgba(255,255,255,0.45)]">
               {PHASE_PAD_LAYOUT.map((item) => (
                 <PhaseAreaTile
                   key={item.phase}

@@ -552,7 +552,7 @@ export function PhasePadRotationRail(props: PrototypeControlProps) {
       onValueChange={props.onRotationSelect}
       switchMotion={props.switchMotion}
       density="compact"
-      className="mb-2"
+      className="mb-1.5 rounded-[16px] border border-[rgba(160,174,189,0.28)] bg-[linear-gradient(180deg,rgba(246,249,251,0.98)_0%,rgba(232,237,242,0.98)_100%)] p-[5px] shadow-[inset_0_1px_0_rgba(255,255,255,0.82)]"
     />
   )
 }
