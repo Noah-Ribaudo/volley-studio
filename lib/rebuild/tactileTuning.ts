@@ -35,6 +35,7 @@ export interface JoystickTuning {
   scale: number
   highlightIntensity: number
   whiteRingOpacity: number
+  offsetTexture: boolean
   ringTextureScale: number
   ringTextureSpacingX: number
   ringTextureSpacingY: number
@@ -164,6 +165,7 @@ export const DEFAULT_TACTILE_TUNING: TactileTuning = {
     scale: 1,
     highlightIntensity: 0.18,
     whiteRingOpacity: 0.2,
+    offsetTexture: true,
     ringTextureScale: 5.4,
     ringTextureSpacingX: 5.4,
     ringTextureSpacingY: 4.8,
@@ -278,6 +280,7 @@ export function sanitizeTactileTuning(input: TactileTuning): TactileTuning {
       scale: clamp(input.joystick.scale, 0.65, 1.5),
       highlightIntensity: clamp(input.joystick.highlightIntensity, 0, 1),
       whiteRingOpacity: clamp(input.joystick.whiteRingOpacity, 0, 1),
+      offsetTexture: input.joystick.offsetTexture,
       ringTextureScale: clamp(input.joystick.ringTextureScale, 3, 12),
       ringTextureSpacingX: clamp(input.joystick.ringTextureSpacingX, 3, 16),
       ringTextureSpacingY: clamp(input.joystick.ringTextureSpacingY, 3, 16),

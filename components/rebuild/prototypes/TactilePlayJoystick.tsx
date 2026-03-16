@@ -155,6 +155,8 @@ export function TactilePlayJoystick({
   const selectedPhase = dragPhase ?? currentPhase
   const bumpSize = joystickTuning.ringTextureScale
   const textureSize = `${joystickTuning.ringTextureSpacingX}px ${joystickTuning.ringTextureSpacingY}px`
+  const textureOffsetX = joystickTuning.offsetTexture ? joystickTuning.ringTextureSpacingX / 2 : 0
+  const textureOffsetY = joystickTuning.offsetTexture ? joystickTuning.ringTextureSpacingY / 2 : 0
   const textureStroke = `oklch(68% 0.01 255 / ${0.12 + joystickTuning.ringTextureOpacity * 0.28})`
   const textureShadow = `oklch(20% 0.01 255 / ${0.14 + joystickTuning.ringTextureDepth * 0.36})`
   const capHighlight = joystickTuning.highlightIntensity
@@ -409,7 +411,7 @@ export function TactilePlayJoystick({
                   `radial-gradient(circle at 75% 25%, ${textureStroke} 0 ${Math.max(10, bumpSize * 2.2)}%, transparent ${Math.max(11, bumpSize * 2.2 + 1)}%)`,
                 ].join(', '),
                 backgroundSize: `${textureSize}, ${textureSize}, ${textureSize}`,
-                backgroundPosition: '0 0, 0 0, 0 0',
+                backgroundPosition: `0 0, ${textureOffsetX}px ${textureOffsetY}px, ${textureOffsetX}px ${textureOffsetY}px`,
                 WebkitMaskImage:
                   `radial-gradient(circle, transparent 49%, black 54%, black 100%)`,
                 maskImage:
