@@ -55,19 +55,161 @@ const KIND_LABEL: Record<FlowNodeKind, string> = {
   end: 'End',
 }
 
-const INITIAL_DOCUMENT: FlowDocument = {
+const FULL_PHASE_DOCUMENT: FlowDocument = {
   title: 'Special Attack Flow',
   nodes: [
-    { id: 'start', label: 'Receive', notes: 'Entry point for the special attack flow.', x: 56, y: 124, kind: 'start' },
-    { id: 'trigger', label: 'Trigger Read', notes: 'What has to happen for the special attack to become available?', x: 280, y: 108, kind: 'decision' },
-    { id: 'attack', label: 'Special Attack', notes: 'Describe the look, who is involved, and the expected outcome.', x: 532, y: 108, kind: 'step' },
-    { id: 'fallback', label: 'Regular Attack', notes: 'Where the sequence goes when the special attack is not on.', x: 532, y: 236, kind: 'end' },
+    { id: 'phase-serve', label: 'Serve', notes: 'Use this as the rally start when we have the first touch and put the ball in play.', x: 48, y: 44, kind: 'start' },
+    { id: 'start', label: 'Receive', notes: 'Entry point when the other side serves and we need to control the first contact.', x: 48, y: 224, kind: 'start' },
+    { id: 'trigger', label: 'Trigger Read', notes: 'What has to happen for the special attack to become available?', x: 276, y: 208, kind: 'decision' },
+    { id: 'attack', label: 'Special Attack', notes: 'Describe the look, who is involved, and the expected outcome.', x: 536, y: 150, kind: 'step' },
+    { id: 'fallback', label: 'Regular Attack', notes: 'Where the sequence goes when the special attack is not on.', x: 536, y: 286, kind: 'step' },
+    { id: 'phase-defense', label: 'Defense', notes: 'Our read, block, and floor defense after the ball comes back to their side of the net.', x: 744, y: 218, kind: 'end' },
   ],
   edges: [
+    { id: 'edge-0', source: 'phase-serve', target: 'phase-defense', label: 'serve in play' },
     { id: 'edge-1', source: 'start', target: 'trigger', label: 'ball controlled' },
     { id: 'edge-2', source: 'trigger', target: 'attack', label: 'yes' },
     { id: 'edge-3', source: 'trigger', target: 'fallback', label: 'no' },
+    { id: 'edge-4', source: 'attack', target: 'phase-defense', label: 'attack sent over' },
+    { id: 'edge-5', source: 'fallback', target: 'phase-defense', label: 'standard swing' },
+    { id: 'edge-6', source: 'phase-defense', target: 'phase-serve', label: 'we serve next' },
+    { id: 'edge-7', source: 'phase-defense', target: 'start', label: 'they serve next' },
   ],
+}
+
+function normalizeText(value: string) {
+  return value.trim().toLowerCase()
+}
+
+function hasConnection(document: FlowDocument, source: string, target: string) {
+  return document.edges.some((edge) => edge.source === source && edge.target === target)
+}
+
+function findNodeId(document: FlowDocument, options: {
+  id?: string
+  label?: string
+}) {
+  if (options.id && document.nodes.some((node) => node.id === options.id)) {
+    return options.id
+  }
+
+  if (options.label) {
+    const label = normalizeText(options.label)
+    const match = document.nodes.find((node) => normalizeText(node.label) === label)
+    if (match) {
+      return match.id
+    }
+  }
+
+  return null
+}
+
+function ensureFullPhaseDocument(document: FlowDocument): FlowDocument {
+  const nextNodes = [...document.nodes]
+  const nextEdges = [...document.edges]
+
+  const ensureNode = (candidate: FlowNode) => {
+    const existingId = findNodeId(
+      { ...document, nodes: nextNodes, edges: nextEdges },
+      { id: candidate.id, label: candidate.label }
+    )
+    if (existingId) {
+      return existingId
+    }
+
+    nextNodes.push(candidate)
+    return candidate.id
+  }
+
+  const serveId = ensureNode({
+    id: 'phase-serve',
+    label: 'Serve',
+    notes: 'Use this as the rally start when we have the first touch and put the ball in play.',
+    x: 48,
+    y: 44,
+    kind: 'start',
+  })
+
+  const receiveId =
+    findNodeId({ ...document, nodes: nextNodes, edges: nextEdges }, { id: 'start' }) ??
+    ensureNode({
+      id: 'start',
+      label: 'Receive',
+      notes: 'Entry point when the other side serves and we need to control the first contact.',
+      x: 48,
+      y: 224,
+      kind: 'start',
+    })
+
+  const triggerId =
+    findNodeId({ ...document, nodes: nextNodes, edges: nextEdges }, { id: 'trigger' }) ??
+    ensureNode({
+      id: 'trigger',
+      label: 'Trigger Read',
+      notes: 'What has to happen for the special attack to become available?',
+      x: 276,
+      y: 208,
+      kind: 'decision',
+    })
+
+  const attackId =
+    findNodeId({ ...document, nodes: nextNodes, edges: nextEdges }, { id: 'attack' }) ??
+    ensureNode({
+      id: 'attack',
+      label: 'Special Attack',
+      notes: 'Describe the look, who is involved, and the expected outcome.',
+      x: 536,
+      y: 150,
+      kind: 'step',
+    })
+
+  const fallbackId =
+    findNodeId({ ...document, nodes: nextNodes, edges: nextEdges }, { id: 'fallback' }) ??
+    ensureNode({
+      id: 'fallback',
+      label: 'Regular Attack',
+      notes: 'Where the sequence goes when the special attack is not on.',
+      x: 536,
+      y: 286,
+      kind: 'step',
+    })
+
+  const defenseId = ensureNode({
+    id: 'phase-defense',
+    label: 'Defense',
+    notes: 'Our read, block, and floor defense after the ball comes back to their side of the net.',
+    x: 744,
+    y: 218,
+    kind: 'end',
+  })
+
+  const ensureEdge = (source: string, target: string, label: string) => {
+    if (hasConnection({ ...document, nodes: nextNodes, edges: nextEdges }, source, target)) {
+      return
+    }
+
+    nextEdges.push({
+      id: `edge-${Math.random().toString(36).slice(2, 8)}`,
+      source,
+      target,
+      label,
+    })
+  }
+
+  ensureEdge(serveId, defenseId, 'serve in play')
+  ensureEdge(receiveId, triggerId, 'ball controlled')
+  ensureEdge(triggerId, attackId, 'yes')
+  ensureEdge(triggerId, fallbackId, 'no')
+  ensureEdge(attackId, defenseId, 'attack sent over')
+  ensureEdge(fallbackId, defenseId, 'standard swing')
+  ensureEdge(defenseId, serveId, 'we serve next')
+  ensureEdge(defenseId, receiveId, 'they serve next')
+
+  return {
+    ...document,
+    nodes: nextNodes,
+    edges: nextEdges,
+  }
 }
 
 function clamp(value: number, min: number, max: number) {
@@ -139,8 +281,8 @@ async function copyText(text: string) {
 }
 
 export function SequenceFlowBoard({ className }: { className?: string }) {
-  const [document, setDocument] = useState<FlowDocument>(INITIAL_DOCUMENT)
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(INITIAL_DOCUMENT.nodes[0]?.id ?? null)
+  const [document, setDocument] = useState<FlowDocument>(FULL_PHASE_DOCUMENT)
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(FULL_PHASE_DOCUMENT.nodes[0]?.id ?? null)
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null)
   const [connectFromNodeId, setConnectFromNodeId] = useState<string | null>(null)
   const [importValue, setImportValue] = useState('')
@@ -158,8 +300,9 @@ export function SequenceFlowBoard({ className }: { className?: string }) {
       if (!raw) return
       const parsed = JSON.parse(raw) as FlowDocument
       if (!parsed || !Array.isArray(parsed.nodes) || !Array.isArray(parsed.edges)) return
-      setDocument(parsed)
-      setSelectedNodeId(parsed.nodes[0]?.id ?? null)
+      const nextDocument = ensureFullPhaseDocument(parsed)
+      setDocument(nextDocument)
+      setSelectedNodeId(nextDocument.nodes[0]?.id ?? null)
     } catch {
       // Ignore malformed local data and fall back to the starter board.
     }
@@ -323,8 +466,8 @@ export function SequenceFlowBoard({ className }: { className?: string }) {
   }
 
   const resetBoard = () => {
-    setDocument(INITIAL_DOCUMENT)
-    setSelectedNodeId(INITIAL_DOCUMENT.nodes[0]?.id ?? null)
+    setDocument(FULL_PHASE_DOCUMENT)
+    setSelectedNodeId(FULL_PHASE_DOCUMENT.nodes[0]?.id ?? null)
     setSelectedEdgeId(null)
     setConnectFromNodeId(null)
     setImportValue('')
