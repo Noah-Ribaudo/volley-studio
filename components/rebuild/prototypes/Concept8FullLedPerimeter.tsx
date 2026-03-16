@@ -48,21 +48,20 @@ function PhaseAreaTile({
       onPointerCancel={() => setIsPressed(false)}
       onPointerLeave={() => setIsPressed(false)}
       aria-pressed={isActive}
-      className="relative overflow-hidden rounded-none bg-[rgba(186,198,208,0.55)] outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+      className="relative rounded-[2px] outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
     >
       <motion.div
         animate={{
-          scale: isPressed && !isActive ? 0.994 : isActive ? 0.989 : 1,
-          y: isPressed || isActive ? switchMotion.pressTravel * 0.72 : 0,
+          scale: isPressed && !isActive ? 0.992 : isActive ? 0.985 : 1,
+          y: isPressed || isActive ? switchMotion.pressTravel : 0,
         }}
         transition={transition}
         className={cn(
-          'lab-pressable relative flex min-h-[5.2rem] h-full items-center justify-center rounded-none border px-3 py-3 text-center text-[1.05rem] font-medium text-slate-800 transition-colors',
+          'lab-pressable relative flex min-h-[5.2rem] items-center justify-center border px-3 py-3 text-center text-[1.05rem] font-medium text-slate-800 transition-colors',
           isActive ? 'lab-pressed border-border/80 text-slate-950' : 'border-border/55 text-slate-700'
         )}
         style={{
           ['--lab-switch-knob-glow' as string]: switchMotion.knobGlow,
-          transformOrigin: '50% 50%',
           background: isActive
             ? 'linear-gradient(180deg,rgba(241,245,248,0.98)_0%,rgba(216,224,230,0.98)_100%)'
             : 'linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(236,241,245,0.96)_100%)',
@@ -107,8 +106,7 @@ export function Concept8FullLedPerimeter(props: PrototypeControlProps) {
               totalLights={perimeterState.totalLights}
             />
 
-            <div className="relative z-[1] overflow-hidden rounded-[12px] border border-[rgba(186,198,208,0.58)] bg-[rgba(186,198,208,0.55)] shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
-              <div className="grid grid-cols-2 gap-px">
+            <div className="relative z-[1] grid grid-cols-2 gap-px overflow-hidden rounded-[12px] bg-[rgba(186,198,208,0.55)]">
               {PHASE_PAD_LAYOUT.map((item) => (
                 <PhaseAreaTile
                   key={item.phase}
@@ -119,7 +117,6 @@ export function Concept8FullLedPerimeter(props: PrototypeControlProps) {
                   onPhaseSelect={props.onPhaseSelect}
                 />
               ))}
-              </div>
             </div>
           </div>
 

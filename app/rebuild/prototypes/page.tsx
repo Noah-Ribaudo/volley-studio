@@ -516,8 +516,8 @@ export default function RebuildPrototypeLabPage() {
       {isMobile ? (
         <div className="relative mx-auto flex h-full w-full flex-col overflow-hidden">{phoneShell}</div>
       ) : (
-        <div className="relative flex h-full w-full items-end justify-center overflow-hidden px-6 pb-4 pt-6">
-          <div className="flex w-full max-w-[960px] items-end justify-center gap-8">
+        <div className="relative flex h-full w-full items-center justify-center overflow-hidden px-6 pb-4">
+          <div className="flex h-full w-full max-w-[960px] items-center justify-center gap-8">
             <div className="relative flex shrink-0 items-center justify-center">
               <div
                 className="relative rounded-[44px] border border-white/12 bg-[linear-gradient(180deg,rgba(18,18,22,0.98)_0%,rgba(8,8,10,0.98)_100%)] p-[10px] shadow-[0_32px_60px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.06)]"
