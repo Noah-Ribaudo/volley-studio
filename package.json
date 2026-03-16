@@ -7,6 +7,8 @@
     "npm": "10.x"
   },
   "scripts": {
+    "predev": "node scripts/require-node-22.mjs",
+    "prebuild": "node scripts/require-node-22.mjs",
     "dev": "npm-run-all --parallel dev:convex dev:next dev:agentation",
     "dev:agentation": "agentation-mcp server",
     "dev:convex": "convex dev",
