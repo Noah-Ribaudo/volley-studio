@@ -125,9 +125,9 @@ export function getAdvanceTargetPhase(
     case 'OFFENSE':
       return 'DEFENSE'
     case 'DEFENSE':
-      return null
+      return 'OFFENSE'
     default:
-      return null
+      return 'OFFENSE'
   }
 }
 
@@ -145,7 +145,7 @@ export function getNextByPlay(
   phase: PrototypePhase,
   options?: { hasFirstAttack?: boolean }
 ): PrototypePhase {
-  return getAdvanceTargetPhase(phase, options) ?? phase
+  return getAdvanceTargetPhase(phase, options) ?? 'OFFENSE'
 }
 
 export function canAdvanceByPlay(
@@ -157,11 +157,7 @@ export function canAdvanceByPlay(
 
 export function getLegalPlayLabel(phase: PrototypePhase, options?: { hasFirstAttack?: boolean }): string {
   const next = getAdvanceTargetPhase(phase, options)
-  if (!next) {
-    return `${formatPrototypePhaseLabel(phase)} -> Rally End`
-  }
-
-  return `${formatPrototypePhaseLabel(phase)} -> ${formatPrototypePhaseLabel(next)}`
+  return `${formatPrototypePhaseLabel(phase)} -> ${formatPrototypePhaseLabel(next ?? 'OFFENSE')}`
 }
 
 export function canVariantScore(_variant: PrototypeVariantId): boolean {
