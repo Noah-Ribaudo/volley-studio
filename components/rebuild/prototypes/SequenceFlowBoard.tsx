@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointer
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
@@ -140,6 +141,7 @@ export function SequenceFlowBoard({ className }: { className?: string }) {
   const [connectFromNodeId, setConnectFromNodeId] = useState<string | null>(null)
   const [importValue, setImportValue] = useState('')
   const [copyState, setCopyState] = useState<'idle' | 'summary' | 'json'>('idle')
+  const [isFocused, setIsFocused] = useState(false)
   const dragStateRef = useRef<{ nodeId: string; offsetX: number; offsetY: number } | null>(null)
   const boardRef = useRef<HTMLDivElement | null>(null)
 
@@ -319,8 +321,285 @@ export function SequenceFlowBoard({ className }: { className?: string }) {
     }
   }
 
+  const controlBar = (
+    <>
+      <Button type="button" size="sm" variant="outline" onClick={() => addNode('step')}>
+        Add step
+      </Button>
+      <Button type="button" size="sm" variant="outline" onClick={() => addNode('decision')}>
+        Add decision
+      </Button>
+      <Button type="button" size="sm" variant="outline" onClick={() => addNode('end')}>
+        Add end
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        variant={connectFromNodeId ? 'default' : 'outline'}
+        onClick={() => setConnectFromNodeId((current) => (current ? null : selectedNodeId))}
+      >
+        {connectFromNodeId ? 'Pick target' : 'Connect'}
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        onClick={async () => {
+          const copied = await copyText(buildSummary(document))
+          if (copied) setCopyState('summary')
+        }}
+      >
+        {copyState === 'summary' ? 'Summary copied' : 'Copy summary'}
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        onClick={async () => {
+          const copied = await copyText(JSON.stringify(document, null, 2))
+          if (copied) setCopyState('json')
+        }}
+      >
+        {copyState === 'json' ? 'JSON copied' : 'Copy JSON'}
+      </Button>
+      <Button type="button" size="sm" variant={isFocused ? 'default' : 'outline'} onClick={() => setIsFocused((prev) => !prev)}>
+        {isFocused ? 'Exit focus' : 'Focus'}
+      </Button>
+    </>
+  )
+
+  const inspector = (
+    <div className="space-y-3 rounded-2xl border border-border/60 bg-background/80 p-3">
+      <div className="space-y-1">
+        <p className="text-sm font-medium">Board title</p>
+        <Input
+          value={document.title}
+          onChange={(event) => setDocument((current) => ({ ...current, title: event.target.value }))}
+          placeholder="Name this flow"
+        />
+      </div>
+
+      {selectedNode ? (
+        <>
+          <div className="space-y-1">
+            <p className="text-sm font-medium">Selected step</p>
+            <Input
+              value={selectedNode.label}
+              onChange={(event) => updateSelectedNode({ label: event.target.value })}
+              placeholder="Step label"
+            />
+          </div>
+          <div className="space-y-1">
+            <p className="text-sm font-medium">What should happen here?</p>
+            <Textarea
+              value={selectedNode.notes}
+              onChange={(event) => updateSelectedNode({ notes: event.target.value })}
+              placeholder="Add the meaning, rules, or coaching notes for this step."
+              className="min-h-24"
+            />
+          </div>
+          <div className="space-y-1">
+            <p className="text-sm font-medium">Type</p>
+            <select
+              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+              value={selectedNode.kind}
+              onChange={(event) => updateSelectedNode({ kind: event.target.value as FlowNodeKind })}
+            >
+              {Object.entries(KIND_LABEL).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <Button type="button" variant="outline" size="sm" onClick={deleteSelectedNode}>
+            Delete selected step
+          </Button>
+        </>
+      ) : selectedEdge ? (
+        <>
+          <div className="space-y-1">
+            <p className="text-sm font-medium">Selected arrow</p>
+            <Input
+              value={selectedEdge.label}
+              onChange={(event) => updateSelectedEdge({ label: event.target.value })}
+              placeholder="Label what causes this move"
+            />
+          </div>
+          <Button type="button" variant="outline" size="sm" onClick={deleteSelectedEdge}>
+            Delete selected arrow
+          </Button>
+        </>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          Click a step or arrow to edit it. Use connect mode to draw the sequence between steps.
+        </p>
+      )}
+    </div>
+  )
+
+  const importPanel = (
+    <div className="space-y-3 rounded-2xl border border-border/60 bg-background/80 p-3">
+      <div className="space-y-1">
+        <p className="text-sm font-medium">Paste or save a full board</p>
+        <Textarea
+          value={importValue}
+          onChange={(event) => setImportValue(event.target.value)}
+          placeholder='Paste the copied JSON here if you want to load a different board.'
+          className="min-h-32 font-mono text-xs"
+        />
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => {
+            try {
+              const parsed = JSON.parse(importValue) as FlowDocument
+              if (!Array.isArray(parsed.nodes) || !Array.isArray(parsed.edges) || typeof parsed.title !== 'string') {
+                return
+              }
+              setDocument(parsed)
+              setSelectedNodeId(parsed.nodes[0]?.id ?? null)
+              setSelectedEdgeId(null)
+              setConnectFromNodeId(null)
+            } catch {
+              // Ignore invalid JSON input.
+            }
+          }}
+        >
+          Load pasted JSON
+        </Button>
+        <Button type="button" size="sm" variant="outline" onClick={resetBoard}>
+          Reset starter board
+        </Button>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        This board saves in your browser automatically, so you can sketch now and come back without losing the flow.
+      </p>
+    </div>
+  )
+
+  const boardCanvas = (
+    <div className="overflow-auto rounded-2xl border border-border/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.76)_0%,rgba(245,240,232,0.88)_100%)]">
+      <div
+        ref={boardRef}
+        className="relative"
+        style={{ width: CANVAS_WIDTH, height: CANVAS_HEIGHT }}
+        onClick={() => {
+          setSelectedNodeId(null)
+          setSelectedEdgeId(null)
+        }}
+      >
+        <div
+          className="absolute inset-0 opacity-60"
+          style={{
+            backgroundImage:
+              'linear-gradient(rgba(120,120,120,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(120,120,120,0.08) 1px, transparent 1px)',
+            backgroundSize: '24px 24px',
+          }}
+        />
+
+        <svg className="absolute inset-0 h-full w-full">
+          <defs>
+            <marker id="flow-arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(71,85,105,0.8)" />
+            </marker>
+          </defs>
+
+          {edgePaths.map(({ edge, path, labelX, labelY }) => {
+            const selected = selectedEdgeId === edge.id
+            return (
+              <g key={edge.id}>
+                <path
+                  d={path}
+                  fill="none"
+                  stroke={selected ? 'rgba(234, 88, 12, 0.95)' : 'rgba(71, 85, 105, 0.7)'}
+                  strokeWidth={selected ? 3 : 2}
+                  markerEnd="url(#flow-arrow)"
+                />
+                <path
+                  d={path}
+                  fill="none"
+                  stroke="transparent"
+                  strokeWidth={18}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    setSelectedEdgeId(edge.id)
+                    setSelectedNodeId(null)
+                  }}
+                />
+                <g transform={`translate(${labelX} ${labelY})`}>
+                  <rect
+                    x={-56}
+                    y={-11}
+                    width={112}
+                    height={22}
+                    rx={11}
+                    fill={selected ? 'rgba(255,237,213,0.94)' : 'rgba(255,255,255,0.92)'}
+                    stroke={selected ? 'rgba(234,88,12,0.3)' : 'rgba(148,163,184,0.24)'}
+                  />
+                  <text
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    className="fill-slate-600 text-[11px] font-medium"
+                  >
+                    {edge.label || 'unlabeled'}
+                  </text>
+                </g>
+              </g>
+            )
+          })}
+        </svg>
+
+        {document.nodes.map((node) => {
+          const size = getNodeSize(node.kind)
+          const selected = selectedNodeId === node.id
+
+          return (
+            <button
+              key={node.id}
+              type="button"
+              className={cn(
+                'absolute flex flex-col items-start justify-between rounded-2xl border p-3 text-left transition-shadow outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                getNodeStyles(node.kind, selected),
+                connectFromNodeId === node.id && 'ring-2 ring-amber-500 ring-offset-2'
+              )}
+              style={{
+                left: node.x,
+                top: node.y,
+                width: size.width,
+                height: size.height,
+              }}
+              onClick={(event) => {
+                event.stopPropagation()
+                handleNodeClick(node.id)
+              }}
+              onPointerDown={(event) => {
+                event.stopPropagation()
+                handleNodePointerDown(event, node)
+              }}
+            >
+              <Badge variant="outline" className="bg-white/70">
+                {KIND_LABEL[node.kind]}
+              </Badge>
+              <div className="space-y-1">
+                <div className="text-sm font-semibold leading-tight">{node.label || 'Untitled step'}</div>
+                <div className="line-clamp-2 text-xs text-muted-foreground">
+                  {node.notes || 'Add a short note so the sequence is easy to understand later.'}
+                </div>
+              </div>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+
   return (
-    <Card className={cn('overflow-hidden py-0', className)}>
+    <>
+      <Card className={cn('overflow-hidden py-0', className)}>
       <CardHeader className="gap-3 border-b border-border/60 py-4">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -332,45 +611,7 @@ export function SequenceFlowBoard({ className }: { className?: string }) {
           <Badge variant="outline">{document.nodes.length} steps</Badge>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button type="button" size="sm" variant="outline" onClick={() => addNode('step')}>
-            Add step
-          </Button>
-          <Button type="button" size="sm" variant="outline" onClick={() => addNode('decision')}>
-            Add decision
-          </Button>
-          <Button type="button" size="sm" variant="outline" onClick={() => addNode('end')}>
-            Add end
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={connectFromNodeId ? 'default' : 'outline'}
-            onClick={() => setConnectFromNodeId((current) => (current ? null : selectedNodeId))}
-          >
-            {connectFromNodeId ? 'Pick target' : 'Connect'}
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={async () => {
-              const copied = await copyText(buildSummary(document))
-              if (copied) setCopyState('summary')
-            }}
-          >
-            {copyState === 'summary' ? 'Summary copied' : 'Copy summary'}
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={async () => {
-              const copied = await copyText(JSON.stringify(document, null, 2))
-              if (copied) setCopyState('json')
-            }}
-          >
-            {copyState === 'json' ? 'JSON copied' : 'Copy JSON'}
-          </Button>
+          {controlBar}
         </div>
         {connectFromNodeId ? (
           <p className="text-xs text-muted-foreground">
@@ -381,231 +622,55 @@ export function SequenceFlowBoard({ className }: { className?: string }) {
       </CardHeader>
 
       <CardContent className="space-y-4 px-4 py-4">
-        <div className="overflow-auto rounded-2xl border border-border/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.76)_0%,rgba(245,240,232,0.88)_100%)]">
-          <div
-            ref={boardRef}
-            className="relative"
-            style={{ width: CANVAS_WIDTH, height: CANVAS_HEIGHT }}
-            onClick={() => {
-              setSelectedNodeId(null)
-              setSelectedEdgeId(null)
-            }}
-          >
-            <div
-              className="absolute inset-0 opacity-60"
-              style={{
-                backgroundImage:
-                  'linear-gradient(rgba(120,120,120,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(120,120,120,0.08) 1px, transparent 1px)',
-                backgroundSize: '24px 24px',
-              }}
-            />
-
-            <svg className="absolute inset-0 h-full w-full">
-              <defs>
-                <marker id="flow-arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
-                  <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(71,85,105,0.8)" />
-                </marker>
-              </defs>
-
-              {edgePaths.map(({ edge, path, labelX, labelY }) => {
-                const selected = selectedEdgeId === edge.id
-                return (
-                  <g key={edge.id}>
-                    <path
-                      d={path}
-                      fill="none"
-                      stroke={selected ? 'rgba(234, 88, 12, 0.95)' : 'rgba(71, 85, 105, 0.7)'}
-                      strokeWidth={selected ? 3 : 2}
-                      markerEnd="url(#flow-arrow)"
-                    />
-                    <path
-                      d={path}
-                      fill="none"
-                      stroke="transparent"
-                      strokeWidth={18}
-                      onClick={(event) => {
-                        event.stopPropagation()
-                        setSelectedEdgeId(edge.id)
-                        setSelectedNodeId(null)
-                      }}
-                    />
-                    <g transform={`translate(${labelX} ${labelY})`}>
-                      <rect
-                        x={-56}
-                        y={-11}
-                        width={112}
-                        height={22}
-                        rx={11}
-                        fill={selected ? 'rgba(255,237,213,0.94)' : 'rgba(255,255,255,0.92)'}
-                        stroke={selected ? 'rgba(234,88,12,0.3)' : 'rgba(148,163,184,0.24)'}
-                      />
-                      <text
-                        textAnchor="middle"
-                        dominantBaseline="middle"
-                        className="fill-slate-600 text-[11px] font-medium"
-                      >
-                        {edge.label || 'unlabeled'}
-                      </text>
-                    </g>
-                  </g>
-                )
-              })}
-            </svg>
-
-            {document.nodes.map((node) => {
-              const size = getNodeSize(node.kind)
-              const selected = selectedNodeId === node.id
-
-              return (
-                <button
-                  key={node.id}
-                  type="button"
-                  className={cn(
-                    'absolute flex flex-col items-start justify-between rounded-2xl border p-3 text-left transition-shadow outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                    getNodeStyles(node.kind, selected),
-                    connectFromNodeId === node.id && 'ring-2 ring-amber-500 ring-offset-2'
-                  )}
-                  style={{
-                    left: node.x,
-                    top: node.y,
-                    width: size.width,
-                    height: size.height,
-                  }}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    handleNodeClick(node.id)
-                  }}
-                  onPointerDown={(event) => {
-                    event.stopPropagation()
-                    handleNodePointerDown(event, node)
-                  }}
-                >
-                  <Badge variant="outline" className="bg-white/70">
-                    {KIND_LABEL[node.kind]}
-                  </Badge>
-                  <div className="space-y-1">
-                    <div className="text-sm font-semibold leading-tight">{node.label || 'Untitled step'}</div>
-                    <div className="line-clamp-2 text-xs text-muted-foreground">
-                      {node.notes || 'Add a short note so the sequence is easy to understand later.'}
-                    </div>
-                  </div>
-                </button>
-              )
-            })}
-          </div>
-        </div>
+        {boardCanvas}
 
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-          <div className="space-y-3 rounded-2xl border border-border/60 bg-background/80 p-3">
-            <div className="space-y-1">
-              <p className="text-sm font-medium">Board title</p>
-              <Input
-                value={document.title}
-                onChange={(event) => setDocument((current) => ({ ...current, title: event.target.value }))}
-                placeholder="Name this flow"
-              />
-            </div>
-
-            {selectedNode ? (
-              <>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">Selected step</p>
-                  <Input
-                    value={selectedNode.label}
-                    onChange={(event) => updateSelectedNode({ label: event.target.value })}
-                    placeholder="Step label"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">What should happen here?</p>
-                  <Textarea
-                    value={selectedNode.notes}
-                    onChange={(event) => updateSelectedNode({ notes: event.target.value })}
-                    placeholder="Add the meaning, rules, or coaching notes for this step."
-                    className="min-h-24"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">Type</p>
-                  <select
-                    className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-                    value={selectedNode.kind}
-                    onChange={(event) => updateSelectedNode({ kind: event.target.value as FlowNodeKind })}
-                  >
-                    {Object.entries(KIND_LABEL).map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <Button type="button" variant="outline" size="sm" onClick={deleteSelectedNode}>
-                  Delete selected step
-                </Button>
-              </>
-            ) : selectedEdge ? (
-              <>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">Selected arrow</p>
-                  <Input
-                    value={selectedEdge.label}
-                    onChange={(event) => updateSelectedEdge({ label: event.target.value })}
-                    placeholder="Label what causes this move"
-                  />
-                </div>
-                <Button type="button" variant="outline" size="sm" onClick={deleteSelectedEdge}>
-                  Delete selected arrow
-                </Button>
-              </>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                Click a step or arrow to edit it. Use connect mode to draw the sequence between steps.
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-3 rounded-2xl border border-border/60 bg-background/80 p-3">
-            <div className="space-y-1">
-              <p className="text-sm font-medium">Paste or save a full board</p>
-              <Textarea
-                value={importValue}
-                onChange={(event) => setImportValue(event.target.value)}
-                placeholder='Paste the copied JSON here if you want to load a different board.'
-                className="min-h-32 font-mono text-xs"
-              />
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  try {
-                    const parsed = JSON.parse(importValue) as FlowDocument
-                    if (!Array.isArray(parsed.nodes) || !Array.isArray(parsed.edges) || typeof parsed.title !== 'string') {
-                      return
-                    }
-                    setDocument(parsed)
-                    setSelectedNodeId(parsed.nodes[0]?.id ?? null)
-                    setSelectedEdgeId(null)
-                    setConnectFromNodeId(null)
-                  } catch {
-                    // Ignore invalid JSON input.
-                  }
-                }}
-              >
-                Load pasted JSON
-              </Button>
-              <Button type="button" size="sm" variant="outline" onClick={resetBoard}>
-                Reset starter board
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              This board saves in your browser automatically, so you can sketch now and come back without losing the flow.
-            </p>
-          </div>
+          {inspector}
+          {importPanel}
         </div>
       </CardContent>
-    </Card>
+      </Card>
+
+      <Dialog open={isFocused} onOpenChange={setIsFocused}>
+        <DialogContent
+          showCloseButton={false}
+          className="h-[100dvh] w-[100dvw] max-w-none translate-x-[-50%] translate-y-[-50%] gap-0 rounded-none border-0 p-0"
+        >
+          <DialogHeader className="sr-only">
+            <DialogTitle>Focused Flow Board</DialogTitle>
+            <DialogDescription>Full-screen workspace for sketching and editing the flow sequence.</DialogDescription>
+          </DialogHeader>
+
+          <div className="flex h-full flex-col bg-background">
+            <div className="flex items-center justify-between gap-3 border-b border-border/60 bg-card/96 px-4 py-3">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold">{document.title || 'Flow Board'}</p>
+                <p className="text-xs text-muted-foreground">
+                  Full-screen mode for editing the sequence with the board and controls kept in view.
+                </p>
+              </div>
+              <div className="flex flex-wrap justify-end gap-2">
+                {controlBar}
+              </div>
+            </div>
+
+            {connectFromNodeId ? (
+              <div className="border-b border-border/60 bg-amber-50 px-4 py-2 text-xs text-amber-900">
+                Connection mode is on. Click another step to draw the arrow from{' '}
+                <span className="font-medium">{nodeMap.get(connectFromNodeId)?.label || 'selected step'}</span>.
+              </div>
+            ) : null}
+
+            <div className="grid min-h-0 flex-1 gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+              <div className="min-h-0">{boardCanvas}</div>
+              <div className="flex min-h-0 flex-col gap-4 overflow-auto">
+                {inspector}
+                {importPanel}
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
