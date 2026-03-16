@@ -775,13 +775,8 @@ export function Concept8FullLedPerimeter(props: PrototypeControlProps) {
 
           <div className="relative overflow-visible rounded-[18px] p-[10px]">
             <div
-              className="relative z-[1] border"
-              style={{
-                padding: `${lanePadding}px`,
-                background: theme.frameBackground,
-                borderColor: theme.frameBorder,
-                borderRadius: theme.frameRadius,
-              }}
+              className="relative z-[1]"
+              style={{ padding: `${lanePadding}px` }}
             >
               <PhasePadHardwareLane
                 tuning={hardwareTuning}

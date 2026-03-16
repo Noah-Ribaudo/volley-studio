@@ -105,7 +105,8 @@ export interface C4LiteralPhaseSurfaceTuning {
 }
 
 export interface PhasePadHardwareTuning {
-  trackInset: number
+  trackInsetX: number
+  trackInsetY: number
   trackRadius: number
   trackWidth: number
   piecesPerHorizontalEdge: number
@@ -242,7 +243,8 @@ export const DEFAULT_TACTILE_TUNING: TactileTuning = {
     },
   },
   phasePadHardware: {
-    trackInset: 3.8,
+    trackInsetX: 3.8,
+    trackInsetY: 3.8,
     trackRadius: 4.1,
     trackWidth: 5.2,
     piecesPerHorizontalEdge: 6,
@@ -367,7 +369,8 @@ export function sanitizeTactileTuning(input: TactileTuning): TactileTuning {
       },
     },
     phasePadHardware: {
-      trackInset: clamp(input.phasePadHardware.trackInset, -8, 28),
+      trackInsetX: clamp(input.phasePadHardware.trackInsetX, -8, 28),
+      trackInsetY: clamp(input.phasePadHardware.trackInsetY, -8, 28),
       trackRadius: clamp(input.phasePadHardware.trackRadius, 0, 28),
       trackWidth: clamp(input.phasePadHardware.trackWidth, 0.5, 18),
       piecesPerHorizontalEdge: clamp(Math.round(input.phasePadHardware.piecesPerHorizontalEdge), 2, 32),

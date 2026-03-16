@@ -521,21 +521,18 @@ export function PhasePadHardwareLane({
     return () => observer.disconnect()
   }, [])
 
-  // Correct inset/radius for the non-uniform viewBox scaling so the
-  // track has equal pixel distance from the button group on all sides
+  // Use aspect ratio to keep corner radius visually circular
   const sqrtAr = Math.sqrt(aspectRatio)
-  const insetX = tuning.trackInset / sqrtAr
-  const insetY = tuning.trackInset * sqrtAr
   const radiusX = tuning.trackRadius / sqrtAr
   const radiusY = tuning.trackRadius * sqrtAr
 
   const pathD = useMemo(
-    () => buildHardwareTrackPath(insetX, insetY, radiusX, radiusY),
-    [insetX, insetY, radiusX, radiusY]
+    () => buildHardwareTrackPath(tuning.trackInsetX, tuning.trackInsetY, radiusX, radiusY),
+    [tuning.trackInsetX, tuning.trackInsetY, radiusX, radiusY]
   )
   const pieces = useEdgeBasedTrackPieces(
-    insetX,
-    insetY,
+    tuning.trackInsetX,
+    tuning.trackInsetY,
     radiusX,
     radiusY,
     tuning.piecesPerHorizontalEdge,

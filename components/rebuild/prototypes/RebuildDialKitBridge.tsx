@@ -147,7 +147,8 @@ export function RebuildDialKitBridge({
       ...(usesPhasePadHardware
         ? {
             phasePadHardware: {
-              trackInset: [seed.phasePadHardware.trackInset, -8, 28, 0.1],
+              trackInsetX: [seed.phasePadHardware.trackInsetX, -8, 28, 0.1],
+              trackInsetY: [seed.phasePadHardware.trackInsetY, -8, 28, 0.1],
               trackRadius: [seed.phasePadHardware.trackRadius, 0, 28, 0.1],
               trackWidth: [seed.phasePadHardware.trackWidth, 0.5, 18, 0.1],
               piecesPerHorizontalEdge: [seed.phasePadHardware.piecesPerHorizontalEdge, 2, 32, 1],
@@ -334,7 +335,8 @@ export function RebuildDialKitBridge({
       phasePadHardware:
         usesPhasePadHardware
           ? {
-              trackInset: params.phasePadHardware.trackInset,
+              trackInsetX: params.phasePadHardware.trackInsetX,
+              trackInsetY: params.phasePadHardware.trackInsetY,
               trackRadius: params.phasePadHardware.trackRadius,
               trackWidth: params.phasePadHardware.trackWidth,
               piecesPerHorizontalEdge: params.phasePadHardware.piecesPerHorizontalEdge,
