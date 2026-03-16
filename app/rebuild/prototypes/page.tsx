@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { VolleyballCourt } from '@/components/court'
 import { PrototypeControlPanel } from '@/components/rebuild/prototypes'
 import { RebuildDialKitBridge } from '@/components/rebuild/prototypes/RebuildDialKitBridge'
+import { SequenceFlowBoard } from '@/components/rebuild/prototypes/SequenceFlowBoard'
 import { usePrototypeCourtState } from '@/components/rebuild/prototypes/usePrototypeCourtState'
 import { usePrototypeLabController } from '@/components/rebuild/prototypes/usePrototypeLabController'
 import { Button } from '@/components/ui/button'
@@ -252,6 +253,7 @@ export default function RebuildPrototypeLabPage() {
   )
 
   const tuneGuide = null
+  const flowBoard = <SequenceFlowBoard className={isMobile ? 'mt-4' : 'h-full'} />
 
   const labToolContent = (
     <>
@@ -332,6 +334,7 @@ export default function RebuildPrototypeLabPage() {
                 <SheetDescription>{labStatusCopy}</SheetDescription>
               </SheetHeader>
               <div className="px-4 pb-4">{labToolContent}</div>
+              <div className="px-4 pb-4">{flowBoard}</div>
             </SheetContent>
           </Sheet>
         </>
@@ -449,7 +452,7 @@ export default function RebuildPrototypeLabPage() {
               </div>
             </div>
 
-            <aside className="w-[340px] max-w-[340px] shrink-0">
+            <aside className="flex h-full w-[420px] max-w-[420px] shrink-0 flex-col gap-4 py-4">
               <div className="rounded-[30px] border border-border bg-card/94 p-4 shadow-[0_18px_40px_rgba(0,0,0,0.1)]">
                 <div className="pb-3">
                   <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Mobile Simulator</p>
@@ -458,6 +461,7 @@ export default function RebuildPrototypeLabPage() {
                 </div>
                 {labToolContent}
               </div>
+              <div className="min-h-0 flex-1">{flowBoard}</div>
             </aside>
           </div>
         </div>
