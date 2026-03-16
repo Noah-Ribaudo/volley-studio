@@ -223,6 +223,7 @@ export default function RebuildPrototypeLabPage() {
   }, [])
   const mobileDockHeight =
     activeVariant === 'concept4' ? tactileTuning.c4Literal.clusterLayout.dockHeight : tactileTuning.dock.collapsedHeight
+  const mobileDockStyle = activeVariant === 'concept4' ? { height: mobileDockHeight } : undefined
   const mobileCourtAspectRatio = '393 / 696'
 
   const labStatusCopy = `Rotation ${currentRotation} • ${formatCorePhaseLabel(currentCorePhase)} • ${
@@ -500,8 +501,8 @@ export default function RebuildPrototypeLabPage() {
           />
         </section>
 
-        <section className="w-full shrink-0 overflow-visible" style={{ height: mobileDockHeight }}>
-          <div className="flex h-full min-h-0 items-end overflow-visible">{prototypeControlPanel}</div>
+        <section className="w-full shrink-0 overflow-visible" style={mobileDockStyle}>
+          <div className="flex min-h-0 items-end overflow-visible">{prototypeControlPanel}</div>
         </section>
       </main>
     </>
