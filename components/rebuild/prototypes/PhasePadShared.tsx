@@ -445,13 +445,13 @@ export function PhasePadHardwareLane({
             dx="0"
             dy="0"
             stdDeviation={1 + tuning.glow * 2.6}
-            floodColor={`rgba(255,176,73,${0.2 + tuning.bloom * 0.18})`}
+            floodColor={`rgba(255,142,44,${0.2 + tuning.bloom * 0.18})`}
           />
           <feDropShadow
             dx="0"
             dy="0"
             stdDeviation={2 + tuning.bloom * 4.2}
-            floodColor={`rgba(255,128,32,${0.1 + tuning.bloom * 0.14})`}
+            floodColor={`rgba(210,88,18,${0.1 + tuning.bloom * 0.14})`}
           />
         </filter>
       </defs>
@@ -490,8 +490,8 @@ export function PhasePadHardwareLane({
         const activeColor = strength > 0
           ? {
               r: 255,
-              g: Math.round(186 - strength * 28),
-              b: Math.round(92 - strength * 40),
+              g: Math.round(140 - strength * 18),
+              b: Math.round(42 - strength * 16),
             }
           : {
               r: 132,
@@ -526,7 +526,7 @@ export function PhasePadHardwareLane({
               height={Math.max(0, tuning.pieceThickness * 0.44)}
               rx={Math.max(0.5, tuning.pieceRadius * 0.72)}
               fill={strength > 0
-                ? `rgba(255,228,184,${0.14 + tuning.channelHighlight * 0.12 + strength * 0.16})`
+                ? `rgba(255,198,122,${0.12 + tuning.channelHighlight * 0.1 + strength * 0.14})`
                 : 'rgba(255,255,255,0.03)'}
             />
           </g>
