@@ -8,7 +8,6 @@ import {
   type CorePhase,
   type PrototypePhase,
 } from '@/lib/rebuild/prototypeFlow'
-import { ROLES, type Role } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import type { PrototypeControlProps } from './types'
 import {
@@ -80,40 +79,6 @@ function PhaseAreaTile({
   )
 }
 
-function RoleToggleRow({
-  receiveFirstAttackMap,
-  onToggle,
-}: {
-  receiveFirstAttackMap: PrototypeControlProps['receiveFirstAttackMap']
-  onToggle: (role: Role) => void
-}) {
-  return (
-    <div className="grid grid-cols-7 gap-1.5">
-      {ROLES.map((role) => {
-        const enabled = Boolean(receiveFirstAttackMap[role])
-        return (
-          <button
-            key={role}
-            type="button"
-            onClick={() => onToggle(role)}
-            className={cn(
-              'rounded-full border px-0 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] transition-colors',
-              enabled
-                ? 'border-[rgba(203,120,57,0.6)] bg-[rgba(219,136,67,0.2)] text-[rgba(115,57,19,0.96)]'
-                : 'border-[rgba(170,146,111,0.3)] bg-[rgba(244,237,224,0.8)] text-[rgba(112,98,79,0.92)]'
-            )}
-            style={{
-              color: enabled ? 'rgba(123,60,18,0.96)' : undefined,
-            }}
-          >
-            {role}
-          </button>
-        )
-      })}
-    </div>
-  )
-}
-
 function VariantAccessory(props: PrototypeControlProps) {
   const isReceiveActive = props.currentCorePhase === 'RECEIVE' || props.currentCorePhase === 'FIRST_ATTACK'
   const firstAttackActive = props.currentCorePhase === 'FIRST_ATTACK'
@@ -122,10 +87,12 @@ function VariantAccessory(props: PrototypeControlProps) {
     return (
       <div className="grid gap-2">
         <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.1em] text-[rgba(121,102,80,0.9)]">
-          <span>Receive links</span>
-          <span>{isReceiveActive ? 'Tap roles for 1st attack' : 'Saved per rotation'}</span>
+          <span>Receive arrows</span>
+          <span>{isReceiveActive ? 'Second arrow creates 1st Attack' : 'Receive arrows saved per rotation'}</span>
         </div>
-        <RoleToggleRow receiveFirstAttackMap={props.receiveFirstAttackMap} onToggle={props.onReceiveFirstAttackToggle} />
+        <div className="rounded-2xl border border-[rgba(170,146,111,0.24)] bg-[rgba(244,237,224,0.72)] px-3 py-2 text-[11px] text-[rgba(112,98,79,0.92)]">
+          Draw one receive arrow for normal Attack. Add a second receive arrow from the same player to enable 1st Attack.
+        </div>
       </div>
     )
   }

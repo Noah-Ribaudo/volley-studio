@@ -3,7 +3,6 @@ import type { ArrowCurveConfig, Position, Role, Rotation } from '@/lib/types'
 
 export type RolePositionMap = Partial<Record<Role, Position>>
 export type RoleCurveMap = Partial<Record<Role, ArrowCurveConfig>>
-export type ReceiveFirstAttackMap = Partial<Record<Role, boolean>>
 
 export interface PrototypePhaseSeed {
   positions: RolePositionMap
@@ -12,7 +11,6 @@ export interface PrototypePhaseSeed {
 
 export interface PrototypeRotationSeed {
   phases: Partial<Record<PrototypePhase, PrototypePhaseSeed>>
-  receiveFirstAttack?: ReceiveFirstAttackMap
 }
 
 const LIBERO_BENCH: Position = { x: -0.06, y: 0.88 }
@@ -80,10 +78,6 @@ const R4_OFFENSE_POSITIONS: RolePositionMap = withLibero({
 
 export const PROTOTYPE_SEEDS: Partial<Record<Rotation, PrototypeRotationSeed>> = {
   1: {
-    receiveFirstAttack: {
-      OH1: true,
-      MB1: true,
-    },
     phases: {
       SERVE: {
         positions: withLibero({
@@ -117,10 +111,6 @@ export const PROTOTYPE_SEEDS: Partial<Record<Rotation, PrototypeRotationSeed>> =
     },
   },
   4: {
-    receiveFirstAttack: {
-      OPP: true,
-      OH1: true,
-    },
     phases: {
       SERVE: {
         positions: withLibero({

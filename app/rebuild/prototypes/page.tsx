@@ -112,7 +112,6 @@ export default function RebuildPrototypeLabPage() {
     getFallbackPositions: getFallbackPrototypePositions,
   })
 
-  const receiveFirstAttackMap = prototypeCourtState.getReceiveFirstAttackMap(currentRotation)
   const hasFirstAttackTargets = prototypeCourtState.hasFirstAttackTargets(currentRotation)
 
   const positions = useMemo(
@@ -250,18 +249,9 @@ export default function RebuildPrototypeLabPage() {
       isPreviewingMovement={isPreviewingMovement}
       switchMotion={tactileTuning.switchMotion}
       tactileTuning={tactileTuning}
-      receiveFirstAttackMap={receiveFirstAttackMap}
       hasFirstAttackTargets={hasFirstAttackTargets}
       onRotationSelect={handleRotationSelect}
       onPhaseSelect={handlePhaseSelect}
-      onReceiveFirstAttackToggle={(role) => {
-        prototypeCourtState.toggleReceiveFirstAttack(currentRotation, role)
-      }}
-      onReceiveFirstAttackSelect={(enabled) => {
-        for (const role of ROLES) {
-          prototypeCourtState.setReceiveFirstAttack(currentRotation, role, enabled)
-        }
-      }}
       onPlay={() => {
         if (!canPlayAdvance) return
         handlePlay(nextByPlay)
@@ -380,6 +370,7 @@ export default function RebuildPrototypeLabPage() {
               arrowEndpointLabels={currentArrowLabels}
               secondaryArrows={currentSecondaryArrows}
               secondaryArrowEndpointLabels={currentSecondaryArrowLabels}
+              allowReceiveSecondaryPreview={currentCorePhase === 'RECEIVE'}
               onArrowChange={
                 isEditingAllowed
                   ? (role, position, options) => {

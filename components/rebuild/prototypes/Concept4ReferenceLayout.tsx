@@ -268,9 +268,9 @@ function PhaseCard({
   boosted: boolean
 }) {
   const prefersReducedMotion = useReducedMotion()
-  const isActive = props.currentCorePhase === phase
-  const isNext = props.nextByPlay === phase
-  const contrast = getPhaseContrast(phase, props.currentCorePhase, props)
+  const isActive = props.displayCurrentCorePhase === phase
+  const isNext = props.displayNextByPlay === phase
+  const contrast = getPhaseContrast(phase, props.displayCurrentCorePhase, props)
   const tone = getPhaseTone(phase)
   const surface = props.tactileTuning.c4Literal.phaseSurface
 
@@ -520,8 +520,8 @@ function ActiveConnector({
 function LiteralMode(props: PrototypeControlProps) {
   const prefersReducedMotion = useReducedMotion()
   const geometry = useMemo(() => buildLiteralStage(props.tactileTuning.c4Literal), [props.tactileTuning.c4Literal])
-  const activeConnector = getActiveConnector(props.currentCorePhase)
-  const liveDirection = getConnectorDirection(props.currentCorePhase)
+  const activeConnector = getActiveConnector(props.displayCurrentCorePhase)
+  const liveDirection = getConnectorDirection(props.displayCurrentCorePhase)
   const motionTuning = props.tactileTuning.c4Literal.connectorMotion
   const restingProgress = props.connectorStyle === 'static' ? 1 : motionTuning.restProgress
   const [connectorProgress, setConnectorProgress] = useState(restingProgress)
@@ -684,9 +684,10 @@ function LiteralMode(props: PrototypeControlProps) {
           }}
         >
           <TactilePlayJoystick
-            currentPhase={props.currentCorePhase}
-            nextPhase={props.nextByPlay}
-            nextLabel={getPhaseLabel(props.nextByPlay)}
+            currentPhase={props.displayCurrentCorePhase}
+            nextPhase={props.displayNextByPlay}
+            nextLabel={getPhaseLabel(props.displayNextByPlay)}
+            canPlayAdvance={props.canPlayAdvance}
             mode="literal"
             frameSizeOverride={geometry.joystickSize}
             switchMotion={props.switchMotion}

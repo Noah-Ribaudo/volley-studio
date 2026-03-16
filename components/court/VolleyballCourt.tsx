@@ -150,6 +150,8 @@ interface VolleyballCourtProps {
   onPlayerAssign?: (role: Role, playerId: string) => void
   // Force a role into hover state (shows arrow preview) regardless of actual mouse hover
   forceHoveredRole?: Role | null
+  // Allow receive phase to offer a second arrow affordance after a primary arrow already exists
+  allowReceiveSecondaryPreview?: boolean
   // Hide hover hint tooltip while guided onboarding spotlight is active
   suppressHoverHintTooltip?: boolean
   // Role whose preview arrow should become the spotlight target
@@ -246,6 +248,7 @@ export function VolleyballCourt({
   onTagsChange,
   onPlayerAssign,
   forceHoveredRole,
+  allowReceiveSecondaryPreview = false,
   suppressHoverHintTooltip = false,
   onboardingSpotlightRole = null,
   showOnboardingArrowEndSpotlight = false,
@@ -379,6 +382,7 @@ export function VolleyballCourt({
     animatedPositionsRef.current = animatedPositions
   }, [animatedPositions])
   const [draggingArrowRole, setDraggingArrowRole] = useState<Role | null>(null)
+  const [draggingArrowVariant, setDraggingArrowVariant] = useState<'primary' | 'secondary'>('primary')
   const [arrowDragPosition, setArrowDragPosition] = useState<Position | null>(null)
   const [isDraggingOffCourt, setIsDraggingOffCourt] = useState<Record<Role, boolean>>({} as Record<Role, boolean>)
   const isDraggingOffCourtRef = useRef<Record<Role, boolean>>({} as Record<Role, boolean>)
@@ -1616,6 +1620,7 @@ export function VolleyballCourt({
     }
     e.stopPropagation()
     setDraggingArrowRole(role)
+    setDraggingArrowVariant(variant)
     clearPreviewStateForRole(role)
 
     // Track drag count for hint dismissal
@@ -1742,6 +1747,7 @@ export function VolleyballCourt({
       arrowDragPositionRef.current = null
       curveControlRef.current = null
       setDraggingArrowRole(null)
+      setDraggingArrowVariant('primary')
       setArrowDragPosition(null)
       setIsDraggingOffCourt(prev => ({ ...prev, [role]: false }))
       isDraggingOffCourtRef.current[role] = false
@@ -2301,6 +2307,7 @@ export function VolleyballCourt({
           draggingRole={draggingRole}
           dragPosition={dragPosition}
           draggingArrowRole={draggingArrowRole}
+          draggingArrowVariant={draggingArrowVariant}
           arrowDragPosition={arrowDragPosition}
           arrows={arrows}
           arrowEndpointLabels={arrowEndpointLabels}
@@ -2324,8 +2331,11 @@ export function VolleyballCourt({
           draggingRole={draggingRole}
           dragPosition={dragPosition}
           draggingArrowRole={draggingArrowRole}
+          draggingArrowVariant={draggingArrowVariant}
           arrowDragPosition={arrowDragPosition}
           arrows={arrows}
+          secondaryArrows={secondaryArrows}
+          allowSecondaryPreview={allowReceiveSecondaryPreview}
           previewVisible={effectivePreviewVisible}
           tappedRole={tappedRole}
           isMobile={isMobile}

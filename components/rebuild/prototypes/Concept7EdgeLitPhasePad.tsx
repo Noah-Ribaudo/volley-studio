@@ -62,7 +62,7 @@ function PhaseTile({
 export function Concept7EdgeLitPhasePad(props: PrototypeControlProps) {
   const { transitionFrom, transitionTo, transitionProgress, liveStatus } = usePhasePadTransition(props)
   const perimeterState = getPerimeterSegmentState({
-    currentCorePhase: props.currentCorePhase,
+    currentCorePhase: props.displayCurrentCorePhase,
     transitionFrom,
     transitionTo,
     transitionProgress,
@@ -121,7 +121,7 @@ export function Concept7EdgeLitPhasePad(props: PrototypeControlProps) {
                 key={item.phase}
                 phase={item.phase}
                 label={item.label}
-                currentCorePhase={props.currentCorePhase}
+                currentCorePhase={props.displayCurrentCorePhase}
                 transitionTo={transitionTo}
                 isPreviewingMovement={props.isPreviewingMovement}
                 onPhaseSelect={props.onPhaseSelect}

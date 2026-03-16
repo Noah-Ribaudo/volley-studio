@@ -21,6 +21,7 @@ interface MovementArrowLayerProps {
   draggingRole: Role | null
   dragPosition: Position | null
   draggingArrowRole: Role | null
+  draggingArrowVariant?: 'primary' | 'secondary'
   arrowDragPosition: Position | null
   arrows: ArrowPositions
   arrowEndpointLabels?: Partial<Record<Role, string>>
@@ -48,6 +49,7 @@ function MovementArrowLayerImpl({
   draggingRole,
   dragPosition,
   draggingArrowRole,
+  draggingArrowVariant = 'primary',
   arrowDragPosition,
   arrows,
   arrowEndpointLabels,
@@ -70,7 +72,7 @@ function MovementArrowLayerImpl({
         const hasHomePosition = displayPositions[role] !== undefined
         if (mode === 'simulation' && !hasHomePosition) return null
         // When dragging a brand-new arrow from preview, let the preview layer own it.
-        if (draggingArrowRole === role && !arrows[role]) return null
+        if (draggingArrowRole === role && draggingArrowVariant === 'primary' && !arrows[role]) return null
 
         const lockedPath = (isBezierAnimating || isPreviewingMovement) ? playLockedPaths[role] : null
         // Keep preview paths visually distinct (dashed + dim) for the whole preview lifecycle,
@@ -79,8 +81,13 @@ function MovementArrowLayerImpl({
         const basePosForArrow = lockedPath?.start || displayPositions[role] || { x: 0.5, y: 0.75 }
         const homeSvgPos = toSvgCoords(draggingRole === role && dragPosition ? dragPosition : basePosForArrow)
 
-        const activeArrowTarget = lockedPath?.end ?? (draggingArrowRole === role && arrowDragPosition ? arrowDragPosition : arrows[role])
-        const secondaryArrowTarget = secondaryArrows?.[role]
+        const activeArrowTarget =
+          lockedPath?.end ??
+          (draggingArrowRole === role && draggingArrowVariant === 'primary' && arrowDragPosition ? arrowDragPosition : arrows[role])
+        const secondaryArrowTarget =
+          draggingArrowRole === role && draggingArrowVariant === 'secondary' && arrowDragPosition
+            ? arrowDragPosition
+            : secondaryArrows?.[role]
         const defaultHandleSvg = { x: homeSvgPos.x, y: Math.max(12, homeSvgPos.y - 28) }
         const arrowEndPos = lockedPath?.end ?? activeArrowTarget
         const arrowEndSvg = arrowEndPos ? toSvgCoords(arrowEndPos) : defaultHandleSvg
