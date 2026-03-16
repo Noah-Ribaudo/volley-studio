@@ -52,6 +52,7 @@ export function RebuildDialKitBridge({
         _collapsed: true,
         spring: {
           type: 'spring',
+          __mode: 'advanced',
           stiffness: seed.switchMotion.spring.stiffness,
           damping: seed.switchMotion.spring.damping,
           mass: seed.switchMotion.spring.mass,
@@ -75,6 +76,7 @@ export function RebuildDialKitBridge({
         ringTextureDepth: [seed.joystick.ringTextureDepth, 0, 1, 0.01],
         settleSpring: {
           type: 'spring',
+          __mode: 'advanced',
           stiffness: seed.joystick.settleSpring.stiffness,
           damping: seed.joystick.settleSpring.damping,
           mass: seed.joystick.settleSpring.mass,
