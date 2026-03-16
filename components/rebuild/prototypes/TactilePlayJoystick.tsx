@@ -153,10 +153,12 @@ export function TactilePlayJoystick({
         }
       : defaultFrame
   const selectedPhase = dragPhase ?? currentPhase
+  const bumpSize = joystickTuning.ringTextureScale
   const textureSize = `${joystickTuning.ringTextureSpacingX}px ${joystickTuning.ringTextureSpacingY}px`
-  const textureStroke = `oklch(96% 0.02 90 / ${0.06 + joystickTuning.ringTextureOpacity * 0.34})`
-  const textureShadow = `oklch(45% 0.12 42 / ${joystickTuning.ringTextureDepth * 0.34})`
+  const textureStroke = `oklch(68% 0.01 255 / ${0.12 + joystickTuning.ringTextureOpacity * 0.28})`
+  const textureShadow = `oklch(20% 0.01 255 / ${0.14 + joystickTuning.ringTextureDepth * 0.36})`
   const capHighlight = joystickTuning.highlightIntensity
+  const shellGlow = 0.08 + joystickTuning.haloIntensity * 0.12
 
   const quadrantTransition = prefersReducedMotion
     ? { duration: 0.001 }
@@ -250,13 +252,24 @@ export function TactilePlayJoystick({
         }}
         transition={shellTransition}
         className={cn(
-          'lab-inset lab-texture relative shrink-0 rounded-full border border-border/60 p-0 outline-none focus-visible:ring-2 focus-visible:ring-primary/70',
+          'relative shrink-0 rounded-full p-0 outline-none focus-visible:ring-2 focus-visible:ring-primary/70',
           isDragging ? 'cursor-grabbing' : 'cursor-grab'
         )}
         style={{
           width: frame.frameSize,
           height: frame.frameSize,
           touchAction: 'none',
+          border: '1px solid oklch(96% 0.01 260 / 0.92)',
+          background: [
+            'radial-gradient(circle at 50% 44%, oklch(18% 0.01 255 / 0.7) 0%, oklch(18% 0.01 255 / 0.7) 22%, transparent 23%)',
+            'radial-gradient(circle at 34% 28%, oklch(100% 0 0 / 0.96) 0%, oklch(96% 0.004 250 / 0.98) 52%, oklch(91% 0.01 250) 100%)',
+          ].join(', '),
+          boxShadow: [
+            `0 14px 26px oklch(24% 0.02 255 / ${0.14 + shellGlow * 0.4})`,
+            'inset 0 2px 2px oklch(100% 0 0 / 0.95)',
+            'inset 0 -10px 16px oklch(70% 0.01 250 / 0.18)',
+            'inset 0 0 0 1px oklch(91% 0.008 250 / 0.72)',
+          ].join(', '),
         }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
@@ -271,9 +284,13 @@ export function TactilePlayJoystick({
         }}
       >
         <div
-          className="pointer-events-none absolute rounded-full border border-border/45"
+          className="pointer-events-none absolute rounded-full"
           style={{
             inset: frame.inset,
+            background:
+              'radial-gradient(circle at 50% 42%, oklch(28% 0.01 255 / 0.38) 0%, oklch(12% 0.01 255 / 0.96) 62%, oklch(10% 0.01 255) 100%)',
+            boxShadow:
+              'inset 0 10px 18px oklch(0% 0 0 / 0.52), inset 0 -2px 3px oklch(100% 0 0 / 0.08), 0 1px 0 oklch(100% 0 0 / 0.3)',
           }}
         />
 
@@ -369,33 +386,48 @@ export function TactilePlayJoystick({
               isDragging && 'lab-pressed'
             )}
             style={{
-              background:
-                `radial-gradient(circle at 32% 28%, oklch(88% 0.05 85 / ${capHighlight * 0.92}) 0%, oklch(82% 0.08 74 / ${capHighlight * 0.72}) 12%, transparent 26%), linear-gradient(180deg, oklch(76% 0.17 62) 0%, oklch(68% 0.19 52) 42%, oklch(60% 0.18 42) 100%)`,
-              boxShadow: `0 0 ${14 + joystickTuning.haloIntensity * 18}px oklch(72% 0.14 55 / ${0.08 + joystickTuning.haloIntensity * 0.24}), inset 0 1px 0 oklch(97% 0.01 90 / ${0.12 + capHighlight * 0.4}), inset 0 -7px 12px oklch(42% 0.12 34 / 0.34)`,
+              background: [
+                `radial-gradient(circle at 34% 26%, oklch(82% 0.01 255 / ${capHighlight * 0.42}) 0%, transparent 28%)`,
+                'linear-gradient(180deg, oklch(31% 0.008 255) 0%, oklch(24% 0.008 255) 46%, oklch(17% 0.008 255) 100%)',
+              ].join(', '),
+              boxShadow: [
+                `0 14px 22px oklch(8% 0.01 255 / ${0.22 + joystickTuning.haloIntensity * 0.18})`,
+                `0 0 ${10 + joystickTuning.haloIntensity * 16}px oklch(88% 0.01 250 / ${shellGlow})`,
+                `inset 0 1px 0 oklch(86% 0.01 255 / ${0.06 + capHighlight * 0.18})`,
+                'inset 0 -10px 14px oklch(6% 0.01 255 / 0.54)',
+                'inset 0 0 0 1px oklch(36% 0.01 255 / 0.9)',
+              ].join(', '),
             }}
           >
             <div
               className="pointer-events-none absolute inset-0 rounded-full opacity-70"
               style={{
                 backgroundImage: [
-                  `linear-gradient(30deg, ${textureStroke} 10%, transparent 10.5%, transparent 89%, ${textureStroke} 89.5%, ${textureStroke} 100%)`,
-                  `linear-gradient(150deg, ${textureStroke} 10%, transparent 10.5%, transparent 89%, ${textureStroke} 89.5%, ${textureStroke} 100%)`,
-                  `linear-gradient(90deg, ${textureShadow} 2%, transparent 2.5%, transparent 97%, ${textureShadow} 98%)`,
+                  `radial-gradient(circle at 25% 25%, ${textureStroke} 0 ${Math.max(18, bumpSize * 3.5)}%, transparent ${Math.max(19, bumpSize * 3.5 + 1)}%)`,
+                  `radial-gradient(circle at 75% 75%, ${textureShadow} 0 ${Math.max(16, bumpSize * 3.1)}%, transparent ${Math.max(17, bumpSize * 3.1 + 1)}%)`,
+                  `radial-gradient(circle at 75% 25%, ${textureStroke} 0 ${Math.max(10, bumpSize * 2.2)}%, transparent ${Math.max(11, bumpSize * 2.2 + 1)}%)`,
                 ].join(', '),
                 backgroundSize: `${textureSize}, ${textureSize}, ${textureSize}`,
                 backgroundPosition: '0 0, 0 0, 0 0',
                 WebkitMaskImage:
-                  `radial-gradient(circle, transparent 50%, black 56%, black 100%)`,
+                  `radial-gradient(circle, transparent 49%, black 54%, black 100%)`,
                 maskImage:
-                  `radial-gradient(circle, transparent 50%, black 56%, black 100%)`,
+                  `radial-gradient(circle, transparent 49%, black 54%, black 100%)`,
               }}
             />
             <div
-              className="pointer-events-none absolute inset-[18%] rounded-full"
+              className="pointer-events-none absolute inset-[16%] rounded-full"
               style={{
-                background: `radial-gradient(circle at 50% 36%, oklch(44% 0.08 38 / ${0.16 + capHighlight * 0.14}) 0%, oklch(56% 0.1 44 / 0.08) 34%, transparent 54%), linear-gradient(180deg, oklch(46% 0.08 36 / 0.22) 0%, oklch(78% 0.04 76 / ${0.08 + capHighlight * 0.12}) 100%)`,
-                boxShadow: `inset 0 2px 3px oklch(38% 0.08 34 / 0.34), inset 0 -2px 4px oklch(97% 0.01 90 / ${0.08 + capHighlight * 0.08})`,
-                border: '1px solid oklch(96% 0.01 90 / 0.08)',
+                background: [
+                  `radial-gradient(circle at 50% 68%, oklch(62% 0.01 255 / ${0.1 + capHighlight * 0.12}) 0%, transparent 18%)`,
+                  `radial-gradient(circle at 50% 50%, oklch(6% 0.01 255) 0%, oklch(11% 0.01 255) 58%, oklch(18% 0.01 255) 100%)`,
+                ].join(', '),
+                boxShadow: [
+                  'inset 0 7px 10px oklch(2% 0.01 255 / 0.62)',
+                  `inset 0 -3px 5px oklch(78% 0.01 255 / ${0.05 + capHighlight * 0.08})`,
+                  'inset 0 0 0 1px oklch(48% 0.01 255 / 0.82)',
+                ].join(', '),
+                border: '1px solid oklch(55% 0.01 255 / 0.52)',
               }}
             />
           </motion.div>
