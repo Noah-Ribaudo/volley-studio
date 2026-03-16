@@ -14,6 +14,13 @@ interface TactileRotationSwitchProps {
   switchMotion: SwitchMotionTuning
   density?: 'default' | 'compact'
   className?: string
+  style?: React.CSSProperties
+  itemColors?: {
+    bg: string
+    activeBg: string
+    text: string
+    activeText: string
+  }
 }
 
 export function TactileRotationSwitch({
@@ -22,6 +29,8 @@ export function TactileRotationSwitch({
   switchMotion,
   density = 'default',
   className,
+  style,
+  itemColors,
 }: TactileRotationSwitchProps) {
   const prefersReducedMotion = useReducedMotion()
 
@@ -41,6 +50,7 @@ export function TactileRotationSwitch({
     <RadioGroup.Root
       aria-label="Rotation selector"
       className={cn('lab-inset grid grid-cols-6 gap-1 rounded-xl p-1', className)}
+      style={style}
       value={String(value)}
       onValueChange={(next) => onValueChange(Number(next) as Rotation)}
     >
@@ -59,11 +69,18 @@ export function TactileRotationSwitch({
                 y: isActive ? pressTravel : 0,
               }}
               className={cn(
-                'lab-pressable flex w-full items-center justify-center rounded-lg border text-center text-[10px] font-semibold tracking-[0.08em] text-foreground/90 transition-colors',
+                'lab-pressable flex w-full items-center justify-center rounded-lg border text-center text-[10px] font-semibold tracking-[0.08em] transition-colors',
                 itemHeight,
-                isActive ? 'lab-pressed border-border/80 text-foreground' : 'border-border/55 text-muted-foreground'
+                isActive ? 'lab-pressed border-border/80' : 'border-border/55',
+                !itemColors && (isActive ? 'text-foreground' : 'text-foreground/90 text-muted-foreground')
               )}
-              style={{ ['--lab-switch-knob-glow' as string]: switchMotion.knobGlow }}
+              style={{
+                ['--lab-switch-knob-glow' as string]: switchMotion.knobGlow,
+                ...(itemColors && {
+                  background: isActive ? itemColors.activeBg : itemColors.bg,
+                  color: isActive ? itemColors.activeText : itemColors.text,
+                }),
+              }}
               transition={transition}
             >
               R{rotation}

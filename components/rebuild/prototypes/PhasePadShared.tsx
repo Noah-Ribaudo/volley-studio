@@ -545,14 +545,30 @@ export function getPhasePadJoystickEmphasis(props: PrototypeControlProps): Phase
   }
 }
 
-export function PhasePadRotationRail(props: PrototypeControlProps) {
+export function PhasePadRotationRail(
+  props: PrototypeControlProps & {
+    railStyle?: React.CSSProperties
+    railItemColors?: {
+      bg: string
+      activeBg: string
+      text: string
+      activeText: string
+    }
+  }
+) {
   return (
     <TactileRotationSwitch
       value={props.currentRotation}
       onValueChange={props.onRotationSelect}
       switchMotion={props.switchMotion}
       density="compact"
-      className="mb-1.5 rounded-[16px] border border-[rgba(176,151,116,0.28)] bg-[linear-gradient(180deg,rgba(238,230,214,0.98)_0%,rgba(220,206,184,0.98)_100%)] p-[5px] shadow-[inset_0_1px_0_rgba(255,247,234,0.82)]"
+      className="mb-1.5 rounded-[16px] border p-[5px]"
+      style={props.railStyle ?? {
+        background: 'linear-gradient(180deg, rgba(238,230,214,0.98) 0%, rgba(220,206,184,0.98) 100%)',
+        borderColor: 'rgba(176,151,116,0.28)',
+        boxShadow: 'inset 0 1px 0 rgba(255,247,234,0.82)',
+      }}
+      itemColors={props.railItemColors}
     />
   )
 }

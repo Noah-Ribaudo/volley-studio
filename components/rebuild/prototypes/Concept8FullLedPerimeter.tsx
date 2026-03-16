@@ -16,7 +16,7 @@ import {
 const C8_PHASE_ORDER: CorePhase[] = ['DEFENSE', 'OFFENSE', 'RECEIVE', 'SERVE']
 const PHASE_PAD_JOYSTICK_FRAME_SIZE = 92
 
-type SurfaceShaderId = 'fluted-glass' | 'paper-texture' | 'none'
+type SurfaceShaderId = 'fluted-glass' | 'neuro-noise' | 'dithering' | 'voronoi' | 'waves' | 'warp' | 'none'
 
 type PhasePadVisualTheme = {
   panelBackground: string
@@ -46,6 +46,18 @@ type PhasePadVisualTheme = {
   tileClipPath?: string
   tileInsetStroke?: string
   shader: SurfaceShaderId
+  rotationRailBg: string
+  rotationRailBorder: string
+  rotationRailShadow: string
+  rotationRailItemBg: string
+  rotationRailItemActiveBg: string
+  rotationRailItemText: string
+  rotationRailItemActiveText: string
+  panelTexture?: string
+  panelReflection?: string
+  tileSpecularHighlight?: string
+  tileEdgeLight?: string
+  activeGlow?: string
 }
 
 function lazyShader(name: string): ComponentType<any> {
@@ -59,242 +71,341 @@ function lazyShader(name: string): ComponentType<any> {
 }
 
 const LazyFlutedGlass = lazyShader('FlutedGlass')
-const LazyPaperTexture = lazyShader('PaperTexture')
+const LazyNeuroNoise = lazyShader('NeuroNoise')
+const LazyDithering = lazyShader('Dithering')
+const LazyVoronoi = lazyShader('Voronoi')
+const LazyWaves = lazyShader('Waves')
+const LazyWarp = lazyShader('Warp')
+
+/* ═══════════════════════════════════════════════════════════════════
+   THEME DEFINITIONS — each theme is a completely different material
+   ═══════════════════════════════════════════════════════════════════ */
 
 const PHASE_PAD_VARIANT_THEMES: Record<PrototypeVariantId, PhasePadVisualTheme> = {
+  /* ── CLEAN: Anodized aluminum console ─────────────────────────── */
   clean: {
-    panelBackground: 'linear-gradient(180deg,rgba(235,228,214,0.98)_0%,rgba(208,193,168,0.98)_100%)',
-    panelBorder: 'rgba(172,149,115,0.42)',
-    panelShadow: '0 16px 30px rgba(128,102,72,0.16), inset 0 1px 0 rgba(255,249,240,0.8)',
-    frameBackground: 'linear-gradient(180deg,rgba(108,91,67,0.24)_0%,rgba(162,139,106,0.14)_100%)',
-    frameBorder: 'rgba(159,132,96,0.28)',
-    dividerColor: 'rgba(187,164,131,0.34)',
-    cutoutBackground:
-      'radial-gradient(circle at 50% 50%, rgba(206,186,153,0.84) 0%, rgba(216,197,166,0.96) 56%, rgba(229,214,188,0.98) 100%)',
-    cutoutShadow: 'inset 0 1px 0 rgba(255,248,235,0.64), inset 0 -9px 12px rgba(141,112,76,0.12), 0 1px 0 rgba(255,247,231,0.42)',
-    tileInactiveBackground: 'linear-gradient(180deg,rgba(247,242,232,0.98)_0%,rgba(227,216,196,0.98)_100%)',
-    tileActiveBackground: 'linear-gradient(180deg,rgba(224,212,191,0.98)_0%,rgba(194,177,149,0.98)_100%)',
-    tileInactiveBorder: 'rgba(171,145,108,0.34)',
-    tileActiveBorder: 'rgba(153,122,85,0.6)',
-    tileInactiveText: 'rgba(53,46,36,0.92)',
-    tileActiveText: 'rgba(29,24,18,0.98)',
-    tileInactiveShadow: 'inset 0 1px 0 rgba(255,248,236,0.84), inset 0 -1px 0 rgba(122,95,62,0.16), 0 8px 14px rgba(121,94,63,0.16), 0 16px 24px -18px rgba(56,43,28,0.34)',
-    tileActiveShadow: 'inset 0 1px 0 rgba(255,247,233,0.6), inset 0 8px 12px rgba(123,95,61,0.18), inset 0 -6px 8px rgba(88,67,43,0.16), 0 3px 6px rgba(73,53,31,0.14)',
-    labelShadow: '0 1px 0 rgba(255,248,238,0.62)',
-    backlightInactive: 'radial-gradient(circle at 50% 90%, rgba(255,187,88,0.08) 0%, transparent 58%)',
-    backlightActive: 'radial-gradient(circle at 50% 90%, rgba(255,170,60,0.34) 0%, rgba(255,149,54,0.16) 38%, transparent 72%)',
-    topGloss: 'linear-gradient(180deg,rgba(255,252,246,0.76)_0%,rgba(255,252,246,0.16)_46%,transparent_100%)',
-    panelRadius: '22px',
-    frameRadius: '16px',
-    tileRadius: '16px',
-    tileInsetStroke: 'inset 0 0 0 1px rgba(255,249,239,0.24)',
+    panelBackground: 'linear-gradient(180deg, #c4cad2 0%, #9da5af 100%)',
+    panelBorder: 'rgba(128,136,150,0.52)',
+    panelShadow: '0 18px 36px rgba(50,58,72,0.24), inset 0 1px 0 rgba(255,255,255,0.72), inset 0 -1px 0 rgba(0,0,0,0.1)',
+    frameBackground: 'linear-gradient(180deg, rgba(170,178,188,0.3) 0%, rgba(140,148,160,0.16) 100%)',
+    frameBorder: 'rgba(150,158,170,0.38)',
+    dividerColor: 'rgba(110,118,132,0.42)',
+    cutoutBackground: 'radial-gradient(circle at 50% 50%, rgba(148,156,168,0.9) 0%, rgba(172,180,192,0.96) 52%, rgba(204,210,218,0.98) 100%)',
+    cutoutShadow: 'inset 0 1px 0 rgba(255,255,255,0.54), inset 0 -10px 14px rgba(70,78,92,0.16), 0 1px 0 rgba(255,255,255,0.32)',
+    tileInactiveBackground: 'linear-gradient(180deg, #d8dde4 0%, #b4bcc6 100%)',
+    tileActiveBackground: 'linear-gradient(180deg, #bec5ce 0%, #96a0ab 100%)',
+    tileInactiveBorder: 'rgba(140,148,162,0.4)',
+    tileActiveBorder: 'rgba(108,118,134,0.64)',
+    tileInactiveText: 'rgba(24,28,36,0.92)',
+    tileActiveText: 'rgba(10,14,22,0.98)',
+    tileInactiveShadow: 'inset 0 1px 0 rgba(255,255,255,0.78), inset 0 -2px 0 rgba(70,78,92,0.14), 0 6px 14px rgba(40,48,64,0.2), 0 14px 22px -16px rgba(20,26,38,0.36)',
+    tileActiveShadow: 'inset 0 1px 0 rgba(255,255,255,0.5), inset 0 8px 14px rgba(70,78,92,0.14), inset 0 -4px 6px rgba(40,48,62,0.16), 0 3px 6px rgba(30,38,52,0.18)',
+    labelShadow: '0 1px 0 rgba(255,255,255,0.52)',
+    backlightInactive: 'radial-gradient(circle at 50% 90%, rgba(160,188,255,0.06) 0%, transparent 58%)',
+    backlightActive: 'radial-gradient(circle at 50% 90%, rgba(160,188,255,0.2) 0%, rgba(130,166,255,0.08) 38%, transparent 72%)',
+    topGloss: 'linear-gradient(180deg, rgba(255,255,255,0.68) 0%, rgba(255,255,255,0.1) 40%, transparent 100%)',
+    panelRadius: '18px',
+    frameRadius: '14px',
+    tileRadius: '12px',
+    tileInsetStroke: 'inset 0 0 0 1px rgba(255,255,255,0.16)',
     shader: 'none',
+    tileSpecularHighlight: 'linear-gradient(var(--lab-light-angle, 35deg), transparent 30%, rgba(255,255,255,0.16) 46%, rgba(255,255,255,0.3) 50%, rgba(255,255,255,0.16) 54%, transparent 70%)',
+    tileEdgeLight: 'inset 1px -1px 3px rgba(255,255,255,0.2), inset -1px 1px 3px rgba(0,0,0,0.06)',
+    panelTexture: 'repeating-linear-gradient(90deg, transparent 0px, transparent 2px, rgba(255,255,255,0.025) 2px, rgba(255,255,255,0.025) 3px)',
+    panelReflection: 'linear-gradient(var(--lab-light-angle, 35deg), transparent 20%, rgba(255,255,255,0.06) 44%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.06) 56%, transparent 80%)',
+    rotationRailBg: 'linear-gradient(180deg, rgba(180,188,198,0.98) 0%, rgba(156,164,176,0.98) 100%)',
+    rotationRailBorder: 'rgba(128,136,150,0.34)',
+    rotationRailShadow: 'inset 0 1px 0 rgba(255,255,255,0.52)',
+    rotationRailItemBg: 'transparent',
+    rotationRailItemActiveBg: 'linear-gradient(180deg, #cdd3da 0%, #b0b8c2 100%)',
+    rotationRailItemText: 'rgba(44,52,66,0.68)',
+    rotationRailItemActiveText: 'rgba(16,22,32,0.94)',
   },
+
+  /* ── MACHINED: CNC milled steel ───────────────────────────────── */
   machined: {
-    panelBackground: 'linear-gradient(180deg,rgba(69,74,78,0.98)_0%,rgba(28,32,36,0.98)_100%)',
-    panelBorder: 'rgba(126,133,138,0.34)',
-    panelShadow: '0 22px 38px rgba(3,5,7,0.36), inset 0 1px 0 rgba(218,223,228,0.28), inset 0 -18px 28px rgba(0,0,0,0.24)',
-    frameBackground: 'linear-gradient(180deg,rgba(117,123,128,0.22)_0%,rgba(22,26,29,0.38)_100%)',
-    frameBorder: 'rgba(145,151,156,0.28)',
-    dividerColor: 'rgba(86,92,97,0.7)',
-    dividerInset: '0 0 0 1px rgba(205,212,219,0.08)',
-    cutoutBackground:
-      'radial-gradient(circle at 50% 50%, rgba(69,76,82,0.96) 0%, rgba(92,98,104,0.98) 52%, rgba(130,137,142,0.96) 100%)',
-    cutoutShadow: 'inset 0 1px 0 rgba(214,220,226,0.18), inset 0 -14px 20px rgba(0,0,0,0.32), 0 1px 0 rgba(255,255,255,0.06)',
-    tileInactiveBackground: 'linear-gradient(180deg,rgba(201,205,209,0.98)_0%,rgba(106,112,118,0.98)_100%)',
-    tileActiveBackground: 'linear-gradient(180deg,rgba(161,168,174,0.98)_0%,rgba(77,84,89,0.98)_100%)',
-    tileInactiveBorder: 'rgba(216,223,229,0.22)',
-    tileActiveBorder: 'rgba(255,177,84,0.78)',
-    tileInactiveText: 'rgba(246,248,250,0.94)',
-    tileActiveText: 'rgba(255,247,235,0.98)',
-    tileInactiveShadow: 'inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -4px 0 rgba(0,0,0,0.28), 0 12px 18px rgba(0,0,0,0.26), 0 18px 26px -20px rgba(0,0,0,0.6)',
-    tileActiveShadow: 'inset 0 1px 0 rgba(255,255,255,0.18), inset 0 12px 18px rgba(255,255,255,0.06), inset 0 -6px 8px rgba(0,0,0,0.34), 0 5px 8px rgba(0,0,0,0.28), 0 0 0 1px rgba(255,184,92,0.24), 0 0 22px rgba(255,173,75,0.12)',
-    labelShadow: '0 1px 0 rgba(0,0,0,0.3)',
-    backlightInactive: 'radial-gradient(circle at 50% 100%, rgba(255,184,84,0.06) 0%, transparent 64%)',
-    backlightActive: 'radial-gradient(circle at 50% 100%, rgba(255,170,58,0.26) 0%, rgba(255,146,38,0.14) 42%, transparent 76%)',
-    topGloss: 'linear-gradient(180deg,rgba(255,255,255,0.26)_0%,rgba(255,255,255,0.04)_32%,transparent_100%)',
+    panelBackground: 'linear-gradient(180deg, #3c4248 0%, #1a1e22 100%)',
+    panelBorder: 'rgba(100,110,120,0.38)',
+    panelShadow: '0 24px 44px rgba(0,0,0,0.42), inset 0 1px 0 rgba(200,210,220,0.22), inset 0 -20px 30px rgba(0,0,0,0.3)',
+    frameBackground: 'linear-gradient(180deg, rgba(100,110,120,0.24) 0%, rgba(16,20,24,0.42) 100%)',
+    frameBorder: 'rgba(130,140,150,0.26)',
+    dividerColor: 'rgba(72,80,88,0.76)',
+    dividerInset: '0 0 0 1px rgba(200,210,220,0.06)',
+    cutoutBackground: 'radial-gradient(circle at 50% 50%, rgba(58,66,74,0.96) 0%, rgba(80,88,96,0.98) 52%, rgba(116,124,132,0.96) 100%)',
+    cutoutShadow: 'inset 0 1px 0 rgba(200,210,220,0.16), inset 0 -16px 22px rgba(0,0,0,0.36), 0 1px 0 rgba(255,255,255,0.04)',
+    tileInactiveBackground: 'linear-gradient(180deg, #b4bac0 0%, #6e767e 100%)',
+    tileActiveBackground: 'linear-gradient(180deg, #8e969e 0%, #4a5258 100%)',
+    tileInactiveBorder: 'rgba(200,210,220,0.2)',
+    tileActiveBorder: 'rgba(255,170,70,0.72)',
+    tileInactiveText: 'rgba(240,244,248,0.94)',
+    tileActiveText: 'rgba(255,244,230,0.98)',
+    tileInactiveShadow: 'inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -5px 0 rgba(0,0,0,0.32), 0 14px 20px rgba(0,0,0,0.3), 0 20px 28px -22px rgba(0,0,0,0.64)',
+    tileActiveShadow: 'inset 0 1px 0 rgba(255,255,255,0.14), inset 0 14px 20px rgba(255,255,255,0.04), inset 0 -6px 10px rgba(0,0,0,0.38), 0 4px 8px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,176,80,0.2), 0 0 26px rgba(255,160,60,0.14)',
+    labelShadow: '0 1px 0 rgba(0,0,0,0.34)',
+    backlightInactive: 'radial-gradient(circle at 50% 100%, rgba(255,176,72,0.06) 0%, transparent 64%)',
+    backlightActive: 'radial-gradient(circle at 50% 100%, rgba(255,160,50,0.28) 0%, rgba(255,136,30,0.14) 42%, transparent 76%)',
+    topGloss: 'linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.03) 30%, transparent 100%)',
     panelRadius: '14px',
     frameRadius: '10px',
     tileRadius: '6px',
     tileClipPath: 'polygon(9% 0%, 91% 0%, 100% 14%, 100% 86%, 91% 100%, 9% 100%, 0% 86%, 0% 14%)',
-    tileInsetStroke: 'inset 0 0 0 1px rgba(255,255,255,0.08)',
-    shader: 'paper-texture',
+    tileInsetStroke: 'inset 0 0 0 1px rgba(255,255,255,0.06)',
+    shader: 'dithering',
+    tileSpecularHighlight: 'linear-gradient(var(--lab-light-angle, 35deg), transparent 36%, rgba(255,255,255,0.08) 48%, rgba(255,255,255,0.14) 50%, rgba(255,255,255,0.08) 52%, transparent 64%)',
+    tileEdgeLight: 'inset 1px -1px 4px rgba(255,255,255,0.14), inset -1px 1px 4px rgba(0,0,0,0.18)',
+    activeGlow: '0 0 32px rgba(255,160,50,0.22), 0 0 8px rgba(255,180,80,0.18)',
+    panelTexture: 'repeating-linear-gradient(45deg, transparent 0px, transparent 3px, rgba(255,255,255,0.012) 3px, rgba(255,255,255,0.012) 4px)',
+    rotationRailBg: 'linear-gradient(180deg, rgba(56,62,68,0.98) 0%, rgba(36,40,46,0.98) 100%)',
+    rotationRailBorder: 'rgba(100,110,120,0.3)',
+    rotationRailShadow: 'inset 0 1px 0 rgba(200,210,220,0.12)',
+    rotationRailItemBg: 'transparent',
+    rotationRailItemActiveBg: 'linear-gradient(180deg, #5a6268 0%, #3e444a 100%)',
+    rotationRailItemText: 'rgba(200,210,220,0.56)',
+    rotationRailItemActiveText: 'rgba(240,244,248,0.94)',
   },
+
+  /* ── BACKLIT: Nixie tube display ──────────────────────────────── */
   backlit: {
-    panelBackground: 'linear-gradient(180deg,rgba(46,26,10,0.98)_0%,rgba(17,9,3,0.98)_100%)',
-    panelBorder: 'rgba(255,186,88,0.24)',
-    panelShadow: '0 24px 40px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,218,154,0.18), inset 0 -22px 28px rgba(0,0,0,0.28), 0 0 42px rgba(255,154,38,0.06)',
-    frameBackground: 'linear-gradient(180deg,rgba(110,60,16,0.2)_0%,rgba(20,11,5,0.42)_100%)',
-    frameBorder: 'rgba(255,176,74,0.16)',
-    dividerColor: 'rgba(86,46,16,0.72)',
-    dividerInset: '0 0 0 1px rgba(255,188,89,0.08)',
-    cutoutBackground:
-      'radial-gradient(circle at 50% 50%, rgba(95,52,15,0.96) 0%, rgba(132,77,24,0.98) 50%, rgba(179,116,42,0.88) 100%)',
-    cutoutShadow: 'inset 0 1px 0 rgba(255,204,126,0.18), inset 0 -16px 20px rgba(0,0,0,0.24), 0 0 28px rgba(255,154,38,0.18)',
-    tileInactiveBackground: 'linear-gradient(180deg,rgba(255,206,131,0.2)_0%,rgba(255,159,49,0.08)_100%)',
-    tileActiveBackground: 'linear-gradient(180deg,rgba(255,227,177,0.34)_0%,rgba(255,173,65,0.22)_100%)',
-    tileInactiveBorder: 'rgba(255,191,96,0.22)',
-    tileActiveBorder: 'rgba(255,206,131,0.58)',
-    tileInactiveText: 'rgba(255,220,173,0.92)',
-    tileActiveText: 'rgba(255,242,222,0.98)',
-    tileInactiveShadow: 'inset 0 1px 0 rgba(255,235,204,0.18), inset 0 -1px 0 rgba(0,0,0,0.2), 0 10px 22px rgba(0,0,0,0.18), 0 0 28px rgba(255,157,46,0.08)',
-    tileActiveShadow: 'inset 0 1px 0 rgba(255,243,224,0.24), inset 0 0 0 1px rgba(255,213,145,0.18), 0 10px 26px rgba(0,0,0,0.18), 0 0 34px rgba(255,165,48,0.28), 0 0 10px rgba(255,214,141,0.24)',
-    labelShadow: '0 0 16px rgba(255,190,92,0.32)',
-    backlightInactive: 'radial-gradient(circle at 50% 50%, rgba(255,191,96,0.16) 0%, rgba(255,146,38,0.04) 44%, transparent 76%)',
-    backlightActive: 'radial-gradient(circle at 50% 50%, rgba(255,210,138,0.56) 0%, rgba(255,170,54,0.26) 44%, transparent 78%)',
-    topGloss: 'linear-gradient(180deg,rgba(255,243,224,0.16)_0%,rgba(255,243,224,0.02)_30%,transparent_100%)',
+    panelBackground: 'linear-gradient(180deg, #1e1208 0%, #0a0604 100%)',
+    panelBorder: 'rgba(255,160,60,0.18)',
+    panelShadow: '0 26px 44px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,200,120,0.12), inset 0 -24px 32px rgba(0,0,0,0.32), 0 0 60px rgba(255,140,30,0.08)',
+    frameBackground: 'linear-gradient(180deg, rgba(100,55,12,0.16) 0%, rgba(14,8,4,0.48) 100%)',
+    frameBorder: 'rgba(255,160,60,0.12)',
+    dividerColor: 'rgba(70,38,12,0.78)',
+    dividerInset: '0 0 0 1px rgba(255,170,70,0.06)',
+    cutoutBackground: 'radial-gradient(circle at 50% 50%, rgba(80,44,12,0.96) 0%, rgba(120,68,20,0.98) 50%, rgba(160,100,36,0.86) 100%)',
+    cutoutShadow: 'inset 0 1px 0 rgba(255,190,110,0.14), inset 0 -18px 24px rgba(0,0,0,0.28), 0 0 36px rgba(255,140,30,0.22)',
+    tileInactiveBackground: 'linear-gradient(180deg, rgba(255,190,110,0.12) 0%, rgba(255,140,40,0.04) 100%)',
+    tileActiveBackground: 'linear-gradient(180deg, rgba(255,215,160,0.3) 0%, rgba(255,160,50,0.18) 100%)',
+    tileInactiveBorder: 'rgba(255,175,80,0.16)',
+    tileActiveBorder: 'rgba(255,200,120,0.52)',
+    tileInactiveText: 'rgba(255,210,160,0.88)',
+    tileActiveText: 'rgba(255,240,215,0.98)',
+    tileInactiveShadow: 'inset 0 1px 0 rgba(255,220,180,0.14), inset 0 -1px 0 rgba(0,0,0,0.24), 0 12px 24px rgba(0,0,0,0.22), 0 0 20px rgba(255,140,36,0.06)',
+    tileActiveShadow: 'inset 0 1px 0 rgba(255,235,200,0.2), inset 0 0 0 1px rgba(255,200,130,0.14), 0 12px 28px rgba(0,0,0,0.22), 0 0 48px rgba(255,150,40,0.32), 0 0 16px rgba(255,200,120,0.28)',
+    labelShadow: '0 0 20px rgba(255,175,80,0.4)',
+    backlightInactive: 'radial-gradient(circle at 50% 50%, rgba(255,175,80,0.2) 0%, rgba(255,130,30,0.06) 44%, transparent 76%)',
+    backlightActive: 'radial-gradient(circle at 50% 50%, rgba(255,200,120,0.64) 0%, rgba(255,155,45,0.32) 44%, transparent 78%)',
+    topGloss: 'linear-gradient(180deg, rgba(255,230,190,0.1) 0%, rgba(255,230,190,0.01) 28%, transparent 100%)',
     panelRadius: '24px',
     frameRadius: '20px',
     tileRadius: '999px',
-    tileInsetStroke: 'inset 0 0 0 1px rgba(255,211,140,0.08)',
-    shader: 'none',
+    tileInsetStroke: 'inset 0 0 0 1px rgba(255,195,120,0.06)',
+    shader: 'neuro-noise',
+    activeGlow: '0 0 40px rgba(255,155,40,0.36), 0 0 12px rgba(255,200,120,0.24), 0 0 80px rgba(255,120,20,0.16)',
+    panelReflection: 'radial-gradient(ellipse at 50% 30%, rgba(255,160,50,0.04) 0%, transparent 60%)',
+    rotationRailBg: 'linear-gradient(180deg, rgba(40,24,10,0.98) 0%, rgba(24,14,6,0.98) 100%)',
+    rotationRailBorder: 'rgba(255,160,60,0.14)',
+    rotationRailShadow: 'inset 0 1px 0 rgba(255,190,100,0.08), 0 0 16px rgba(255,140,30,0.06)',
+    rotationRailItemBg: 'transparent',
+    rotationRailItemActiveBg: 'linear-gradient(180deg, rgba(255,180,90,0.16) 0%, rgba(255,140,40,0.08) 100%)',
+    rotationRailItemText: 'rgba(255,195,130,0.5)',
+    rotationRailItemActiveText: 'rgba(255,225,180,0.94)',
   },
+
+  /* ── GLASS: Frosted lab glass ─────────────────────────────────── */
   glass: {
-    panelBackground: 'linear-gradient(180deg,rgba(227,233,238,0.94)_0%,rgba(173,183,193,0.94)_100%)',
-    panelBorder: 'rgba(107,125,145,0.38)',
-    panelShadow: '0 20px 34px rgba(49,65,85,0.18), inset 0 1px 0 rgba(255,255,255,0.68), inset 0 -18px 24px rgba(87,109,131,0.14)',
-    frameBackground: 'linear-gradient(180deg,rgba(96,112,131,0.24)_0%,rgba(216,231,244,0.08)_100%)',
-    frameBorder: 'rgba(122,140,160,0.28)',
-    dividerColor: 'rgba(144,161,178,0.3)',
-    cutoutBackground:
-      'radial-gradient(circle at 50% 50%, rgba(178,194,208,0.72) 0%, rgba(197,209,221,0.88) 52%, rgba(229,236,244,0.94) 100%)',
-    cutoutShadow: 'inset 0 1px 0 rgba(255,255,255,0.54), inset 0 -12px 18px rgba(79,102,125,0.14), 0 0 20px rgba(181,214,255,0.14)',
-    tileInactiveBackground: 'linear-gradient(180deg,rgba(255,255,255,0.34)_0%,rgba(235,243,249,0.22)_100%)',
-    tileActiveBackground: 'linear-gradient(180deg,rgba(255,255,255,0.46)_0%,rgba(215,231,245,0.3)_100%)',
-    tileInactiveBorder: 'rgba(143,167,191,0.38)',
-    tileActiveBorder: 'rgba(170,208,236,0.68)',
-    tileInactiveText: 'rgba(31,51,71,0.94)',
-    tileActiveText: 'rgba(12,27,43,0.98)',
-    tileInactiveShadow: 'inset 0 1px 0 rgba(255,255,255,0.42), inset 0 -2px 0 rgba(84,110,138,0.12), 0 10px 18px rgba(74,95,117,0.14), 0 0 18px rgba(184,226,255,0.08)',
-    tileActiveShadow: 'inset 0 1px 0 rgba(255,255,255,0.28), inset 0 10px 18px rgba(191,226,255,0.12), inset 0 -5px 8px rgba(59,83,107,0.16), 0 4px 10px rgba(41,64,87,0.14), 0 0 28px rgba(172,225,255,0.22)',
-    labelShadow: '0 1px 0 rgba(255,255,255,0.42)',
-    backlightInactive: 'radial-gradient(circle at 50% 88%, rgba(156,220,255,0.08) 0%, transparent 72%)',
-    backlightActive: 'radial-gradient(circle at 50% 88%, rgba(170,232,255,0.22) 0%, rgba(143,210,255,0.1) 42%, transparent 78%)',
-    topGloss: 'linear-gradient(180deg,rgba(255,255,255,0.28)_0%,rgba(255,255,255,0.06)_38%,transparent_100%)',
+    panelBackground: 'linear-gradient(180deg, rgba(220,230,240,0.92) 0%, rgba(165,180,195,0.92) 100%)',
+    panelBorder: 'rgba(95,120,148,0.42)',
+    panelShadow: '0 22px 38px rgba(40,58,82,0.22), inset 0 1px 0 rgba(255,255,255,0.74), inset 0 -20px 28px rgba(75,100,128,0.16)',
+    frameBackground: 'linear-gradient(180deg, rgba(88,108,132,0.26) 0%, rgba(210,225,240,0.06) 100%)',
+    frameBorder: 'rgba(112,136,164,0.3)',
+    dividerColor: 'rgba(132,156,180,0.32)',
+    cutoutBackground: 'radial-gradient(circle at 50% 50%, rgba(168,188,210,0.68) 0%, rgba(190,206,224,0.86) 52%, rgba(224,234,246,0.94) 100%)',
+    cutoutShadow: 'inset 0 1px 0 rgba(255,255,255,0.58), inset 0 -14px 20px rgba(68,95,125,0.16), 0 0 24px rgba(170,210,255,0.16)',
+    tileInactiveBackground: 'linear-gradient(180deg, rgba(255,255,255,0.3) 0%, rgba(228,240,252,0.18) 100%)',
+    tileActiveBackground: 'linear-gradient(180deg, rgba(255,255,255,0.44) 0%, rgba(208,228,248,0.28) 100%)',
+    tileInactiveBorder: 'rgba(132,162,196,0.42)',
+    tileActiveBorder: 'rgba(160,204,240,0.72)',
+    tileInactiveText: 'rgba(24,44,68,0.94)',
+    tileActiveText: 'rgba(8,24,42,0.98)',
+    tileInactiveShadow: 'inset 0 1px 0 rgba(255,255,255,0.46), inset 0 -2px 0 rgba(72,100,132,0.14), 0 12px 20px rgba(62,86,114,0.16), 0 0 22px rgba(172,220,255,0.1)',
+    tileActiveShadow: 'inset 0 1px 0 rgba(255,255,255,0.32), inset 0 12px 20px rgba(180,220,255,0.14), inset 0 -6px 10px rgba(50,76,104,0.18), 0 4px 12px rgba(34,58,84,0.16), 0 0 36px rgba(160,216,255,0.26)',
+    labelShadow: '0 1px 0 rgba(255,255,255,0.46)',
+    backlightInactive: 'radial-gradient(circle at 50% 88%, rgba(144,216,255,0.1) 0%, transparent 72%)',
+    backlightActive: 'radial-gradient(circle at 50% 88%, rgba(160,228,255,0.26) 0%, rgba(130,204,255,0.12) 42%, transparent 78%)',
+    topGloss: 'linear-gradient(180deg, rgba(255,255,255,0.32) 0%, rgba(255,255,255,0.06) 36%, transparent 100%)',
     panelRadius: '30px',
     frameRadius: '26px',
     tileRadius: '26px',
-    tileInsetStroke: 'inset 0 0 0 1px rgba(255,255,255,0.16)',
+    tileInsetStroke: 'inset 0 0 0 1px rgba(255,255,255,0.2)',
     shader: 'fluted-glass',
+    tileSpecularHighlight: 'linear-gradient(var(--lab-light-angle, 35deg), transparent 25%, rgba(255,255,255,0.1) 42%, rgba(255,255,255,0.22) 50%, rgba(255,255,255,0.1) 58%, transparent 75%)',
+    tileEdgeLight: 'inset 1px -1px 6px rgba(180,220,255,0.16), inset -1px 1px 6px rgba(80,110,145,0.12)',
+    activeGlow: '0 0 28px rgba(160,216,255,0.24), 0 0 6px rgba(200,235,255,0.14)',
+    panelReflection: 'linear-gradient(var(--lab-light-angle, 35deg), transparent 15%, rgba(255,255,255,0.05) 42%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 58%, transparent 85%)',
+    rotationRailBg: 'linear-gradient(180deg, rgba(200,215,230,0.92) 0%, rgba(175,192,210,0.92) 100%)',
+    rotationRailBorder: 'rgba(112,136,164,0.28)',
+    rotationRailShadow: 'inset 0 1px 0 rgba(255,255,255,0.54)',
+    rotationRailItemBg: 'transparent',
+    rotationRailItemActiveBg: 'linear-gradient(180deg, rgba(255,255,255,0.36) 0%, rgba(224,238,250,0.22) 100%)',
+    rotationRailItemText: 'rgba(50,72,98,0.6)',
+    rotationRailItemActiveText: 'rgba(16,36,58,0.94)',
   },
+
+  /* ── CERAMIC: Porcelain toggle array ──────────────────────────── */
   ceramic: {
-    panelBackground: 'linear-gradient(180deg,rgba(248,246,239,0.98)_0%,rgba(214,205,188,0.98)_100%)',
-    panelBorder: 'rgba(171,155,128,0.34)',
-    panelShadow: '0 18px 34px rgba(111,94,67,0.14), inset 0 1px 0 rgba(255,255,255,0.94), inset 0 -16px 22px rgba(162,145,118,0.12)',
-    frameBackground: 'linear-gradient(180deg,rgba(190,179,159,0.18)_0%,rgba(243,238,230,0.42)_100%)',
-    frameBorder: 'rgba(181,165,135,0.22)',
-    dividerColor: 'rgba(205,193,171,0.5)',
-    dividerInset: '0 0 0 1px rgba(255,255,255,0.18)',
-    cutoutBackground:
-      'radial-gradient(circle at 50% 50%, rgba(219,211,197,0.88) 0%, rgba(233,227,217,0.98) 52%, rgba(248,245,239,0.98) 100%)',
-    cutoutShadow: 'inset 0 1px 0 rgba(255,255,255,0.82), inset 0 -10px 14px rgba(158,142,115,0.1), 0 1px 0 rgba(255,255,255,0.54)',
-    tileInactiveBackground: 'linear-gradient(180deg,rgba(255,255,252,0.98)_0%,rgba(240,234,225,0.98)_100%)',
-    tileActiveBackground: 'linear-gradient(180deg,rgba(245,239,228,0.98)_0%,rgba(222,211,192,0.98)_100%)',
-    tileInactiveBorder: 'rgba(184,169,141,0.28)',
-    tileActiveBorder: 'rgba(162,141,102,0.44)',
-    tileInactiveText: 'rgba(82,67,48,0.92)',
-    tileActiveText: 'rgba(58,46,31,0.96)',
-    tileInactiveShadow: 'inset 0 1px 0 rgba(255,255,255,0.9), inset 0 -2px 0 rgba(171,150,116,0.14), 0 8px 14px rgba(143,119,82,0.12)',
-    tileActiveShadow: 'inset 0 1px 0 rgba(255,255,255,0.76), inset 0 8px 12px rgba(255,255,255,0.18), inset 0 -4px 7px rgba(165,142,104,0.14), 0 5px 9px rgba(127,101,66,0.14)',
-    labelShadow: '0 1px 0 rgba(255,255,255,0.76)',
-    backlightInactive: 'radial-gradient(circle at 50% 90%, rgba(255,201,118,0.06) 0%, transparent 64%)',
-    backlightActive: 'radial-gradient(circle at 50% 90%, rgba(255,201,118,0.18) 0%, rgba(255,177,93,0.08) 42%, transparent 74%)',
-    topGloss: 'linear-gradient(180deg,rgba(255,255,255,0.82)_0%,rgba(255,255,255,0.24)_42%,transparent_100%)',
+    panelBackground: 'linear-gradient(180deg, #f6f4ee 0%, #d2c8b4 100%)',
+    panelBorder: 'rgba(168,152,124,0.32)',
+    panelShadow: '0 20px 38px rgba(100,84,58,0.16), inset 0 1px 0 rgba(255,255,255,0.96), inset 0 -18px 24px rgba(152,136,108,0.12)',
+    frameBackground: 'linear-gradient(180deg, rgba(185,174,154,0.16) 0%, rgba(240,236,228,0.44) 100%)',
+    frameBorder: 'rgba(176,160,130,0.2)',
+    dividerColor: 'rgba(200,188,166,0.48)',
+    dividerInset: '0 0 0 1px rgba(255,255,255,0.2)',
+    cutoutBackground: 'radial-gradient(circle at 50% 50%, rgba(214,206,192,0.88) 0%, rgba(230,224,214,0.98) 52%, rgba(246,242,236,0.98) 100%)',
+    cutoutShadow: 'inset 0 1px 0 rgba(255,255,255,0.88), inset 0 -12px 16px rgba(148,132,106,0.1), 0 1px 0 rgba(255,255,255,0.56)',
+    tileInactiveBackground: 'linear-gradient(180deg, #ffffff 0%, #f0eadf 100%)',
+    tileActiveBackground: 'linear-gradient(180deg, #f0eadf 0%, #ddd3c0 100%)',
+    tileInactiveBorder: 'rgba(178,164,136,0.26)',
+    tileActiveBorder: 'rgba(156,136,98,0.42)',
+    tileInactiveText: 'rgba(72,60,42,0.92)',
+    tileActiveText: 'rgba(50,40,26,0.96)',
+    tileInactiveShadow: 'inset 0 2px 0 rgba(255,255,255,0.94), inset 0 -3px 0 rgba(162,144,112,0.16), 0 10px 18px rgba(132,112,76,0.14), 0 18px 28px -18px rgba(80,64,38,0.28)',
+    tileActiveShadow: 'inset 0 2px 0 rgba(255,255,255,0.72), inset 0 10px 16px rgba(255,255,255,0.2), inset 0 -5px 8px rgba(156,136,100,0.16), 0 5px 10px rgba(116,96,62,0.16)',
+    labelShadow: '0 1px 0 rgba(255,255,255,0.82)',
+    backlightInactive: 'radial-gradient(circle at 50% 90%, rgba(255,195,110,0.06) 0%, transparent 64%)',
+    backlightActive: 'radial-gradient(circle at 50% 90%, rgba(255,195,110,0.2) 0%, rgba(255,170,88,0.08) 42%, transparent 74%)',
+    topGloss: 'linear-gradient(180deg, rgba(255,255,255,0.88) 0%, rgba(255,255,255,0.28) 44%, transparent 100%)',
     panelRadius: '28px',
     frameRadius: '24px',
     tileRadius: '22px',
-    tileInsetStroke: 'inset 0 0 0 1px rgba(255,255,255,0.28)',
+    tileInsetStroke: 'inset 0 0 0 1px rgba(255,255,255,0.32)',
     shader: 'none',
+    tileSpecularHighlight: 'linear-gradient(var(--lab-light-angle, 35deg), transparent 26%, rgba(255,255,255,0.22) 44%, rgba(255,255,255,0.42) 50%, rgba(255,255,255,0.22) 56%, transparent 74%)',
+    tileEdgeLight: 'inset 1px -2px 5px rgba(255,255,255,0.36), inset -1px 2px 5px rgba(120,100,68,0.08)',
+    panelReflection: 'linear-gradient(var(--lab-light-angle, 35deg), transparent 18%, rgba(255,255,255,0.08) 42%, rgba(255,255,255,0.18) 50%, rgba(255,255,255,0.08) 58%, transparent 82%)',
+    rotationRailBg: 'linear-gradient(180deg, rgba(238,234,226,0.98) 0%, rgba(220,212,198,0.98) 100%)',
+    rotationRailBorder: 'rgba(176,160,130,0.26)',
+    rotationRailShadow: 'inset 0 1px 0 rgba(255,255,255,0.86)',
+    rotationRailItemBg: 'transparent',
+    rotationRailItemActiveBg: 'linear-gradient(180deg, #faf8f4 0%, #ece6dc 100%)',
+    rotationRailItemText: 'rgba(100,84,58,0.6)',
+    rotationRailItemActiveText: 'rgba(50,40,26,0.94)',
   },
+
+  /* ── RUBBER: Industrial silicone keypad ───────────────────────── */
   rubber: {
-    panelBackground: 'linear-gradient(180deg,rgba(80,53,35,0.98)_0%,rgba(34,20,12,0.98)_100%)',
-    panelBorder: 'rgba(119,80,53,0.42)',
-    panelShadow: '0 24px 42px rgba(0,0,0,0.38), inset 0 1px 0 rgba(191,144,101,0.12), inset 0 -18px 22px rgba(0,0,0,0.28)',
-    frameBackground: 'linear-gradient(180deg,rgba(111,73,46,0.18)_0%,rgba(26,15,9,0.46)_100%)',
-    frameBorder: 'rgba(151,108,76,0.18)',
-    dividerColor: 'rgba(59,34,20,0.82)',
-    dividerInset: '0 0 0 1px rgba(255,184,118,0.05)',
-    cutoutBackground:
-      'radial-gradient(circle at 50% 50%, rgba(68,41,25,0.96) 0%, rgba(94,59,37,0.98) 48%, rgba(131,89,56,0.86) 100%)',
-    cutoutShadow: 'inset 0 1px 0 rgba(176,128,90,0.12), inset 0 -14px 18px rgba(0,0,0,0.34), 0 0 18px rgba(0,0,0,0.18)',
-    tileInactiveBackground: 'linear-gradient(180deg,rgba(119,78,48,0.96)_0%,rgba(73,45,26,0.98)_100%)',
-    tileActiveBackground: 'linear-gradient(180deg,rgba(100,62,37,0.98)_0%,rgba(58,34,18,0.98)_100%)',
-    tileInactiveBorder: 'rgba(166,123,83,0.18)',
-    tileActiveBorder: 'rgba(210,165,112,0.28)',
-    tileInactiveText: 'rgba(255,230,201,0.92)',
-    tileActiveText: 'rgba(255,241,223,0.96)',
-    tileInactiveShadow: 'inset 0 2px 0 rgba(171,124,82,0.14), inset 0 -6px 0 rgba(0,0,0,0.26), 0 12px 18px rgba(0,0,0,0.24)',
-    tileActiveShadow: 'inset 0 2px 0 rgba(176,128,88,0.1), inset 0 10px 16px rgba(0,0,0,0.14), inset 0 -2px 0 rgba(0,0,0,0.42), 0 3px 4px rgba(0,0,0,0.18)',
-    labelShadow: '0 1px 0 rgba(0,0,0,0.28)',
-    backlightInactive: 'radial-gradient(circle at 50% 85%, rgba(255,164,88,0.08) 0%, transparent 60%)',
-    backlightActive: 'radial-gradient(circle at 50% 85%, rgba(255,164,88,0.16) 0%, rgba(255,131,48,0.06) 38%, transparent 72%)',
-    topGloss: 'linear-gradient(180deg,rgba(255,221,184,0.08)_0%,rgba(255,221,184,0.01)_28%,transparent_100%)',
-    panelRadius: '26px',
-    frameRadius: '24px',
-    tileRadius: '26px',
-    tileInsetStroke: 'inset 0 0 0 1px rgba(255,198,148,0.05)',
-    shader: 'paper-texture',
+    panelBackground: 'linear-gradient(180deg, #2e2e32 0%, #141416 100%)',
+    panelBorder: 'rgba(80,80,86,0.36)',
+    panelShadow: '0 26px 46px rgba(0,0,0,0.44), inset 0 1px 0 rgba(140,140,148,0.08), inset 0 -20px 26px rgba(0,0,0,0.32)',
+    frameBackground: 'linear-gradient(180deg, rgba(72,72,78,0.14) 0%, rgba(18,18,20,0.48) 100%)',
+    frameBorder: 'rgba(96,96,104,0.14)',
+    dividerColor: 'rgba(40,40,44,0.86)',
+    dividerInset: '0 0 0 1px rgba(180,180,190,0.03)',
+    cutoutBackground: 'radial-gradient(circle at 50% 50%, rgba(48,48,52,0.96) 0%, rgba(66,66,72,0.98) 48%, rgba(96,96,104,0.84) 100%)',
+    cutoutShadow: 'inset 0 1px 0 rgba(140,140,148,0.08), inset 0 -16px 20px rgba(0,0,0,0.38), 0 0 16px rgba(0,0,0,0.2)',
+    tileInactiveBackground: 'linear-gradient(180deg, #48484e 0%, #2a2a2e 100%)',
+    tileActiveBackground: 'linear-gradient(180deg, #3a3a3e 0%, #1e1e22 100%)',
+    tileInactiveBorder: 'rgba(100,100,108,0.14)',
+    tileActiveBorder: 'rgba(200,155,90,0.22)',
+    tileInactiveText: 'rgba(220,220,228,0.88)',
+    tileActiveText: 'rgba(240,236,228,0.96)',
+    tileInactiveShadow: 'inset 0 2px 0 rgba(120,120,128,0.1), inset 0 -8px 0 rgba(0,0,0,0.32), 0 14px 22px rgba(0,0,0,0.28)',
+    tileActiveShadow: 'inset 0 2px 0 rgba(120,120,128,0.06), inset 0 14px 22px rgba(0,0,0,0.18), inset 0 -2px 0 rgba(0,0,0,0.48), 0 2px 4px rgba(0,0,0,0.22)',
+    labelShadow: '0 1px 0 rgba(0,0,0,0.32)',
+    backlightInactive: 'radial-gradient(circle at 50% 85%, rgba(255,155,70,0.06) 0%, transparent 60%)',
+    backlightActive: 'radial-gradient(circle at 50% 85%, rgba(255,155,70,0.14) 0%, rgba(255,120,40,0.05) 38%, transparent 72%)',
+    topGloss: 'linear-gradient(180deg, rgba(200,200,210,0.06) 0%, rgba(200,200,210,0.01) 24%, transparent 100%)',
+    panelRadius: '20px',
+    frameRadius: '16px',
+    tileRadius: '14px',
+    tileInsetStroke: 'inset 0 0 0 1px rgba(160,160,168,0.04)',
+    shader: 'voronoi',
+    rotationRailBg: 'linear-gradient(180deg, rgba(42,42,46,0.98) 0%, rgba(26,26,28,0.98) 100%)',
+    rotationRailBorder: 'rgba(80,80,86,0.22)',
+    rotationRailShadow: 'inset 0 1px 0 rgba(140,140,148,0.06)',
+    rotationRailItemBg: 'transparent',
+    rotationRailItemActiveBg: 'linear-gradient(180deg, #3e3e42 0%, #2a2a2e 100%)',
+    rotationRailItemText: 'rgba(180,180,188,0.48)',
+    rotationRailItemActiveText: 'rgba(228,228,234,0.92)',
   },
+
+  /* ── INSTRUMENT: Scientific instrument panel ──────────────────── */
   instrument: {
-    panelBackground: 'linear-gradient(180deg,rgba(236,242,246,0.98)_0%,rgba(194,204,214,0.98)_100%)',
-    panelBorder: 'rgba(132,150,170,0.34)',
-    panelShadow: '0 18px 34px rgba(73,96,123,0.16), inset 0 1px 0 rgba(255,255,255,0.88), inset 0 -18px 22px rgba(124,147,173,0.1)',
-    frameBackground: 'linear-gradient(180deg,rgba(149,170,192,0.16)_0%,rgba(237,244,249,0.46)_100%)',
-    frameBorder: 'rgba(154,174,194,0.22)',
-    dividerColor: 'rgba(170,190,210,0.44)',
-    dividerInset: '0 0 0 1px rgba(255,255,255,0.16)',
-    cutoutBackground:
-      'radial-gradient(circle at 50% 50%, rgba(194,206,218,0.88) 0%, rgba(213,223,232,0.96) 52%, rgba(244,248,251,0.98) 100%)',
-    cutoutShadow: 'inset 0 1px 0 rgba(255,255,255,0.86), inset 0 -12px 16px rgba(146,166,186,0.12), 0 1px 0 rgba(255,255,255,0.46)',
-    tileInactiveBackground: 'linear-gradient(180deg,rgba(253,255,255,0.98)_0%,rgba(230,237,244,0.98)_100%)',
-    tileActiveBackground: 'linear-gradient(180deg,rgba(233,243,250,0.98)_0%,rgba(204,218,229,0.98)_100%)',
-    tileInactiveBorder: 'rgba(156,176,195,0.3)',
-    tileActiveBorder: 'rgba(105,148,191,0.42)',
-    tileInactiveText: 'rgba(56,73,92,0.92)',
-    tileActiveText: 'rgba(34,52,72,0.96)',
-    tileInactiveShadow: 'inset 0 1px 0 rgba(255,255,255,0.9), inset 0 -1px 0 rgba(157,176,194,0.12), 0 8px 14px rgba(110,133,158,0.12)',
-    tileActiveShadow: 'inset 0 1px 0 rgba(255,255,255,0.72), inset 0 0 0 1px rgba(154,198,235,0.18), 0 7px 12px rgba(104,132,156,0.16), 0 0 20px rgba(166,219,255,0.1)',
-    labelShadow: '0 1px 0 rgba(255,255,255,0.72)',
-    backlightInactive: 'radial-gradient(circle at 50% 88%, rgba(167,222,255,0.08) 0%, transparent 66%)',
-    backlightActive: 'radial-gradient(circle at 50% 88%, rgba(167,222,255,0.2) 0%, rgba(111,190,255,0.08) 40%, transparent 74%)',
-    topGloss: 'linear-gradient(180deg,rgba(255,255,255,0.76)_0%,rgba(255,255,255,0.18)_36%,transparent_100%)',
-    panelRadius: '18px',
-    frameRadius: '14px',
-    tileRadius: '10px',
-    tileInsetStroke: 'inset 0 0 0 1px rgba(255,255,255,0.24)',
-    shader: 'none',
+    panelBackground: 'linear-gradient(180deg, #e0e8ee 0%, #bcc8d4 100%)',
+    panelBorder: 'rgba(118,138,160,0.36)',
+    panelShadow: '0 18px 34px rgba(60,82,110,0.18), inset 0 1px 0 rgba(255,255,255,0.9), inset 0 -18px 24px rgba(110,134,162,0.1)',
+    frameBackground: 'linear-gradient(180deg, rgba(138,160,184,0.18) 0%, rgba(232,240,248,0.48) 100%)',
+    frameBorder: 'rgba(142,164,188,0.22)',
+    dividerColor: 'rgba(158,180,204,0.46)',
+    dividerInset: '0 0 0 1px rgba(255,255,255,0.14)',
+    cutoutBackground: 'radial-gradient(circle at 50% 50%, rgba(184,198,214,0.88) 0%, rgba(206,218,230,0.96) 52%, rgba(240,246,250,0.98) 100%)',
+    cutoutShadow: 'inset 0 1px 0 rgba(255,255,255,0.88), inset 0 -12px 16px rgba(132,154,178,0.12), 0 1px 0 rgba(255,255,255,0.44)',
+    tileInactiveBackground: 'linear-gradient(180deg, #f4f7fa 0%, #d4dde6 100%)',
+    tileActiveBackground: 'linear-gradient(180deg, #dce6ee 0%, #b4c2ce 100%)',
+    tileInactiveBorder: 'rgba(144,166,190,0.3)',
+    tileActiveBorder: 'rgba(92,138,186,0.44)',
+    tileInactiveText: 'rgba(44,62,82,0.92)',
+    tileActiveText: 'rgba(26,44,64,0.96)',
+    tileInactiveShadow: 'inset 0 1px 0 rgba(255,255,255,0.92), inset 0 -1px 0 rgba(146,168,190,0.12), 0 8px 14px rgba(98,122,150,0.14)',
+    tileActiveShadow: 'inset 0 1px 0 rgba(255,255,255,0.7), inset 0 0 0 1px rgba(142,192,232,0.16), 0 7px 12px rgba(90,118,148,0.18), 0 0 22px rgba(154,210,255,0.12)',
+    labelShadow: '0 1px 0 rgba(255,255,255,0.7)',
+    backlightInactive: 'radial-gradient(circle at 50% 88%, rgba(154,214,255,0.08) 0%, transparent 66%)',
+    backlightActive: 'radial-gradient(circle at 50% 88%, rgba(154,214,255,0.22) 0%, rgba(100,182,255,0.08) 40%, transparent 74%)',
+    topGloss: 'linear-gradient(180deg, rgba(255,255,255,0.72) 0%, rgba(255,255,255,0.16) 34%, transparent 100%)',
+    panelRadius: '16px',
+    frameRadius: '12px',
+    tileRadius: '8px',
+    tileInsetStroke: 'inset 0 0 0 1px rgba(255,255,255,0.22)',
+    shader: 'waves',
+    tileSpecularHighlight: 'linear-gradient(var(--lab-light-angle, 35deg), transparent 34%, rgba(255,255,255,0.12) 47%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.12) 53%, transparent 66%)',
+    tileEdgeLight: 'inset 1px -1px 2px rgba(255,255,255,0.18), inset -1px 1px 2px rgba(80,100,125,0.06)',
+    panelTexture: 'repeating-linear-gradient(0deg, transparent 0px, transparent 1px, rgba(120,140,165,0.03) 1px, rgba(120,140,165,0.03) 2px)',
+    rotationRailBg: 'linear-gradient(180deg, rgba(216,226,236,0.98) 0%, rgba(192,204,216,0.98) 100%)',
+    rotationRailBorder: 'rgba(142,164,188,0.26)',
+    rotationRailShadow: 'inset 0 1px 0 rgba(255,255,255,0.74)',
+    rotationRailItemBg: 'transparent',
+    rotationRailItemActiveBg: 'linear-gradient(180deg, #eaf0f6 0%, #ced8e2 100%)',
+    rotationRailItemText: 'rgba(68,88,112,0.6)',
+    rotationRailItemActiveText: 'rgba(26,44,64,0.94)',
   },
+
+  /* ── MIDNIGHT: Deep space console ─────────────────────────────── */
   midnight: {
-    panelBackground: 'linear-gradient(180deg,rgba(24,27,42,0.98)_0%,rgba(8,10,17,0.98)_100%)',
-    panelBorder: 'rgba(92,110,180,0.22)',
-    panelShadow: '0 26px 48px rgba(0,0,0,0.46), inset 0 1px 0 rgba(135,164,255,0.08), inset 0 -20px 28px rgba(0,0,0,0.32), 0 0 48px rgba(92,132,255,0.05)',
-    frameBackground: 'linear-gradient(180deg,rgba(54,63,107,0.14)_0%,rgba(8,11,20,0.5)_100%)',
-    frameBorder: 'rgba(98,116,190,0.14)',
-    dividerColor: 'rgba(19,23,38,0.92)',
-    dividerInset: '0 0 0 1px rgba(132,160,255,0.05)',
-    cutoutBackground:
-      'radial-gradient(circle at 50% 50%, rgba(26,32,57,0.96) 0%, rgba(43,50,87,0.98) 48%, rgba(72,87,148,0.78) 100%)',
-    cutoutShadow: 'inset 0 1px 0 rgba(158,184,255,0.12), inset 0 -16px 20px rgba(0,0,0,0.38), 0 0 24px rgba(78,124,255,0.12)',
-    tileInactiveBackground: 'linear-gradient(180deg,rgba(52,60,96,0.98)_0%,rgba(18,22,36,0.98)_100%)',
-    tileActiveBackground: 'linear-gradient(180deg,rgba(74,89,153,0.98)_0%,rgba(22,28,50,0.98)_100%)',
-    tileInactiveBorder: 'rgba(122,147,245,0.12)',
-    tileActiveBorder: 'rgba(134,194,255,0.34)',
-    tileInactiveText: 'rgba(226,233,255,0.9)',
-    tileActiveText: 'rgba(244,248,255,0.98)',
-    tileInactiveShadow: 'inset 0 1px 0 rgba(146,166,255,0.08), inset 0 -4px 0 rgba(0,0,0,0.3), 0 14px 20px rgba(0,0,0,0.26)',
-    tileActiveShadow: 'inset 0 1px 0 rgba(171,194,255,0.12), inset 0 0 0 1px rgba(132,214,255,0.18), 0 14px 24px rgba(0,0,0,0.26), 0 0 28px rgba(92,172,255,0.14)',
-    labelShadow: '0 0 18px rgba(137,193,255,0.24)',
-    backlightInactive: 'radial-gradient(circle at 50% 88%, rgba(122,177,255,0.08) 0%, transparent 68%)',
-    backlightActive: 'radial-gradient(circle at 50% 88%, rgba(122,177,255,0.22) 0%, rgba(80,236,255,0.08) 42%, transparent 74%)',
-    topGloss: 'linear-gradient(180deg,rgba(160,183,255,0.12)_0%,rgba(160,183,255,0.02)_30%,transparent_100%)',
+    panelBackground: 'linear-gradient(180deg, #181c30 0%, #06080e 100%)',
+    panelBorder: 'rgba(80,100,180,0.18)',
+    panelShadow: '0 28px 52px rgba(0,0,0,0.52), inset 0 1px 0 rgba(120,150,255,0.06), inset 0 -22px 30px rgba(0,0,0,0.36), 0 0 56px rgba(80,120,255,0.06)',
+    frameBackground: 'linear-gradient(180deg, rgba(46,54,100,0.12) 0%, rgba(6,8,16,0.54) 100%)',
+    frameBorder: 'rgba(86,106,186,0.12)',
+    dividerColor: 'rgba(14,18,32,0.94)',
+    dividerInset: '0 0 0 1px rgba(120,148,255,0.04)',
+    cutoutBackground: 'radial-gradient(circle at 50% 50%, rgba(20,26,50,0.96) 0%, rgba(36,44,80,0.98) 48%, rgba(62,76,140,0.76) 100%)',
+    cutoutShadow: 'inset 0 1px 0 rgba(146,172,255,0.1), inset 0 -18px 22px rgba(0,0,0,0.42), 0 0 28px rgba(68,114,255,0.14)',
+    tileInactiveBackground: 'linear-gradient(180deg, #3a4270 0%, #141828 100%)',
+    tileActiveBackground: 'linear-gradient(180deg, #4e5c9e 0%, #181e38 100%)',
+    tileInactiveBorder: 'rgba(110,136,240,0.1)',
+    tileActiveBorder: 'rgba(120,188,255,0.38)',
+    tileInactiveText: 'rgba(220,228,255,0.88)',
+    tileActiveText: 'rgba(240,246,255,0.98)',
+    tileInactiveShadow: 'inset 0 1px 0 rgba(134,156,255,0.06), inset 0 -5px 0 rgba(0,0,0,0.34), 0 16px 24px rgba(0,0,0,0.3)',
+    tileActiveShadow: 'inset 0 1px 0 rgba(160,184,255,0.1), inset 0 0 0 1px rgba(120,204,255,0.16), 0 16px 28px rgba(0,0,0,0.3), 0 0 36px rgba(80,164,255,0.18), 0 0 10px rgba(130,200,255,0.12)',
+    labelShadow: '0 0 22px rgba(125,185,255,0.28)',
+    backlightInactive: 'radial-gradient(circle at 50% 88%, rgba(110,168,255,0.1) 0%, transparent 68%)',
+    backlightActive: 'radial-gradient(circle at 50% 88%, rgba(110,168,255,0.26) 0%, rgba(70,230,255,0.1) 42%, transparent 74%)',
+    topGloss: 'linear-gradient(180deg, rgba(148,172,255,0.1) 0%, rgba(148,172,255,0.01) 28%, transparent 100%)',
     panelRadius: '20px',
     frameRadius: '18px',
     tileRadius: '12px',
     tileClipPath: 'polygon(6% 0%, 94% 0%, 100% 16%, 100% 84%, 94% 100%, 6% 100%, 0% 84%, 0% 16%)',
-    tileInsetStroke: 'inset 0 0 0 1px rgba(118,169,255,0.06)',
-    shader: 'none',
+    tileInsetStroke: 'inset 0 0 0 1px rgba(106,158,255,0.05)',
+    shader: 'warp',
+    tileSpecularHighlight: 'linear-gradient(var(--lab-light-angle, 35deg), transparent 32%, rgba(140,170,255,0.06) 46%, rgba(140,170,255,0.12) 50%, rgba(140,170,255,0.06) 54%, transparent 68%)',
+    tileEdgeLight: 'inset 1px -1px 4px rgba(100,160,255,0.1), inset -1px 1px 4px rgba(0,0,0,0.12)',
+    activeGlow: '0 0 36px rgba(80,164,255,0.2), 0 0 8px rgba(120,200,255,0.14), 0 0 72px rgba(60,120,255,0.1)',
+    panelReflection: 'radial-gradient(ellipse at 50% 25%, rgba(100,140,255,0.03) 0%, transparent 55%)',
+    rotationRailBg: 'linear-gradient(180deg, rgba(24,28,48,0.98) 0%, rgba(12,14,26,0.98) 100%)',
+    rotationRailBorder: 'rgba(80,100,180,0.14)',
+    rotationRailShadow: 'inset 0 1px 0 rgba(120,148,255,0.06), 0 0 14px rgba(70,110,255,0.04)',
+    rotationRailItemBg: 'transparent',
+    rotationRailItemActiveBg: 'linear-gradient(180deg, rgba(60,72,130,0.6) 0%, rgba(28,34,62,0.6) 100%)',
+    rotationRailItemText: 'rgba(170,186,240,0.44)',
+    rotationRailItemActiveText: 'rgba(220,230,255,0.94)',
   },
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   RENDERING HELPERS
+   ═══════════════════════════════════════════════════════════════════ */
 
 function getInnerCornerPosition(row: 'top' | 'bottom', column: 'left' | 'right', cutoutDiameter: number) {
   return {
@@ -312,17 +423,37 @@ function PhaseTileShader({
   shader: SurfaceShaderId
   isActive: boolean
 }) {
-  if (shader === 'paper-texture') {
+  if (shader === 'dithering') {
     return (
-      <div className="pointer-events-none absolute inset-[1px] rounded-[inherit] overflow-hidden opacity-75 mix-blend-multiply">
-        <LazyPaperTexture
+      <div className="pointer-events-none absolute inset-[1px] overflow-hidden rounded-[inherit] opacity-60 mix-blend-multiply">
+        <LazyDithering
           className="h-full w-full"
           style={{ width: '100%', height: '100%' }}
-          colorBack={isActive ? '#aeb4bb' : '#dce1e6'}
-          colorFront={isActive ? '#5f676f' : '#8b949c'}
-          scale={1.3}
-          speed={0.15}
-          seed={4}
+          colorBack={isActive ? '#7a828a' : '#c0c6cc'}
+          colorFront={isActive ? '#4a5258' : '#8a929a'}
+          shape="warp"
+          type="4x4"
+          size={1.5}
+          scale={2.4}
+          speed={0.08}
+        />
+      </div>
+    )
+  }
+
+  if (shader === 'neuro-noise') {
+    return (
+      <div className="pointer-events-none absolute inset-[1px] overflow-hidden rounded-[inherit] opacity-80 mix-blend-screen">
+        <LazyNeuroNoise
+          className="h-full w-full"
+          style={{ width: '100%', height: '100%' }}
+          colorFront={isActive ? '#ffcc88' : '#ff9e44'}
+          colorMid={isActive ? '#cc6600' : '#884400'}
+          colorBack="#1a0e04"
+          brightness={isActive ? 0.7 : 0.35}
+          contrast={0.6}
+          scale={1.6}
+          speed={0.18}
         />
       </div>
     )
@@ -330,15 +461,79 @@ function PhaseTileShader({
 
   if (shader === 'fluted-glass') {
     return (
-      <div className="pointer-events-none absolute inset-[1px] rounded-[inherit] overflow-hidden opacity-90 mix-blend-screen">
+      <div className="pointer-events-none absolute inset-[1px] overflow-hidden rounded-[inherit] opacity-90 mix-blend-screen">
         <LazyFlutedGlass
           className="h-full w-full"
           style={{ width: '100%', height: '100%' }}
-          colorHighlight={isActive ? '#dff6ff' : '#f3fbff'}
-          colorShadow={isActive ? '#5f7d97' : '#87a8c0'}
-          speed={0.12}
-          distortion={0.12}
-          scale={1.1}
+          colorHighlight={isActive ? '#dff8ff' : '#f0faff'}
+          colorShadow={isActive ? '#4a6e8a' : '#7a9eb8'}
+          speed={0.14}
+          distortion={0.22}
+          scale={1.3}
+        />
+      </div>
+    )
+  }
+
+  if (shader === 'voronoi') {
+    return (
+      <div className="pointer-events-none absolute inset-[1px] overflow-hidden rounded-[inherit] opacity-30 mix-blend-overlay">
+        <LazyVoronoi
+          className="h-full w-full"
+          style={{ width: '100%', height: '100%' }}
+          colors={isActive ? ['#2e2e32', '#3a3a3e', '#444448'] : ['#48484e', '#54545a', '#606066']}
+          colorGap={isActive ? '#1a1a1e' : '#2a2a2e'}
+          scale={3.2}
+          gap={0.02}
+          glow={0.15}
+          speed={0.04}
+          distortion={0.08}
+        />
+      </div>
+    )
+  }
+
+  if (shader === 'waves') {
+    return (
+      <div className="pointer-events-none absolute inset-[1px] overflow-hidden rounded-[inherit] opacity-40 mix-blend-multiply">
+        <LazyWaves
+          className="h-full w-full"
+          style={{ width: '100%', height: '100%' }}
+          colorFront={isActive ? '#8a9eb8' : '#a4b8d0'}
+          colorBack={isActive ? '#dce6ee' : '#f0f6fa'}
+          shape={0}
+          frequency={1.8}
+          amplitude={0.06}
+          spacing={0.15}
+          proportion={0.4}
+          softness={0.35}
+          scale={4.0}
+          rotation={0}
+        />
+      </div>
+    )
+  }
+
+  if (shader === 'warp') {
+    return (
+      <div className="pointer-events-none absolute inset-[1px] overflow-hidden rounded-[inherit] opacity-65 mix-blend-screen">
+        <LazyWarp
+          className="h-full w-full"
+          style={{ width: '100%', height: '100%' }}
+          colors={
+            isActive
+              ? ['#1a2050', '#2a3878', '#4060b0', '#2244aa', '#183060']
+              : ['#101830', '#1a2448', '#2a3870', '#1a2e60', '#121e40']
+          }
+          shape="stripes"
+          shapeScale={0.3}
+          distortion={0.4}
+          swirl={0.2}
+          swirlIterations={6}
+          softness={0.7}
+          proportion={0.5}
+          speed={0.06}
+          scale={1.2}
         />
       </div>
     )
@@ -380,6 +575,10 @@ function PhaseAreaTile({
         mass: switchMotion.spring.mass,
       }
 
+  const activeShadow = isActive && theme.activeGlow
+    ? `${theme.tileActiveShadow}, ${theme.activeGlow}`
+    : theme.tileActiveShadow
+
   return (
     <button
       type="button"
@@ -402,13 +601,14 @@ function PhaseAreaTile({
           ['--lab-switch-knob-glow' as string]: switchMotion.knobGlow,
           background: isActive ? theme.tileActiveBackground : theme.tileInactiveBackground,
           borderColor: isActive ? theme.tileActiveBorder : theme.tileInactiveBorder,
-          boxShadow: isActive ? theme.tileActiveShadow : theme.tileInactiveShadow,
+          boxShadow: isActive ? activeShadow : theme.tileInactiveShadow,
           color: isActive ? theme.tileActiveText : theme.tileInactiveText,
           backdropFilter: variantId === 'glass' ? 'blur(10px) saturate(1.08)' : variantId === 'backlit' ? 'blur(8px)' : undefined,
           borderRadius: theme.tileRadius,
           clipPath: theme.tileClipPath,
         }}
       >
+        {/* Backlight layer */}
         <span
           aria-hidden
           className="pointer-events-none absolute inset-0 rounded-[inherit]"
@@ -418,12 +618,31 @@ function PhaseAreaTile({
             boxShadow: theme.tileInsetStroke,
           }}
         />
+        {/* Top gloss layer */}
         <span
           aria-hidden
           className="pointer-events-none absolute inset-x-[10px] top-0 h-[38%] rounded-t-[inherit]"
           style={{ background: theme.topGloss }}
         />
+        {/* Shader layer */}
         <PhaseTileShader shader={theme.shader} isActive={isActive} />
+        {/* Specular highlight — directional light catch */}
+        {theme.tileSpecularHighlight && (
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-0 rounded-[inherit]"
+            style={{ background: theme.tileSpecularHighlight }}
+          />
+        )}
+        {/* Edge light — rim lighting */}
+        {theme.tileEdgeLight && (
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-0 rounded-[inherit]"
+            style={{ boxShadow: theme.tileEdgeLight }}
+          />
+        )}
+        {/* Cutout corner mask */}
         <span
           aria-hidden
           className="pointer-events-none absolute rounded-full"
@@ -435,6 +654,7 @@ function PhaseAreaTile({
             boxShadow: theme.cutoutShadow,
           }}
         />
+        {/* Label */}
         <span
           className="relative z-[1] text-[1.02rem] font-semibold tracking-[-0.02em]"
           style={{
@@ -470,7 +690,7 @@ export function Concept8FullLedPerimeter(props: PrototypeControlProps) {
   return (
     <div className="flex w-full flex-col justify-end">
       <div
-        className="border p-2"
+        className="relative overflow-hidden border p-2"
         style={{
           background: theme.panelBackground,
           borderColor: theme.panelBorder,
@@ -478,47 +698,79 @@ export function Concept8FullLedPerimeter(props: PrototypeControlProps) {
           borderRadius: theme.panelRadius,
         }}
       >
-        <PhasePadRotationRail {...props} />
-
-        <div className="relative overflow-visible rounded-[18px] p-[10px]">
+        {/* Panel texture overlay */}
+        {theme.panelTexture && (
           <div
-            className="relative z-[1] border"
-            style={{
-              padding: `${lanePadding}px`,
-              background: theme.frameBackground,
-              borderColor: theme.frameBorder,
-              borderRadius: theme.frameRadius,
+            aria-hidden
+            className="pointer-events-none absolute inset-0 z-[0] rounded-[inherit]"
+            style={{ background: theme.panelTexture }}
+          />
+        )}
+        {/* Panel reflection/sheen overlay */}
+        {theme.panelReflection && (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 z-[0] rounded-[inherit]"
+            style={{ background: theme.panelReflection }}
+          />
+        )}
+
+        <div className="relative z-[1]">
+          <PhasePadRotationRail
+            {...props}
+            railStyle={{
+              background: theme.rotationRailBg,
+              borderColor: theme.rotationRailBorder,
+              boxShadow: theme.rotationRailShadow,
             }}
-          >
-            <PhasePadHardwareLane
-              tuning={hardwareTuning}
-              segmentStart={perimeterState.segmentStart}
-              segmentLength={perimeterState.segmentLength}
-              totalLights={perimeterState.totalLights}
-            />
+            railItemColors={{
+              bg: theme.rotationRailItemBg,
+              activeBg: theme.rotationRailItemActiveBg,
+              text: theme.rotationRailItemText,
+              activeText: theme.rotationRailItemActiveText,
+            }}
+          />
 
+          <div className="relative overflow-visible rounded-[18px] p-[10px]">
             <div
-              className="relative z-[1] grid grid-cols-2 gap-px overflow-hidden"
-              style={{ background: theme.dividerColor, borderRadius: theme.frameRadius, boxShadow: theme.dividerInset }}
+              className="relative z-[1] border"
+              style={{
+                padding: `${lanePadding}px`,
+                background: theme.frameBackground,
+                borderColor: theme.frameBorder,
+                borderRadius: theme.frameRadius,
+              }}
             >
-              {PHASE_PAD_LAYOUT.map((item) => (
-                <PhaseAreaTile
-                  key={item.phase}
-                  phase={item.phase}
-                  label={item.phase === 'OFFENSE' ? offenseLabel : item.label}
-                  isActive={item.phase === activeDisplayPhase}
-                  row={item.row}
-                  column={item.column}
-                  cutoutDiameter={cutoutDiameter}
-                  variantId={props.variantId}
-                  switchMotion={props.switchMotion}
-                  onManualPhaseSelect={props.onManualPhaseSelect}
-                />
-              ))}
-            </div>
-          </div>
+              <PhasePadHardwareLane
+                tuning={hardwareTuning}
+                segmentStart={perimeterState.segmentStart}
+                segmentLength={perimeterState.segmentLength}
+                totalLights={perimeterState.totalLights}
+              />
 
-          <PhasePadJoystick props={props} />
+              <div
+                className="relative z-[1] grid grid-cols-2 gap-px overflow-hidden"
+                style={{ background: theme.dividerColor, borderRadius: theme.frameRadius, boxShadow: theme.dividerInset }}
+              >
+                {PHASE_PAD_LAYOUT.map((item) => (
+                  <PhaseAreaTile
+                    key={item.phase}
+                    phase={item.phase}
+                    label={item.phase === 'OFFENSE' ? offenseLabel : item.label}
+                    isActive={item.phase === activeDisplayPhase}
+                    row={item.row}
+                    column={item.column}
+                    cutoutDiameter={cutoutDiameter}
+                    variantId={props.variantId}
+                    switchMotion={props.switchMotion}
+                    onManualPhaseSelect={props.onManualPhaseSelect}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <PhasePadJoystick props={props} />
+          </div>
         </div>
       </div>
     </div>
