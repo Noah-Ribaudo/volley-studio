@@ -1,7 +1,7 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { useState, type ComponentType } from 'react'
+import { useMemo, useState, type ComponentType } from 'react'
 import { motion, useReducedMotion } from 'motion/react'
 import type { CorePhase, PrototypePhase, PrototypeVariantId } from '@/lib/rebuild/prototypeFlow'
 import type { PrototypeControlProps } from './types'
@@ -706,11 +706,20 @@ export function Concept8FullLedPerimeter(props: PrototypeControlProps) {
   const hardwareTuning = props.tactileTuning.phasePadHardware
   const theme = PHASE_PAD_VARIANT_THEMES[props.variantId]
   const lanePadding = Math.max(8, hardwareTuning.trackWidth + 4.5)
+  const piecesPerEdge = useMemo(
+    () => [
+      hardwareTuning.piecesPerHorizontalEdge, // DEFENSE — top
+      hardwareTuning.piecesPerVerticalEdge,    // OFFENSE — right
+      hardwareTuning.piecesPerHorizontalEdge, // RECEIVE — bottom
+      hardwareTuning.piecesPerVerticalEdge,    // SERVE — left
+    ],
+    [hardwareTuning.piecesPerHorizontalEdge, hardwareTuning.piecesPerVerticalEdge]
+  )
   const perimeterState = useQuarterTrackTravelState({
     currentCorePhase: props.displayCurrentCorePhase,
     targetCorePhase: props.displayTargetCorePhase,
     isPhaseTraveling: props.isPhaseTraveling,
-    positionsPerQuarter: hardwareTuning.piecesPerQuarter,
+    piecesPerEdge,
     phaseOrder: C8_PHASE_ORDER,
     travelDurationMs: props.tactileTuning.c4Literal.connectorMotion.playDurationMs,
   })

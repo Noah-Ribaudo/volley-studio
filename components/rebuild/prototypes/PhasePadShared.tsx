@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useReducedMotion } from 'motion/react'
 import { formatCorePhaseLabel, type CorePhase } from '@/lib/rebuild/prototypeFlow'
 import type { PhaseEmphasisTuning, PhasePadHardwareTuning } from '@/lib/rebuild/tactileTuning'
@@ -88,45 +88,73 @@ export function useQuarterTrackTravelState({
   currentCorePhase,
   targetCorePhase,
   isPhaseTraveling,
-  positionsPerQuarter,
+  piecesPerEdge,
   phaseOrder,
   travelDurationMs,
 }: {
   currentCorePhase: CorePhase
   targetCorePhase: CorePhase
   isPhaseTraveling: boolean
-  positionsPerQuarter: number
+  piecesPerEdge: number[]
   phaseOrder: readonly CorePhase[]
   travelDurationMs: number
 }) {
   const prefersReducedMotion = useReducedMotion()
-  const segmentLength = positionsPerQuarter
-  const totalLights = positionsPerQuarter * phaseOrder.length
-  const restingStart = useMemo(
-    () => getQuarterTrackSegmentStart(currentCorePhase, positionsPerQuarter, phaseOrder),
-    [currentCorePhase, phaseOrder, positionsPerQuarter]
+  const totalLights = useMemo(() => piecesPerEdge.reduce((a, b) => a + b, 0), [piecesPerEdge])
+
+  const getEdgeStart = useCallback(
+    (phase: CorePhase) => {
+      const idx = phaseOrder.indexOf(phase)
+      if (idx <= 0) return 0
+      let start = 0
+      for (let i = 0; i < idx; i++) start += piecesPerEdge[i]
+      return start
+    },
+    [phaseOrder, piecesPerEdge]
   )
+
+  const getEdgeLength = useCallback(
+    (phase: CorePhase) => {
+      const idx = phaseOrder.indexOf(phase)
+      return idx >= 0 ? piecesPerEdge[idx] : piecesPerEdge[0]
+    },
+    [phaseOrder, piecesPerEdge]
+  )
+
+  const restingStart = useMemo(() => getEdgeStart(currentCorePhase), [currentCorePhase, getEdgeStart])
+  const restingLength = useMemo(() => getEdgeLength(currentCorePhase), [currentCorePhase, getEdgeLength])
+
   const segmentStartRef = useRef(restingStart)
+  const segmentLengthRef = useRef(restingLength)
   const [segmentStart, setSegmentStart] = useState(restingStart)
+  const [segmentLength, setSegmentLength] = useState(restingLength)
 
   useEffect(() => {
     segmentStartRef.current = segmentStart
-  }, [segmentStart])
+    segmentLengthRef.current = segmentLength
+  }, [segmentStart, segmentLength])
 
   useEffect(() => {
     if (!isPhaseTraveling) {
       segmentStartRef.current = restingStart
+      segmentLengthRef.current = restingLength
       setSegmentStart(restingStart)
+      setSegmentLength(restingLength)
       return
     }
 
     const originStart = segmentStartRef.current
-    const goalStart = getQuarterTrackSegmentStart(targetCorePhase, positionsPerQuarter, phaseOrder)
+    const originLength = segmentLengthRef.current
+    const goalStart = getEdgeStart(targetCorePhase)
+    const goalLength = getEdgeLength(targetCorePhase)
     const travelDelta = getShortestPerimeterDelta(originStart, goalStart, totalLights)
+    const lengthDelta = goalLength - originLength
 
-    if (Math.abs(travelDelta) < 0.001) {
+    if (Math.abs(travelDelta) < 0.001 && Math.abs(lengthDelta) < 0.001) {
       segmentStartRef.current = goalStart
+      segmentLengthRef.current = goalLength
       setSegmentStart(goalStart)
+      setSegmentLength(goalLength)
       return
     }
 
@@ -136,9 +164,10 @@ export function useQuarterTrackTravelState({
 
     const tick = (now: number) => {
       const progress = Math.min((now - startedAt) / durationMs, 1)
-      const nextStart = originStart + travelDelta * progress
-      segmentStartRef.current = nextStart
-      setSegmentStart(nextStart)
+      segmentStartRef.current = originStart + travelDelta * progress
+      segmentLengthRef.current = originLength + lengthDelta * progress
+      setSegmentStart(segmentStartRef.current)
+      setSegmentLength(segmentLengthRef.current)
 
       if (progress < 1) {
         frameId = window.requestAnimationFrame(tick)
@@ -152,10 +181,11 @@ export function useQuarterTrackTravelState({
     }
   }, [
     currentCorePhase,
+    getEdgeLength,
+    getEdgeStart,
     isPhaseTraveling,
-    phaseOrder,
-    positionsPerQuarter,
     prefersReducedMotion,
+    restingLength,
     restingStart,
     targetCorePhase,
     totalLights,
@@ -311,13 +341,16 @@ export function getPerimeterSegmentState({
   }
 }
 
-function getQuarterTrackSegmentStart(
+function getEdgeTrackSegmentStart(
   phase: CorePhase,
-  positionsPerQuarter: number,
+  piecesPerEdge: number[],
   phaseOrder: readonly CorePhase[]
 ) {
   const phaseIndex = phaseOrder.indexOf(phase)
-  return (phaseIndex >= 0 ? phaseIndex : 0) * positionsPerQuarter
+  if (phaseIndex <= 0) return 0
+  let start = 0
+  for (let i = 0; i < phaseIndex; i++) start += piecesPerEdge[i]
+  return start
 }
 
 export function getQuarterTrackSegmentState({
@@ -326,7 +359,7 @@ export function getQuarterTrackSegmentState({
   transitionTo,
   transitionProgress,
   isPreviewingMovement,
-  positionsPerQuarter,
+  piecesPerEdge,
   phaseOrder,
 }: {
   currentCorePhase: CorePhase
@@ -334,27 +367,32 @@ export function getQuarterTrackSegmentState({
   transitionTo: CorePhase
   transitionProgress: number
   isPreviewingMovement: boolean
-  positionsPerQuarter: number
+  piecesPerEdge: number[]
   phaseOrder: readonly CorePhase[]
 }) {
-  const segmentLength = positionsPerQuarter
-  const totalLights = positionsPerQuarter * phaseOrder.length
-  const restingStart = getQuarterTrackSegmentStart(currentCorePhase, positionsPerQuarter, phaseOrder)
+  const totalLights = piecesPerEdge.reduce((a, b) => a + b, 0)
+  const currentIdx = phaseOrder.indexOf(currentCorePhase)
+  const restingLength = currentIdx >= 0 ? piecesPerEdge[currentIdx] : piecesPerEdge[0]
+  const restingStart = getEdgeTrackSegmentStart(currentCorePhase, piecesPerEdge, phaseOrder)
 
   if (!isPreviewingMovement) {
     return {
-      segmentLength,
+      segmentLength: restingLength,
       totalLights,
       segmentStart: restingStart,
     }
   }
 
-  const fromStart = getQuarterTrackSegmentStart(transitionFrom, positionsPerQuarter, phaseOrder)
-  const toStart = getQuarterTrackSegmentStart(transitionTo, positionsPerQuarter, phaseOrder)
+  const fromStart = getEdgeTrackSegmentStart(transitionFrom, piecesPerEdge, phaseOrder)
+  const toStart = getEdgeTrackSegmentStart(transitionTo, piecesPerEdge, phaseOrder)
+  const fromIdx = phaseOrder.indexOf(transitionFrom)
+  const toIdx = phaseOrder.indexOf(transitionTo)
+  const fromLength = fromIdx >= 0 ? piecesPerEdge[fromIdx] : piecesPerEdge[0]
+  const toLength = toIdx >= 0 ? piecesPerEdge[toIdx] : piecesPerEdge[0]
   const travelDelta = getShortestPerimeterDelta(fromStart, toStart, totalLights)
 
   return {
-    segmentLength,
+    segmentLength: fromLength + (toLength - fromLength) * transitionProgress,
     totalLights,
     segmentStart: fromStart + travelDelta * transitionProgress,
   }
@@ -412,6 +450,44 @@ function useHardwareTrackPieces(pathD: string, pieceCount: number) {
   }
 }
 
+function useEdgeBasedTrackPieces(
+  inset: number,
+  radius: number,
+  piecesPerH: number,
+  piecesPerV: number
+) {
+  return useMemo(() => {
+    const min = inset
+    const max = 100 - inset
+    const innerMin = min + radius
+    const innerMax = max - radius
+    const pieces: HardwareTrackPiece[] = []
+
+    // Top edge: left → right
+    for (let i = 0; i < piecesPerH; i++) {
+      const t = (i + 0.5) / piecesPerH
+      pieces.push({ x: innerMin + t * (innerMax - innerMin), y: min, angle: 0 })
+    }
+    // Right edge: top → bottom
+    for (let i = 0; i < piecesPerV; i++) {
+      const t = (i + 0.5) / piecesPerV
+      pieces.push({ x: max, y: innerMin + t * (innerMax - innerMin), angle: 90 })
+    }
+    // Bottom edge: right → left
+    for (let i = 0; i < piecesPerH; i++) {
+      const t = (i + 0.5) / piecesPerH
+      pieces.push({ x: innerMax - t * (innerMax - innerMin), y: max, angle: 180 })
+    }
+    // Left edge: bottom → top
+    for (let i = 0; i < piecesPerV; i++) {
+      const t = (i + 0.5) / piecesPerV
+      pieces.push({ x: min, y: innerMax - t * (innerMax - innerMin), angle: 270 })
+    }
+
+    return pieces
+  }, [inset, radius, piecesPerH, piecesPerV])
+}
+
 export function PhasePadHardwareLane({
   tuning,
   segmentStart,
@@ -443,7 +519,12 @@ export function PhasePadHardwareLane({
     () => buildHardwareTrackPath(tuning.trackInset, tuning.trackRadius),
     [tuning.trackInset, tuning.trackRadius]
   )
-  const { pathRef, pieces } = useHardwareTrackPieces(pathD, totalLights)
+  const pieces = useEdgeBasedTrackPieces(
+    tuning.trackInset,
+    tuning.trackRadius,
+    tuning.piecesPerHorizontalEdge,
+    tuning.piecesPerVerticalEdge
+  )
 
   return (
     <svg
@@ -474,7 +555,6 @@ export function PhasePadHardwareLane({
       </defs>
 
       <path
-        ref={pathRef}
         d={pathD}
         fill="none"
         stroke={`rgba(0,0,0,${0.22 + tuning.channelShadow * 0.26})`}
