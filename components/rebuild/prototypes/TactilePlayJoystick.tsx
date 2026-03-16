@@ -162,6 +162,11 @@ export function TactilePlayJoystick({
   const capHighlight = joystickTuning.highlightIntensity
   const shellGlow = 0.08 + joystickTuning.haloIntensity * 0.12
   const knobSize = frame.knobSize * joystickTuning.scale
+  const showKnobBorderRing = joystickTuning.showKnobBorderRing
+  const showDialShellRing = joystickTuning.showDialShellRing
+  const bowlHighlight = 0.08 + joystickTuning.baseLightness * 0.2
+  const bowlMid = 0.12 + joystickTuning.baseLightness * 0.5
+  const bowlEdge = 0.1 + joystickTuning.baseLightness * 0.44
 
   const quadrantTransition = prefersReducedMotion
     ? { duration: 0.001 }
@@ -259,10 +264,10 @@ export function TactilePlayJoystick({
           isDragging ? 'cursor-grabbing' : 'cursor-grab'
         )}
         style={{
-          width: frame.frameSize,
-          height: frame.frameSize,
+          width: frame.frameSize * joystickTuning.shellScale,
+          height: frame.frameSize * joystickTuning.shellScale,
           touchAction: 'none',
-          border: '1px solid oklch(96% 0.01 260 / 0.92)',
+          border: showDialShellRing ? '1px solid oklch(96% 0.01 260 / 0.92)' : 'none',
           background: [
             'radial-gradient(circle at 50% 44%, oklch(18% 0.01 255 / 0.7) 0%, oklch(18% 0.01 255 / 0.7) 22%, transparent 23%)',
             'radial-gradient(circle at 34% 28%, oklch(100% 0 0 / 0.96) 0%, oklch(96% 0.004 250 / 0.98) 52%, oklch(91% 0.01 250) 100%)',
@@ -271,7 +276,7 @@ export function TactilePlayJoystick({
             `0 14px 26px oklch(24% 0.02 255 / ${0.14 + shellGlow * 0.4})`,
             'inset 0 2px 2px oklch(100% 0 0 / 0.95)',
             'inset 0 -10px 16px oklch(70% 0.01 250 / 0.18)',
-            'inset 0 0 0 1px oklch(91% 0.008 250 / 0.72)',
+            ...(showDialShellRing ? ['inset 0 0 0 1px oklch(91% 0.008 250 / 0.72)'] : []),
           ].join(', '),
         }}
         onPointerDown={handlePointerDown}
@@ -290,10 +295,11 @@ export function TactilePlayJoystick({
           className="pointer-events-none absolute rounded-full"
           style={{
             inset: frame.inset,
+            transform: `scale(${joystickTuning.baseScale})`,
             background:
-              'radial-gradient(circle at 50% 42%, oklch(28% 0.01 255 / 0.38) 0%, oklch(12% 0.01 255 / 0.96) 62%, oklch(10% 0.01 255) 100%)',
+              `radial-gradient(circle at 50% 42%, oklch(${Math.round(bowlHighlight * 100)}% 0.005 255 / 0.22) 0%, oklch(${Math.round(bowlMid * 100)}% 0.006 255 / 0.88) 58%, oklch(${Math.round(bowlEdge * 100)}% 0.005 255) 100%)`,
             boxShadow:
-              'inset 0 10px 18px oklch(0% 0 0 / 0.52), inset 0 -2px 3px oklch(100% 0 0 / 0.08), 0 1px 0 oklch(100% 0 0 / 0.3)',
+              `inset 0 10px 18px oklch(${Math.round((0.1 + joystickTuning.baseLightness * 0.22) * 100)}% 0.004 255 / 0.22), inset 0 -2px 3px oklch(100% 0 0 / 0.12), 0 1px 0 oklch(100% 0 0 / 0.22)`,
           }}
         />
 
@@ -389,6 +395,7 @@ export function TactilePlayJoystick({
               isDragging && 'lab-pressed'
             )}
             style={{
+              border: showKnobBorderRing ? undefined : 'none',
               background: [
                 `radial-gradient(circle at 34% 26%, oklch(92% 0.05 72 / ${capHighlight * 0.34}) 0%, transparent 28%)`,
                 'linear-gradient(180deg, oklch(72% 0.18 55) 0%, oklch(64% 0.2 45) 44%, oklch(48% 0.17 35) 100%)',
@@ -396,9 +403,11 @@ export function TactilePlayJoystick({
               boxShadow: [
                 `0 14px 22px oklch(8% 0.01 255 / ${0.22 + joystickTuning.haloIntensity * 0.18})`,
                 `0 0 ${10 + joystickTuning.haloIntensity * 16}px oklch(88% 0.01 250 / ${shellGlow})`,
-                `inset 0 1px 0 oklch(94% 0.03 78 / ${joystickTuning.whiteRingOpacity * (0.14 + capHighlight * 0.22)})`,
+                ...(showKnobBorderRing
+                  ? [`inset 0 1px 0 oklch(94% 0.03 78 / ${joystickTuning.whiteRingOpacity * (0.14 + capHighlight * 0.22)})`]
+                  : []),
                 'inset 0 -10px 14px oklch(30% 0.1 28 / 0.46)',
-                'inset 0 0 0 1px oklch(48% 0.11 36 / 0.9)',
+                ...(showKnobBorderRing ? ['inset 0 0 0 1px oklch(48% 0.11 36 / 0.9)'] : []),
               ].join(', '),
             }}
           >
