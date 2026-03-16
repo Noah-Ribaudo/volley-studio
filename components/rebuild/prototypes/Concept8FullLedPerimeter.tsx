@@ -683,8 +683,8 @@ export function Concept8FullLedPerimeter(props: PrototypeControlProps) {
   })
   const activeDisplayPhase = props.isPhaseTraveling ? props.displayTargetCorePhase : props.displayCurrentCorePhase
   const offenseLabel = props.currentCorePhase === 'FIRST_ATTACK' ? '1st Attack' : 'Attack'
-  const shellRadius = (PHASE_PAD_JOYSTICK_FRAME_SIZE * props.tactileTuning.joystick.shellScale) / 2
-  const cutoutRadius = Math.max(0, shellRadius + props.tactileTuning.joystick.shellCutoutPadding)
+  const baseRadius = (PHASE_PAD_JOYSTICK_FRAME_SIZE / 2) * props.tactileTuning.joystick.baseScale
+  const cutoutRadius = Math.max(0, baseRadius + props.tactileTuning.joystick.shellCutoutPadding)
   const cutoutDiameter = cutoutRadius * 2
 
   return (

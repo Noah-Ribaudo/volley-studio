@@ -35,14 +35,12 @@ export interface JoystickTuning {
   autoNudgeHoldMs: number
   haloIntensity: number
   scale: number
-  shellScale: number
   shellCutoutPadding: number
   baseScale: number
   baseLightness: number
   highlightIntensity: number
   whiteRingOpacity: number
   showKnobBorderRing: boolean
-  showDialShellRing: boolean
   offsetTexture: boolean
   ringTextureScale: number
   ringTextureSpacingX: number
@@ -178,14 +176,12 @@ export const DEFAULT_TACTILE_TUNING: TactileTuning = {
     autoNudgeHoldMs: 140,
     haloIntensity: 0.51,
     scale: 1.5,
-    shellScale: 0.65,
     shellCutoutPadding: -2.25,
     baseScale: 1.34,
     baseLightness: 0.3,
     highlightIntensity: 0.6,
     whiteRingOpacity: 0,
     showKnobBorderRing: false,
-    showDialShellRing: false,
     offsetTexture: true,
     ringTextureScale: 11.8,
     ringTextureSpacingX: 3.9,
@@ -304,14 +300,12 @@ export function sanitizeTactileTuning(input: TactileTuning): TactileTuning {
       autoNudgeHoldMs: clamp(input.joystick.autoNudgeHoldMs, 40, 360),
       haloIntensity: clamp(input.joystick.haloIntensity, 0, 1.25),
       scale: clamp(input.joystick.scale, 0.65, 1.5),
-      shellScale: clamp(input.joystick.shellScale, 0.55, 1.6),
       shellCutoutPadding: clamp(input.joystick.shellCutoutPadding, -8, 24),
       baseScale: clamp(input.joystick.baseScale, 0.5, 1.8),
       baseLightness: clamp(input.joystick.baseLightness, 0.1, 1.2),
       highlightIntensity: clamp(input.joystick.highlightIntensity, 0, 1),
       whiteRingOpacity: clamp(input.joystick.whiteRingOpacity, 0, 1),
       showKnobBorderRing: input.joystick.showKnobBorderRing,
-      showDialShellRing: input.joystick.showDialShellRing,
       offsetTexture: input.joystick.offsetTexture,
       ringTextureScale: clamp(input.joystick.ringTextureScale, 3, 12),
       ringTextureSpacingX: clamp(input.joystick.ringTextureSpacingX, 3, 16),

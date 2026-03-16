@@ -186,7 +186,6 @@ export function TactilePlayJoystick({
   const shellGlow = 0.08 + joystickTuning.haloIntensity * 0.12
   const knobSize = frame.knobSize * joystickTuning.scale
   const showKnobBorderRing = joystickTuning.showKnobBorderRing
-  const showDialShellRing = joystickTuning.showDialShellRing
   const bowlHighlight = 0.08 + joystickTuning.baseLightness * 0.2
   const bowlMid = 0.12 + joystickTuning.baseLightness * 0.5
   const bowlEdge = 0.1 + joystickTuning.baseLightness * 0.44
@@ -332,19 +331,16 @@ export function TactilePlayJoystick({
           !canPlayAdvance ? 'cursor-default opacity-80' : isDragging ? 'cursor-grabbing' : 'cursor-grab'
         )}
         style={{
-          width: frame.frameSize * joystickTuning.shellScale,
-          height: frame.frameSize * joystickTuning.shellScale,
+          width: frame.frameSize,
+          height: frame.frameSize,
           touchAction: 'none',
-          border: showDialShellRing ? '1px solid oklch(96% 0.01 260 / 0.92)' : 'none',
           background: [
-            'radial-gradient(circle at 50% 44%, oklch(18% 0.01 255 / 0.7) 0%, oklch(18% 0.01 255 / 0.7) 22%, transparent 23%)',
-            'radial-gradient(circle at 34% 28%, oklch(100% 0 0 / 0.96) 0%, oklch(96% 0.004 250 / 0.98) 52%, oklch(91% 0.01 250) 100%)',
+            'radial-gradient(circle at 50% 42%, oklch(18% 0.01 255 / 0.74) 0%, oklch(18% 0.01 255 / 0.74) 18%, transparent 20%)',
+            'radial-gradient(circle at 34% 28%, oklch(96% 0.004 250 / 0.16) 0%, transparent 34%)',
           ].join(', '),
           boxShadow: [
             `0 14px 26px oklch(24% 0.02 255 / ${0.14 + shellGlow * 0.4})`,
-            'inset 0 2px 2px oklch(100% 0 0 / 0.95)',
-            'inset 0 -10px 16px oklch(70% 0.01 250 / 0.18)',
-            ...(showDialShellRing ? ['inset 0 0 0 1px oklch(91% 0.008 250 / 0.72)'] : []),
+            'inset 0 1px 0 oklch(100% 0 0 / 0.14)',
           ].join(', '),
         }}
         onPointerDown={handlePointerDown}
