@@ -29,7 +29,7 @@ export function RebuildDialKitBridge({
   onTuningChange,
   position = 'top-right',
 }: RebuildDialKitBridgeProps) {
-  const usesPhasePadHardware = activeVariant === 'playerToggle' || activeVariant === 'attackLabel' || activeVariant === 'splitAttack'
+  const usesPhasePadHardware = activeVariant === 'clean' || activeVariant === 'machined' || activeVariant === 'backlit' || activeVariant === 'glass'
   const usesLegacyClusterControls = false
   const [seed, setSeed] = useState<TactileTuning>(DEFAULT_TACTILE_TUNING)
   const [panelVersion, setPanelVersion] = useState(0)
