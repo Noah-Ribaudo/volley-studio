@@ -154,8 +154,9 @@ export function TactilePlayJoystick({
       : defaultFrame
   const selectedPhase = dragPhase ?? currentPhase
   const textureSize = `${joystickTuning.ringTextureSpacingX}px ${joystickTuning.ringTextureSpacingY}px`
-  const textureStroke = `oklch(96% 0.02 90 / ${0.1 + joystickTuning.ringTextureOpacity * 0.45})`
+  const textureStroke = `oklch(96% 0.02 90 / ${0.06 + joystickTuning.ringTextureOpacity * 0.34})`
   const textureShadow = `oklch(45% 0.12 42 / ${joystickTuning.ringTextureDepth * 0.34})`
+  const capHighlight = joystickTuning.highlightIntensity
 
   const quadrantTransition = prefersReducedMotion
     ? { duration: 0.001 }
@@ -369,8 +370,8 @@ export function TactilePlayJoystick({
             )}
             style={{
               background:
-                'radial-gradient(circle at 32% 28%, oklch(88% 0.05 85 / 0.92) 0%, oklch(82% 0.08 74 / 0.78) 12%, transparent 26%), linear-gradient(180deg, oklch(76% 0.17 62) 0%, oklch(68% 0.19 52) 42%, oklch(60% 0.18 42) 100%)',
-              boxShadow: `0 0 ${14 + joystickTuning.haloIntensity * 18}px oklch(72% 0.14 55 / ${0.08 + joystickTuning.haloIntensity * 0.24}), inset 0 1px 0 oklch(97% 0.01 90 / 0.52), inset 0 -7px 12px oklch(42% 0.12 34 / 0.34)`,
+                `radial-gradient(circle at 32% 28%, oklch(88% 0.05 85 / ${capHighlight * 0.92}) 0%, oklch(82% 0.08 74 / ${capHighlight * 0.72}) 12%, transparent 26%), linear-gradient(180deg, oklch(76% 0.17 62) 0%, oklch(68% 0.19 52) 42%, oklch(60% 0.18 42) 100%)`,
+              boxShadow: `0 0 ${14 + joystickTuning.haloIntensity * 18}px oklch(72% 0.14 55 / ${0.08 + joystickTuning.haloIntensity * 0.24}), inset 0 1px 0 oklch(97% 0.01 90 / ${0.12 + capHighlight * 0.4}), inset 0 -7px 12px oklch(42% 0.12 34 / 0.34)`,
             }}
           >
             <div
@@ -389,7 +390,14 @@ export function TactilePlayJoystick({
                   `radial-gradient(circle, transparent 50%, black 56%, black 100%)`,
               }}
             />
-            <div className="pointer-events-none absolute inset-[18%] rounded-full border border-white/18 bg-black/5" />
+            <div
+              className="pointer-events-none absolute inset-[18%] rounded-full"
+              style={{
+                background: `radial-gradient(circle at 50% 36%, oklch(44% 0.08 38 / ${0.16 + capHighlight * 0.14}) 0%, oklch(56% 0.1 44 / 0.08) 34%, transparent 54%), linear-gradient(180deg, oklch(46% 0.08 36 / 0.22) 0%, oklch(78% 0.04 76 / ${0.08 + capHighlight * 0.12}) 100%)`,
+                boxShadow: `inset 0 2px 3px oklch(38% 0.08 34 / 0.34), inset 0 -2px 4px oklch(97% 0.01 90 / ${0.08 + capHighlight * 0.08})`,
+                border: '1px solid oklch(96% 0.01 90 / 0.08)',
+              }}
+            />
           </motion.div>
         </div>
       </motion.button>
