@@ -63,9 +63,9 @@ function PhaseAreaTile({
         style={{
           ['--lab-switch-knob-glow' as string]: switchMotion.knobGlow,
           background: isActive
-            ? 'linear-gradient(180deg,rgba(241,245,248,0.98)_0%,rgba(216,224,230,0.98)_100%)'
-            : 'linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(236,241,245,0.96)_100%)',
-          borderColor: isActive ? 'rgba(117,132,145,0.62)' : 'rgba(135,154,170,0.28)',
+            ? 'linear-gradient(180deg,rgba(223,210,188,0.98)_0%,rgba(198,181,155,0.98)_100%)'
+            : 'linear-gradient(180deg,rgba(244,237,224,0.98)_0%,rgba(224,212,191,0.98)_100%)',
+          borderColor: isActive ? 'rgba(152,126,89,0.58)' : 'rgba(170,146,111,0.3)',
         }}
       >
         <span className="relative z-[1] tracking-[-0.02em]">{label}</span>
@@ -89,10 +89,10 @@ export function Concept8FullLedPerimeter(props: PrototypeControlProps) {
 
   return (
     <div className="flex w-full flex-col justify-end">
-      <div className="rounded-[22px] border border-[rgba(160,174,189,0.45)] bg-[linear-gradient(180deg,rgba(249,250,252,0.98)_0%,rgba(229,235,240,0.98)_100%)] p-2 shadow-[0_16px_30px_rgba(148,163,184,0.16),inset_0_1px_0_rgba(255,255,255,0.88)]">
+      <div className="rounded-[22px] border border-[rgba(172,149,115,0.42)] bg-[linear-gradient(180deg,rgba(239,231,216,0.98)_0%,rgba(213,198,175,0.98)_100%)] p-2 shadow-[0_16px_30px_rgba(128,102,72,0.16),inset_0_1px_0_rgba(255,249,240,0.8)]">
         <PhasePadRotationRail {...props} />
 
-        <div className="relative overflow-visible rounded-[18px] border border-[rgba(160,174,189,0.28)] bg-[linear-gradient(180deg,rgba(246,249,251,0.98)_0%,rgba(232,237,242,0.98)_100%)] p-[10px] shadow-[inset_0_1px_0_rgba(255,255,255,0.84),inset_0_-10px_18px_rgba(181,197,210,0.12)]">
+        <div className="relative overflow-visible rounded-[18px] border border-[rgba(176,151,116,0.28)] bg-[linear-gradient(180deg,rgba(238,229,213,0.98)_0%,rgba(220,206,184,0.98)_100%)] p-[10px] shadow-[inset_0_1px_0_rgba(255,247,234,0.82),inset_0_-10px_18px_rgba(156,130,94,0.12)]">
           <div
             className="relative z-[1] rounded-[14px]"
             style={{
@@ -106,7 +106,7 @@ export function Concept8FullLedPerimeter(props: PrototypeControlProps) {
               totalLights={perimeterState.totalLights}
             />
 
-            <div className="relative z-[1] grid grid-cols-2 gap-px overflow-hidden rounded-[13px] border border-[rgba(170,181,191,0.22)] bg-[rgba(190,201,210,0.42)] shadow-[inset_0_1px_0_rgba(255,255,255,0.45)]">
+            <div className="relative z-[1] grid grid-cols-2 gap-px overflow-hidden rounded-[13px] border border-[rgba(174,150,116,0.24)] bg-[rgba(187,164,131,0.34)] shadow-[inset_0_1px_0_rgba(255,247,234,0.38)]">
               {PHASE_PAD_LAYOUT.map((item) => (
                 <PhaseAreaTile
                   key={item.phase}
