@@ -293,9 +293,9 @@ export function TactilePlayJoystick({
           style={{
             inset: frame.inset,
             background:
-              'radial-gradient(circle at 50% 42%, oklch(28% 0.01 255 / 0.38) 0%, oklch(12% 0.01 255 / 0.96) 62%, oklch(10% 0.01 255) 100%)',
+              'radial-gradient(circle at 50% 42%, oklch(62% 0.006 255 / 0.28) 0%, oklch(42% 0.008 255 / 0.92) 60%, oklch(34% 0.006 255) 100%)',
             boxShadow:
-              'inset 0 10px 18px oklch(0% 0 0 / 0.52), inset 0 -2px 3px oklch(100% 0 0 / 0.08), 0 1px 0 oklch(100% 0 0 / 0.3)',
+              'inset 0 10px 18px oklch(20% 0.004 255 / 0.32), inset 0 -2px 3px oklch(100% 0 0 / 0.1), 0 1px 0 oklch(100% 0 0 / 0.26)',
           }}
         />
 
