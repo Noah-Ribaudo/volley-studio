@@ -119,6 +119,10 @@ export interface PhasePadHardwareTuning {
   channelHighlight: number
 }
 
+export interface ArrowTagTuning {
+  fontSize: number
+}
+
 export interface C4LiteralTuning {
   clusterLayout: C4LiteralClusterLayoutTuning
   connectorGeometry: C4LiteralConnectorGeometryTuning
@@ -135,6 +139,7 @@ export interface TactileTuning {
   connectors: ConnectorTuning
   c4Literal: C4LiteralTuning
   phasePadHardware: PhasePadHardwareTuning
+  arrowTags: ArrowTagTuning
 }
 
 export const DEFAULT_TACTILE_TUNING: TactileTuning = {
@@ -247,6 +252,9 @@ export const DEFAULT_TACTILE_TUNING: TactileTuning = {
     bloom: 1.89,
     channelShadow: 0.85,
     channelHighlight: 0.75,
+  },
+  arrowTags: {
+    fontSize: 10,
   },
 }
 
@@ -367,6 +375,9 @@ export function sanitizeTactileTuning(input: TactileTuning): TactileTuning {
       bloom: clamp(input.phasePadHardware.bloom, 0, 3),
       channelShadow: clamp(input.phasePadHardware.channelShadow, 0, 1),
       channelHighlight: clamp(input.phasePadHardware.channelHighlight, 0, 1),
+    },
+    arrowTags: {
+      fontSize: clamp(input.arrowTags.fontSize, 8, 20),
     },
   }
 }

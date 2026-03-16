@@ -95,6 +95,7 @@ interface VolleyballCourtProps {
   onArrowChange?: (role: Role, position: Position | null, options?: { variant?: 'primary' | 'secondary' }) => void
   arrowEndpointLabels?: Partial<Record<Role, string>>
   secondaryArrowEndpointLabels?: Partial<Record<Role, string>>
+  arrowTagFontSize?: number
   arrowCurves?: Partial<Record<Role, ArrowCurveConfig>>
   onArrowCurveChange?: (role: Role, curve: ArrowCurveConfig | null) => void
   baseOrder?: Role[]
@@ -213,6 +214,7 @@ export function VolleyballCourt({
   onArrowChange,
   arrowEndpointLabels = {},
   secondaryArrowEndpointLabels = {},
+  arrowTagFontSize = 10,
   arrowCurves = {},
   onArrowCurveChange,
   baseOrder = DEFAULT_BASE_ORDER,
@@ -391,7 +393,10 @@ export function VolleyballCourt({
   const [_curveDragPosition, _setCurveDragPosition] = useState<Position | null>(null) // Current drag position in normalized coords
   const [hoveredRole, setHoveredRole] = useState<Role | null>(null) // Hovered player token (for arrow tip)
   const [nextStepTooltipRole, setNextStepTooltipRole] = useState<Role | null>(null)
-  const [hoveredArrowRole, setHoveredArrowRole] = useState<Role | null>(null) // Hovered arrow (for curve handle)
+  const [hoveredArrow, setHoveredArrow] = useState<{ role: Role | null; variant: 'primary' | 'secondary' | null }>({
+    role: null,
+    variant: null,
+  }) // Hovered arrow (for curve handle + endpoint tag)
   const [tappedRole, setTappedRole] = useState<Role | null>(null) // For mobile tap-to-reveal arrow tip
   // Arrow preview hover state (boolean to avoid per-frame rerenders)
   const [previewVisible, setPreviewVisible] = useState<Partial<Record<Role, boolean>>>({})
@@ -2313,6 +2318,9 @@ export function VolleyballCourt({
           arrowEndpointLabels={arrowEndpointLabels}
           secondaryArrows={secondaryArrows}
           secondaryArrowEndpointLabels={secondaryArrowEndpointLabels}
+          arrowTagFontSize={arrowTagFontSize}
+          hoveredArrowRole={hoveredArrow.role}
+          hoveredArrowVariant={hoveredArrow.variant}
           arrowCurves={arrowCurves}
           curveStrength={playTuning.curveStrength}
           showArrows={showArrows}
@@ -2321,7 +2329,7 @@ export function VolleyballCourt({
           debugHitboxes={debugHitboxes}
           toSvgCoords={toSvgCoords}
           onArrowDragStart={handleArrowDragStart}
-          onArrowHoverChange={setHoveredArrowRole}
+          onArrowHoverChange={(role, variant) => setHoveredArrow({ role, variant: role ? (variant ?? 'primary') : null })}
           getRoleColor={(role) => ROLE_INFO[role].color}
         />
 
@@ -2618,7 +2626,7 @@ export function VolleyballCourt({
           isPreviewingMovement={isPreviewingMovement}
           isMobile={isMobile}
           tappedRole={tappedRole}
-          hoveredArrowRole={hoveredArrowRole}
+          hoveredArrowRole={hoveredArrow.role}
           draggingCurveRole={draggingCurveRole}
           canEditCurves={Boolean(onArrowCurveChange)}
           playLockedPaths={playLockedPathsRef.current}
@@ -2635,7 +2643,7 @@ export function VolleyballCourt({
           debugHitboxes={debugHitboxes}
           toSvgCoords={toSvgCoords}
           onCurveDragStart={handleCurveDragStart}
-          onArrowHoverChange={setHoveredArrowRole}
+          onArrowHoverChange={(role) => setHoveredArrow({ role, variant: role ? 'primary' : null })}
         />
 
         <SimulationBallLayer

@@ -370,6 +370,7 @@ export default function RebuildPrototypeLabPage() {
               arrowEndpointLabels={currentArrowLabels}
               secondaryArrows={currentSecondaryArrows}
               secondaryArrowEndpointLabels={currentSecondaryArrowLabels}
+              arrowTagFontSize={tactileTuning.arrowTags.fontSize}
               allowReceiveSecondaryPreview={currentCorePhase === 'RECEIVE'}
               onArrowChange={
                 isEditingAllowed

@@ -21,6 +21,7 @@ const RESET_ACTIONS = new Set([
   'resetLoadingBar',
   'resetPhaseSurfaces',
   'resetPhasePadHardware',
+  'resetArrowTags',
 ])
 
 export function RebuildDialKitBridge({
@@ -154,9 +155,14 @@ export function RebuildDialKitBridge({
             resetPhasePadHardware: { type: 'action', label: 'Reset Phase Hardware' },
           }
         : {}),
+      arrowTags: {
+        _collapsed: true,
+        fontSize: [seed.arrowTags.fontSize, 8, 20, 0.25],
+      },
       resetLighting: { type: 'action', label: 'Reset Global Light' },
       resetPressFeel: { type: 'action', label: 'Reset Press Feel' },
       resetJoystick: { type: 'action', label: 'Reset Joystick' },
+      resetArrowTags: { type: 'action', label: 'Reset Arrow Tags' },
     },
     {
       onAction: (actionPath: string) => {
@@ -235,6 +241,13 @@ export function RebuildDialKitBridge({
           }
         }
 
+        if (actionPath === 'resetArrowTags') {
+          next = {
+            ...latest,
+            arrowTags: DEFAULT_TACTILE_TUNING.arrowTags,
+          }
+        }
+
         const sanitized = sanitizeTactileTuning(next)
         latestTuningRef.current = sanitized
         setSeed(sanitized)
@@ -304,6 +317,9 @@ export function RebuildDialKitBridge({
       },
       phaseEmphasis: preserved.phaseEmphasis,
       connectors: preserved.connectors,
+      arrowTags: {
+        fontSize: params.arrowTags.fontSize,
+      },
       phasePadHardware:
         usesPhasePadHardware
           ? {
