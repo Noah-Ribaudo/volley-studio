@@ -264,9 +264,8 @@ export function TactilePlayJoystick({
           isDragging ? 'cursor-grabbing' : 'cursor-grab'
         )}
         style={{
-          width: frame.frameSize,
-          height: frame.frameSize,
-          transform: `scale(${joystickTuning.shellScale})`,
+          width: frame.frameSize * joystickTuning.shellScale,
+          height: frame.frameSize * joystickTuning.shellScale,
           touchAction: 'none',
           border: showDialShellRing ? '1px solid oklch(96% 0.01 260 / 0.92)' : 'none',
           background: [
