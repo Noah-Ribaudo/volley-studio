@@ -19,14 +19,14 @@ import {
 } from './PhasePadShared'
 
 const C8_PHASE_ORDER: CorePhase[] = ['DEFENSE', 'OFFENSE', 'RECEIVE', 'SERVE']
-const INNER_CORNER_CUT = 64
+const PHASE_PAD_JOYSTICK_FRAME_SIZE = 92
 
-function getInnerCornerPosition(row: 'top' | 'bottom', column: 'left' | 'right') {
+function getInnerCornerPosition(row: 'top' | 'bottom', column: 'left' | 'right', cutoutDiameter: number) {
   return {
-    top: row === 'top' ? 'auto' : `${INNER_CORNER_CUT / -2}px`,
-    bottom: row === 'top' ? `${INNER_CORNER_CUT / -2}px` : 'auto',
-    left: column === 'left' ? 'auto' : `${INNER_CORNER_CUT / -2}px`,
-    right: column === 'left' ? `${INNER_CORNER_CUT / -2}px` : 'auto',
+    top: row === 'top' ? 'auto' : `${cutoutDiameter / -2}px`,
+    bottom: row === 'top' ? `${cutoutDiameter / -2}px` : 'auto',
+    left: column === 'left' ? 'auto' : `${cutoutDiameter / -2}px`,
+    right: column === 'left' ? `${cutoutDiameter / -2}px` : 'auto',
   }
 }
 
@@ -36,6 +36,7 @@ function PhaseAreaTile({
   isActive,
   row,
   column,
+  cutoutDiameter,
   switchMotion,
   onManualPhaseSelect,
 }: {
@@ -44,6 +45,7 @@ function PhaseAreaTile({
   isActive: boolean
   row: 'top' | 'bottom'
   column: 'left' | 'right'
+  cutoutDiameter: number
   switchMotion: PrototypeControlProps['switchMotion']
   onManualPhaseSelect: (phase: PrototypePhase) => void
 }) {
@@ -91,9 +93,9 @@ function PhaseAreaTile({
           aria-hidden
           className="pointer-events-none absolute rounded-full"
           style={{
-            width: `${INNER_CORNER_CUT}px`,
-            height: `${INNER_CORNER_CUT}px`,
-            ...getInnerCornerPosition(row, column),
+            width: `${cutoutDiameter}px`,
+            height: `${cutoutDiameter}px`,
+            ...getInnerCornerPosition(row, column, cutoutDiameter),
             background:
               'radial-gradient(circle at 50% 50%, rgba(206,186,153,0.84) 0%, rgba(216,197,166,0.96) 56%, rgba(229,214,188,0.98) 100%)',
             boxShadow: [
@@ -213,6 +215,9 @@ export function Concept8FullLedPerimeter(props: PrototypeControlProps) {
   const offenseLabel = props.currentCorePhase === 'FIRST_ATTACK' ? '1st Attack' : 'Attack'
   const showAccessory = props.variantId !== 'clean'
   const showFooter = props.variantId !== 'clean'
+  const shellRadius = (PHASE_PAD_JOYSTICK_FRAME_SIZE * props.tactileTuning.joystick.shellScale) / 2
+  const cutoutRadius = Math.max(0, shellRadius + props.tactileTuning.joystick.shellCutoutPadding)
+  const cutoutDiameter = cutoutRadius * 2
 
   return (
     <div className="flex w-full flex-col justify-end">
@@ -248,6 +253,7 @@ export function Concept8FullLedPerimeter(props: PrototypeControlProps) {
                   isActive={item.phase === activeDisplayPhase}
                   row={item.row}
                   column={item.column}
+                  cutoutDiameter={cutoutDiameter}
                   switchMotion={props.switchMotion}
                   onManualPhaseSelect={props.onManualPhaseSelect}
                 />

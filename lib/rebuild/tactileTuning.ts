@@ -36,6 +36,7 @@ export interface JoystickTuning {
   haloIntensity: number
   scale: number
   shellScale: number
+  shellCutoutPadding: number
   baseScale: number
   baseLightness: number
   highlightIntensity: number
@@ -178,6 +179,7 @@ export const DEFAULT_TACTILE_TUNING: TactileTuning = {
     haloIntensity: 0.75,
     scale: 1.5,
     shellScale: 0.89,
+    shellCutoutPadding: 4,
     baseScale: 1,
     baseLightness: 0.56,
     highlightIntensity: 0.8,
@@ -303,6 +305,7 @@ export function sanitizeTactileTuning(input: TactileTuning): TactileTuning {
       haloIntensity: clamp(input.joystick.haloIntensity, 0, 1.25),
       scale: clamp(input.joystick.scale, 0.65, 1.5),
       shellScale: clamp(input.joystick.shellScale, 0.55, 1.6),
+      shellCutoutPadding: clamp(input.joystick.shellCutoutPadding, -8, 24),
       baseScale: clamp(input.joystick.baseScale, 0.5, 1.8),
       baseLightness: clamp(input.joystick.baseLightness, 0.1, 1.2),
       highlightIntensity: clamp(input.joystick.highlightIntensity, 0, 1),
