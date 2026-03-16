@@ -423,6 +423,22 @@ export function PhasePadHardwareLane({
   segmentLength: number
   totalLights: number
 }) {
+  const svgRef = useRef<SVGSVGElement>(null)
+  const [aspectRatio, setAspectRatio] = useState(1)
+
+  useLayoutEffect(() => {
+    const el = svgRef.current
+    if (!el) return
+    const measure = () => {
+      const { width, height } = el.getBoundingClientRect()
+      if (height > 0) setAspectRatio(width / height)
+    }
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
   const pathD = useMemo(
     () => buildHardwareTrackPath(tuning.trackInset, tuning.trackRadius),
     [tuning.trackInset, tuning.trackRadius]
@@ -431,6 +447,7 @@ export function PhasePadHardwareLane({
 
   return (
     <svg
+      ref={svgRef}
       aria-hidden="true"
       className="pointer-events-none absolute inset-0 h-full w-full"
       preserveAspectRatio="none"
@@ -499,8 +516,18 @@ export function PhasePadHardwareLane({
               b: 136,
             }
 
+        // Counteract the non-uniform viewBox scaling so every piece
+        // appears the same shape regardless of which edge it sits on
+        const θ = piece.angle * Math.PI / 180
+        const cosθ = Math.cos(θ)
+        const sinθ = Math.sin(θ)
+        const rx = Math.sqrt((cosθ * aspectRatio) ** 2 + sinθ ** 2)
+        const ry = Math.sqrt((sinθ * aspectRatio) ** 2 + cosθ ** 2)
+        const sx = Math.sqrt(ry / rx)
+        const sy = Math.sqrt(rx / ry)
+
         return (
-          <g key={`hardware-piece-${index}`} transform={`translate(${piece.x} ${piece.y}) rotate(${piece.angle})`}>
+          <g key={`hardware-piece-${index}`} transform={`translate(${piece.x} ${piece.y}) rotate(${piece.angle}) scale(${sx.toFixed(4)},${sy.toFixed(4)})`}>
             <rect
               x={-tuning.pieceLength / 2}
               y={-tuning.pieceThickness / 2}
