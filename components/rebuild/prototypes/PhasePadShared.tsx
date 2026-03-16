@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useReducedMotion } from 'motion/react'
 import { type CorePhase, formatCorePhaseLabel } from '@/lib/rebuild/prototypeFlow'
 import type { PhaseEmphasisTuning, PhasePadHardwareTuning } from '@/lib/rebuild/tactileTuning'
 import { TactilePlayJoystick } from './TactilePlayJoystick'
@@ -80,6 +81,100 @@ export function usePhasePadTransition(props: PrototypeControlProps) {
     transitionTo,
     transitionProgress,
     liveStatus,
+  }
+}
+
+export function useQuarterTrackTravelState({
+  currentCorePhase,
+  targetCorePhase,
+  isPhaseTraveling,
+  positionsPerQuarter,
+  phaseOrder,
+  travelDurationMs,
+}: {
+  currentCorePhase: CorePhase
+  targetCorePhase: CorePhase
+  isPhaseTraveling: boolean
+  positionsPerQuarter: number
+  phaseOrder: readonly CorePhase[]
+  travelDurationMs: number
+}) {
+  const prefersReducedMotion = useReducedMotion()
+  const segmentLength = positionsPerQuarter
+  const totalLights = positionsPerQuarter * phaseOrder.length
+  const restingStart = useMemo(
+    () => getQuarterTrackSegmentStart(currentCorePhase, positionsPerQuarter, phaseOrder),
+    [currentCorePhase, phaseOrder, positionsPerQuarter]
+  )
+  const segmentStartRef = useRef(restingStart)
+  const [segmentStart, setSegmentStart] = useState(restingStart)
+
+  useEffect(() => {
+    segmentStartRef.current = segmentStart
+  }, [segmentStart])
+
+  useEffect(() => {
+    if (!isPhaseTraveling) {
+      segmentStartRef.current = restingStart
+      setSegmentStart(restingStart)
+      return
+    }
+
+    const originStart = segmentStartRef.current
+    const goalStart = getQuarterTrackSegmentStart(targetCorePhase, positionsPerQuarter, phaseOrder)
+    const travelDelta = getShortestPerimeterDelta(originStart, goalStart, totalLights)
+
+    if (Math.abs(travelDelta) < 0.001) {
+      segmentStartRef.current = goalStart
+      setSegmentStart(goalStart)
+      return
+    }
+
+    const durationMs = prefersReducedMotion ? 1 : Math.max(1, travelDurationMs)
+    let frameId = 0
+    const startedAt = performance.now()
+
+    const tick = (now: number) => {
+      const progress = Math.min((now - startedAt) / durationMs, 1)
+      const nextStart = originStart + travelDelta * progress
+      segmentStartRef.current = nextStart
+      setSegmentStart(nextStart)
+
+      if (progress < 1) {
+        frameId = window.requestAnimationFrame(tick)
+      }
+    }
+
+    frameId = window.requestAnimationFrame(tick)
+
+    return () => {
+      window.cancelAnimationFrame(frameId)
+    }
+  }, [
+    currentCorePhase,
+    isPhaseTraveling,
+    phaseOrder,
+    positionsPerQuarter,
+    prefersReducedMotion,
+    restingStart,
+    targetCorePhase,
+    totalLights,
+    travelDurationMs,
+  ])
+
+  const liveStatus = useMemo(() => {
+    if (isPhaseTraveling) {
+      return `${formatCorePhaseLabel(currentCorePhase)} -> ${formatCorePhaseLabel(targetCorePhase)}`
+    }
+
+    return formatCorePhaseLabel(currentCorePhase)
+  }, [currentCorePhase, isPhaseTraveling, targetCorePhase])
+
+  return {
+    liveStatus,
+    segmentLength,
+    segmentStart,
+    totalLights,
   }
 }
 
