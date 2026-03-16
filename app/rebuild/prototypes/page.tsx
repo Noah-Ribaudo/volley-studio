@@ -135,6 +135,10 @@ export default function RebuildPrototypeLabPage() {
     () => prototypeCourtState.getSecondaryArrowEndpointLabels(currentRotation, currentCorePhase),
     [currentCorePhase, currentRotation, prototypeCourtState]
   )
+  const currentSecondaryArrowSources = useMemo(
+    () => (currentCorePhase === 'RECEIVE' ? currentArrows : {}),
+    [currentArrows, currentCorePhase]
+  )
 
   const currentArrowCurves = useMemo(
     () => prototypeCourtState.getArrowCurves(currentRotation, currentCorePhase),
@@ -369,9 +373,16 @@ export default function RebuildPrototypeLabPage() {
               arrows={currentArrows}
               arrowEndpointLabels={currentArrowLabels}
               secondaryArrows={currentSecondaryArrows}
+              secondaryArrowSources={currentSecondaryArrowSources}
               secondaryArrowEndpointLabels={currentSecondaryArrowLabels}
               arrowTagFontSize={tactileTuning.arrowTags.fontSize}
-              allowReceiveSecondaryPreview={currentCorePhase === 'RECEIVE'}
+              onCreateSecondaryArrow={
+                isEditingAllowed && currentCorePhase === 'RECEIVE'
+                  ? (role) => {
+                      prototypeCourtState.createSecondaryArrowTarget(currentRotation, currentCorePhase, role)
+                    }
+                  : undefined
+              }
               onArrowChange={
                 isEditingAllowed
                   ? (role, position, options) => {

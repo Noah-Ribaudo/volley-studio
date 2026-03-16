@@ -47,10 +47,12 @@ interface MovementArrowLayerProps {
   arrows: ArrowPositions
   arrowEndpointLabels?: Partial<Record<Role, string>>
   secondaryArrows?: ArrowPositions
+  secondaryArrowSources?: ArrowPositions
   secondaryArrowEndpointLabels?: Partial<Record<Role, string>>
   arrowTagFontSize?: number
   hoveredArrowRole: Role | null
   hoveredArrowVariant?: 'primary' | 'secondary' | null
+  tappedRole: Role | null
   arrowCurves: Partial<Record<Role, ArrowCurveConfig>>
   curveStrength: number
   showArrows: boolean
@@ -60,6 +62,7 @@ interface MovementArrowLayerProps {
   toSvgCoords: (position: Position) => { x: number; y: number }
   onArrowDragStart: (role: Role, e: React.MouseEvent | React.TouchEvent, initialEndSvg?: { x: number; y: number }, initialControlSvg?: { x: number; y: number }, variant?: 'primary' | 'secondary') => void
   onArrowHoverChange: (role: Role | null, variant?: 'primary' | 'secondary') => void
+  onCreateSecondaryArrow?: (role: Role) => void
   getRoleColor: (role: Role) => string
 }
 
@@ -78,10 +81,12 @@ function MovementArrowLayerImpl({
   arrows,
   arrowEndpointLabels,
   secondaryArrows,
+  secondaryArrowSources,
   secondaryArrowEndpointLabels,
   arrowTagFontSize = 10,
   hoveredArrowRole,
   hoveredArrowVariant = null,
+  tappedRole,
   arrowCurves,
   curveStrength,
   showArrows,
@@ -91,6 +96,7 @@ function MovementArrowLayerImpl({
   toSvgCoords,
   onArrowDragStart,
   onArrowHoverChange,
+  onCreateSecondaryArrow,
   getRoleColor,
 }: MovementArrowLayerProps) {
   const prefersReducedMotion = useReducedMotion()
@@ -188,6 +194,8 @@ function MovementArrowLayerImpl({
         const activeArrowTarget =
           lockedPath?.end ??
           (draggingArrowRole === role && draggingArrowVariant === 'primary' && arrowDragPosition ? arrowDragPosition : arrows[role])
+        const secondaryArrowStartPos = secondaryArrowSources?.[role] ?? activeArrowTarget ?? basePosForArrow
+        const secondaryArrowStartSvg = secondaryArrowStartPos ? toSvgCoords(secondaryArrowStartPos) : homeSvgPos
         const secondaryArrowTarget =
           draggingArrowRole === role && draggingArrowVariant === 'secondary' && arrowDragPosition
             ? arrowDragPosition
@@ -220,6 +228,12 @@ function MovementArrowLayerImpl({
         const secondaryEndpointLabel = secondaryArrowEndpointLabels?.[role] ?? null
         const showPrimaryLabel = Boolean(endpointLabel && hoveredArrowRole === role && hoveredArrowVariant === 'primary')
         const showSecondaryLabel = Boolean(secondaryEndpointLabel && hoveredArrowRole === role && hoveredArrowVariant === 'secondary')
+        const showAddSecondaryAction = Boolean(
+          onCreateSecondaryArrow &&
+          activeArrowTarget &&
+          !secondaryArrows?.[role] &&
+          ((hoveredArrowRole === role && hoveredArrowVariant === 'primary') || tappedRole === role)
+        )
 
         const hasValidPositions = arrowEndPos &&
           !isNaN(homeSvgPos.x) && !isNaN(homeSvgPos.y) &&
@@ -266,10 +280,54 @@ function MovementArrowLayerImpl({
                 visible: showPrimaryLabel,
               })
             ) : null}
+            {showAddSecondaryAction ? (
+              <g
+                transform={`translate(${arrowEndSvg.x + (arrowEndSvg.x >= homeSvgPos.x ? 14 : -14)} ${arrowEndSvg.y + 28})`}
+                onMouseEnter={() => onArrowHoverChange(role, 'primary')}
+                onMouseLeave={() => onArrowHoverChange(null)}
+              >
+                <rect
+                  x={arrowEndSvg.x >= homeSvgPos.x ? 0 : -116}
+                  y={-12}
+                  width={116}
+                  height={24}
+                  rx={12}
+                  fill="rgba(255,255,255,0.98)"
+                  stroke="rgba(148,163,184,0.34)"
+                  strokeWidth={1}
+                  style={{ cursor: 'pointer', pointerEvents: 'auto' }}
+                  onMouseDown={(event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    onCreateSecondaryArrow?.(role)
+                  }}
+                  onTouchStart={(event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    onCreateSecondaryArrow?.(role)
+                  }}
+                />
+                <text
+                  x={arrowEndSvg.x >= homeSvgPos.x ? 58 : -58}
+                  y={0}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  style={{
+                    fill: 'rgb(71 85 105)',
+                    fontSize: 10,
+                    fontWeight: 600,
+                    userSelect: 'none',
+                    pointerEvents: 'none',
+                  }}
+                >
+                  Add 2nd attack
+                </text>
+              </g>
+            ) : null}
             {hasValidSecondaryPositions && secondaryArrowEndSvg ? (
               <g>
                 <MovementArrow
-                  start={{ x: homeSvgPos.x, y: homeSvgPos.y }}
+                  start={{ x: secondaryArrowStartSvg.x, y: secondaryArrowStartSvg.y }}
                   end={secondaryArrowEndSvg}
                   control={null}
                   color={getRoleColor(role)}

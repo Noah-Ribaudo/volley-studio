@@ -92,7 +92,9 @@ interface VolleyballCourtProps {
   }
   arrows?: ArrowPositions
   secondaryArrows?: ArrowPositions
+  secondaryArrowSources?: ArrowPositions
   onArrowChange?: (role: Role, position: Position | null, options?: { variant?: 'primary' | 'secondary' }) => void
+  onCreateSecondaryArrow?: (role: Role) => void
   arrowEndpointLabels?: Partial<Record<Role, string>>
   secondaryArrowEndpointLabels?: Partial<Record<Role, string>>
   arrowTagFontSize?: number
@@ -151,8 +153,6 @@ interface VolleyballCourtProps {
   onPlayerAssign?: (role: Role, playerId: string) => void
   // Force a role into hover state (shows arrow preview) regardless of actual mouse hover
   forceHoveredRole?: Role | null
-  // Allow receive phase to offer a second arrow affordance after a primary arrow already exists
-  allowReceiveSecondaryPreview?: boolean
   // Hide hover hint tooltip while guided onboarding spotlight is active
   suppressHoverHintTooltip?: boolean
   // Role whose preview arrow should become the spotlight target
@@ -211,7 +211,9 @@ export function VolleyballCourt({
   animationConfig,
   arrows = {},
   secondaryArrows = {},
+  secondaryArrowSources = {},
   onArrowChange,
+  onCreateSecondaryArrow,
   arrowEndpointLabels = {},
   secondaryArrowEndpointLabels = {},
   arrowTagFontSize = 10,
@@ -250,7 +252,6 @@ export function VolleyballCourt({
   onTagsChange,
   onPlayerAssign,
   forceHoveredRole,
-  allowReceiveSecondaryPreview = false,
   suppressHoverHintTooltip = false,
   onboardingSpotlightRole = null,
   showOnboardingArrowEndSpotlight = false,
@@ -1636,7 +1637,10 @@ export function VolleyballCourt({
     const activeArrowSet = variant === 'secondary' ? secondaryArrows : arrows
     const isCreatingNewArrow = !activeArrowSet[role]
     const previewCurveHeight = 25
-    const homeBasePos = displayPositions[role] || positions[role] || { x: 0.5, y: 0.75 }
+    const homeBasePos =
+      variant === 'secondary'
+        ? secondaryArrowSources[role] || arrows[role] || displayPositions[role] || positions[role] || { x: 0.5, y: 0.75 }
+        : displayPositions[role] || positions[role] || { x: 0.5, y: 0.75 }
     const dragStartSvg = toSvgCoords(homeBasePos)
 
     // Prevent page scroll during drag
@@ -1767,7 +1771,7 @@ export function VolleyballCourt({
     document.addEventListener('mouseup', handleEnd)
       document.addEventListener('touchmove', handleMove, { passive: false })
       document.addEventListener('touchend', handleEnd)
-  }, [onArrowChange, onArrowCurveChange, getClientPoint, clientToSvgCoords, toNormalizedCoords, incrementDragCount, markNextStepDragLearned, markArrowDragLearned, isMobile, arrows, secondaryArrows, arrowCurves, isPreviewingMovement, displayPositions, positions, toSvgCoords, clearPreviewStateForRole])
+  }, [onArrowChange, onArrowCurveChange, getClientPoint, clientToSvgCoords, toNormalizedCoords, incrementDragCount, markNextStepDragLearned, markArrowDragLearned, isMobile, arrows, secondaryArrows, secondaryArrowSources, arrowCurves, isPreviewingMovement, displayPositions, positions, toSvgCoords, clearPreviewStateForRole])
 
   // Handle curve drag - dragging the curve handle adjusts direction and intensity
   const handleCurveDragStart = useCallback((role: Role, e: React.MouseEvent | React.TouchEvent) => {
@@ -2317,10 +2321,12 @@ export function VolleyballCourt({
           arrows={arrows}
           arrowEndpointLabels={arrowEndpointLabels}
           secondaryArrows={secondaryArrows}
+          secondaryArrowSources={secondaryArrowSources}
           secondaryArrowEndpointLabels={secondaryArrowEndpointLabels}
           arrowTagFontSize={arrowTagFontSize}
           hoveredArrowRole={hoveredArrow.role}
           hoveredArrowVariant={hoveredArrow.variant}
+          tappedRole={tappedRole}
           arrowCurves={arrowCurves}
           curveStrength={playTuning.curveStrength}
           showArrows={showArrows}
@@ -2330,6 +2336,7 @@ export function VolleyballCourt({
           toSvgCoords={toSvgCoords}
           onArrowDragStart={handleArrowDragStart}
           onArrowHoverChange={(role, variant) => setHoveredArrow({ role, variant: role ? (variant ?? 'primary') : null })}
+          onCreateSecondaryArrow={onCreateSecondaryArrow}
           getRoleColor={(role) => ROLE_INFO[role].color}
         />
 
@@ -2339,11 +2346,8 @@ export function VolleyballCourt({
           draggingRole={draggingRole}
           dragPosition={dragPosition}
           draggingArrowRole={draggingArrowRole}
-          draggingArrowVariant={draggingArrowVariant}
           arrowDragPosition={arrowDragPosition}
           arrows={arrows}
-          secondaryArrows={secondaryArrows}
-          allowSecondaryPreview={allowReceiveSecondaryPreview}
           previewVisible={effectivePreviewVisible}
           tappedRole={tappedRole}
           isMobile={isMobile}

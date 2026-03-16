@@ -88,10 +88,10 @@ function VariantAccessory(props: PrototypeControlProps) {
       <div className="grid gap-2">
         <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.1em] text-[rgba(121,102,80,0.9)]">
           <span>Receive arrows</span>
-          <span>{isReceiveActive ? 'Second arrow creates 1st Attack' : 'Receive arrows saved per rotation'}</span>
+          <span>{isReceiveActive ? 'Extend an attack path into 1st Attack' : 'Receive arrows saved per rotation'}</span>
         </div>
         <div className="rounded-2xl border border-[rgba(170,146,111,0.24)] bg-[rgba(244,237,224,0.72)] px-3 py-2 text-[11px] text-[rgba(112,98,79,0.92)]">
-          Draw one receive arrow for normal Attack. Add a second receive arrow from the same player to enable 1st Attack.
+          Draw one receive arrow for normal Attack. Then hover that arrow and add a 2nd attack position to turn it into a 1st Attack path.
         </div>
       </div>
     )
