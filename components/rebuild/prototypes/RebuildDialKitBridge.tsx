@@ -147,10 +147,10 @@ export function RebuildDialKitBridge({
       ...(usesPhasePadHardware
         ? {
             phasePadHardware: {
-              trackInsetX: [seed.phasePadHardware.trackInsetX, -8, 28, 0.1],
-              trackInsetY: [seed.phasePadHardware.trackInsetY, -8, 28, 0.1],
-              trackRadius: [seed.phasePadHardware.trackRadius, 0, 28, 0.1],
-              trackWidth: [seed.phasePadHardware.trackWidth, 0.5, 18, 0.1],
+              trackWidth: [seed.phasePadHardware.trackWidth, 44, 116, 0.1],
+              trackHeight: [seed.phasePadHardware.trackHeight, 44, 116, 0.1],
+              trackCornerRadius: [seed.phasePadHardware.trackCornerRadius, 0, 28, 0.1],
+              channelWidth: [seed.phasePadHardware.channelWidth, 0.5, 18, 0.1],
               piecesPerHorizontalEdge: [seed.phasePadHardware.piecesPerHorizontalEdge, 2, 32, 1],
               piecesPerVerticalEdge: [seed.phasePadHardware.piecesPerVerticalEdge, 2, 32, 1],
               pieceLength: [seed.phasePadHardware.pieceLength, 1, 28, 0.1],
@@ -335,10 +335,10 @@ export function RebuildDialKitBridge({
       phasePadHardware:
         usesPhasePadHardware
           ? {
-              trackInsetX: params.phasePadHardware.trackInsetX,
-              trackInsetY: params.phasePadHardware.trackInsetY,
-              trackRadius: params.phasePadHardware.trackRadius,
               trackWidth: params.phasePadHardware.trackWidth,
+              trackHeight: params.phasePadHardware.trackHeight,
+              trackCornerRadius: params.phasePadHardware.trackCornerRadius,
+              channelWidth: params.phasePadHardware.channelWidth,
               piecesPerHorizontalEdge: params.phasePadHardware.piecesPerHorizontalEdge,
               piecesPerVerticalEdge: params.phasePadHardware.piecesPerVerticalEdge,
               pieceLength: params.phasePadHardware.pieceLength,

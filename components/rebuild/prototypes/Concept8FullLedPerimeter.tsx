@@ -705,7 +705,7 @@ function PhaseAreaTile({
 export function Concept8FullLedPerimeter(props: PrototypeControlProps) {
   const hardwareTuning = props.tactileTuning.phasePadHardware
   const theme = PHASE_PAD_VARIANT_THEMES[props.variantId]
-  const lanePadding = Math.max(8, hardwareTuning.trackWidth + 4.5)
+  const lanePadding = Math.max(8, hardwareTuning.channelWidth + 4.5)
   const piecesPerEdge = useMemo(
     () => [
       hardwareTuning.piecesPerHorizontalEdge, // DEFENSE — top

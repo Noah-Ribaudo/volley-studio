@@ -105,10 +105,10 @@ export interface C4LiteralPhaseSurfaceTuning {
 }
 
 export interface PhasePadHardwareTuning {
-  trackInsetX: number
-  trackInsetY: number
-  trackRadius: number
   trackWidth: number
+  trackHeight: number
+  trackCornerRadius: number
+  channelWidth: number
   piecesPerHorizontalEdge: number
   piecesPerVerticalEdge: number
   pieceLength: number
@@ -243,10 +243,10 @@ export const DEFAULT_TACTILE_TUNING: TactileTuning = {
     },
   },
   phasePadHardware: {
-    trackInsetX: 3.8,
-    trackInsetY: 3.8,
-    trackRadius: 4.1,
-    trackWidth: 5.2,
+    trackWidth: 92.4,
+    trackHeight: 92.4,
+    trackCornerRadius: 4.1,
+    channelWidth: 5.2,
     piecesPerHorizontalEdge: 6,
     piecesPerVerticalEdge: 6,
     pieceLength: 14.1,
@@ -369,10 +369,10 @@ export function sanitizeTactileTuning(input: TactileTuning): TactileTuning {
       },
     },
     phasePadHardware: {
-      trackInsetX: clamp(input.phasePadHardware.trackInsetX, -8, 28),
-      trackInsetY: clamp(input.phasePadHardware.trackInsetY, -8, 28),
-      trackRadius: clamp(input.phasePadHardware.trackRadius, 0, 28),
-      trackWidth: clamp(input.phasePadHardware.trackWidth, 0.5, 18),
+      trackWidth: clamp(input.phasePadHardware.trackWidth, 44, 116),
+      trackHeight: clamp(input.phasePadHardware.trackHeight, 44, 116),
+      trackCornerRadius: clamp(input.phasePadHardware.trackCornerRadius, 0, 28),
+      channelWidth: clamp(input.phasePadHardware.channelWidth, 0.5, 18),
       piecesPerHorizontalEdge: clamp(Math.round(input.phasePadHardware.piecesPerHorizontalEdge), 2, 32),
       piecesPerVerticalEdge: clamp(Math.round(input.phasePadHardware.piecesPerVerticalEdge), 2, 32),
       pieceLength: clamp(input.phasePadHardware.pieceLength, 1, 28),

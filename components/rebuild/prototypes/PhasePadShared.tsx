@@ -521,18 +521,20 @@ export function PhasePadHardwareLane({
     return () => observer.disconnect()
   }, [])
 
-  // Use aspect ratio to keep corner radius visually circular
+  // Convert track width/height to viewBox insets, correct corner radius for aspect ratio
+  const insetX = (100 - tuning.channelWidth) / 2
+  const insetY = (100 - tuning.trackHeight) / 2
   const sqrtAr = Math.sqrt(aspectRatio)
-  const radiusX = tuning.trackRadius / sqrtAr
-  const radiusY = tuning.trackRadius * sqrtAr
+  const radiusX = tuning.trackCornerRadius / sqrtAr
+  const radiusY = tuning.trackCornerRadius * sqrtAr
 
   const pathD = useMemo(
-    () => buildHardwareTrackPath(tuning.trackInsetX, tuning.trackInsetY, radiusX, radiusY),
-    [tuning.trackInsetX, tuning.trackInsetY, radiusX, radiusY]
+    () => buildHardwareTrackPath(insetX, insetY, radiusX, radiusY),
+    [insetX, insetY, radiusX, radiusY]
   )
   const pieces = useEdgeBasedTrackPieces(
-    tuning.trackInsetX,
-    tuning.trackInsetY,
+    insetX,
+    insetY,
     radiusX,
     radiusY,
     tuning.piecesPerHorizontalEdge,
@@ -571,21 +573,21 @@ export function PhasePadHardwareLane({
         d={pathD}
         fill="none"
         stroke={`rgba(0,0,0,${0.22 + tuning.channelShadow * 0.26})`}
-        strokeWidth={tuning.trackWidth + 3}
+        strokeWidth={tuning.channelWidth + 3}
         strokeLinecap="round"
       />
       <path
         d={pathD}
         fill="none"
         stroke={`rgba(255,255,255,${0.04 + tuning.channelHighlight * 0.12})`}
-        strokeWidth={tuning.trackWidth + 0.75}
+        strokeWidth={tuning.channelWidth + 0.75}
         strokeLinecap="round"
       />
       <path
         d={pathD}
         fill="none"
         stroke={`rgba(10,10,12,${0.38 + tuning.channelShadow * 0.24})`}
-        strokeWidth={tuning.trackWidth}
+        strokeWidth={tuning.channelWidth}
         strokeLinecap="round"
       />
 
