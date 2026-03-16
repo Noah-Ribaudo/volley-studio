@@ -21,11 +21,8 @@ interface ArrowPreviewOverlayProps {
   draggingRole: Role | null
   dragPosition: Position | null
   draggingArrowRole: Role | null
-  draggingArrowVariant?: 'primary' | 'secondary'
   arrowDragPosition: Position | null
   arrows: ArrowPositions
-  secondaryArrows?: ArrowPositions
-  allowSecondaryPreview?: boolean
   previewVisible: Partial<Record<Role, boolean>>
   tappedRole: Role | null
   isMobile: boolean
@@ -54,11 +51,8 @@ function ArrowPreviewOverlayImpl({
   draggingRole,
   dragPosition,
   draggingArrowRole,
-  draggingArrowVariant = 'primary',
   arrowDragPosition,
   arrows,
-  secondaryArrows = {},
-  allowSecondaryPreview = false,
   previewVisible,
   tappedRole,
   isMobile,
@@ -91,25 +85,20 @@ function ArrowPreviewOverlayImpl({
         const actualTokenRadius = Math.max(baseTokenSize * tokenScale, 48) / 2
 
         const rolePreviewVisible = previewVisible[role] === true
-        const hasPrimaryArrow = Boolean(arrows[role])
-        const hasSecondaryArrow = Boolean(secondaryArrows[role])
-        const canShowSecondaryPreview = allowSecondaryPreview && hasPrimaryArrow && !hasSecondaryArrow
-        const previewVariant: 'primary' | 'secondary' = canShowSecondaryPreview ? 'secondary' : 'primary'
-        const hasArrowForVariant = previewVariant === 'secondary' ? hasSecondaryArrow : hasPrimaryArrow
+        const hasArrow = Boolean(arrows[role])
         const isDraggingNewPreviewArrow =
           draggingArrowRole === role &&
-          draggingArrowVariant === previewVariant &&
-          !hasArrowForVariant &&
+          !hasArrow &&
           Boolean(arrowDragPosition)
 
-        if (hasArrowForVariant && !isDraggingNewPreviewArrow) {
+        if (hasArrow && !isDraggingNewPreviewArrow) {
           return null
         }
 
-        const canShowPreview = !hasArrowForVariant
+        const canShowPreview = !hasArrow
         const isPreviewActive = canShowPreview && (
           rolePreviewVisible ||
-          (draggingArrowRole === role && draggingArrowVariant === previewVariant) ||
+          draggingArrowRole === role ||
           (isMobile && tappedRole === role)
         )
 
@@ -124,7 +113,7 @@ function ArrowPreviewOverlayImpl({
         }
         const defaultPreviewEndSvg = {
           x: previewStartSvg.x + direction * (edgeInset + previewPeekDistance),
-          y: homeSvgPos.y + (previewVariant === 'secondary' ? 8 : -10),
+          y: homeSvgPos.y - 10,
         }
         const previewEndSvg = isDraggingNewPreviewArrow && arrowDragPosition
           ? toSvgCoords(arrowDragPosition)
@@ -149,9 +138,8 @@ function ArrowPreviewOverlayImpl({
               color={ROLE_INFO[role].color}
               strokeWidth={3}
               opacity={0.85}
-              dashPattern={previewVariant === 'secondary' ? '6 5' : undefined}
               isDraggable={true}
-              onDragStart={(e) => onArrowDragStart(role, e, previewEndSvg, previewControlSvg, previewVariant)}
+              onDragStart={(e) => onArrowDragStart(role, e, previewEndSvg, previewControlSvg, 'primary')}
               onMouseEnter={() => !draggingRole && !draggingArrowRole && onPreviewHover(role, 'arrow', true)}
               onMouseLeave={() => onPreviewHover(role, 'arrow', false)}
               dragHitArea="both"

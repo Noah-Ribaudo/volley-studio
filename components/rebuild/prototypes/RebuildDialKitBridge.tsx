@@ -21,6 +21,7 @@ const RESET_ACTIONS = new Set([
   'resetLoadingBar',
   'resetPhaseSurfaces',
   'resetPhasePadHardware',
+  'resetArrowTags',
 ])
 
 export function RebuildDialKitBridge({
@@ -28,7 +29,15 @@ export function RebuildDialKitBridge({
   onTuningChange,
   position = 'top-right',
 }: RebuildDialKitBridgeProps) {
-  const usesPhasePadHardware = activeVariant === 'playerToggle' || activeVariant === 'attackLabel' || activeVariant === 'splitAttack'
+  const usesPhasePadHardware =
+    activeVariant === 'clean' ||
+    activeVariant === 'machined' ||
+    activeVariant === 'backlit' ||
+    activeVariant === 'glass' ||
+    activeVariant === 'ceramic' ||
+    activeVariant === 'rubber' ||
+    activeVariant === 'instrument' ||
+    activeVariant === 'midnight'
   const usesLegacyClusterControls = false
   const [seed, setSeed] = useState<TactileTuning>(DEFAULT_TACTILE_TUNING)
   const [panelVersion, setPanelVersion] = useState(0)
@@ -66,11 +75,14 @@ export function RebuildDialKitBridge({
         _collapsed: true,
         travel: [seed.joystick.travel, 6, 52, 1],
         deadZone: [seed.joystick.deadZone, 0, 42, 1],
+        autoNudgeDistance: [seed.joystick.autoNudgeDistance, 0, 24, 0.25],
+        autoNudgeHoldMs: [seed.joystick.autoNudgeHoldMs, 40, 360, 5],
         haloIntensity: [seed.joystick.haloIntensity, 0, 1.25, 0.01],
         scale: [seed.joystick.scale, 0.65, 1.5, 0.01],
-        shellScale: seed.joystick.shellScale,
-        baseScale: seed.joystick.baseScale,
-        baseLightness: seed.joystick.baseLightness,
+        shellScale: [seed.joystick.shellScale, 0.55, 1.6, 0.01],
+        shellCutoutPadding: [seed.joystick.shellCutoutPadding, -8, 24, 0.25],
+        baseScale: [seed.joystick.baseScale, 0.5, 1.8, 0.01],
+        baseLightness: [seed.joystick.baseLightness, 0.1, 1.2, 0.01],
         highlightIntensity: [seed.joystick.highlightIntensity, 0, 1, 0.01],
         whiteRingOpacity: [seed.joystick.whiteRingOpacity, 0, 1, 0.01],
         showKnobBorderRing: seed.joystick.showKnobBorderRing,
@@ -154,9 +166,14 @@ export function RebuildDialKitBridge({
             resetPhasePadHardware: { type: 'action', label: 'Reset Phase Hardware' },
           }
         : {}),
+      arrowTags: {
+        _collapsed: true,
+        fontSize: [seed.arrowTags.fontSize, 8, 20, 0.25],
+      },
       resetLighting: { type: 'action', label: 'Reset Global Light' },
       resetPressFeel: { type: 'action', label: 'Reset Press Feel' },
       resetJoystick: { type: 'action', label: 'Reset Joystick' },
+      resetArrowTags: { type: 'action', label: 'Reset Arrow Tags' },
     },
     {
       onAction: (actionPath: string) => {
@@ -235,6 +252,13 @@ export function RebuildDialKitBridge({
           }
         }
 
+        if (actionPath === 'resetArrowTags') {
+          next = {
+            ...latest,
+            arrowTags: DEFAULT_TACTILE_TUNING.arrowTags,
+          }
+        }
+
         const sanitized = sanitizeTactileTuning(next)
         latestTuningRef.current = sanitized
         setSeed(sanitized)
@@ -281,9 +305,12 @@ export function RebuildDialKitBridge({
       joystick: {
         travel: params.joystick.travel,
         deadZone: params.joystick.deadZone,
+        autoNudgeDistance: params.joystick.autoNudgeDistance,
+        autoNudgeHoldMs: params.joystick.autoNudgeHoldMs,
         haloIntensity: params.joystick.haloIntensity,
         scale: params.joystick.scale,
         shellScale: params.joystick.shellScale,
+        shellCutoutPadding: params.joystick.shellCutoutPadding,
         baseScale: params.joystick.baseScale,
         baseLightness: params.joystick.baseLightness,
         highlightIntensity: params.joystick.highlightIntensity,
@@ -304,6 +331,9 @@ export function RebuildDialKitBridge({
       },
       phaseEmphasis: preserved.phaseEmphasis,
       connectors: preserved.connectors,
+      arrowTags: {
+        fontSize: params.arrowTags.fontSize,
+      },
       phasePadHardware:
         usesPhasePadHardware
           ? {

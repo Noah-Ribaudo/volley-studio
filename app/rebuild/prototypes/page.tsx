@@ -55,8 +55,10 @@ export default function RebuildPrototypeLabPage() {
     isLabTrayOpen,
     setIsLabTrayOpen,
     connectorStyle,
+    manualJoystickNudge,
     handleRotationSelect,
     handlePhaseSelect,
+    handleManualPhaseSelect,
     handlePlay,
     handlePoint,
     resetPreview,
@@ -135,9 +137,17 @@ export default function RebuildPrototypeLabPage() {
     () => prototypeCourtState.getSecondaryArrowEndpointLabels(currentRotation, currentCorePhase),
     [currentCorePhase, currentRotation, prototypeCourtState]
   )
+  const currentSecondaryArrowSources = useMemo(
+    () => (currentCorePhase === 'RECEIVE' ? currentArrows : {}),
+    [currentArrows, currentCorePhase]
+  )
 
   const currentArrowCurves = useMemo(
     () => prototypeCourtState.getArrowCurves(currentRotation, currentCorePhase),
+    [currentCorePhase, currentRotation, prototypeCourtState]
+  )
+  const currentSecondaryArrowCurves = useMemo(
+    () => prototypeCourtState.getSecondaryArrowCurves(currentRotation, currentCorePhase),
     [currentCorePhase, currentRotation, prototypeCourtState]
   )
   const currentStatusFlags = localStatusFlags[rotationPhaseKey] || {}
@@ -250,8 +260,10 @@ export default function RebuildPrototypeLabPage() {
       switchMotion={tactileTuning.switchMotion}
       tactileTuning={tactileTuning}
       hasFirstAttackTargets={hasFirstAttackTargets}
+      manualJoystickNudge={manualJoystickNudge}
       onRotationSelect={handleRotationSelect}
       onPhaseSelect={handlePhaseSelect}
+      onManualPhaseSelect={handleManualPhaseSelect}
       onPlay={() => {
         if (!canPlayAdvance) return
         handlePlay(nextByPlay)
@@ -369,8 +381,17 @@ export default function RebuildPrototypeLabPage() {
               arrows={currentArrows}
               arrowEndpointLabels={currentArrowLabels}
               secondaryArrows={currentSecondaryArrows}
+              secondaryArrowSources={currentSecondaryArrowSources}
               secondaryArrowEndpointLabels={currentSecondaryArrowLabels}
-              allowReceiveSecondaryPreview={currentCorePhase === 'RECEIVE'}
+              secondaryArrowCurves={currentSecondaryArrowCurves}
+              arrowTagFontSize={tactileTuning.arrowTags.fontSize}
+              onCreateSecondaryArrow={
+                isEditingAllowed && currentCorePhase === 'RECEIVE'
+                  ? (role) => {
+                      prototypeCourtState.createSecondaryArrowTarget(currentRotation, currentCorePhase, role)
+                    }
+                  : undefined
+              }
               onArrowChange={
                 isEditingAllowed
                   ? (role, position, options) => {
@@ -389,7 +410,12 @@ export default function RebuildPrototypeLabPage() {
               arrowCurves={currentArrowCurves}
               onArrowCurveChange={
                 isEditingAllowed
-                  ? (role, curve) => {
+                  ? (role, curve, options) => {
+                      if (options?.variant === 'secondary') {
+                        prototypeCourtState.setSecondaryArrowCurve(currentRotation, currentCorePhase, role, curve)
+                        return
+                      }
+
                       prototypeCourtState.setArrowCurve(currentRotation, currentCorePhase, role, curve)
                     }
                   : undefined

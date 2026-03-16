@@ -2,7 +2,15 @@ import type { RallyPhase, Rotation } from '@/lib/types'
 
 export type CorePhase = 'SERVE' | 'RECEIVE' | 'OFFENSE' | 'DEFENSE'
 export type PrototypePhase = CorePhase | 'FIRST_ATTACK'
-export type PrototypeVariantId = 'playerToggle' | 'attackLabel' | 'splitAttack'
+export type PrototypeVariantId =
+  | 'clean'
+  | 'machined'
+  | 'backlit'
+  | 'glass'
+  | 'ceramic'
+  | 'rubber'
+  | 'instrument'
+  | 'midnight'
 export type ConnectorStyle = 'static' | 'sweep' | 'relay' | 'pulse'
 export type ReceiveLinkTarget = 'OFFENSE' | 'FIRST_ATTACK'
 
@@ -34,9 +42,14 @@ export const PROTOTYPE_VARIANTS: Array<{
   shortLabel: string
   label: string
 }> = [
-  { id: 'playerToggle', shortLabel: 'Toggle', label: 'Player toggle variant' },
-  { id: 'attackLabel', shortLabel: 'State', label: 'Attack label variant' },
-  { id: 'splitAttack', shortLabel: 'Split', label: 'Split attack variant' },
+  { id: 'clean', shortLabel: 'Clean', label: 'Bare hardware with crisp mechanical buttons' },
+  { id: 'machined', shortLabel: 'Metal', label: 'Machined metal buttons with heavier depth and weight' },
+  { id: 'backlit', shortLabel: 'Glow', label: 'Warm backlit buttons with translucent button faces' },
+  { id: 'glass', shortLabel: 'Glass', label: 'Fluted glass buttons with shader-driven material sheen' },
+  { id: 'ceramic', shortLabel: 'Ceramic', label: 'Bright ceramic buttons with soft depth and glossy edges' },
+  { id: 'rubber', shortLabel: 'Rubber', label: 'Chunky rubber pads with matte softness and deep compression' },
+  { id: 'instrument', shortLabel: 'Lab', label: 'Pale instrument buttons with icy contrast and precise seams' },
+  { id: 'midnight', shortLabel: 'Night', label: 'Dark industrial buttons with neon edge lift and heavy shadow' },
 ]
 
 export const CONNECTOR_STYLE_OPTIONS: Array<{

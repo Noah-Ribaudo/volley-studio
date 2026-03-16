@@ -31,9 +31,12 @@ export interface DockTuning {
 export interface JoystickTuning {
   travel: number
   deadZone: number
+  autoNudgeDistance: number
+  autoNudgeHoldMs: number
   haloIntensity: number
   scale: number
   shellScale: number
+  shellCutoutPadding: number
   baseScale: number
   baseLightness: number
   highlightIntensity: number
@@ -119,6 +122,10 @@ export interface PhasePadHardwareTuning {
   channelHighlight: number
 }
 
+export interface ArrowTagTuning {
+  fontSize: number
+}
+
 export interface C4LiteralTuning {
   clusterLayout: C4LiteralClusterLayoutTuning
   connectorGeometry: C4LiteralConnectorGeometryTuning
@@ -135,6 +142,7 @@ export interface TactileTuning {
   connectors: ConnectorTuning
   c4Literal: C4LiteralTuning
   phasePadHardware: PhasePadHardwareTuning
+  arrowTags: ArrowTagTuning
 }
 
 export const DEFAULT_TACTILE_TUNING: TactileTuning = {
@@ -166,15 +174,18 @@ export const DEFAULT_TACTILE_TUNING: TactileTuning = {
   joystick: {
     travel: 13,
     deadZone: 10,
-    haloIntensity: 0.75,
+    autoNudgeDistance: 8,
+    autoNudgeHoldMs: 140,
+    haloIntensity: 0.51,
     scale: 1.5,
-    shellScale: 0.89,
-    baseScale: 1,
-    baseLightness: 0.56,
-    highlightIntensity: 0.8,
-    whiteRingOpacity: 0.29,
+    shellScale: 0.65,
+    shellCutoutPadding: -2.25,
+    baseScale: 1.34,
+    baseLightness: 0.3,
+    highlightIntensity: 0.6,
+    whiteRingOpacity: 0,
     showKnobBorderRing: false,
-    showDialShellRing: true,
+    showDialShellRing: false,
     offsetTexture: true,
     ringTextureScale: 11.8,
     ringTextureSpacingX: 3.9,
@@ -234,19 +245,22 @@ export const DEFAULT_TACTILE_TUNING: TactileTuning = {
     },
   },
   phasePadHardware: {
-    trackInset: 1.9,
-    trackRadius: 2.9,
-    trackWidth: 4.9,
+    trackInset: 3.8,
+    trackRadius: 4.1,
+    trackWidth: 5.2,
     piecesPerQuarter: 6,
-    pieceLength: 14,
-    pieceThickness: 4.25,
-    pieceRadius: 1.6,
-    inactiveOpacity: 0.14,
+    pieceLength: 14.1,
+    pieceThickness: 3.25,
+    pieceRadius: 1.3,
+    inactiveOpacity: 0.21,
     activeOpacity: 0.68,
-    glow: 0.58,
-    bloom: 1.89,
-    channelShadow: 0.85,
-    channelHighlight: 0.75,
+    glow: 0.41,
+    bloom: 1.45,
+    channelShadow: 1,
+    channelHighlight: 0.51,
+  },
+  arrowTags: {
+    fontSize: 16,
   },
 }
 
@@ -286,9 +300,12 @@ export function sanitizeTactileTuning(input: TactileTuning): TactileTuning {
     joystick: {
       travel: clamp(input.joystick.travel, 6, 52),
       deadZone: clamp(input.joystick.deadZone, 0, 42),
+      autoNudgeDistance: clamp(input.joystick.autoNudgeDistance, 0, 24),
+      autoNudgeHoldMs: clamp(input.joystick.autoNudgeHoldMs, 40, 360),
       haloIntensity: clamp(input.joystick.haloIntensity, 0, 1.25),
       scale: clamp(input.joystick.scale, 0.65, 1.5),
       shellScale: clamp(input.joystick.shellScale, 0.55, 1.6),
+      shellCutoutPadding: clamp(input.joystick.shellCutoutPadding, -8, 24),
       baseScale: clamp(input.joystick.baseScale, 0.5, 1.8),
       baseLightness: clamp(input.joystick.baseLightness, 0.1, 1.2),
       highlightIntensity: clamp(input.joystick.highlightIntensity, 0, 1),
@@ -367,6 +384,9 @@ export function sanitizeTactileTuning(input: TactileTuning): TactileTuning {
       bloom: clamp(input.phasePadHardware.bloom, 0, 3),
       channelShadow: clamp(input.phasePadHardware.channelShadow, 0, 1),
       channelHighlight: clamp(input.phasePadHardware.channelHighlight, 0, 1),
+    },
+    arrowTags: {
+      fontSize: clamp(input.arrowTags.fontSize, 8, 20),
     },
   }
 }

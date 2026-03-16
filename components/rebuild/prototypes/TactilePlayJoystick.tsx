@@ -1,10 +1,11 @@
 'use client'
 
-import { useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { motion, useReducedMotion } from 'motion/react'
 import type { CorePhase } from '@/lib/rebuild/prototypeFlow'
 import type { JoystickTuning, PhaseEmphasisTuning, SwitchMotionTuning } from '@/lib/rebuild/tactileTuning'
 import { cn } from '@/lib/utils'
+import type { ManualJoystickNudge } from './types'
 
 /* ─────────────────────────────────────────────────────────
  * ANIMATION STORYBOARD
@@ -67,6 +68,7 @@ interface TactilePlayJoystickProps {
   transitionProgress?: number
   mode?: JoystickMode
   frameSizeOverride?: number
+  manualJoystickNudge?: ManualJoystickNudge | null
   switchMotion: SwitchMotionTuning
   joystickTuning: JoystickTuning
   phaseEmphasis: PhaseEmphasisTuning
@@ -122,6 +124,22 @@ function getPhaseTint(phase: CorePhase): string {
   return isFoundationalPhase(phase) ? 'oklch(78% 0.08 72)' : 'oklch(76% 0.03 255)'
 }
 
+function getAutoNudgeOffset(phase: CorePhase, distance: number): { x: number; y: number } {
+  const diagonal = distance / Math.SQRT2
+
+  switch (phase) {
+    case 'SERVE':
+      return { x: -diagonal, y: -diagonal }
+    case 'DEFENSE':
+      return { x: diagonal, y: -diagonal }
+    case 'RECEIVE':
+      return { x: -diagonal, y: diagonal }
+    case 'OFFENSE':
+    default:
+      return { x: diagonal, y: diagonal }
+  }
+}
+
 export function TactilePlayJoystick({
   currentPhase,
   nextPhase,
@@ -129,6 +147,7 @@ export function TactilePlayJoystick({
   canPlayAdvance = true,
   mode = 'radial',
   frameSizeOverride,
+  manualJoystickNudge,
   switchMotion,
   joystickTuning,
   phaseEmphasis,
@@ -143,6 +162,8 @@ export function TactilePlayJoystick({
   const isPointerDownRef = useRef(false)
   const movedSinceDownRef = useRef(false)
   const lastDragPhaseRef = useRef<CorePhase | null>(null)
+  const autoNudgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const consumedNudgeTriggerRef = useRef<number | null>(null)
 
   const defaultFrame = JOYSTICK_FRAME[mode]
   const frame =
@@ -195,6 +216,10 @@ export function TactilePlayJoystick({
       }
 
   const resetStick = () => {
+    if (autoNudgeTimerRef.current) {
+      clearTimeout(autoNudgeTimerRef.current)
+      autoNudgeTimerRef.current = null
+    }
     isPointerDownRef.current = false
     movedSinceDownRef.current = false
     lastDragPhaseRef.current = null
@@ -202,6 +227,44 @@ export function TactilePlayJoystick({
     setDragPhase(null)
     setOffset({ x: 0, y: 0 })
   }
+
+  useEffect(() => {
+    return () => {
+      if (autoNudgeTimerRef.current) {
+        clearTimeout(autoNudgeTimerRef.current)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!manualJoystickNudge || isDragging || isPointerDownRef.current) {
+      return
+    }
+
+    if (consumedNudgeTriggerRef.current === manualJoystickNudge.trigger) {
+      return
+    }
+
+    if (autoNudgeTimerRef.current) {
+      clearTimeout(autoNudgeTimerRef.current)
+      autoNudgeTimerRef.current = null
+    }
+
+    consumedNudgeTriggerRef.current = manualJoystickNudge.trigger
+    const nudgePhase = manualJoystickNudge.phase
+    setOffset(getAutoNudgeOffset(nudgePhase, joystickTuning.autoNudgeDistance))
+
+    autoNudgeTimerRef.current = setTimeout(() => {
+      setOffset({ x: 0, y: 0 })
+      autoNudgeTimerRef.current = null
+    }, prefersReducedMotion ? 16 : joystickTuning.autoNudgeHoldMs)
+  }, [
+    isDragging,
+    joystickTuning.autoNudgeDistance,
+    joystickTuning.autoNudgeHoldMs,
+    manualJoystickNudge,
+    prefersReducedMotion,
+  ])
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
     isPointerDownRef.current = true
