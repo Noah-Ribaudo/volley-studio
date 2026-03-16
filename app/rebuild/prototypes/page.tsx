@@ -415,90 +415,92 @@ export default function RebuildPrototypeLabPage() {
       ) : null}
 
       <main className="flex min-h-0 flex-1 flex-col justify-end overflow-hidden">
-        <section className="relative w-full shrink-0 overflow-visible" style={{ aspectRatio: mobileCourtAspectRatio }}>
-          <VolleyballCourt
-            positions={positions}
-            animationConfig={{ durationMs: playDurationMs }}
-            hideAwayTeam={hideAwayTeam}
-            awayTeamHidePercent={awayTeamHidePercent}
-            rotation={currentRotation}
-            roster={currentTeam?.roster || []}
-            assignments={currentTeam?.position_assignments || {}}
-            onPositionChange={
-              isEditingAllowed
-                ? (role, position) => {
-                    updateLocalPosition(currentRotation, rallyPhase, role, position)
-                  }
-                : undefined
-            }
-            arrows={currentArrows}
-            onArrowChange={
-              isEditingAllowed
-                ? (role, position) => {
-                    if (!position) {
-                      clearArrow(currentRotation, rallyPhase, role)
-                      return
+        <section className="flex min-h-0 flex-1 items-end overflow-visible">
+          <div className="relative w-full shrink-0 overflow-visible" style={{ aspectRatio: mobileCourtAspectRatio }}>
+            <VolleyballCourt
+              positions={positions}
+              animationConfig={{ durationMs: playDurationMs }}
+              hideAwayTeam={hideAwayTeam}
+              awayTeamHidePercent={awayTeamHidePercent}
+              rotation={currentRotation}
+              roster={currentTeam?.roster || []}
+              assignments={currentTeam?.position_assignments || {}}
+              onPositionChange={
+                isEditingAllowed
+                  ? (role, position) => {
+                      updateLocalPosition(currentRotation, rallyPhase, role, position)
                     }
+                  : undefined
+              }
+              arrows={currentArrows}
+              onArrowChange={
+                isEditingAllowed
+                  ? (role, position) => {
+                      if (!position) {
+                        clearArrow(currentRotation, rallyPhase, role)
+                        return
+                      }
 
-                    updateArrow(currentRotation, rallyPhase, role, position)
-                  }
-                : undefined
-            }
-            arrowCurves={currentArrowCurves}
-            onArrowCurveChange={
-              isEditingAllowed
-                ? (role, curve) => {
-                    setArrowCurve(currentRotation, rallyPhase, role, curve)
-                  }
-                : undefined
-            }
-            showPosition={showPosition}
-            showPlayer={showPlayer}
-            showNumber={showNumber}
-            circleTokens={circleTokens}
-            legalityViolations={violations}
-            showLibero={showLibero}
-            currentPhase={rallyPhase}
-            attackBallPosition={currentAttackBallPosition}
-            onAttackBallChange={
-              isEditingAllowed
-                ? (position) => {
-                    if (!position) {
-                      clearAttackBallPosition(currentRotation, rallyPhase)
-                      return
+                      updateArrow(currentRotation, rallyPhase, role, position)
                     }
+                  : undefined
+              }
+              arrowCurves={currentArrowCurves}
+              onArrowCurveChange={
+                isEditingAllowed
+                  ? (role, curve) => {
+                      setArrowCurve(currentRotation, rallyPhase, role, curve)
+                    }
+                  : undefined
+              }
+              showPosition={showPosition}
+              showPlayer={showPlayer}
+              showNumber={showNumber}
+              circleTokens={circleTokens}
+              legalityViolations={violations}
+              showLibero={showLibero}
+              currentPhase={rallyPhase}
+              attackBallPosition={currentAttackBallPosition}
+              onAttackBallChange={
+                isEditingAllowed
+                  ? (position) => {
+                      if (!position) {
+                        clearAttackBallPosition(currentRotation, rallyPhase)
+                        return
+                      }
 
-                    setAttackBallPosition(currentRotation, rallyPhase, position)
-                  }
-                : undefined
-            }
-            statusFlags={currentStatusFlags}
-            onStatusToggle={
-              isEditingAllowed
-                ? (role, status) => {
-                    togglePlayerStatus(currentRotation, rallyPhase, role, status)
-                  }
-                : undefined
-            }
-            fullStatusLabels={fullStatusLabels}
-            animationTrigger={playAnimationTrigger}
-            isPreviewingMovement={isPreviewingMovement}
-            tagFlags={currentTagFlags}
-            onTagsChange={
-              isEditingAllowed
-                ? (role, tags) => {
-                    setTokenTags(currentRotation, rallyPhase, role, tags)
-                  }
-                : undefined
-            }
-            onPlayerAssign={
-              isEditingAllowed
-                ? (role, playerId) => {
-                    assignPlayerToRole(role, playerId)
-                  }
-                : undefined
-            }
-          />
+                      setAttackBallPosition(currentRotation, rallyPhase, position)
+                    }
+                  : undefined
+              }
+              statusFlags={currentStatusFlags}
+              onStatusToggle={
+                isEditingAllowed
+                  ? (role, status) => {
+                      togglePlayerStatus(currentRotation, rallyPhase, role, status)
+                    }
+                  : undefined
+              }
+              fullStatusLabels={fullStatusLabels}
+              animationTrigger={playAnimationTrigger}
+              isPreviewingMovement={isPreviewingMovement}
+              tagFlags={currentTagFlags}
+              onTagsChange={
+                isEditingAllowed
+                  ? (role, tags) => {
+                      setTokenTags(currentRotation, rallyPhase, role, tags)
+                    }
+                  : undefined
+              }
+              onPlayerAssign={
+                isEditingAllowed
+                  ? (role, playerId) => {
+                      assignPlayerToRole(role, playerId)
+                    }
+                  : undefined
+              }
+            />
+          </div>
         </section>
 
         <section className="w-full shrink-0 overflow-visible" style={mobileDockStyle}>
