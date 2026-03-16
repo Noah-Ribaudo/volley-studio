@@ -19,17 +19,31 @@ import {
 } from './PhasePadShared'
 
 const C8_PHASE_ORDER: CorePhase[] = ['DEFENSE', 'OFFENSE', 'RECEIVE', 'SERVE']
+const INNER_CORNER_CUT = 64
+
+function getInnerCornerPosition(row: 'top' | 'bottom', column: 'left' | 'right') {
+  return {
+    top: row === 'top' ? 'auto' : `${INNER_CORNER_CUT / -2}px`,
+    bottom: row === 'top' ? `${INNER_CORNER_CUT / -2}px` : 'auto',
+    left: column === 'left' ? 'auto' : `${INNER_CORNER_CUT / -2}px`,
+    right: column === 'left' ? `${INNER_CORNER_CUT / -2}px` : 'auto',
+  }
+}
 
 function PhaseAreaTile({
   phase,
   label,
   isActive,
+  row,
+  column,
   switchMotion,
   onManualPhaseSelect,
 }: {
   phase: CorePhase
   label: string
   isActive: boolean
+  row: 'top' | 'bottom'
+  column: 'left' | 'right'
   switchMotion: PrototypeControlProps['switchMotion']
   onManualPhaseSelect: (phase: PrototypePhase) => void
 }) {
@@ -73,6 +87,22 @@ function PhaseAreaTile({
           borderColor: isActive ? 'rgba(152,126,89,0.58)' : 'rgba(170,146,111,0.3)',
         }}
       >
+        <span
+          aria-hidden
+          className="pointer-events-none absolute rounded-full"
+          style={{
+            width: `${INNER_CORNER_CUT}px`,
+            height: `${INNER_CORNER_CUT}px`,
+            ...getInnerCornerPosition(row, column),
+            background:
+              'radial-gradient(circle at 50% 50%, rgba(206,186,153,0.84) 0%, rgba(216,197,166,0.96) 56%, rgba(229,214,188,0.98) 100%)',
+            boxShadow: [
+              'inset 0 1px 0 rgba(255,248,235,0.64)',
+              'inset 0 -9px 12px rgba(141,112,76,0.12)',
+              '0 1px 0 rgba(255,247,231,0.42)',
+            ].join(', '),
+          }}
+        />
         <span className="relative z-[1] tracking-[-0.02em]">{label}</span>
       </motion.div>
     </button>
@@ -216,6 +246,8 @@ export function Concept8FullLedPerimeter(props: PrototypeControlProps) {
                   phase={item.phase}
                   label={item.phase === 'OFFENSE' ? offenseLabel : item.label}
                   isActive={item.phase === activeDisplayPhase}
+                  row={item.row}
+                  column={item.column}
                   switchMotion={props.switchMotion}
                   onManualPhaseSelect={props.onManualPhaseSelect}
                 />
