@@ -6,6 +6,7 @@ export interface PrototypeControlProps {
   variantId: PrototypeVariantId
   currentRotation: Rotation
   currentCorePhase: CorePhase
+  targetCorePhase: CorePhase
   nextByPlay: CorePhase
   legalPlayLabel: string
   isFoundationalPhase: boolean
@@ -13,6 +14,7 @@ export interface PrototypeControlProps {
   canScore: boolean
   connectorStyle: ConnectorStyle
   playAnimationTrigger: number
+  isPhaseTraveling: boolean
   isPreviewingMovement: boolean
   switchMotion: SwitchMotionTuning
   tactileTuning: TactileTuning

@@ -45,7 +45,9 @@ export default function RebuildPrototypeLabPage() {
     setActiveVariant,
     currentRotation,
     currentCorePhase,
+    targetCorePhase,
     isOurServe,
+    isPhaseTraveling,
     isPreviewingMovement,
     playAnimationTrigger,
     isLabTrayOpen,
@@ -210,8 +212,11 @@ export default function RebuildPrototypeLabPage() {
   }, [handleLoadDemoSeeds])
 
   const isEditingAllowed = !isPreviewingMovement
-  const nextByPlay = getNextByPlay(currentCorePhase)
-  const legalPlayLabel = getLegalPlayLabel(currentCorePhase)
+  const controlCorePhase = activeVariant === 'concept8' && isPhaseTraveling
+    ? targetCorePhase
+    : currentCorePhase
+  const nextByPlay = getNextByPlay(controlCorePhase)
+  const legalPlayLabel = getLegalPlayLabel(controlCorePhase)
   const scoringEnabled = canVariantScore(activeVariant)
   const handleTuningChange = useCallback((next: TactileTuning) => {
     setTactileTuning(next)
@@ -254,13 +259,15 @@ export default function RebuildPrototypeLabPage() {
       variantId={activeVariant}
       currentRotation={currentRotation}
       currentCorePhase={currentCorePhase}
+      targetCorePhase={targetCorePhase}
       nextByPlay={nextByPlay}
       legalPlayLabel={legalPlayLabel}
-      isFoundationalPhase={isFoundationalPhase(currentCorePhase)}
+      isFoundationalPhase={isFoundationalPhase(controlCorePhase)}
       isOurServe={isOurServe}
       canScore={scoringEnabled}
       connectorStyle={connectorStyle}
       playAnimationTrigger={playAnimationTrigger}
+      isPhaseTraveling={isPhaseTraveling}
       isPreviewingMovement={isPreviewingMovement}
       switchMotion={tactileTuning.switchMotion}
       tactileTuning={tactileTuning}
