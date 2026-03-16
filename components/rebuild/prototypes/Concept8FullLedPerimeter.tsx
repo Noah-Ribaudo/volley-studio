@@ -2,8 +2,15 @@
 
 import { useState } from 'react'
 import { motion, useReducedMotion } from 'motion/react'
+import { Button } from '@/components/ui/button'
+import {
+  formatPrototypePhaseLabel,
+  type CorePhase,
+  type PrototypePhase,
+} from '@/lib/rebuild/prototypeFlow'
+import { ROLES, type Role } from '@/lib/types'
 import { cn } from '@/lib/utils'
-import type { CorePhase } from '@/lib/rebuild/prototypeFlow'
+import type { PrototypeControlProps } from './types'
 import {
   PHASE_PAD_LAYOUT,
   PhasePadHardwareLane,
@@ -11,7 +18,6 @@ import {
   PhasePadRotationRail,
   useQuarterTrackTravelState,
 } from './PhasePadShared'
-import type { PrototypeControlProps } from './types'
 
 const C8_PHASE_ORDER: CorePhase[] = ['DEFENSE', 'OFFENSE', 'RECEIVE', 'SERVE']
 
@@ -26,7 +32,7 @@ function PhaseAreaTile({
   label: string
   isActive: boolean
   switchMotion: PrototypeControlProps['switchMotion']
-  onPhaseSelect: (phase: CorePhase) => void
+  onPhaseSelect: (phase: PrototypePhase) => void
 }) {
   const prefersReducedMotion = useReducedMotion()
   const [isPressed, setIsPressed] = useState(false)
@@ -74,23 +80,149 @@ function PhaseAreaTile({
   )
 }
 
+function RoleToggleRow({
+  receiveFirstAttackMap,
+  onToggle,
+}: {
+  receiveFirstAttackMap: PrototypeControlProps['receiveFirstAttackMap']
+  onToggle: (role: Role) => void
+}) {
+  return (
+    <div className="grid grid-cols-7 gap-1.5">
+      {ROLES.map((role) => {
+        const enabled = Boolean(receiveFirstAttackMap[role])
+        return (
+          <button
+            key={role}
+            type="button"
+            onClick={() => onToggle(role)}
+            className={cn(
+              'rounded-full border px-0 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] transition-colors',
+              enabled
+                ? 'border-[rgba(203,120,57,0.6)] bg-[rgba(219,136,67,0.2)] text-[rgba(115,57,19,0.96)]'
+                : 'border-[rgba(170,146,111,0.3)] bg-[rgba(244,237,224,0.8)] text-[rgba(112,98,79,0.92)]'
+            )}
+            style={{
+              color: enabled ? 'rgba(123,60,18,0.96)' : undefined,
+            }}
+          >
+            {role}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function VariantAccessory(props: PrototypeControlProps) {
+  const isReceiveActive = props.currentCorePhase === 'RECEIVE' || props.currentCorePhase === 'FIRST_ATTACK'
+  const firstAttackActive = props.currentCorePhase === 'FIRST_ATTACK'
+
+  if (props.variantId === 'playerToggle') {
+    return (
+      <div className="grid gap-2">
+        <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.1em] text-[rgba(121,102,80,0.9)]">
+          <span>Receive links</span>
+          <span>{isReceiveActive ? 'Tap roles for 1st attack' : 'Saved per rotation'}</span>
+        </div>
+        <RoleToggleRow receiveFirstAttackMap={props.receiveFirstAttackMap} onToggle={props.onReceiveFirstAttackToggle} />
+      </div>
+    )
+  }
+
+  if (props.variantId === 'attackLabel') {
+    return (
+      <div className="grid gap-2">
+        <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.1em] text-[rgba(121,102,80,0.9)]">
+          <span>Attack destination</span>
+          <span>{props.hasFirstAttackTargets ? 'Receive can stop at 1st attack' : 'Receive goes straight to attack'}</span>
+        </div>
+        <div className="grid grid-cols-2 gap-1.5">
+          <Button
+            type="button"
+            variant={firstAttackActive ? 'default' : 'outline'}
+            size="sm"
+            className="h-8 text-[11px]"
+            disabled={!props.hasFirstAttackTargets}
+            onClick={() => props.onPhaseSelect('FIRST_ATTACK')}
+          >
+            1st Attack
+          </Button>
+          <Button
+            type="button"
+            variant={props.currentCorePhase === 'OFFENSE' ? 'default' : 'outline'}
+            size="sm"
+            className="h-8 text-[11px]"
+            onClick={() => props.onPhaseSelect('OFFENSE')}
+          >
+            Attack
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="grid gap-2">
+      <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.1em] text-[rgba(121,102,80,0.9)]">
+        <span>Attack controls</span>
+        <span>Separate first-hit and normal attack</span>
+      </div>
+      <div className="grid grid-cols-3 gap-1.5">
+        <Button
+          type="button"
+          variant={props.currentCorePhase === 'RECEIVE' ? 'default' : 'outline'}
+          size="sm"
+          className="h-8 text-[11px]"
+          onClick={() => props.onPhaseSelect('RECEIVE')}
+        >
+          Receive
+        </Button>
+        <Button
+          type="button"
+          variant={firstAttackActive ? 'default' : 'outline'}
+          size="sm"
+          className="h-8 text-[11px]"
+          onClick={() => props.onPhaseSelect('FIRST_ATTACK')}
+        >
+          1st Attack
+        </Button>
+        <Button
+          type="button"
+          variant={props.currentCorePhase === 'OFFENSE' ? 'default' : 'outline'}
+          size="sm"
+          className="h-8 text-[11px]"
+          onClick={() => props.onPhaseSelect('OFFENSE')}
+        >
+          Attack
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 export function Concept8FullLedPerimeter(props: PrototypeControlProps) {
   const hardwareTuning = props.tactileTuning.phasePadHardware
   const lanePadding = Math.max(8, hardwareTuning.trackWidth + 4.5)
   const perimeterState = useQuarterTrackTravelState({
-    currentCorePhase: props.currentCorePhase,
-    targetCorePhase: props.targetCorePhase,
+    currentCorePhase: props.displayCurrentCorePhase,
+    targetCorePhase: props.displayTargetCorePhase,
     isPhaseTraveling: props.isPhaseTraveling,
     positionsPerQuarter: hardwareTuning.piecesPerQuarter,
     phaseOrder: C8_PHASE_ORDER,
     travelDurationMs: props.tactileTuning.c4Literal.connectorMotion.playDurationMs,
   })
-  const activePhase = props.isPhaseTraveling ? props.targetCorePhase : props.currentCorePhase
+  const activeDisplayPhase = props.isPhaseTraveling ? props.displayTargetCorePhase : props.displayCurrentCorePhase
+  const offenseLabel = props.currentCorePhase === 'FIRST_ATTACK' ? '1st Attack' : 'Attack'
 
   return (
     <div className="flex w-full flex-col justify-end">
       <div className="rounded-[22px] border border-[rgba(172,149,115,0.42)] bg-[linear-gradient(180deg,rgba(239,231,216,0.98)_0%,rgba(213,198,175,0.98)_100%)] p-2 shadow-[0_16px_30px_rgba(128,102,72,0.16),inset_0_1px_0_rgba(255,249,240,0.8)]">
         <PhasePadRotationRail {...props} />
+
+        <div className="mb-2 rounded-[16px] border border-[rgba(175,149,115,0.26)] bg-[rgba(247,240,228,0.74)] px-2.5 py-2 shadow-[inset_0_1px_0_rgba(255,247,234,0.52)]">
+          <VariantAccessory {...props} />
+        </div>
 
         <div className="relative overflow-visible rounded-[18px] p-[10px]">
           <div
@@ -106,13 +238,13 @@ export function Concept8FullLedPerimeter(props: PrototypeControlProps) {
               totalLights={perimeterState.totalLights}
             />
 
-            <div className="relative z-[1] grid grid-cols-2 gap-px overflow-hidden rounded-[13px] border border-[rgba(174,150,116,0.24)] bg-[rgba(187,164,131,0.34)] shadow-[inset_0_1px_0_rgba(255,247,234,0.38)]">
+            <div className="relative z-[1] grid grid-cols-2 gap-px overflow-hidden rounded-[13px] bg-[rgba(187,164,131,0.34)]">
               {PHASE_PAD_LAYOUT.map((item) => (
                 <PhaseAreaTile
                   key={item.phase}
                   phase={item.phase}
-                  label={item.label}
-                  isActive={item.phase === activePhase}
+                  label={item.phase === 'OFFENSE' ? offenseLabel : item.label}
+                  isActive={item.phase === activeDisplayPhase}
                   switchMotion={props.switchMotion}
                   onPhaseSelect={props.onPhaseSelect}
                 />
@@ -121,6 +253,11 @@ export function Concept8FullLedPerimeter(props: PrototypeControlProps) {
           </div>
 
           <PhasePadJoystick props={props} />
+        </div>
+
+        <div className="mt-2 flex items-center justify-between px-1 text-[11px] text-[rgba(108,90,70,0.92)]">
+          <div className="font-medium">{formatPrototypePhaseLabel(props.currentCorePhase)}</div>
+          <div>{props.legalPlayLabel}</div>
         </div>
       </div>
     </div>

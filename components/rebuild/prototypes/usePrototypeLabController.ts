@@ -5,18 +5,18 @@ import {
   applyPointScored,
   canVariantScore,
   type ConnectorStyle,
-  getNextByPlay,
-  type CorePhase,
+  toDisplayCorePhase,
   type PointWinner,
+  type PrototypePhase,
   type PrototypeVariantId,
 } from '@/lib/rebuild/prototypeFlow'
 import type { Rotation } from '@/lib/types'
 
 export function usePrototypeLabController(playAdvanceDelayMs: number) {
-  const [activeVariant, setActiveVariant] = useState<PrototypeVariantId>('concept8')
+  const [activeVariant, setActiveVariant] = useState<PrototypeVariantId>('playerToggle')
   const [currentRotation, setCurrentRotation] = useState<Rotation>(1)
-  const [currentCorePhase, setCurrentCorePhase] = useState<CorePhase>('SERVE')
-  const [targetCorePhase, setTargetCorePhase] = useState<CorePhase>('SERVE')
+  const [currentCorePhase, setCurrentCorePhase] = useState<PrototypePhase>('SERVE')
+  const [targetCorePhase, setTargetCorePhase] = useState<PrototypePhase>('SERVE')
   const [isOurServe, setIsOurServe] = useState(true)
   const [isPhaseTraveling, setIsPhaseTraveling] = useState(false)
   const [isPreviewingMovement, setPreviewingMovement] = useState(false)
@@ -55,7 +55,7 @@ export function usePrototypeLabController(playAdvanceDelayMs: number) {
   }, [clearPhaseCommitTimer, clearPlayTimer, currentCorePhase])
 
   const queuePhaseTravel = useCallback(
-    (nextPhase: CorePhase, options?: { previewMovement?: boolean; triggerPlayAnimation?: boolean }) => {
+    (nextPhase: PrototypePhase, options?: { previewMovement?: boolean; triggerPlayAnimation?: boolean }) => {
       const previewMovement = options?.previewMovement ?? false
       const triggerPlayAnimation = options?.triggerPlayAnimation ?? false
       const shouldStartTravel =
@@ -108,58 +108,26 @@ export function usePrototypeLabController(playAdvanceDelayMs: number) {
   )
 
   const handlePhaseSelect = useCallback(
-    (phase: CorePhase) => {
-      if (activeVariant === 'concept8') {
-        queuePhaseTravel(phase)
-        return
-      }
-
-      resetPreview()
-      setCurrentCorePhase(phase)
-      setTargetCorePhase(phase)
+    (phase: PrototypePhase) => {
+      queuePhaseTravel(phase)
     },
-    [activeVariant, queuePhaseTravel, resetPreview]
+    [queuePhaseTravel]
   )
 
-  const handlePlay = useCallback(() => {
+  const handlePlay = useCallback((nextPhase: PrototypePhase) => {
     if (isPreviewingMovement) {
       resetPreview()
       return
     }
 
-    const basePhase = activeVariant === 'concept8' && isPhaseTraveling
-      ? targetCorePhase
-      : currentCorePhase
-    const nextPhase = getNextByPlay(basePhase)
-
-    if (activeVariant === 'concept8') {
-      queuePhaseTravel(nextPhase, {
-        previewMovement: true,
-        triggerPlayAnimation: true,
-      })
-      return
-    }
-
-    setPlayAnimationTrigger((prev) => prev + 1)
-    setPreviewingMovement(true)
-    clearPlayTimer()
-
-    playTimerRef.current = setTimeout(() => {
-      setPreviewingMovement(false)
-      setCurrentCorePhase(nextPhase)
-      setTargetCorePhase(nextPhase)
-      playTimerRef.current = null
-    }, playAdvanceDelayMs)
+    queuePhaseTravel(nextPhase, {
+      previewMovement: true,
+      triggerPlayAnimation: true,
+    })
   }, [
-    activeVariant,
-    clearPlayTimer,
-    currentCorePhase,
-    isPhaseTraveling,
     isPreviewingMovement,
-    playAdvanceDelayMs,
     queuePhaseTravel,
     resetPreview,
-    targetCorePhase,
   ])
 
   const handlePoint = useCallback(
@@ -170,7 +138,7 @@ export function usePrototypeLabController(playAdvanceDelayMs: number) {
       const outcome = applyPointScored(
         {
           currentRotation,
-          currentCorePhase,
+          currentCorePhase: toDisplayCorePhase(currentCorePhase),
           isOurServe,
         },
         winner

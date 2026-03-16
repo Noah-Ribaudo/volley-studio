@@ -2,7 +2,7 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useReducedMotion } from 'motion/react'
-import { type CorePhase, formatCorePhaseLabel } from '@/lib/rebuild/prototypeFlow'
+import { formatCorePhaseLabel, type CorePhase } from '@/lib/rebuild/prototypeFlow'
 import type { PhaseEmphasisTuning, PhasePadHardwareTuning } from '@/lib/rebuild/tactileTuning'
 import { TactilePlayJoystick } from './TactilePlayJoystick'
 import { TactileRotationSwitch } from './TactileRotationSwitch'
@@ -31,8 +31,8 @@ export const PHASE_PAD_LAYOUT: Array<{
 ]
 
 export function usePhasePadTransition(props: PrototypeControlProps) {
-  const [transitionFrom, setTransitionFrom] = useState<CorePhase>(props.currentCorePhase)
-  const [transitionTo, setTransitionTo] = useState<CorePhase>(props.nextByPlay)
+  const [transitionFrom, setTransitionFrom] = useState<CorePhase>(props.displayCurrentCorePhase)
+  const [transitionTo, setTransitionTo] = useState<CorePhase>(props.displayNextByPlay)
   const [transitionProgress, setTransitionProgress] = useState(0)
 
   const playDurationMs = props.tactileTuning.c4Literal.connectorMotion.playDurationMs
@@ -40,13 +40,13 @@ export function usePhasePadTransition(props: PrototypeControlProps) {
   useEffect(() => {
     if (!props.isPreviewingMovement) {
       setTransitionProgress(0)
-      setTransitionFrom(props.currentCorePhase)
-      setTransitionTo(props.nextByPlay)
+      setTransitionFrom(props.displayCurrentCorePhase)
+      setTransitionTo(props.displayNextByPlay)
       return
     }
 
-    setTransitionFrom(props.currentCorePhase)
-    setTransitionTo(props.nextByPlay)
+    setTransitionFrom(props.displayCurrentCorePhase)
+    setTransitionTo(props.displayNextByPlay)
     setTransitionProgress(0)
 
     let frameId = 0
@@ -66,15 +66,15 @@ export function usePhasePadTransition(props: PrototypeControlProps) {
     return () => {
       window.cancelAnimationFrame(frameId)
     }
-  }, [playDurationMs, props.currentCorePhase, props.isPreviewingMovement, props.nextByPlay, props.playAnimationTrigger])
+  }, [playDurationMs, props.displayCurrentCorePhase, props.displayNextByPlay, props.isPreviewingMovement, props.playAnimationTrigger])
 
   const liveStatus = useMemo(() => {
     if (props.isPreviewingMovement) {
       return `${formatCorePhaseLabel(transitionFrom)} -> ${formatCorePhaseLabel(transitionTo)}`
     }
 
-    return formatCorePhaseLabel(props.currentCorePhase)
-  }, [props.currentCorePhase, props.isPreviewingMovement, transitionFrom, transitionTo])
+    return formatCorePhaseLabel(props.displayCurrentCorePhase)
+  }, [props.displayCurrentCorePhase, props.isPreviewingMovement, transitionFrom, transitionTo])
 
   return {
     transitionFrom,
@@ -566,9 +566,9 @@ export function PhasePadJoystick({
     <div className="pointer-events-none absolute inset-0 z-[5] flex items-center justify-center">
       <div className="pointer-events-auto">
         <TactilePlayJoystick
-          currentPhase={props.currentCorePhase}
-          nextPhase={props.nextByPlay}
-          nextLabel={formatCorePhaseLabel(props.nextByPlay)}
+          currentPhase={props.displayCurrentCorePhase}
+          nextPhase={props.displayNextByPlay}
+          nextLabel={props.nextByPlay === 'FIRST_ATTACK' ? '1st Attack' : formatCorePhaseLabel(props.displayNextByPlay)}
           mode="literal"
           frameSizeOverride={92}
           switchMotion={props.switchMotion}

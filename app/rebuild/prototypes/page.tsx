@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { VolleyballCourt } from '@/components/court'
 import { PrototypeControlPanel } from '@/components/rebuild/prototypes'
 import { RebuildDialKitBridge } from '@/components/rebuild/prototypes/RebuildDialKitBridge'
+import { usePrototypeCourtState } from '@/components/rebuild/prototypes/usePrototypeCourtState'
 import { usePrototypeLabController } from '@/components/rebuild/prototypes/usePrototypeLabController'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
@@ -11,19 +12,18 @@ import { useIsMobile } from '@/hooks/useIsMobile'
 import { validateRotationLegality } from '@/lib/model/legality'
 import {
   canVariantScore,
-  CONNECTOR_STYLE_OPTIONS,
-  CORE_PHASES,
-  formatCorePhaseLabel,
+  formatPrototypePhaseLabel,
   getLegalPlayLabel,
   getNextByPlay,
   isFoundationalPhase,
   PROTOTYPE_VARIANTS,
+  toDisplayCorePhase,
   toRallyPhase,
+  type CorePhase,
 } from '@/lib/rebuild/prototypeFlow'
-import { getPrototypeSeed } from '@/lib/rebuild/prototypeSeeds'
 import { DEFAULT_TACTILE_TUNING, toTactileCssVariables, type TactileTuning } from '@/lib/rebuild/tactileTuning'
 import { createRotationPhaseKey, getBackRowMiddle } from '@/lib/rotations'
-import { getCurrentArrows, getCurrentPositions, getCurrentTags } from '@/lib/whiteboardHelpers'
+import { getCurrentPositions, getCurrentTags } from '@/lib/whiteboardHelpers'
 import { ROLES, type Position, type Role, type Rotation } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { useDisplayPrefsStore } from '@/store/useDisplayPrefsStore'
@@ -53,7 +53,6 @@ export default function RebuildPrototypeLabPage() {
     isLabTrayOpen,
     setIsLabTrayOpen,
     connectorStyle,
-    setConnectorStyle,
     handleRotationSelect,
     handlePhaseSelect,
     handlePlay,
@@ -62,24 +61,19 @@ export default function RebuildPrototypeLabPage() {
     resetToBaseline,
   } = usePrototypeLabController(playDurationMs)
 
-  const rallyPhase = toRallyPhase(currentCorePhase)
+  const displayCurrentCorePhase = toDisplayCorePhase(currentCorePhase)
+  const displayTargetCorePhase = toDisplayCorePhase(targetCorePhase)
+  const rallyPhase = toRallyPhase(displayCurrentCorePhase)
   const rotationPhaseKey = createRotationPhaseKey(currentRotation, rallyPhase)
 
   const localPositions = useWhiteboardStore((state) => state.localPositions)
-  const localArrows = useWhiteboardStore((state) => state.localArrows)
-  const arrowCurves = useWhiteboardStore((state) => state.arrowCurves)
   const localStatusFlags = useWhiteboardStore((state) => state.localStatusFlags)
   const localTagFlags = useWhiteboardStore((state) => state.localTagFlags)
   const attackBallPositions = useWhiteboardStore((state) => state.attackBallPositions)
-  const updateLocalPosition = useWhiteboardStore((state) => state.updateLocalPosition)
-  const updateArrow = useWhiteboardStore((state) => state.updateArrow)
-  const clearArrow = useWhiteboardStore((state) => state.clearArrow)
-  const setArrowCurve = useWhiteboardStore((state) => state.setArrowCurve)
   const togglePlayerStatus = useWhiteboardStore((state) => state.togglePlayerStatus)
   const setTokenTags = useWhiteboardStore((state) => state.setTokenTags)
   const setAttackBallPosition = useWhiteboardStore((state) => state.setAttackBallPosition)
   const clearAttackBallPosition = useWhiteboardStore((state) => state.clearAttackBallPosition)
-  const resetToDefaults = useWhiteboardStore((state) => state.resetToDefaults)
 
   const currentTeam = useTeamStore((state) => state.currentTeam)
   const customLayouts = useTeamStore((state) => state.customLayouts)
@@ -96,59 +90,45 @@ export default function RebuildPrototypeLabPage() {
 
   const currentAttackBallPosition = attackBallPositions[rotationPhaseKey] || null
 
-  const isReceivingContext = currentCorePhase === 'RECEIVE'
-
-  const positions = useMemo(
-    () =>
+  const getFallbackPrototypePositions = useCallback(
+    (rotation: Rotation, phase: CorePhase) =>
       getCurrentPositions(
-        currentRotation,
-        rallyPhase,
+        rotation,
+        toRallyPhase(phase),
         localPositions,
         customLayouts,
         currentTeam,
-        isReceivingContext,
+        phase === 'RECEIVE',
         undefined,
         showLibero,
-        currentAttackBallPosition
+        attackBallPositions[createRotationPhaseKey(rotation, toRallyPhase(phase))] || null
       ),
-    [
-      currentAttackBallPosition,
-      currentRotation,
-      currentTeam,
-      customLayouts,
-      isReceivingContext,
-      localPositions,
-      rallyPhase,
-      showLibero,
-    ]
+    [attackBallPositions, currentTeam, customLayouts, localPositions, showLibero]
+  )
+
+  const prototypeCourtState = usePrototypeCourtState({
+    getFallbackPositions: getFallbackPrototypePositions,
+  })
+
+  const receiveFirstAttackMap = prototypeCourtState.getReceiveFirstAttackMap(currentRotation)
+  const hasFirstAttackTargets = prototypeCourtState.hasFirstAttackTargets(currentRotation)
+
+  const positions = useMemo(
+    () => prototypeCourtState.getPositions(currentRotation, currentCorePhase),
+    [currentCorePhase, currentRotation, prototypeCourtState]
   )
 
   const currentArrows = useMemo(
-    () =>
-      getCurrentArrows(
-        currentRotation,
-        rallyPhase,
-        localArrows,
-        isReceivingContext,
-        undefined,
-        showLibero,
-        currentAttackBallPosition,
-        currentTeam
-      ),
-    [
-      currentAttackBallPosition,
-      currentRotation,
-      currentTeam,
-      isReceivingContext,
-      localArrows,
-      rallyPhase,
-      showLibero,
-    ]
+    () => prototypeCourtState.getDerivedArrows(currentRotation, currentCorePhase),
+    [currentCorePhase, currentRotation, prototypeCourtState]
   )
 
-  const currentArrowCurves = arrowCurves[rotationPhaseKey] || {}
+  const currentArrowCurves = useMemo(
+    () => prototypeCourtState.getArrowCurves(currentRotation, currentCorePhase),
+    [currentCorePhase, currentRotation, prototypeCourtState]
+  )
   const currentStatusFlags = localStatusFlags[rotationPhaseKey] || {}
-  const currentTagFlags = getCurrentTags(currentRotation, rallyPhase, localTagFlags)
+  const currentTagFlags = currentCorePhase === 'FIRST_ATTACK' ? {} : getCurrentTags(currentRotation, rallyPhase, localTagFlags)
 
   const violations = useMemo(() => {
     if (rallyPhase !== 'PRE_SERVE' && rallyPhase !== 'SERVE_RECEIVE') {
@@ -173,37 +153,17 @@ export default function RebuildPrototypeLabPage() {
 
   const handleLoadDemoSeeds = useCallback(() => {
     resetPreview()
-
-    ;([1, 4] as Rotation[]).forEach((rotation) => {
-      CORE_PHASES.forEach((phase) => {
-        const seed = getPrototypeSeed(rotation, phase)
-        if (!seed) return
-        const mappedPhase = toRallyPhase(phase)
-
-        for (const role of ROLES) {
-          clearArrow(rotation, mappedPhase, role)
-        }
-
-        for (const [role, pos] of Object.entries(seed.positions)) {
-          if (!pos) continue
-          updateLocalPosition(rotation, mappedPhase, role as Role, pos)
-        }
-
-        for (const [role, pos] of Object.entries(seed.arrows)) {
-          if (!pos) continue
-          updateArrow(rotation, mappedPhase, role as Role, pos)
-        }
-      })
-    })
-
+    prototypeCourtState.loadDemoSeeds([1, 4])
     resetToBaseline()
-  }, [clearArrow, resetPreview, resetToBaseline, updateArrow, updateLocalPosition])
+  }, [prototypeCourtState, resetPreview, resetToBaseline])
 
   const handleResetCurrentPhase = useCallback(() => {
     resetPreview()
-    resetToDefaults(currentRotation, rallyPhase)
-    clearAttackBallPosition(currentRotation, rallyPhase)
-  }, [clearAttackBallPosition, currentRotation, rallyPhase, resetPreview, resetToDefaults])
+    prototypeCourtState.resetPhase(currentRotation, currentCorePhase)
+    if (currentCorePhase !== 'FIRST_ATTACK') {
+      clearAttackBallPosition(currentRotation, rallyPhase)
+    }
+  }, [clearAttackBallPosition, currentCorePhase, currentRotation, prototypeCourtState, rallyPhase, resetPreview])
 
   useEffect(() => {
     if (didBootstrapSeedsRef.current) return
@@ -212,21 +172,20 @@ export default function RebuildPrototypeLabPage() {
   }, [handleLoadDemoSeeds])
 
   const isEditingAllowed = !isPreviewingMovement
-  const controlCorePhase = activeVariant === 'concept8' && isPhaseTraveling
+  const controlCorePhase = isPhaseTraveling
     ? targetCorePhase
     : currentCorePhase
-  const nextByPlay = getNextByPlay(controlCorePhase)
-  const legalPlayLabel = getLegalPlayLabel(controlCorePhase)
+  const displayNextByPlay = toDisplayCorePhase(getNextByPlay(controlCorePhase, { hasFirstAttack: hasFirstAttackTargets }))
+  const nextByPlay = getNextByPlay(controlCorePhase, { hasFirstAttack: hasFirstAttackTargets })
+  const legalPlayLabel = getLegalPlayLabel(controlCorePhase, { hasFirstAttack: hasFirstAttackTargets })
   const scoringEnabled = canVariantScore(activeVariant)
   const handleTuningChange = useCallback((next: TactileTuning) => {
     setTactileTuning(next)
   }, [])
-  const mobileDockHeight =
-    activeVariant === 'concept4' ? tactileTuning.c4Literal.clusterLayout.dockHeight : tactileTuning.dock.collapsedHeight
-  const mobileDockStyle = activeVariant === 'concept4' ? { height: mobileDockHeight } : undefined
+  const mobileDockStyle = undefined
   const mobileCourtAspectRatio = '393 / 696'
 
-  const labStatusCopy = `Rotation ${currentRotation} • ${formatCorePhaseLabel(currentCorePhase)} • ${
+  const labStatusCopy = `Rotation ${currentRotation} • ${formatPrototypePhaseLabel(currentCorePhase)} • ${
     isOurServe ? 'We Serve' : 'We Receive'
   }`
 
@@ -261,9 +220,12 @@ export default function RebuildPrototypeLabPage() {
       currentRotation={currentRotation}
       currentCorePhase={currentCorePhase}
       targetCorePhase={targetCorePhase}
+      displayCurrentCorePhase={displayCurrentCorePhase}
+      displayTargetCorePhase={displayTargetCorePhase}
       nextByPlay={nextByPlay}
+      displayNextByPlay={displayNextByPlay}
       legalPlayLabel={legalPlayLabel}
-      isFoundationalPhase={isFoundationalPhase(controlCorePhase)}
+      isFoundationalPhase={isFoundationalPhase(displayCurrentCorePhase)}
       isOurServe={isOurServe}
       canScore={scoringEnabled}
       connectorStyle={connectorStyle}
@@ -272,62 +234,24 @@ export default function RebuildPrototypeLabPage() {
       isPreviewingMovement={isPreviewingMovement}
       switchMotion={tactileTuning.switchMotion}
       tactileTuning={tactileTuning}
+      receiveFirstAttackMap={receiveFirstAttackMap}
+      hasFirstAttackTargets={hasFirstAttackTargets}
       onRotationSelect={handleRotationSelect}
       onPhaseSelect={handlePhaseSelect}
-      onPlay={handlePlay}
+      onReceiveFirstAttackToggle={(role) => {
+        prototypeCourtState.toggleReceiveFirstAttack(currentRotation, role)
+      }}
+      onReceiveFirstAttackSelect={(enabled) => {
+        for (const role of ROLES) {
+          prototypeCourtState.setReceiveFirstAttack(currentRotation, role, enabled)
+        }
+      }}
+      onPlay={() => handlePlay(nextByPlay)}
       onPoint={handlePoint}
     />
   )
 
-  const connectorStyleControls =
-    activeVariant === 'concept4' ? (
-      <div className="mt-2 border-t border-border/40 px-1 pt-2">
-        <div className="px-1 pb-1 text-[10px] uppercase tracking-[0.08em] text-muted-foreground">Connection Style</div>
-        <div className="grid grid-cols-4 gap-1">
-          {CONNECTOR_STYLE_OPTIONS.map((style) => (
-            <Button
-              key={style.id}
-              type="button"
-              variant={style.id === connectorStyle ? 'default' : 'outline'}
-              size="sm"
-              className="h-8 px-1 text-[10px]"
-              onClick={() => setConnectorStyle(style.id)}
-            >
-              {style.label}
-            </Button>
-          ))}
-        </div>
-      </div>
-    ) : null
-
-  const tuneGuide =
-    isTuneOpen && activeVariant === 'concept4' ? (
-      <div className="lab-inset mt-3 rounded-lg p-3">
-        <div className="pb-2 text-[10px] uppercase tracking-[0.08em] text-muted-foreground">Tune Guide</div>
-        <div className="grid gap-2 text-[11px] leading-[1.45] text-muted-foreground">
-          <div>
-            <span className="font-medium text-foreground">Global Light</span>
-            {' '}
-            controls the shared top-left light and overall surface depth.
-          </div>
-          <div>
-            <span className="font-medium text-foreground">Joystick</span>
-            {' '}
-            changes stick travel, dead zone, and settle feel.
-          </div>
-          <div>
-            <span className="font-medium text-foreground">Cluster Layout</span>
-            {' '}
-            changes the height, spacing, and button sizes of the literal control bank.
-          </div>
-          <div>
-            <span className="font-medium text-foreground">Loading Bar</span>
-            {' '}
-            controls how far the line rests, how fast it travels, how big the head is, and how hard the destination charges.
-          </div>
-        </div>
-      </div>
-    ) : null
+  const tuneGuide = null
 
   const labToolContent = (
     <>
@@ -377,7 +301,6 @@ export default function RebuildPrototypeLabPage() {
         <div className="px-2 pt-1 text-[11px] text-muted-foreground">
           {PROTOTYPE_VARIANTS.find((variant) => variant.id === activeVariant)?.label}
         </div>
-        {connectorStyleControls}
       </div>
       {tuneGuide}
     </>
@@ -428,28 +351,16 @@ export default function RebuildPrototypeLabPage() {
               onPositionChange={
                 isEditingAllowed
                   ? (role, position) => {
-                      updateLocalPosition(currentRotation, rallyPhase, role, position)
+                      prototypeCourtState.updatePosition(currentRotation, currentCorePhase, role, position)
                     }
                   : undefined
               }
               arrows={currentArrows}
-              onArrowChange={
-                isEditingAllowed
-                  ? (role, position) => {
-                      if (!position) {
-                        clearArrow(currentRotation, rallyPhase, role)
-                        return
-                      }
-
-                      updateArrow(currentRotation, rallyPhase, role, position)
-                    }
-                  : undefined
-              }
               arrowCurves={currentArrowCurves}
               onArrowCurveChange={
                 isEditingAllowed
                   ? (role, curve) => {
-                      setArrowCurve(currentRotation, rallyPhase, role, curve)
+                      prototypeCourtState.setArrowCurve(currentRotation, currentCorePhase, role, curve)
                     }
                   : undefined
               }
@@ -459,10 +370,10 @@ export default function RebuildPrototypeLabPage() {
               circleTokens={circleTokens}
               legalityViolations={violations}
               showLibero={showLibero}
-              currentPhase={rallyPhase}
-              attackBallPosition={currentAttackBallPosition}
+              currentPhase={currentCorePhase === 'FIRST_ATTACK' ? 'ATTACK_PHASE' : rallyPhase}
+              attackBallPosition={currentCorePhase === 'FIRST_ATTACK' ? null : currentAttackBallPosition}
               onAttackBallChange={
-                isEditingAllowed
+                isEditingAllowed && currentCorePhase !== 'FIRST_ATTACK'
                   ? (position) => {
                       if (!position) {
                         clearAttackBallPosition(currentRotation, rallyPhase)
@@ -473,9 +384,9 @@ export default function RebuildPrototypeLabPage() {
                     }
                   : undefined
               }
-              statusFlags={currentStatusFlags}
+              statusFlags={currentCorePhase === 'FIRST_ATTACK' ? {} : currentStatusFlags}
               onStatusToggle={
-                isEditingAllowed
+                isEditingAllowed && currentCorePhase !== 'FIRST_ATTACK'
                   ? (role, status) => {
                       togglePlayerStatus(currentRotation, rallyPhase, role, status)
                     }
@@ -487,7 +398,7 @@ export default function RebuildPrototypeLabPage() {
             preserveAspectRatio="xMidYMax meet"
             tagFlags={currentTagFlags}
             onTagsChange={
-                isEditingAllowed
+                isEditingAllowed && currentCorePhase !== 'FIRST_ATTACK'
                   ? (role, tags) => {
                       setTokenTags(currentRotation, rallyPhase, role, tags)
                     }

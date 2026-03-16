@@ -1,8 +1,10 @@
 import type { RallyPhase, Rotation } from '@/lib/types'
 
 export type CorePhase = 'SERVE' | 'RECEIVE' | 'OFFENSE' | 'DEFENSE'
-export type PrototypeVariantId = 'concept4' | 'concept7' | 'concept8'
+export type PrototypePhase = CorePhase | 'FIRST_ATTACK'
+export type PrototypeVariantId = 'playerToggle' | 'attackLabel' | 'splitAttack'
 export type ConnectorStyle = 'static' | 'sweep' | 'relay' | 'pulse'
+export type ReceiveLinkTarget = 'OFFENSE' | 'FIRST_ATTACK'
 
 export type PointWinner = 'us' | 'them'
 
@@ -19,16 +21,22 @@ export interface PointOutcome {
   didSideout: boolean
 }
 
+export interface PrototypeMovementLink {
+  sourcePhase: PrototypePhase
+  targetPhase: PrototypePhase
+}
+
 export const CORE_PHASES: CorePhase[] = ['SERVE', 'RECEIVE', 'OFFENSE', 'DEFENSE']
+export const PROTOTYPE_PHASES: PrototypePhase[] = ['SERVE', 'RECEIVE', 'FIRST_ATTACK', 'OFFENSE', 'DEFENSE']
 
 export const PROTOTYPE_VARIANTS: Array<{
   id: PrototypeVariantId
   shortLabel: string
   label: string
 }> = [
-  { id: 'concept4', shortLabel: 'C4', label: 'Reference Relay Layout' },
-  { id: 'concept7', shortLabel: 'C7', label: 'Edge-Lit Phase Pad' },
-  { id: 'concept8', shortLabel: 'C8', label: 'Full LED Perimeter' },
+  { id: 'playerToggle', shortLabel: 'Toggle', label: 'Player toggle variant' },
+  { id: 'attackLabel', shortLabel: 'State', label: 'Attack label variant' },
+  { id: 'splitAttack', shortLabel: 'Split', label: 'Split attack variant' },
 ]
 
 export const CONNECTOR_STYLE_OPTIONS: Array<{
@@ -71,27 +79,59 @@ export function isFoundationalPhase(phase: CorePhase): boolean {
   return phase === 'SERVE' || phase === 'RECEIVE'
 }
 
-export function getNextByPlay(phase: CorePhase): CorePhase {
+export function toDisplayCorePhase(phase: PrototypePhase): CorePhase {
+  return phase === 'FIRST_ATTACK' ? 'OFFENSE' : phase
+}
+
+export function getReceiveLinkTarget(hasFirstAttack: boolean): ReceiveLinkTarget {
+  return hasFirstAttack ? 'FIRST_ATTACK' : 'OFFENSE'
+}
+
+export function getLinkedTargetPhase(
+  phase: PrototypePhase,
+  options?: { hasFirstAttack?: boolean }
+): PrototypePhase {
+  const hasFirstAttack = options?.hasFirstAttack ?? false
+
   switch (phase) {
     case 'SERVE':
       return 'DEFENSE'
     case 'RECEIVE':
+      return getReceiveLinkTarget(hasFirstAttack)
+    case 'FIRST_ATTACK':
       return 'OFFENSE'
     case 'OFFENSE':
       return 'DEFENSE'
     case 'DEFENSE':
-      return 'OFFENSE'
+      return 'SERVE'
     default:
       return 'OFFENSE'
   }
 }
 
-export function getLegalPlayLabel(phase: CorePhase): string {
-  const next = getNextByPlay(phase)
-  return `${phase} -> ${next}`
+export function getMovementLink(
+  phase: PrototypePhase,
+  options?: { hasFirstAttack?: boolean }
+): PrototypeMovementLink {
+  return {
+    sourcePhase: phase,
+    targetPhase: getLinkedTargetPhase(phase, options),
+  }
 }
 
-export function canVariantScore(variant: PrototypeVariantId): boolean {
+export function getNextByPlay(
+  phase: PrototypePhase,
+  options?: { hasFirstAttack?: boolean }
+): PrototypePhase {
+  return getLinkedTargetPhase(phase, options)
+}
+
+export function getLegalPlayLabel(phase: PrototypePhase, options?: { hasFirstAttack?: boolean }): string {
+  const next = getNextByPlay(phase, options)
+  return `${formatPrototypePhaseLabel(phase)} -> ${formatPrototypePhaseLabel(next)}`
+}
+
+export function canVariantScore(_variant: PrototypeVariantId): boolean {
   return false
 }
 
@@ -171,4 +211,12 @@ export function formatCorePhaseLabel(phase: CorePhase): string {
     default:
       return 'Serve'
   }
+}
+
+export function formatPrototypePhaseLabel(phase: PrototypePhase): string {
+  if (phase === 'FIRST_ATTACK') {
+    return '1st Attack'
+  }
+
+  return formatCorePhaseLabel(phase)
 }

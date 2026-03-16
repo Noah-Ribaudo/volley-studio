@@ -28,6 +28,8 @@ export function RebuildDialKitBridge({
   onTuningChange,
   position = 'top-right',
 }: RebuildDialKitBridgeProps) {
+  const usesPhasePadHardware = activeVariant === 'playerToggle' || activeVariant === 'attackLabel' || activeVariant === 'splitAttack'
+  const usesLegacyClusterControls = false
   const [seed, setSeed] = useState<TactileTuning>(DEFAULT_TACTILE_TUNING)
   const [panelVersion, setPanelVersion] = useState(0)
   const latestTuningRef = useRef<TactileTuning>(DEFAULT_TACTILE_TUNING)
@@ -82,7 +84,7 @@ export function RebuildDialKitBridge({
           mass: seed.joystick.settleSpring.mass,
         },
       },
-      ...(activeVariant === 'concept4'
+      ...(usesLegacyClusterControls
         ? {
             c4Literal: {
               clusterLayout: {
@@ -127,7 +129,7 @@ export function RebuildDialKitBridge({
             resetPhaseSurfaces: { type: 'action', label: 'Reset Phase Surfaces' },
           }
         : {}),
-      ...(activeVariant === 'concept8'
+      ...(usesPhasePadHardware
         ? {
             phasePadHardware: {
               trackInset: [seed.phasePadHardware.trackInset, -8, 28, 0.1],
@@ -293,7 +295,7 @@ export function RebuildDialKitBridge({
       phaseEmphasis: preserved.phaseEmphasis,
       connectors: preserved.connectors,
       phasePadHardware:
-        activeVariant === 'concept8'
+        usesPhasePadHardware
           ? {
               trackInset: params.phasePadHardware.trackInset,
               trackRadius: params.phasePadHardware.trackRadius,
@@ -311,7 +313,7 @@ export function RebuildDialKitBridge({
             }
           : preserved.phasePadHardware,
       c4Literal:
-        activeVariant === 'concept4'
+        usesLegacyClusterControls
           ? {
               clusterLayout: {
                 dockHeight: params.c4Literal.clusterLayout.dockHeight,
@@ -349,7 +351,7 @@ export function RebuildDialKitBridge({
             }
           : preserved.c4Literal,
     })
-  }, [activeVariant, params])
+  }, [params, usesLegacyClusterControls, usesPhasePadHardware])
 
   useEffect(() => {
     const serialized = JSON.stringify(nextTuning)
