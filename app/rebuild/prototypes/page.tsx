@@ -55,8 +55,10 @@ export default function RebuildPrototypeLabPage() {
     isLabTrayOpen,
     setIsLabTrayOpen,
     connectorStyle,
+    manualJoystickNudge,
     handleRotationSelect,
     handlePhaseSelect,
+    handleManualPhaseSelect,
     handlePlay,
     handlePoint,
     resetPreview,
@@ -258,8 +260,10 @@ export default function RebuildPrototypeLabPage() {
       switchMotion={tactileTuning.switchMotion}
       tactileTuning={tactileTuning}
       hasFirstAttackTargets={hasFirstAttackTargets}
+      manualJoystickNudge={manualJoystickNudge}
       onRotationSelect={handleRotationSelect}
       onPhaseSelect={handlePhaseSelect}
+      onManualPhaseSelect={handleManualPhaseSelect}
       onPlay={() => {
         if (!canPlayAdvance) return
         handlePlay(nextByPlay)

@@ -31,6 +31,8 @@ export interface DockTuning {
 export interface JoystickTuning {
   travel: number
   deadZone: number
+  autoNudgeDistance: number
+  autoNudgeHoldMs: number
   haloIntensity: number
   scale: number
   shellScale: number
@@ -171,6 +173,8 @@ export const DEFAULT_TACTILE_TUNING: TactileTuning = {
   joystick: {
     travel: 13,
     deadZone: 10,
+    autoNudgeDistance: 8,
+    autoNudgeHoldMs: 140,
     haloIntensity: 0.75,
     scale: 1.5,
     shellScale: 0.89,
@@ -294,6 +298,8 @@ export function sanitizeTactileTuning(input: TactileTuning): TactileTuning {
     joystick: {
       travel: clamp(input.joystick.travel, 6, 52),
       deadZone: clamp(input.joystick.deadZone, 0, 42),
+      autoNudgeDistance: clamp(input.joystick.autoNudgeDistance, 0, 24),
+      autoNudgeHoldMs: clamp(input.joystick.autoNudgeHoldMs, 40, 360),
       haloIntensity: clamp(input.joystick.haloIntensity, 0, 1.25),
       scale: clamp(input.joystick.scale, 0.65, 1.5),
       shellScale: clamp(input.joystick.shellScale, 0.55, 1.6),

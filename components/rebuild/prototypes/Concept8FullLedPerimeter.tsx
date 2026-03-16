@@ -25,13 +25,13 @@ function PhaseAreaTile({
   label,
   isActive,
   switchMotion,
-  onPhaseSelect,
+  onManualPhaseSelect,
 }: {
   phase: CorePhase
   label: string
   isActive: boolean
   switchMotion: PrototypeControlProps['switchMotion']
-  onPhaseSelect: (phase: PrototypePhase) => void
+  onManualPhaseSelect: (phase: PrototypePhase) => void
 }) {
   const prefersReducedMotion = useReducedMotion()
   const [isPressed, setIsPressed] = useState(false)
@@ -47,7 +47,7 @@ function PhaseAreaTile({
   return (
     <button
       type="button"
-      onClick={() => onPhaseSelect(phase)}
+      onClick={() => onManualPhaseSelect(phase)}
       onPointerDown={() => setIsPressed(true)}
       onPointerUp={() => setIsPressed(false)}
       onPointerCancel={() => setIsPressed(false)}
@@ -111,7 +111,7 @@ function VariantAccessory(props: PrototypeControlProps) {
             size="sm"
             className="h-8 text-[11px]"
             disabled={!props.hasFirstAttackTargets}
-            onClick={() => props.onPhaseSelect('FIRST_ATTACK')}
+            onClick={() => props.onManualPhaseSelect('FIRST_ATTACK')}
           >
             1st Attack
           </Button>
@@ -120,7 +120,7 @@ function VariantAccessory(props: PrototypeControlProps) {
             variant={props.currentCorePhase === 'OFFENSE' ? 'default' : 'outline'}
             size="sm"
             className="h-8 text-[11px]"
-            onClick={() => props.onPhaseSelect('OFFENSE')}
+            onClick={() => props.onManualPhaseSelect('OFFENSE')}
           >
             Attack
           </Button>
@@ -141,7 +141,7 @@ function VariantAccessory(props: PrototypeControlProps) {
           variant={props.currentCorePhase === 'RECEIVE' ? 'default' : 'outline'}
           size="sm"
           className="h-8 text-[11px]"
-          onClick={() => props.onPhaseSelect('RECEIVE')}
+          onClick={() => props.onManualPhaseSelect('RECEIVE')}
         >
           Receive
         </Button>
@@ -150,7 +150,7 @@ function VariantAccessory(props: PrototypeControlProps) {
           variant={firstAttackActive ? 'default' : 'outline'}
           size="sm"
           className="h-8 text-[11px]"
-          onClick={() => props.onPhaseSelect('FIRST_ATTACK')}
+          onClick={() => props.onManualPhaseSelect('FIRST_ATTACK')}
         >
           1st Attack
         </Button>
@@ -159,7 +159,7 @@ function VariantAccessory(props: PrototypeControlProps) {
           variant={props.currentCorePhase === 'OFFENSE' ? 'default' : 'outline'}
           size="sm"
           className="h-8 text-[11px]"
-          onClick={() => props.onPhaseSelect('OFFENSE')}
+          onClick={() => props.onManualPhaseSelect('OFFENSE')}
         >
           Attack
         </Button>
@@ -217,7 +217,7 @@ export function Concept8FullLedPerimeter(props: PrototypeControlProps) {
                   label={item.phase === 'OFFENSE' ? offenseLabel : item.label}
                   isActive={item.phase === activeDisplayPhase}
                   switchMotion={props.switchMotion}
-                  onPhaseSelect={props.onPhaseSelect}
+                  onManualPhaseSelect={props.onManualPhaseSelect}
                 />
               ))}
             </div>

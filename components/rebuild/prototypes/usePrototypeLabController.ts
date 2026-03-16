@@ -23,6 +23,7 @@ export function usePrototypeLabController(playAdvanceDelayMs: number) {
   const [playAnimationTrigger, setPlayAnimationTrigger] = useState(0)
   const [isLabTrayOpen, setIsLabTrayOpen] = useState(false)
   const [connectorStyle, setConnectorStyle] = useState<ConnectorStyle>('sweep')
+  const [manualJoystickNudge, setManualJoystickNudge] = useState<{ phase: 'SERVE' | 'RECEIVE' | 'OFFENSE' | 'DEFENSE'; trigger: number } | null>(null)
 
   const playTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const phaseCommitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -114,6 +115,17 @@ export function usePrototypeLabController(playAdvanceDelayMs: number) {
     [queuePhaseTravel]
   )
 
+  const handleManualPhaseSelect = useCallback(
+    (phase: PrototypePhase) => {
+      setManualJoystickNudge((prev) => ({
+        phase: toDisplayCorePhase(phase),
+        trigger: (prev?.trigger ?? 0) + 1,
+      }))
+      queuePhaseTravel(phase)
+    },
+    [queuePhaseTravel]
+  )
+
   const handlePlay = useCallback((nextPhase: PrototypePhase) => {
     if (isPreviewingMovement) {
       resetPreview()
@@ -175,9 +187,11 @@ export function usePrototypeLabController(playAdvanceDelayMs: number) {
     isLabTrayOpen,
     setIsLabTrayOpen,
     connectorStyle,
+    manualJoystickNudge,
     setConnectorStyle,
     handleRotationSelect,
     handlePhaseSelect,
+    handleManualPhaseSelect,
     handlePlay,
     handlePoint,
     resetPreview,

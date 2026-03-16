@@ -570,6 +570,7 @@ export function PhasePadJoystick({
           nextPhase={props.displayNextByPlay}
           nextLabel={props.nextByPlay === 'FIRST_ATTACK' ? '1st Attack' : formatCorePhaseLabel(props.displayNextByPlay)}
           canPlayAdvance={props.canPlayAdvance}
+          manualJoystickNudge={props.manualJoystickNudge}
           mode="literal"
           frameSizeOverride={92}
           switchMotion={props.switchMotion}
