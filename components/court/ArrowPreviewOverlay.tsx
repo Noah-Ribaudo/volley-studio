@@ -33,12 +33,13 @@ interface ArrowPreviewOverlayProps {
   debugHitboxes: boolean
   toSvgCoords: (pos: Position) => { x: number; y: number }
   getPlayerInfo: (role: Role) => PlayerInfo
-  onArrowChange?: (role: Role, position: Position | null) => void
+  onArrowChange?: (role: Role, position: Position | null, options?: { variant?: 'primary' | 'secondary' }) => void
   onArrowDragStart: (
     role: Role,
     e: React.MouseEvent | React.TouchEvent,
     initialEndSvg?: { x: number; y: number },
-    initialControlSvg?: { x: number; y: number }
+    initialControlSvg?: { x: number; y: number },
+    variant?: 'primary' | 'secondary'
   ) => void
   onPreviewHover: (role: Role, zone: 'token' | 'arrow', isEntering: boolean) => void
   onboardingSpotlightRole?: Role | null
@@ -85,10 +86,15 @@ function ArrowPreviewOverlayImpl({
 
         const rolePreviewVisible = previewVisible[role] === true
         const hasArrow = Boolean(arrows[role])
-        const isDraggingNewPreviewArrow = draggingArrowRole === role && !hasArrow && Boolean(arrowDragPosition)
+        const isDraggingNewPreviewArrow =
+          draggingArrowRole === role &&
+          !hasArrow &&
+          Boolean(arrowDragPosition)
+
         if (hasArrow && !isDraggingNewPreviewArrow) {
           return null
         }
+
         const canShowPreview = !hasArrow
         const isPreviewActive = canShowPreview && (
           rolePreviewVisible ||
@@ -133,7 +139,7 @@ function ArrowPreviewOverlayImpl({
               strokeWidth={3}
               opacity={0.85}
               isDraggable={true}
-              onDragStart={(e) => onArrowDragStart(role, e, previewEndSvg, previewControlSvg)}
+              onDragStart={(e) => onArrowDragStart(role, e, previewEndSvg, previewControlSvg, 'primary')}
               onMouseEnter={() => !draggingRole && !draggingArrowRole && onPreviewHover(role, 'arrow', true)}
               onMouseLeave={() => onPreviewHover(role, 'arrow', false)}
               dragHitArea="both"

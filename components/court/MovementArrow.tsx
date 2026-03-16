@@ -21,6 +21,8 @@ interface MovementArrowProps {
   onMouseEnter?: () => void
   /** Called when mouse leaves the arrow path */
   onMouseLeave?: () => void
+  /** Called when the arrow itself is selected */
+  onSelect?: () => void
   /** Debug mode: show hit boxes with neon green highlight */
   debugHitboxes?: boolean
   /** Whether to animate the path drawing when arrow first appears */
@@ -60,6 +62,7 @@ function MovementArrowImpl({
   showCurveHandle = false,
   onMouseEnter,
   onMouseLeave,
+  onSelect,
   debugHitboxes = false,
   animateIn = false,
   dragHitArea = 'tip',
@@ -350,10 +353,12 @@ function MovementArrowImpl({
             onMouseDown={canDragFromPath ? (e) => {
               e.preventDefault()
               e.stopPropagation()
+              onSelect?.()
               onDragStart?.(e)
             } : undefined}
             onTouchStart={canDragFromPath ? (e) => {
               e.stopPropagation()
+              onSelect?.()
               onDragStart?.(e)
             } : undefined}
           />
@@ -416,10 +421,12 @@ function MovementArrowImpl({
             onMouseDown={(e) => {
               e.preventDefault()
               e.stopPropagation()
+              onSelect?.()
               onDragStart?.(e)
             }}
             onTouchStart={(e) => {
               e.stopPropagation()
+              onSelect?.()
               onDragStart?.(e)
             }}
           />
