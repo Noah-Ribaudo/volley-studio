@@ -53,6 +53,8 @@ interface MovementArrowLayerProps {
   arrowTagFontSize?: number
   hoveredArrowRole: Role | null
   hoveredArrowVariant?: 'primary' | 'secondary' | null
+  selectedArrowRole?: Role | null
+  selectedArrowVariant?: 'primary' | 'secondary' | null
   tappedRole: Role | null
   arrowCurves: Partial<Record<Role, ArrowCurveConfig>>
   curveStrength: number
@@ -63,6 +65,7 @@ interface MovementArrowLayerProps {
   toSvgCoords: (position: Position) => { x: number; y: number }
   onArrowDragStart: (role: Role, e: React.MouseEvent | React.TouchEvent, initialEndSvg?: { x: number; y: number }, initialControlSvg?: { x: number; y: number }, variant?: 'primary' | 'secondary') => void
   onArrowHoverChange: (role: Role | null, variant?: 'primary' | 'secondary') => void
+  onArrowSelect?: (role: Role, variant?: 'primary' | 'secondary') => void
   onCreateSecondaryArrow?: (role: Role) => void
   getRoleColor: (role: Role) => string
 }
@@ -88,6 +91,8 @@ function MovementArrowLayerImpl({
   arrowTagFontSize = 10,
   hoveredArrowRole,
   hoveredArrowVariant = null,
+  selectedArrowRole = null,
+  selectedArrowVariant = null,
   tappedRole,
   arrowCurves,
   curveStrength,
@@ -98,6 +103,7 @@ function MovementArrowLayerImpl({
   toSvgCoords,
   onArrowDragStart,
   onArrowHoverChange,
+  onArrowSelect,
   onCreateSecondaryArrow,
   getRoleColor,
 }: MovementArrowLayerProps) {
@@ -241,13 +247,19 @@ function MovementArrowLayerImpl({
         const secondaryControlSvg = validSecondaryControl ? toSvgCoords(validSecondaryControl) : null
         const endpointLabel = arrowEndpointLabels?.[role] ?? null
         const secondaryEndpointLabel = secondaryArrowEndpointLabels?.[role] ?? null
-        const showPrimaryLabel = Boolean(endpointLabel && hoveredArrowRole === role && hoveredArrowVariant === 'primary')
-        const showSecondaryLabel = Boolean(secondaryEndpointLabel && hoveredArrowRole === role && hoveredArrowVariant === 'secondary')
+        const primaryIsActive =
+          (hoveredArrowRole === role && hoveredArrowVariant === 'primary') ||
+          (selectedArrowRole === role && selectedArrowVariant === 'primary')
+        const secondaryIsActive =
+          (hoveredArrowRole === role && hoveredArrowVariant === 'secondary') ||
+          (selectedArrowRole === role && selectedArrowVariant === 'secondary')
+        const showPrimaryLabel = Boolean(endpointLabel && primaryIsActive)
+        const showSecondaryLabel = Boolean(secondaryEndpointLabel && secondaryIsActive)
         const showAddSecondaryAction = Boolean(
           onCreateSecondaryArrow &&
           activeArrowTarget &&
           !secondaryArrows?.[role] &&
-          ((hoveredArrowRole === role && hoveredArrowVariant === 'primary') || tappedRole === role)
+          (primaryIsActive || tappedRole === role)
         )
 
         const hasValidPositions = arrowEndPos &&
@@ -279,8 +291,9 @@ function MovementArrowLayerImpl({
                 arrowheadOpacityScale={isTraversingPath ? 0.85 : 1}
                 isDraggable={true}
                 onDragStart={(e) => onArrowDragStart(role, e, undefined, undefined, 'primary')}
+                onSelect={() => onArrowSelect?.(role, 'primary')}
                 showCurveHandle={false}
-                  onMouseEnter={() => onArrowHoverChange(role, 'primary')}
+                onMouseEnter={() => onArrowHoverChange(role, 'primary')}
                 onMouseLeave={() => onArrowHoverChange(null)}
                 debugHitboxes={debugHitboxes}
               />
@@ -353,6 +366,7 @@ function MovementArrowLayerImpl({
                   arrowheadOpacityScale={0.75}
                   isDraggable={true}
                   onDragStart={(e) => onArrowDragStart(role, e, undefined, undefined, 'secondary')}
+                  onSelect={() => onArrowSelect?.(role, 'secondary')}
                   showCurveHandle={false}
                   onMouseEnter={() => onArrowHoverChange(role, 'secondary')}
                   onMouseLeave={() => onArrowHoverChange(null)}

@@ -400,6 +400,10 @@ export function VolleyballCourt({
     role: null,
     variant: null,
   }) // Hovered arrow (for curve handle + endpoint tag)
+  const [selectedArrow, setSelectedArrow] = useState<{ role: Role | null; variant: 'primary' | 'secondary' | null }>({
+    role: null,
+    variant: null,
+  })
   const [tappedRole, setTappedRole] = useState<Role | null>(null) // For mobile tap-to-reveal arrow tip
   // Arrow preview hover state (boolean to avoid per-frame rerenders)
   const [previewVisible, setPreviewVisible] = useState<Partial<Record<Role, boolean>>>({})
@@ -673,6 +677,10 @@ export function VolleyballCourt({
     setHoveredRole(null)
     setNextStepTooltipRole(null)
     setPreviewVisible({})
+  }, [])
+
+  const clearArrowSelection = useCallback(() => {
+    setSelectedArrow({ role: null, variant: null })
   }, [])
 
   // Cleanup animation refs on unmount
@@ -1538,6 +1546,7 @@ export function VolleyballCourt({
       e.preventDefault()
     }
     e.stopPropagation()
+    clearArrowSelection()
 
     const pos = getEventPosition(e.nativeEvent as MouseEvent | TouchEvent)
     const currentPos = toSvgCoords(positions[role] || { x: 0.5, y: 0.5 })
@@ -1609,7 +1618,7 @@ export function VolleyballCourt({
     document.addEventListener('mouseup', handleEnd)
       document.addEventListener('touchmove', handleMove, { passive: false })
       document.addEventListener('touchend', handleEnd)
-    }, [isEditable, isPreviewingMovement, positions, getEventPosition, getClientPoint, clientToSvgCoords, handleDragEnd, toSvgCoords, toNormalizedCoords, clearAllPreviewState])
+    }, [isEditable, isPreviewingMovement, positions, getEventPosition, getClientPoint, clientToSvgCoords, handleDragEnd, toSvgCoords, toNormalizedCoords, clearAllPreviewState, clearArrowSelection])
 
   // Handle arrow drag (create, reposition, or delete movement arrows)
   const handleArrowDragStart = useCallback((
@@ -1627,6 +1636,7 @@ export function VolleyballCourt({
       e.preventDefault()
     }
     e.stopPropagation()
+    setSelectedArrow({ role, variant })
     setDraggingArrowRole(role)
     setDraggingArrowVariant(variant)
     clearPreviewStateForRole(role)
@@ -2261,9 +2271,11 @@ export function VolleyballCourt({
               handlePrimedCourtTap(e)
               e.preventDefault()
               e.stopPropagation()
+              clearArrowSelection()
               return
             }
 
+            clearArrowSelection()
             if (contextPlayer && onContextPlayerChange) {
               onContextPlayerChange(null)
               setContextAnchorPosition(null)
@@ -2279,7 +2291,9 @@ export function VolleyballCourt({
               handlePrimedCourtTap(e)
               e.preventDefault()
               e.stopPropagation()
+              clearArrowSelection()
             }
+            clearArrowSelection()
           }
         }}
       >
@@ -2336,6 +2350,8 @@ export function VolleyballCourt({
           arrowTagFontSize={arrowTagFontSize}
           hoveredArrowRole={hoveredArrow.role}
           hoveredArrowVariant={hoveredArrow.variant}
+          selectedArrowRole={selectedArrow.role}
+          selectedArrowVariant={selectedArrow.variant}
           tappedRole={tappedRole}
           arrowCurves={arrowCurves}
           curveStrength={playTuning.curveStrength}
@@ -2346,6 +2362,7 @@ export function VolleyballCourt({
           toSvgCoords={toSvgCoords}
           onArrowDragStart={handleArrowDragStart}
           onArrowHoverChange={(role, variant) => setHoveredArrow({ role, variant: role ? (variant ?? 'primary') : null })}
+          onArrowSelect={(role, variant) => setSelectedArrow({ role, variant: role ? (variant ?? 'primary') : null })}
           onCreateSecondaryArrow={onCreateSecondaryArrow}
           getRoleColor={(role) => ROLE_INFO[role].color}
         />
@@ -2478,6 +2495,7 @@ export function VolleyballCourt({
                           if (isMobile) {
                             setTappedRole(tappedRole === role ? null : role)
                           }
+                          clearArrowSelection()
                         }
                       }}
                       onMouseDown={(e) => {
