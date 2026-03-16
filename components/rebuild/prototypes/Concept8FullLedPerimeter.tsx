@@ -92,7 +92,7 @@ export function Concept8FullLedPerimeter(props: PrototypeControlProps) {
       <div className="rounded-[22px] border border-[rgba(172,149,115,0.42)] bg-[linear-gradient(180deg,rgba(239,231,216,0.98)_0%,rgba(213,198,175,0.98)_100%)] p-2 shadow-[0_16px_30px_rgba(128,102,72,0.16),inset_0_1px_0_rgba(255,249,240,0.8)]">
         <PhasePadRotationRail {...props} />
 
-        <div className="relative overflow-visible rounded-[18px] border border-[rgba(176,151,116,0.28)] bg-[linear-gradient(180deg,rgba(238,229,213,0.98)_0%,rgba(220,206,184,0.98)_100%)] p-[10px] shadow-[inset_0_1px_0_rgba(255,247,234,0.82),inset_0_-10px_18px_rgba(156,130,94,0.12)]">
+        <div className="relative overflow-visible rounded-[18px] bg-[linear-gradient(180deg,rgba(238,229,213,0.98)_0%,rgba(220,206,184,0.98)_100%)] p-[10px] shadow-[inset_0_1px_0_rgba(255,247,234,0.82),inset_0_-10px_18px_rgba(156,130,94,0.12)]">
           <div
             className="relative z-[1] rounded-[14px]"
             style={{
