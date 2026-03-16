@@ -164,9 +164,9 @@ export function TactilePlayJoystick({
   const knobSize = frame.knobSize * joystickTuning.scale
   const showKnobBorderRing = joystickTuning.showKnobBorderRing
   const showDialShellRing = joystickTuning.showDialShellRing
-  const bowlHighlight = 0.16 + joystickTuning.baseLightness * 0.14
-  const bowlMid = 0.24 + joystickTuning.baseLightness * 0.36
-  const bowlEdge = 0.2 + joystickTuning.baseLightness * 0.32
+  const bowlHighlight = 0.08 + joystickTuning.baseLightness * 0.2
+  const bowlMid = 0.12 + joystickTuning.baseLightness * 0.5
+  const bowlEdge = 0.1 + joystickTuning.baseLightness * 0.44
 
   const quadrantTransition = prefersReducedMotion
     ? { duration: 0.001 }
@@ -266,6 +266,7 @@ export function TactilePlayJoystick({
         style={{
           width: frame.frameSize,
           height: frame.frameSize,
+          transform: `scale(${joystickTuning.shellScale})`,
           touchAction: 'none',
           border: showDialShellRing ? '1px solid oklch(96% 0.01 260 / 0.92)' : 'none',
           background: [
@@ -299,7 +300,7 @@ export function TactilePlayJoystick({
             background:
               `radial-gradient(circle at 50% 42%, oklch(${Math.round(bowlHighlight * 100)}% 0.005 255 / 0.22) 0%, oklch(${Math.round(bowlMid * 100)}% 0.006 255 / 0.88) 58%, oklch(${Math.round(bowlEdge * 100)}% 0.005 255) 100%)`,
             boxShadow:
-              'inset 0 10px 18px oklch(26% 0.004 255 / 0.22), inset 0 -2px 3px oklch(100% 0 0 / 0.12), 0 1px 0 oklch(100% 0 0 / 0.22)',
+              `inset 0 10px 18px oklch(${Math.round((0.1 + joystickTuning.baseLightness * 0.22) * 100)}% 0.004 255 / 0.22), inset 0 -2px 3px oklch(100% 0 0 / 0.12), 0 1px 0 oklch(100% 0 0 / 0.22)`,
           }}
         />
 

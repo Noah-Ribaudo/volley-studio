@@ -33,6 +33,7 @@ export interface JoystickTuning {
   deadZone: number
   haloIntensity: number
   scale: number
+  shellScale: number
   baseScale: number
   baseLightness: number
   highlightIntensity: number
@@ -167,6 +168,7 @@ export const DEFAULT_TACTILE_TUNING: TactileTuning = {
     deadZone: 10,
     haloIntensity: 0.75,
     scale: 1.5,
+    shellScale: 1,
     baseScale: 1,
     baseLightness: 0.56,
     highlightIntensity: 0.8,
@@ -286,8 +288,9 @@ export function sanitizeTactileTuning(input: TactileTuning): TactileTuning {
       deadZone: clamp(input.joystick.deadZone, 0, 42),
       haloIntensity: clamp(input.joystick.haloIntensity, 0, 1.25),
       scale: clamp(input.joystick.scale, 0.65, 1.5),
-      baseScale: clamp(input.joystick.baseScale, 0.72, 1.2),
-      baseLightness: clamp(input.joystick.baseLightness, 0.25, 0.85),
+      shellScale: clamp(input.joystick.shellScale, 0.55, 1.6),
+      baseScale: clamp(input.joystick.baseScale, 0.5, 1.8),
+      baseLightness: clamp(input.joystick.baseLightness, 0.1, 1.2),
       highlightIntensity: clamp(input.joystick.highlightIntensity, 0, 1),
       whiteRingOpacity: clamp(input.joystick.whiteRingOpacity, 0, 1),
       showKnobBorderRing: input.joystick.showKnobBorderRing,
