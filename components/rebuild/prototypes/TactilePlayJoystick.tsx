@@ -394,22 +394,12 @@ export function TactilePlayJoystick({
               boxShadow: [
                 `0 14px 22px oklch(8% 0.01 255 / ${0.22 + joystickTuning.haloIntensity * 0.18})`,
                 `0 0 ${10 + joystickTuning.haloIntensity * 16}px oklch(88% 0.01 250 / ${shellGlow})`,
-                `inset 0 1px 0 oklch(94% 0.03 78 / ${0.03 + capHighlight * 0.12})`,
+                `inset 0 1px 0 oklch(94% 0.03 78 / ${joystickTuning.whiteRingOpacity * (0.14 + capHighlight * 0.22)})`,
                 'inset 0 -10px 14px oklch(30% 0.1 28 / 0.46)',
                 'inset 0 0 0 1px oklch(48% 0.11 36 / 0.9)',
               ].join(', '),
             }}
           >
-            <div
-              className="pointer-events-none absolute inset-[-5%] rounded-full"
-              style={{
-                opacity: joystickTuning.outerRingOpacity,
-                boxShadow: [
-                  '0 0 0 1.5px oklch(98% 0.01 250 / 0.92)',
-                  '0 1px 0.5px oklch(100% 0 0 / 0.65)',
-                ].join(', '),
-              }}
-            />
             <div
               className="pointer-events-none absolute inset-0 rounded-full opacity-70"
               style={{
@@ -435,7 +425,7 @@ export function TactilePlayJoystick({
                 ].join(', '),
                 boxShadow: [
                   'inset 0 7px 10px oklch(26% 0.08 32 / 0.52)',
-                  `inset 0 -2px 4px oklch(84% 0.04 78 / ${0.015 + capHighlight * 0.03})`,
+                  `inset 0 -2px 4px oklch(84% 0.04 78 / ${joystickTuning.whiteRingOpacity * (0.08 + capHighlight * 0.1)})`,
                 ].join(', '),
               }}
             />
