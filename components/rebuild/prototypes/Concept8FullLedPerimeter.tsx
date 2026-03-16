@@ -181,15 +181,19 @@ export function Concept8FullLedPerimeter(props: PrototypeControlProps) {
   })
   const activeDisplayPhase = props.isPhaseTraveling ? props.displayTargetCorePhase : props.displayCurrentCorePhase
   const offenseLabel = props.currentCorePhase === 'FIRST_ATTACK' ? '1st Attack' : 'Attack'
+  const showAccessory = props.variantId !== 'clean'
+  const showFooter = props.variantId !== 'clean'
 
   return (
     <div className="flex w-full flex-col justify-end">
       <div className="rounded-[22px] border border-[rgba(172,149,115,0.42)] bg-[linear-gradient(180deg,rgba(239,231,216,0.98)_0%,rgba(213,198,175,0.98)_100%)] p-2 shadow-[0_16px_30px_rgba(128,102,72,0.16),inset_0_1px_0_rgba(255,249,240,0.8)]">
         <PhasePadRotationRail {...props} />
 
-        <div className="mb-2 rounded-[16px] border border-[rgba(175,149,115,0.26)] bg-[rgba(247,240,228,0.74)] px-2.5 py-2 shadow-[inset_0_1px_0_rgba(255,247,234,0.52)]">
-          <VariantAccessory {...props} />
-        </div>
+        {showAccessory ? (
+          <div className="mb-2 rounded-[16px] border border-[rgba(175,149,115,0.26)] bg-[rgba(247,240,228,0.74)] px-2.5 py-2 shadow-[inset_0_1px_0_rgba(255,247,234,0.52)]">
+            <VariantAccessory {...props} />
+          </div>
+        ) : null}
 
         <div className="relative overflow-visible rounded-[18px] p-[10px]">
           <div
@@ -222,10 +226,12 @@ export function Concept8FullLedPerimeter(props: PrototypeControlProps) {
           <PhasePadJoystick props={props} />
         </div>
 
-        <div className="mt-2 flex items-center justify-between px-1 text-[11px] text-[rgba(108,90,70,0.92)]">
-          <div className="font-medium">{formatPrototypePhaseLabel(props.currentCorePhase)}</div>
-          <div>{props.legalPlayLabel}</div>
-        </div>
+        {showFooter ? (
+          <div className="mt-2 flex items-center justify-between px-1 text-[11px] text-[rgba(108,90,70,0.92)]">
+            <div className="font-medium">{formatPrototypePhaseLabel(props.currentCorePhase)}</div>
+            <div>{props.legalPlayLabel}</div>
+          </div>
+        ) : null}
       </div>
     </div>
   )

@@ -2,7 +2,7 @@ import type { RallyPhase, Rotation } from '@/lib/types'
 
 export type CorePhase = 'SERVE' | 'RECEIVE' | 'OFFENSE' | 'DEFENSE'
 export type PrototypePhase = CorePhase | 'FIRST_ATTACK'
-export type PrototypeVariantId = 'playerToggle' | 'attackLabel' | 'splitAttack'
+export type PrototypeVariantId = 'playerToggle' | 'attackLabel' | 'splitAttack' | 'clean'
 export type ConnectorStyle = 'static' | 'sweep' | 'relay' | 'pulse'
 export type ReceiveLinkTarget = 'OFFENSE' | 'FIRST_ATTACK'
 
@@ -37,6 +37,7 @@ export const PROTOTYPE_VARIANTS: Array<{
   { id: 'playerToggle', shortLabel: 'Toggle', label: 'Player toggle variant' },
   { id: 'attackLabel', shortLabel: 'State', label: 'Attack label variant' },
   { id: 'splitAttack', shortLabel: 'Split', label: 'Split attack variant' },
+  { id: 'clean', shortLabel: 'Clean', label: 'Stripped control variant' },
 ]
 
 export const CONNECTOR_STYLE_OPTIONS: Array<{
