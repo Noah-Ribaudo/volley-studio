@@ -153,7 +153,7 @@ export function TactilePlayJoystick({
         }
       : defaultFrame
   const selectedPhase = dragPhase ?? currentPhase
-  const textureSize = `${joystickTuning.ringTextureScale}px ${Math.max(3, joystickTuning.ringTextureScale * 0.86)}px`
+  const textureSize = `${joystickTuning.ringTextureSpacingX}px ${joystickTuning.ringTextureSpacingY}px`
   const textureStroke = `oklch(96% 0.02 90 / ${0.1 + joystickTuning.ringTextureOpacity * 0.45})`
   const textureShadow = `oklch(45% 0.12 42 / ${joystickTuning.ringTextureDepth * 0.34})`
 
@@ -364,30 +364,29 @@ export function TactilePlayJoystick({
             }}
             transition={knobTransition}
             className={cn(
-              'lab-raised relative flex h-full w-full items-center justify-center rounded-full border text-sm font-semibold text-foreground',
+              'lab-raised relative flex h-full w-full items-center justify-center rounded-full text-sm font-semibold text-foreground',
               isDragging && 'lab-pressed'
             )}
             style={{
-              borderColor: 'color-mix(in oklch, oklch(58% 0.19 48) 70%, var(--border) 30%)',
               background:
                 'radial-gradient(circle at 32% 28%, oklch(88% 0.05 85 / 0.92) 0%, oklch(82% 0.08 74 / 0.78) 12%, transparent 26%), linear-gradient(180deg, oklch(76% 0.17 62) 0%, oklch(68% 0.19 52) 42%, oklch(60% 0.18 42) 100%)',
               boxShadow: `0 0 ${14 + joystickTuning.haloIntensity * 18}px oklch(72% 0.14 55 / ${0.08 + joystickTuning.haloIntensity * 0.24}), inset 0 1px 0 oklch(97% 0.01 90 / 0.52), inset 0 -7px 12px oklch(42% 0.12 34 / 0.34)`,
             }}
           >
             <div
-              className="pointer-events-none absolute inset-[7%] rounded-full opacity-70"
+              className="pointer-events-none absolute inset-0 rounded-full opacity-70"
               style={{
                 backgroundImage: [
-                  `linear-gradient(30deg, ${textureStroke} 12%, transparent 12.5%, transparent 87%, ${textureStroke} 87.5%, ${textureStroke} 100%)`,
-                  `linear-gradient(150deg, ${textureStroke} 12%, transparent 12.5%, transparent 87%, ${textureStroke} 87.5%, ${textureStroke} 100%)`,
+                  `linear-gradient(30deg, ${textureStroke} 10%, transparent 10.5%, transparent 89%, ${textureStroke} 89.5%, ${textureStroke} 100%)`,
+                  `linear-gradient(150deg, ${textureStroke} 10%, transparent 10.5%, transparent 89%, ${textureStroke} 89.5%, ${textureStroke} 100%)`,
                   `linear-gradient(90deg, ${textureShadow} 2%, transparent 2.5%, transparent 97%, ${textureShadow} 98%)`,
                 ].join(', '),
                 backgroundSize: `${textureSize}, ${textureSize}, ${textureSize}`,
                 backgroundPosition: '0 0, 0 0, 0 0',
                 WebkitMaskImage:
-                  'radial-gradient(circle, transparent 52%, black 58%, black 76%, transparent 82%)',
+                  `radial-gradient(circle, transparent 50%, black 56%, black 100%)`,
                 maskImage:
-                  'radial-gradient(circle, transparent 52%, black 58%, black 76%, transparent 82%)',
+                  `radial-gradient(circle, transparent 50%, black 56%, black 100%)`,
               }}
             />
             <div className="pointer-events-none absolute inset-[18%] rounded-full border border-white/18 bg-black/5" />

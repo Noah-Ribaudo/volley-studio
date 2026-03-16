@@ -65,6 +65,8 @@ export function RebuildDialKitBridge({
         deadZone: [seed.joystick.deadZone, 0, 42, 1],
         haloIntensity: [seed.joystick.haloIntensity, 0, 1.25, 0.01],
         ringTextureScale: [seed.joystick.ringTextureScale, 3, 12, 0.1],
+        ringTextureSpacingX: [seed.joystick.ringTextureSpacingX, 3, 16, 0.1],
+        ringTextureSpacingY: [seed.joystick.ringTextureSpacingY, 3, 16, 0.1],
         ringTextureOpacity: [seed.joystick.ringTextureOpacity, 0, 1, 0.01],
         ringTextureDepth: [seed.joystick.ringTextureDepth, 0, 1, 0.01],
         settleSpring: {
@@ -268,6 +270,8 @@ export function RebuildDialKitBridge({
         deadZone: params.joystick.deadZone,
         haloIntensity: params.joystick.haloIntensity,
         ringTextureScale: params.joystick.ringTextureScale,
+        ringTextureSpacingX: params.joystick.ringTextureSpacingX,
+        ringTextureSpacingY: params.joystick.ringTextureSpacingY,
         ringTextureOpacity: params.joystick.ringTextureOpacity,
         ringTextureDepth: params.joystick.ringTextureDepth,
         settleSpring: {
