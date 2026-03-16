@@ -398,13 +398,17 @@ export function getQuarterTrackSegmentState({
   }
 }
 
-function buildHardwareTrackPath(inset: number, radius: number) {
-  const min = inset
-  const max = 100 - inset
-  const innerMin = min + radius
-  const innerMax = max - radius
+function buildHardwareTrackPath(insetX: number, insetY: number, radiusX: number, radiusY: number) {
+  const minX = insetX
+  const maxX = 100 - insetX
+  const minY = insetY
+  const maxY = 100 - insetY
+  const innerMinX = minX + radiusX
+  const innerMaxX = maxX - radiusX
+  const innerMinY = minY + radiusY
+  const innerMaxY = maxY - radiusY
 
-  return `M 50 ${min} H ${innerMax} A ${radius} ${radius} 0 0 1 ${max} ${innerMin} V ${innerMax} A ${radius} ${radius} 0 0 1 ${innerMax} ${max} H ${innerMin} A ${radius} ${radius} 0 0 1 ${min} ${innerMax} V ${innerMin} A ${radius} ${radius} 0 0 1 ${innerMin} ${min} H 50`
+  return `M 50 ${minY} H ${innerMaxX} A ${radiusX} ${radiusY} 0 0 1 ${maxX} ${innerMinY} V ${innerMaxY} A ${radiusX} ${radiusY} 0 0 1 ${innerMaxX} ${maxY} H ${innerMinX} A ${radiusX} ${radiusY} 0 0 1 ${minX} ${innerMaxY} V ${innerMinY} A ${radiusX} ${radiusY} 0 0 1 ${innerMinX} ${minY} H 50`
 }
 
 type HardwareTrackPiece = {
@@ -451,41 +455,43 @@ function useHardwareTrackPieces(pathD: string, pieceCount: number) {
 }
 
 function useEdgeBasedTrackPieces(
-  inset: number,
-  radius: number,
+  insetX: number,
+  insetY: number,
+  radiusX: number,
+  radiusY: number,
   piecesPerH: number,
   piecesPerV: number
 ) {
   return useMemo(() => {
-    const min = inset
-    const max = 100 - inset
-    const innerMin = min + radius
-    const innerMax = max - radius
+    const minX = insetX, maxX = 100 - insetX
+    const minY = insetY, maxY = 100 - insetY
+    const innerMinX = minX + radiusX, innerMaxX = maxX - radiusX
+    const innerMinY = minY + radiusY, innerMaxY = maxY - radiusY
     const pieces: HardwareTrackPiece[] = []
 
     // Top edge: left → right
     for (let i = 0; i < piecesPerH; i++) {
       const t = (i + 0.5) / piecesPerH
-      pieces.push({ x: innerMin + t * (innerMax - innerMin), y: min, angle: 0 })
+      pieces.push({ x: innerMinX + t * (innerMaxX - innerMinX), y: minY, angle: 0 })
     }
     // Right edge: top → bottom
     for (let i = 0; i < piecesPerV; i++) {
       const t = (i + 0.5) / piecesPerV
-      pieces.push({ x: max, y: innerMin + t * (innerMax - innerMin), angle: 90 })
+      pieces.push({ x: maxX, y: innerMinY + t * (innerMaxY - innerMinY), angle: 90 })
     }
     // Bottom edge: right → left
     for (let i = 0; i < piecesPerH; i++) {
       const t = (i + 0.5) / piecesPerH
-      pieces.push({ x: innerMax - t * (innerMax - innerMin), y: max, angle: 180 })
+      pieces.push({ x: innerMaxX - t * (innerMaxX - innerMinX), y: maxY, angle: 180 })
     }
     // Left edge: bottom → top
     for (let i = 0; i < piecesPerV; i++) {
       const t = (i + 0.5) / piecesPerV
-      pieces.push({ x: min, y: innerMax - t * (innerMax - innerMin), angle: 270 })
+      pieces.push({ x: minX, y: innerMaxY - t * (innerMaxY - innerMinY), angle: 270 })
     }
 
     return pieces
-  }, [inset, radius, piecesPerH, piecesPerV])
+  }, [insetX, insetY, radiusX, radiusY, piecesPerH, piecesPerV])
 }
 
 export function PhasePadHardwareLane({
@@ -515,13 +521,23 @@ export function PhasePadHardwareLane({
     return () => observer.disconnect()
   }, [])
 
+  // Correct inset/radius for the non-uniform viewBox scaling so the
+  // track has equal pixel distance from the button group on all sides
+  const sqrtAr = Math.sqrt(aspectRatio)
+  const insetX = tuning.trackInset / sqrtAr
+  const insetY = tuning.trackInset * sqrtAr
+  const radiusX = tuning.trackRadius / sqrtAr
+  const radiusY = tuning.trackRadius * sqrtAr
+
   const pathD = useMemo(
-    () => buildHardwareTrackPath(tuning.trackInset, tuning.trackRadius),
-    [tuning.trackInset, tuning.trackRadius]
+    () => buildHardwareTrackPath(insetX, insetY, radiusX, radiusY),
+    [insetX, insetY, radiusX, radiusY]
   )
   const pieces = useEdgeBasedTrackPieces(
-    tuning.trackInset,
-    tuning.trackRadius,
+    insetX,
+    insetY,
+    radiusX,
+    radiusY,
     tuning.piecesPerHorizontalEdge,
     tuning.piecesPerVerticalEdge
   )
