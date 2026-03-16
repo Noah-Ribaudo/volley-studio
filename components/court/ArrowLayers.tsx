@@ -5,6 +5,26 @@ import { MovementArrow } from './MovementArrow'
 import { computeDefaultControlPoint } from '@/lib/whiteboard-motion'
 import type { ArrowCurveConfig, ArrowPositions, Position, PositionCoordinates, Role } from '@/lib/types'
 
+let arrowLabelMeasureContext: CanvasRenderingContext2D | null = null
+
+function measureArrowLabelWidth(text: string, fontSize: number) {
+  if (typeof document === 'undefined') {
+    return text.length * fontSize * 0.52
+  }
+
+  if (!arrowLabelMeasureContext) {
+    const canvas = document.createElement('canvas')
+    arrowLabelMeasureContext = canvas.getContext('2d')
+  }
+
+  if (!arrowLabelMeasureContext) {
+    return text.length * fontSize * 0.52
+  }
+
+  arrowLabelMeasureContext.font = `600 ${fontSize}px Inter, ui-sans-serif, system-ui, sans-serif`
+  return arrowLabelMeasureContext.measureText(text).width
+}
+
 type LockedPath = {
   start: Position
   end: Position
@@ -88,9 +108,10 @@ function MovementArrowLayerImpl({
     dashed?: boolean
   }) => {
     const fontSize = arrowTagFontSize
-    const padX = fontSize * 0.68
-    const padY = fontSize * 0.42
-    const labelWidth = Math.max(fontSize * 2.6, text.length * fontSize * 0.58 + padX * 2)
+    const padX = fontSize * 0.5
+    const padY = fontSize * 0.34
+    const measuredTextWidth = measureArrowLabelWidth(text, fontSize)
+    const labelWidth = Math.max(fontSize * 1.9, measuredTextWidth + padX * 2)
     const labelHeight = fontSize + padY * 2
     const x = align === 'start' ? 0 : -labelWidth
     const textX = align === 'start' ? padX : -padX
