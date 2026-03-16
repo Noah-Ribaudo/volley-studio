@@ -481,11 +481,12 @@ export default function RebuildPrototypeLabPage() {
                     }
                   : undefined
               }
-              fullStatusLabels={fullStatusLabels}
-              animationTrigger={playAnimationTrigger}
-              isPreviewingMovement={isPreviewingMovement}
-              tagFlags={currentTagFlags}
-              onTagsChange={
+            fullStatusLabels={fullStatusLabels}
+            animationTrigger={playAnimationTrigger}
+            isPreviewingMovement={isPreviewingMovement}
+            preserveAspectRatio="xMidYMax meet"
+            tagFlags={currentTagFlags}
+            onTagsChange={
                 isEditingAllowed
                   ? (role, tags) => {
                       setTokenTags(currentRotation, rallyPhase, role, tags)
