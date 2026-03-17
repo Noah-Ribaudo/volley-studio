@@ -4,6 +4,7 @@ import { memo } from 'react'
 import { CourtGrid } from './CourtGrid'
 import { getRoleZone } from '@/lib/rotations'
 import type { ArrowPositions, PositionCoordinates, Role, Rotation } from '@/lib/types'
+import type { PrototypeCourtPalette } from '@/components/rebuild/prototypes/prototypeSurfaceThemes'
 
 interface CourtBaseLayerProps {
   padding: number
@@ -18,6 +19,8 @@ interface CourtBaseLayerProps {
   arrows: ArrowPositions
   displayPositions: PositionCoordinates
   lineColor: string
+  paddingBackground?: string
+  palette?: PrototypeCourtPalette
 }
 
 const zoneLabelPositions = (courtWidth: number, courtHeight: number): Record<number, { x: number; y: number }> => ({
@@ -42,6 +45,8 @@ function CourtBaseLayerImpl({
   arrows,
   displayPositions,
   lineColor,
+  paddingBackground,
+  palette,
 }: CourtBaseLayerProps) {
   const showZoneGuides = showZones && rotation && !isBezierAnimating && !Object.values(arrows).some(Boolean)
   const labels = zoneLabelPositions(courtWidth, courtHeight)
@@ -53,8 +58,8 @@ function CourtBaseLayerImpl({
         y={-padding}
         width={courtWidth + padding * 2}
         height={courtHeight + padding * 2}
-        fill="var(--muted)"
-        opacity={0.28}
+        fill={paddingBackground ?? 'var(--muted)'}
+        opacity={paddingBackground ? 1 : 0.28}
         style={{ pointerEvents: 'none' }}
       />
 
@@ -65,6 +70,7 @@ function CourtBaseLayerImpl({
         rotation={rotation}
         baseOrder={baseOrder}
         fullCourt={true}
+        palette={palette}
       />
 
       {showZoneGuides && (
@@ -100,4 +106,3 @@ function CourtBaseLayerImpl({
 }
 
 export const CourtBaseLayer = memo(CourtBaseLayerImpl)
-
