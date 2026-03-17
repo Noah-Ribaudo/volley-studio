@@ -543,6 +543,30 @@ export function PhasePadHardwareLane({
     () => buildHardwareTrackPath(insetX, insetY, radius),
     [insetX, insetY, radius]
   )
+  const svgRef = useRef<SVGSVGElement | null>(null)
+  const [svgSize, setSvgSize] = useState({ width: 100, height: 100 })
+
+  useLayoutEffect(() => {
+    const node = svgRef.current
+    if (!node) return
+
+    const updateSize = () => {
+      const rect = node.getBoundingClientRect()
+      if (rect.width <= 0 || rect.height <= 0) return
+      setSvgSize({ width: rect.width, height: rect.height })
+    }
+
+    updateSize()
+
+    const observer = new ResizeObserver(() => {
+      updateSize()
+    })
+    observer.observe(node)
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [])
   const { pathRef } = useHardwareTrackPieces(pathD, totalLights)
   const pieces = useEdgeBasedTrackPieces(
     insetX,
@@ -554,6 +578,7 @@ export function PhasePadHardwareLane({
 
   return (
     <svg
+      ref={svgRef}
       aria-hidden="true"
       className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
       preserveAspectRatio="none"
@@ -622,32 +647,45 @@ export function PhasePadHardwareLane({
               g: 132,
               b: 136,
             }
+        const isHorizontalPiece = piece.angle % 180 === 0
+        const scaleX = svgSize.width / 100 || 1
+        const scaleY = svgSize.height / 100 || 1
+        const localPieceLength = isHorizontalPiece
+          ? tuning.pieceLength / scaleX
+          : tuning.pieceLength / scaleY
+        const localPieceThickness = isHorizontalPiece
+          ? tuning.pieceThickness / scaleY
+          : tuning.pieceThickness / scaleX
+        const highlightInsetX = localPieceLength * 0.05
+        const highlightInsetY = localPieceThickness * 0.14
+        const highlightWidth = Math.max(0, localPieceLength - highlightInsetX * 2)
+        const highlightHeight = Math.max(0, localPieceThickness * 0.44)
 
         return (
           <g key={`hardware-piece-${index}`} transform={`translate(${piece.x} ${piece.y}) rotate(${piece.angle})`}>
             <rect
-              x={-tuning.pieceLength / 2}
-              y={-tuning.pieceThickness / 2}
-              width={tuning.pieceLength}
-              height={tuning.pieceThickness}
+              x={-localPieceLength / 2}
+              y={-localPieceThickness / 2}
+              width={localPieceLength}
+              height={localPieceThickness}
               rx={tuning.pieceRadius}
               fill={`rgba(128,128,132,${0.22 + tuning.inactiveOpacity * 0.2})`}
               filter="url(#phase-pad-hardware-shadow)"
             />
             <rect
-              x={-tuning.pieceLength / 2}
-              y={-tuning.pieceThickness / 2}
-              width={tuning.pieceLength}
-              height={tuning.pieceThickness}
+              x={-localPieceLength / 2}
+              y={-localPieceThickness / 2}
+              width={localPieceLength}
+              height={localPieceThickness}
               rx={tuning.pieceRadius}
               fill={`rgba(${activeColor.r},${activeColor.g},${activeColor.b},${activeOpacity})`}
               filter={strength > 0 ? 'url(#phase-pad-hardware-glow)' : undefined}
             />
             <rect
-              x={-tuning.pieceLength / 2 + 0.7}
-              y={-tuning.pieceThickness / 2 + 0.55}
-              width={Math.max(0, tuning.pieceLength - 1.4)}
-              height={Math.max(0, tuning.pieceThickness * 0.44)}
+              x={-localPieceLength / 2 + highlightInsetX}
+              y={-localPieceThickness / 2 + highlightInsetY}
+              width={highlightWidth}
+              height={highlightHeight}
               rx={Math.max(0.5, tuning.pieceRadius * 0.72)}
               fill={strength > 0
                 ? `rgba(255,198,122,${0.12 + tuning.channelHighlight * 0.1 + strength * 0.14})`
