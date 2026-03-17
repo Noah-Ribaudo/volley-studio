@@ -23,6 +23,7 @@ const RESET_ACTIONS = new Set([
   'resetPhasePadHardware',
   'resetArrowTags',
 ])
+const DIALKIT_SCHEMA_VERSION = 2
 
 export function RebuildDialKitBridge({
   activeVariant,
@@ -45,7 +46,10 @@ export function RebuildDialKitBridge({
   const latestTuningRef = useRef<TactileTuning>(DEFAULT_TACTILE_TUNING)
   const lastSerializedRef = useRef<string>(JSON.stringify(DEFAULT_TACTILE_TUNING))
 
-  const panelName = useMemo(() => `Rebuild Tactile Lab ${panelVersion}`, [panelVersion])
+  const panelName = useMemo(
+    () => `Rebuild Tactile Lab ${DIALKIT_SCHEMA_VERSION}.${panelVersion}`,
+    [panelVersion]
+  )
 
   const params = useDialKit(
     panelName,
@@ -148,22 +152,22 @@ export function RebuildDialKitBridge({
       ...(usesPhasePadHardware
         ? {
             phasePadHardware: {
-              trackWidth: [seed.phasePadHardware.trackWidth, 44, 116],
-              trackHeight: [seed.phasePadHardware.trackHeight, 44, 116],
-              trackCornerRadius: [seed.phasePadHardware.trackCornerRadius, 0, 28],
-              channelWidth: [seed.phasePadHardware.channelWidth, 0.5, 18],
-              piecesPerLongSide: [seed.phasePadHardware.piecesPerLongSide, 2, 32],
-              piecesPerShortSide: [seed.phasePadHardware.piecesPerShortSide, 2, 32],
-              pieceLengthLongSide: [seed.phasePadHardware.pieceLengthLongSide, 1, 28],
-              pieceLengthShortSide: [seed.phasePadHardware.pieceLengthShortSide, 1, 28],
-              pieceThickness: [seed.phasePadHardware.pieceThickness, 0.75, 16],
-              pieceRadius: [seed.phasePadHardware.pieceRadius, 0, 10],
-              inactiveOpacity: [seed.phasePadHardware.inactiveOpacity, 0, 0.75],
-              activeOpacity: [seed.phasePadHardware.activeOpacity, 0.2, 1],
-              glow: [seed.phasePadHardware.glow, 0, 3],
-              bloom: [seed.phasePadHardware.bloom, 0, 3],
-              channelShadow: [seed.phasePadHardware.channelShadow, 0, 1],
-              channelHighlight: [seed.phasePadHardware.channelHighlight, 0, 1],
+              trackWidth: [seed.phasePadHardware.trackWidth, 44, 116, 0.1],
+              trackHeight: [seed.phasePadHardware.trackHeight, 44, 116, 0.1],
+              trackCornerRadius: [seed.phasePadHardware.trackCornerRadius, 0, 28, 0.1],
+              channelWidth: [seed.phasePadHardware.channelWidth, 0.5, 18, 0.05],
+              piecesPerLongSide: [seed.phasePadHardware.piecesPerLongSide, 2, 32, 1],
+              piecesPerShortSide: [seed.phasePadHardware.piecesPerShortSide, 2, 32, 1],
+              pieceLengthLongSide: [seed.phasePadHardware.pieceLengthLongSide, 1, 28, 0.1],
+              pieceLengthShortSide: [seed.phasePadHardware.pieceLengthShortSide, 1, 28, 0.1],
+              pieceThickness: [seed.phasePadHardware.pieceThickness, 0.75, 16, 0.05],
+              pieceRadius: [seed.phasePadHardware.pieceRadius, 0, 10, 0.05],
+              inactiveOpacity: [seed.phasePadHardware.inactiveOpacity, 0, 0.75, 0.01],
+              activeOpacity: [seed.phasePadHardware.activeOpacity, 0.2, 1, 0.01],
+              glow: [seed.phasePadHardware.glow, 0, 3, 0.01],
+              bloom: [seed.phasePadHardware.bloom, 0, 3, 0.01],
+              channelShadow: [seed.phasePadHardware.channelShadow, 0, 1, 0.01],
+              channelHighlight: [seed.phasePadHardware.channelHighlight, 0, 1, 0.01],
             },
             resetPhasePadHardware: { type: 'action', label: 'Reset Phase Hardware' },
           }
