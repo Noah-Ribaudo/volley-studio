@@ -21,7 +21,7 @@ import {
   useQuarterTrackTravelState,
 } from './PhasePadShared'
 
-const C8_PHASE_ORDER: CorePhase[] = ['DEFENSE', 'OFFENSE', 'RECEIVE', 'SERVE']
+const C8_PHASE_ORDER: CorePhase[] = ['SERVE', 'DEFENSE', 'OFFENSE', 'RECEIVE']
 const PHASE_PAD_JOYSTICK_FRAME_SIZE = 92
 
 type SurfaceShaderId = 'fluted-glass' | 'neuro-noise' | 'dithering' | 'voronoi' | 'waves' | 'warp' | 'none'
@@ -723,10 +723,10 @@ export function Concept8FullLedPerimeter(props: PrototypeControlProps) {
   const verticalPieces = horizontalLong ? hardwareTuning.piecesPerShortSide : hardwareTuning.piecesPerLongSide
   const piecesPerEdge = useMemo(
     () => [
-      verticalPieces,
       horizontalPieces,
       verticalPieces,
       horizontalPieces,
+      verticalPieces,
     ],
     [horizontalPieces, verticalPieces]
   )
