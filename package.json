@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "npm-run-all --parallel dev:convex dev:next",
+    "dev": "rm -rf .next && next dev",
     "dev:convex": "convex dev",
     "dev:next": "rm -rf .next && next dev",
     "build": "next build",
