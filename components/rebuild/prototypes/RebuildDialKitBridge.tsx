@@ -82,7 +82,7 @@ export function RebuildDialKitBridge({
         deadZone: [seed.joystick.deadZone, 0, 42],
         autoNudgeDistance: [seed.joystick.autoNudgeDistance, 0, 24],
         autoNudgeHoldMs: [seed.joystick.autoNudgeHoldMs, 40, 360],
-        haloIntensity: [seed.joystick.haloIntensity, 0, 1.25],
+        haloIntensity: [seed.joystick.haloIntensity, 0, 2],
         scale: [seed.joystick.scale, 0.65, 1.5],
         shellCutoutPadding: [seed.joystick.shellCutoutPadding, -8, 24],
         baseScale: [seed.joystick.baseScale, 0.5, 1.8],
