@@ -24,6 +24,8 @@ interface TactileRotationSwitchProps {
   }
 }
 
+const INNER_END_RADIUS = 'calc(var(--rotation-rail-outer-radius, 16px) - var(--rotation-rail-padding, 5px))'
+
 export function TactileRotationSwitch({
   value,
   onValueChange,
@@ -107,6 +109,10 @@ export function TactileRotationSwitch({
                 boxShadow: isActive ? activeShadow : inactiveShadow,
                 borderColor: isActive ? activeBorderColor : inactiveBorderColor,
                 textShadow: isActive ? `0 0 12px color-mix(in srgb, ${TACTILE_ACCENT_SOFT_HEX} 54%, transparent)` : undefined,
+                borderTopLeftRadius: isFirst ? INNER_END_RADIUS : undefined,
+                borderBottomLeftRadius: isFirst ? INNER_END_RADIUS : undefined,
+                borderTopRightRadius: isLast ? INNER_END_RADIUS : undefined,
+                borderBottomRightRadius: isLast ? INNER_END_RADIUS : undefined,
               }}
               transition={transition}
             >

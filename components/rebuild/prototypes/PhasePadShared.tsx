@@ -746,10 +746,14 @@ export function PhasePadRotationRail(
       switchMotion={props.switchMotion}
       density="compact"
       className="mb-1.5 rounded-[16px] border p-[5px]"
-      style={props.railStyle ?? {
-        background: 'linear-gradient(180deg, rgba(238,230,214,0.98) 0%, rgba(220,206,184,0.98) 100%)',
-        borderColor: 'rgba(176,151,116,0.28)',
-        boxShadow: 'inset 0 1px 0 rgba(255,247,234,0.82)',
+      style={{
+        ['--rotation-rail-outer-radius' as string]: '16px',
+        ['--rotation-rail-padding' as string]: '5px',
+        ...(props.railStyle ?? {
+          background: 'linear-gradient(180deg, rgba(238,230,214,0.98) 0%, rgba(220,206,184,0.98) 100%)',
+          borderColor: 'rgba(176,151,116,0.28)',
+          boxShadow: 'inset 0 1px 0 rgba(255,247,234,0.82)',
+        }),
       }}
       itemColors={props.railItemColors}
     />
