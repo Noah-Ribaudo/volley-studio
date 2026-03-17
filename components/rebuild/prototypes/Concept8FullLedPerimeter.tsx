@@ -155,7 +155,7 @@ const PHASE_PAD_VARIANT_THEMES: Record<PrototypeVariantId, PhasePadVisualTheme> 
     frameRadius: '16px',
     tileRadius: '14px',
     tileInsetStroke: 'inset 0 0 0 1px rgba(255,255,255,0.1)',
-    shader: 'none',
+    shader: 'dithering',
     tileSpecularHighlight: 'linear-gradient(var(--lab-light-angle, 35deg), transparent 28%, rgba(255,255,255,0.14) 44%, rgba(255,255,255,0.28) 50%, rgba(255,255,255,0.14) 56%, transparent 72%)',
     tileEdgeLight: 'inset 1px -1px 4px rgba(255,255,255,0.28), inset -1px 1px 4px rgba(100,80,48,0.06)',
     rotationRailBg: 'linear-gradient(180deg, rgba(216,208,194,0.98) 0%, rgba(194,184,168,0.98) 100%)',
@@ -163,8 +163,8 @@ const PHASE_PAD_VARIANT_THEMES: Record<PrototypeVariantId, PhasePadVisualTheme> 
     rotationRailShadow: 'inset 0 1px 0 rgba(255,255,255,0.62)',
     rotationRailItemBg: 'linear-gradient(180deg, #f4efe6 0%, #ddd3c4 100%)',
     rotationRailItemActiveBg: 'linear-gradient(180deg, #e2d8c8 0%, #c8b8a2 100%)',
-    rotationRailItemText: 'rgba(72,58,36,0.62)',
-    rotationRailItemActiveText: 'rgba(56,42,22,0.94)',
+    rotationRailItemText: 'rgba(52,40,22,0.78)',
+    rotationRailItemActiveText: 'rgba(42,30,14,0.96)',
   },
 
 }
@@ -409,7 +409,9 @@ function PhaseAreaTile({
           background: isActive ? theme.tileActiveBackground : theme.tileInactiveBackground,
           borderColor: isActive ? theme.tileActiveBorder : theme.tileInactiveBorder,
           boxShadow: isActive ? activeShadow : theme.tileInactiveShadow,
-          color: isActive ? TACTILE_ACCENT_HEX : theme.tileInactiveText,
+          color: isActive
+            ? (variantId === 'soft' ? '#c06a08' : TACTILE_ACCENT_HEX)
+            : theme.tileInactiveText,
           backdropFilter: undefined,
           borderRadius: theme.tileRadius,
           clipPath: theme.tileClipPath,

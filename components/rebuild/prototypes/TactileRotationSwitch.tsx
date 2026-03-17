@@ -107,7 +107,7 @@ export function TactileRotationSwitch({
               style={{
                 ['--lab-switch-knob-glow' as string]: switchMotion.knobGlow,
                 background: isActive ? activeBackground : inactiveBackground,
-                color: isActive ? TACTILE_ACCENT_HEX : itemColors?.text,
+                color: isActive ? (isDarkTheme ? TACTILE_ACCENT_HEX : '#c06a08') : itemColors?.text,
                 boxShadow: isActive ? activeShadow : inactiveShadow,
                 borderColor: isActive ? activeBorderColor : inactiveBorderColor,
                 textShadow: isActive ? `0 0 12px color-mix(in srgb, ${TACTILE_ACCENT_SOFT_HEX} 54%, transparent)` : undefined,
