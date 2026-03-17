@@ -101,28 +101,30 @@ export function useQuarterTrackTravelState({
 }) {
   const prefersReducedMotion = useReducedMotion()
   const totalLights = useMemo(() => piecesPerEdge.reduce((a, b) => a + b, 0), [piecesPerEdge])
-
-  const getEdgeStart = useCallback(
+  const getCornerSegment = useCallback(
     (phase: CorePhase) => {
-      const idx = phaseOrder.indexOf(phase)
-      if (idx <= 0) return 0
-      let start = 0
-      for (let i = 0; i < idx; i++) start += piecesPerEdge[i]
-      return start
+      const phaseIndex = phaseOrder.indexOf(phase)
+      if (phaseIndex < 0) {
+        return { start: 0, length: piecesPerEdge[0] ?? 0 }
+      }
+
+      let cornerPosition = 0
+      for (let i = 0; i < phaseIndex; i++) cornerPosition += piecesPerEdge[i]
+
+      const previousEdgeLength = piecesPerEdge[(phaseIndex - 1 + piecesPerEdge.length) % piecesPerEdge.length] ?? 0
+      const nextEdgeLength = piecesPerEdge[phaseIndex] ?? 0
+
+      return {
+        start: cornerPosition - previousEdgeLength / 2,
+        length: previousEdgeLength / 2 + nextEdgeLength / 2,
+      }
     },
     [phaseOrder, piecesPerEdge]
   )
 
-  const getEdgeLength = useCallback(
-    (phase: CorePhase) => {
-      const idx = phaseOrder.indexOf(phase)
-      return idx >= 0 ? piecesPerEdge[idx] : piecesPerEdge[0]
-    },
-    [phaseOrder, piecesPerEdge]
-  )
-
-  const restingStart = useMemo(() => getEdgeStart(currentCorePhase), [currentCorePhase, getEdgeStart])
-  const restingLength = useMemo(() => getEdgeLength(currentCorePhase), [currentCorePhase, getEdgeLength])
+  const restingSegment = useMemo(() => getCornerSegment(currentCorePhase), [currentCorePhase, getCornerSegment])
+  const restingStart = restingSegment.start
+  const restingLength = restingSegment.length
 
   const segmentStartRef = useRef(restingStart)
   const segmentLengthRef = useRef(restingLength)
@@ -145,8 +147,9 @@ export function useQuarterTrackTravelState({
 
     const originStart = segmentStartRef.current
     const originLength = segmentLengthRef.current
-    const goalStart = getEdgeStart(targetCorePhase)
-    const goalLength = getEdgeLength(targetCorePhase)
+    const goalSegment = getCornerSegment(targetCorePhase)
+    const goalStart = goalSegment.start
+    const goalLength = goalSegment.length
     const travelDelta = getShortestPerimeterDelta(originStart, goalStart, totalLights)
     const lengthDelta = goalLength - originLength
 
@@ -181,8 +184,7 @@ export function useQuarterTrackTravelState({
     }
   }, [
     currentCorePhase,
-    getEdgeLength,
-    getEdgeStart,
+    getCornerSegment,
     isPhaseTraveling,
     prefersReducedMotion,
     restingLength,
@@ -353,6 +355,29 @@ function getEdgeTrackSegmentStart(
   return start
 }
 
+function getCornerTrackSegment(
+  phase: CorePhase,
+  piecesPerEdge: number[],
+  phaseOrder: readonly CorePhase[]
+) {
+  const phaseIndex = phaseOrder.indexOf(phase)
+  if (phaseIndex < 0) {
+    return {
+      start: 0,
+      length: piecesPerEdge[0] ?? 0,
+    }
+  }
+
+  const cornerPosition = getEdgeTrackSegmentStart(phase, piecesPerEdge, phaseOrder)
+  const previousEdgeLength = piecesPerEdge[(phaseIndex - 1 + piecesPerEdge.length) % piecesPerEdge.length] ?? 0
+  const nextEdgeLength = piecesPerEdge[phaseIndex] ?? 0
+
+  return {
+    start: cornerPosition - previousEdgeLength / 2,
+    length: previousEdgeLength / 2 + nextEdgeLength / 2,
+  }
+}
+
 export function getQuarterTrackSegmentState({
   currentCorePhase,
   transitionFrom,
@@ -371,9 +396,9 @@ export function getQuarterTrackSegmentState({
   phaseOrder: readonly CorePhase[]
 }) {
   const totalLights = piecesPerEdge.reduce((a, b) => a + b, 0)
-  const currentIdx = phaseOrder.indexOf(currentCorePhase)
-  const restingLength = currentIdx >= 0 ? piecesPerEdge[currentIdx] : piecesPerEdge[0]
-  const restingStart = getEdgeTrackSegmentStart(currentCorePhase, piecesPerEdge, phaseOrder)
+  const restingSegment = getCornerTrackSegment(currentCorePhase, piecesPerEdge, phaseOrder)
+  const restingLength = restingSegment.length
+  const restingStart = restingSegment.start
 
   if (!isPreviewingMovement) {
     return {
@@ -383,12 +408,12 @@ export function getQuarterTrackSegmentState({
     }
   }
 
-  const fromStart = getEdgeTrackSegmentStart(transitionFrom, piecesPerEdge, phaseOrder)
-  const toStart = getEdgeTrackSegmentStart(transitionTo, piecesPerEdge, phaseOrder)
-  const fromIdx = phaseOrder.indexOf(transitionFrom)
-  const toIdx = phaseOrder.indexOf(transitionTo)
-  const fromLength = fromIdx >= 0 ? piecesPerEdge[fromIdx] : piecesPerEdge[0]
-  const toLength = toIdx >= 0 ? piecesPerEdge[toIdx] : piecesPerEdge[0]
+  const fromSegment = getCornerTrackSegment(transitionFrom, piecesPerEdge, phaseOrder)
+  const toSegment = getCornerTrackSegment(transitionTo, piecesPerEdge, phaseOrder)
+  const fromStart = fromSegment.start
+  const toStart = toSegment.start
+  const fromLength = fromSegment.length
+  const toLength = toSegment.length
   const travelDelta = getShortestPerimeterDelta(fromStart, toStart, totalLights)
 
   return {

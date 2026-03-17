@@ -711,10 +711,10 @@ export function Concept8FullLedPerimeter(props: PrototypeControlProps) {
   const verticalPieces = horizontalLong ? hardwareTuning.piecesPerShortSide : hardwareTuning.piecesPerLongSide
   const piecesPerEdge = useMemo(
     () => [
-      horizontalPieces,
       verticalPieces,
       horizontalPieces,
       verticalPieces,
+      horizontalPieces,
     ],
     [horizontalPieces, verticalPieces]
   )
