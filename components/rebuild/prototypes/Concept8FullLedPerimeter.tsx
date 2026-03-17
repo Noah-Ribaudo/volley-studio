@@ -130,39 +130,41 @@ const PHASE_PAD_VARIANT_THEMES: Record<PrototypeVariantId, PhasePadVisualTheme> 
 
   /* ── SOFT: Light mode rubber ───────────────────────────────────── */
   soft: {
-    panelBackground: 'linear-gradient(180deg, #ece7de 0%, #d7cec0 100%)',
-    panelBorder: 'rgba(164,150,126,0.34)',
-    panelShadow: '0 24px 44px rgba(76,60,38,0.18), inset 0 1px 0 rgba(255,255,255,0.78), inset 0 -18px 24px rgba(122,102,72,0.1)',
-    frameBackground: 'linear-gradient(180deg, rgba(194,184,168,0.28) 0%, rgba(244,238,230,0.52) 100%)',
-    frameBorder: 'rgba(174,160,136,0.24)',
-    dividerColor: 'rgba(188,176,158,0.64)',
-    dividerInset: '0 0 0 1px rgba(255,255,255,0.22)',
-    cutoutBackground: 'radial-gradient(circle at 50% 50%, rgba(210,202,188,0.94) 0%, rgba(228,220,208,0.98) 48%, rgba(244,238,230,0.98) 100%)',
-    cutoutShadow: 'inset 0 1px 0 rgba(255,255,255,0.84), inset 0 -14px 18px rgba(138,118,86,0.12), 0 0 18px rgba(120,92,52,0.08)',
-    tileInactiveBackground: 'linear-gradient(180deg, #f4efe6 0%, #ddd3c5 100%)',
-    tileActiveBackground: 'linear-gradient(180deg, #d9cdbd 0%, #bcae9c 100%)',
-    tileInactiveBorder: 'rgba(180,166,142,0.26)',
-    tileActiveBorder: 'rgba(182,128,66,0.28)',
-    tileInactiveText: 'rgba(82,68,46,0.84)',
-    tileActiveText: 'rgba(54,40,22,0.94)',
-    tileInactiveShadow: 'inset 0 2px 0 rgba(255,255,255,0.84), inset 0 -6px 0 rgba(146,128,98,0.14), 0 12px 20px rgba(116,96,62,0.16)',
-    tileActiveShadow: 'inset 0 2px 0 rgba(255,255,255,0.54), inset 0 12px 18px rgba(255,255,255,0.16), inset 0 -2px 0 rgba(118,96,66,0.24), 0 3px 6px rgba(100,78,48,0.12)',
-    labelShadow: '0 1px 0 rgba(255,255,255,0.62)',
-    backlightInactive: 'radial-gradient(circle at 50% 85%, rgba(255,155,70,0.05) 0%, transparent 60%)',
-    backlightActive: 'radial-gradient(circle at 50% 85%, rgba(255,155,70,0.14) 0%, rgba(255,120,40,0.05) 38%, transparent 72%)',
-    topGloss: 'linear-gradient(180deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.08) 24%, transparent 100%)',
+    panelBackground: 'linear-gradient(180deg, #e8e2d8 0%, #cfc5b4 100%)',
+    panelBorder: 'rgba(148,132,106,0.4)',
+    panelShadow: '0 24px 44px rgba(76,60,38,0.2), inset 0 1px 0 rgba(255,255,255,0.72), inset 0 -18px 24px rgba(110,90,60,0.12)',
+    frameBackground: 'linear-gradient(180deg, rgba(180,170,152,0.3) 0%, rgba(236,230,220,0.5) 100%)',
+    frameBorder: 'rgba(158,142,114,0.28)',
+    dividerColor: 'rgba(168,154,132,0.72)',
+    dividerInset: '0 0 0 1px rgba(255,255,255,0.18)',
+    cutoutBackground: 'radial-gradient(circle at 50% 50%, rgba(198,190,174,0.94) 0%, rgba(218,210,196,0.98) 48%, rgba(236,230,220,0.98) 100%)',
+    cutoutShadow: 'inset 0 1px 0 rgba(255,255,255,0.78), inset 0 -14px 18px rgba(128,108,76,0.14), 0 0 18px rgba(100,78,44,0.1)',
+    tileInactiveBackground: 'linear-gradient(180deg, #f2ece2 0%, #d6cabb 100%)',
+    tileActiveBackground: 'linear-gradient(180deg, #cdc0ae 0%, #b0a08a 100%)',
+    tileInactiveBorder: 'rgba(160,144,118,0.32)',
+    tileActiveBorder: 'rgba(168,118,56,0.36)',
+    tileInactiveText: 'rgba(52,40,24,0.92)',
+    tileActiveText: 'rgba(36,26,12,0.96)',
+    tileInactiveShadow: 'inset 0 2px 0 rgba(255,255,255,0.76), inset 0 -6px 0 rgba(136,116,84,0.18), 0 12px 20px rgba(100,80,48,0.2)',
+    tileActiveShadow: 'inset 0 2px 0 rgba(255,255,255,0.44), inset 0 12px 18px rgba(255,255,255,0.12), inset 0 -2px 0 rgba(100,80,50,0.3), 0 3px 6px rgba(80,60,32,0.16)',
+    labelShadow: '0 1px 0 rgba(255,255,255,0.52)',
+    backlightInactive: 'radial-gradient(circle at 50% 85%, rgba(255,155,70,0.06) 0%, transparent 60%)',
+    backlightActive: 'radial-gradient(circle at 50% 85%, rgba(255,145,60,0.18) 0%, rgba(255,110,30,0.07) 38%, transparent 72%)',
+    topGloss: 'linear-gradient(180deg, rgba(255,255,255,0.42) 0%, rgba(255,255,255,0.06) 24%, transparent 100%)',
     panelRadius: '20px',
     frameRadius: '16px',
     tileRadius: '14px',
-    tileInsetStroke: 'inset 0 0 0 1px rgba(255,255,255,0.12)',
-    shader: 'dithering',
-    rotationRailBg: 'linear-gradient(180deg, rgba(222,214,202,0.98) 0%, rgba(198,188,174,0.98) 100%)',
-    rotationRailBorder: 'rgba(168,154,130,0.24)',
-    rotationRailShadow: 'inset 0 1px 0 rgba(255,255,255,0.68)',
-    rotationRailItemBg: 'linear-gradient(180deg, #f8f4ed 0%, #e3d9cb 100%)',
-    rotationRailItemActiveBg: 'linear-gradient(180deg, #d9cdbd 0%, #bdaa95 100%)',
-    rotationRailItemText: 'rgba(116,98,70,0.48)',
-    rotationRailItemActiveText: 'rgba(74,54,32,0.92)',
+    tileInsetStroke: 'inset 0 0 0 1px rgba(255,255,255,0.1)',
+    shader: 'none',
+    tileSpecularHighlight: 'linear-gradient(var(--lab-light-angle, 35deg), transparent 28%, rgba(255,255,255,0.14) 44%, rgba(255,255,255,0.28) 50%, rgba(255,255,255,0.14) 56%, transparent 72%)',
+    tileEdgeLight: 'inset 1px -1px 4px rgba(255,255,255,0.28), inset -1px 1px 4px rgba(100,80,48,0.06)',
+    rotationRailBg: 'linear-gradient(180deg, rgba(216,208,194,0.98) 0%, rgba(194,184,168,0.98) 100%)',
+    rotationRailBorder: 'rgba(158,142,116,0.28)',
+    rotationRailShadow: 'inset 0 1px 0 rgba(255,255,255,0.62)',
+    rotationRailItemBg: 'linear-gradient(180deg, #f4efe6 0%, #ddd3c4 100%)',
+    rotationRailItemActiveBg: 'linear-gradient(180deg, #e2d8c8 0%, #c8b8a2 100%)',
+    rotationRailItemText: 'rgba(72,58,36,0.62)',
+    rotationRailItemActiveText: 'rgba(56,42,22,0.94)',
   },
 
 }
@@ -457,12 +459,13 @@ function PhaseAreaTile({
         )}
         {/* Label */}
         <span
-          className="relative z-[1] text-[1.02rem] font-semibold tracking-[-0.02em]"
+          className="relative z-[1] tracking-[-0.02em]"
           style={{
+            fontSize: variantId === 'soft' ? '1.06rem' : '1.02rem',
+            fontWeight: variantId === 'soft' ? 700 : 600,
             textShadow: isActive
               ? `0 0 12px color-mix(in srgb, ${TACTILE_ACCENT_SOFT_HEX} 58%, transparent)`
               : theme.labelShadow,
-            opacity: isActive ? 1 : 0.96,
           }}
         >
           {label}

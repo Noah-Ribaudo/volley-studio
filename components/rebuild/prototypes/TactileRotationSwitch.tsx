@@ -69,14 +69,16 @@ export function TactileRotationSwitch({
         const activeShadow =
           isDarkTheme
             ? 'inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -1px 0 rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.2)'
-            : 'inset 0 1px 0 rgba(255,255,255,0.16), inset 0 -1px 0 rgba(0,0,0,0.28), 0 1px 2px rgba(0,0,0,0.12)'
+            : 'inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(0,0,0,0.16), 0 1px 2px rgba(0,0,0,0.08)'
         const inactiveBackground = itemColors?.bg ?? 'linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.08) 100%)'
         const activeBackground = itemColors?.activeBg ?? 'linear-gradient(180deg, rgba(44,48,56,0.92) 0%, rgba(24,28,34,0.98) 100%)'
         const inactiveBorderColor = itemColors
           ? `color-mix(in oklch, ${itemColors.text} 24%, transparent)`
           : undefined
         const activeBorderColor = itemColors
-          ? `color-mix(in oklch, ${itemColors.activeText} 32%, black 68%)`
+          ? isDarkTheme
+            ? `color-mix(in oklch, ${itemColors.activeText} 32%, black 68%)`
+            : `color-mix(in oklch, ${itemColors.activeText} 38%, transparent)`
           : undefined
 
         return (
