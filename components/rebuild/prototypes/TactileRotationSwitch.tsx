@@ -59,13 +59,23 @@ export function TactileRotationSwitch({
         const isActive = value === rotation
         const isFirst = rotation === ROTATIONS[0]
         const isLast = rotation === ROTATIONS[ROTATIONS.length - 1]
-        const backgroundSeed = itemColors?.activeBg ?? itemColors?.bg ?? 'rgba(255,255,255,0.14)'
+        const isDarkTheme = (itemColors?.text ?? '').includes('240') || (itemColors?.text ?? '').includes('220') || (itemColors?.text ?? '').includes('200')
         const inactiveShadow =
-          'inset 0 1px 0 rgba(255,255,255,0.42), inset 0 -1px 0 rgba(0,0,0,0.14), 0 3px 6px rgba(0,0,0,0.12)'
+          isDarkTheme
+            ? 'inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -1px 0 rgba(0,0,0,0.34), 0 3px 6px rgba(0,0,0,0.18)'
+            : 'inset 0 1px 0 rgba(255,255,255,0.42), inset 0 -1px 0 rgba(0,0,0,0.14), 0 3px 6px rgba(0,0,0,0.12)'
         const activeShadow =
-          'inset 0 1px 0 rgba(255,255,255,0.16), inset 0 -1px 0 rgba(0,0,0,0.28), 0 1px 2px rgba(0,0,0,0.12)'
-        const inactiveBackground = `linear-gradient(180deg, color-mix(in oklch, ${backgroundSeed} 26%, white 74%) 0%, color-mix(in oklch, ${backgroundSeed} 14%, white 86%) 100%)`
-        const activeBackground = `linear-gradient(180deg, color-mix(in oklch, ${backgroundSeed} 42%, black 58%) 0%, color-mix(in oklch, ${backgroundSeed} 24%, black 76%) 100%)`
+          isDarkTheme
+            ? 'inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -1px 0 rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.2)'
+            : 'inset 0 1px 0 rgba(255,255,255,0.16), inset 0 -1px 0 rgba(0,0,0,0.28), 0 1px 2px rgba(0,0,0,0.12)'
+        const inactiveBackground = itemColors?.bg ?? 'linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.08) 100%)'
+        const activeBackground = itemColors?.activeBg ?? 'linear-gradient(180deg, rgba(44,48,56,0.92) 0%, rgba(24,28,34,0.98) 100%)'
+        const inactiveBorderColor = itemColors
+          ? `color-mix(in oklch, ${itemColors.text} 24%, transparent)`
+          : undefined
+        const activeBorderColor = itemColors
+          ? `color-mix(in oklch, ${itemColors.activeText} 32%, black 68%)`
+          : undefined
 
         return (
           <RadioGroup.Item
@@ -95,6 +105,7 @@ export function TactileRotationSwitch({
                 background: isActive ? activeBackground : inactiveBackground,
                 color: isActive ? TACTILE_ACCENT_HEX : itemColors?.text,
                 boxShadow: isActive ? activeShadow : inactiveShadow,
+                borderColor: isActive ? activeBorderColor : inactiveBorderColor,
                 textShadow: isActive ? `0 0 12px color-mix(in srgb, ${TACTILE_ACCENT_SOFT_HEX} 54%, transparent)` : undefined,
               }}
               transition={transition}
