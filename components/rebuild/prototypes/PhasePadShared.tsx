@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useReducedMotion } from 'motion/react'
 import { formatCorePhaseLabel, type CorePhase } from '@/lib/rebuild/prototypeFlow'
 import type { PhaseEmphasisTuning, PhasePadHardwareTuning } from '@/lib/rebuild/tactileTuning'
@@ -423,17 +423,23 @@ export function getQuarterTrackSegmentState({
   }
 }
 
-function buildHardwareTrackPath(insetX: number, insetY: number, radius: number) {
+function buildHardwareTrackPath(
+  insetX: number,
+  insetY: number,
+  radius: number,
+  width: number,
+  height: number
+) {
   const minX = insetX
-  const maxX = 100 - insetX
+  const maxX = width - insetX
   const minY = insetY
-  const maxY = 100 - insetY
+  const maxY = height - insetY
   const innerMinX = minX + radius
   const innerMaxX = maxX - radius
   const innerMinY = minY + radius
   const innerMaxY = maxY - radius
 
-  return `M 50 ${minY} H ${innerMaxX} A ${radius} ${radius} 0 0 1 ${maxX} ${innerMinY} V ${innerMaxY} A ${radius} ${radius} 0 0 1 ${innerMaxX} ${maxY} H ${innerMinX} A ${radius} ${radius} 0 0 1 ${minX} ${innerMaxY} V ${innerMinY} A ${radius} ${radius} 0 0 1 ${innerMinX} ${minY} H 50`
+  return `M ${width / 2} ${minY} H ${innerMaxX} A ${radius} ${radius} 0 0 1 ${maxX} ${innerMinY} V ${innerMaxY} A ${radius} ${radius} 0 0 1 ${innerMaxX} ${maxY} H ${innerMinX} A ${radius} ${radius} 0 0 1 ${minX} ${innerMaxY} V ${innerMinY} A ${radius} ${radius} 0 0 1 ${innerMinX} ${minY} H ${width / 2}`
 }
 
 type HardwareTrackPiece = {
@@ -446,14 +452,16 @@ function useEdgeBasedTrackPieces(
   insetX: number,
   insetY: number,
   radius: number,
+  width: number,
+  height: number,
   piecesPerHorizontalEdge: number,
   piecesPerVerticalEdge: number
 ) {
   return useMemo(() => {
     const minX = insetX
-    const maxX = 100 - insetX
+    const maxX = width - insetX
     const minY = insetY
-    const maxY = 100 - insetY
+    const maxY = height - insetY
     const innerMinX = minX + radius
     const innerMaxX = maxX - radius
     const innerMinY = minY + radius
@@ -481,7 +489,7 @@ function useEdgeBasedTrackPieces(
     }
 
     return pieces
-  }, [insetX, insetY, radius, piecesPerHorizontalEdge, piecesPerVerticalEdge])
+  }, [height, insetX, insetY, piecesPerHorizontalEdge, piecesPerVerticalEdge, radius, width])
 }
 
 function useHardwareTrackPieces(pathD: string, pieceCount: number) {
@@ -523,27 +531,22 @@ function useHardwareTrackPieces(pathD: string, pieceCount: number) {
 
 export function PhasePadHardwareLane({
   tuning,
+  lightAngle,
   segmentStart,
   segmentLength,
   totalLights,
 }: {
   tuning: PhasePadHardwareTuning
+  lightAngle: number
   segmentStart: number
   segmentLength: number
   totalLights: number
 }) {
-  const insetX = (100 - tuning.trackWidth) / 2
-  const insetY = (100 - tuning.trackHeight) / 2
-  const radius = Math.min(tuning.trackCornerRadius, tuning.trackWidth / 2, tuning.trackHeight / 2)
   const horizontalLong = tuning.trackWidth >= tuning.trackHeight
   const piecesPerHorizontalEdge = horizontalLong ? tuning.piecesPerLongSide : tuning.piecesPerShortSide
   const piecesPerVerticalEdge = horizontalLong ? tuning.piecesPerShortSide : tuning.piecesPerLongSide
-
-  const pathD = useMemo(
-    () => buildHardwareTrackPath(insetX, insetY, radius),
-    [insetX, insetY, radius]
-  )
   const svgRef = useRef<SVGSVGElement | null>(null)
+  const gradientId = useId()
   const [svgSize, setSvgSize] = useState({ width: 100, height: 100 })
 
   useLayoutEffect(() => {
@@ -567,14 +570,34 @@ export function PhasePadHardwareLane({
       observer.disconnect()
     }
   }, [])
+  const insetX = (svgSize.width * (100 - tuning.trackWidth)) / 200
+  const insetY = (svgSize.height * (100 - tuning.trackHeight)) / 200
+  const radius = Math.min(
+    (Math.min(svgSize.width, svgSize.height) * tuning.trackCornerRadius) / 100,
+    (svgSize.width * tuning.trackWidth) / 200,
+    (svgSize.height * tuning.trackHeight) / 200
+  )
+  const pathD = useMemo(
+    () => buildHardwareTrackPath(insetX, insetY, radius, svgSize.width, svgSize.height),
+    [insetX, insetY, radius, svgSize.height, svgSize.width]
+  )
   const { pathRef } = useHardwareTrackPieces(pathD, totalLights)
   const pieces = useEdgeBasedTrackPieces(
     insetX,
     insetY,
     radius,
+    svgSize.width,
+    svgSize.height,
     piecesPerHorizontalEdge,
     piecesPerVerticalEdge
   )
+  const lightRadians = (lightAngle * Math.PI) / 180
+  const lightVectorX = Math.sin(lightRadians)
+  const lightVectorY = -Math.cos(lightRadians)
+  const gradientX1 = 50 + lightVectorX * 50
+  const gradientY1 = 50 + lightVectorY * 50
+  const gradientX2 = 50 - lightVectorX * 50
+  const gradientY2 = 50 - lightVectorY * 50
 
   return (
     <svg
@@ -582,11 +605,22 @@ export function PhasePadHardwareLane({
       aria-hidden="true"
       className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
       preserveAspectRatio="none"
-      viewBox="0 0 100 100"
+      viewBox={`0 0 ${svgSize.width} ${svgSize.height}`}
       style={{ overflow: 'visible' }}
     >
       <defs>
-        <filter id="phase-pad-hardware-shadow" x="-20%" y="-20%" width="140%" height="140%">
+        <linearGradient
+          id={`phase-pad-hardware-rim-${gradientId}`}
+          x1={`${gradientX1}%`}
+          y1={`${gradientY1}%`}
+          x2={`${gradientX2}%`}
+          y2={`${gradientY2}%`}
+        >
+          <stop offset="0%" stopColor={`rgba(18,18,22,${0.4 + tuning.channelShadow * 0.2})`} />
+          <stop offset="45%" stopColor={`rgba(76,82,92,${0.14 + tuning.channelHighlight * 0.12})`} />
+          <stop offset="100%" stopColor={`rgba(255,255,255,${0.12 + tuning.channelHighlight * 0.18})`} />
+        </linearGradient>
+        <filter id="phase-pad-hardware-piece-shadow" x="-20%" y="-20%" width="140%" height="140%">
           <feDropShadow dx="0" dy="0.7" stdDeviation="1.2" floodColor="rgba(0,0,0,0.42)" />
         </filter>
         <filter id="phase-pad-hardware-glow" x="-40%" y="-40%" width="180%" height="180%">
@@ -609,21 +643,14 @@ export function PhasePadHardwareLane({
         ref={pathRef}
         d={pathD}
         fill="none"
-        stroke={`rgba(0,0,0,${0.22 + tuning.channelShadow * 0.26})`}
-        strokeWidth={tuning.channelWidth + 3}
+        stroke={`url(#phase-pad-hardware-rim-${gradientId})`}
+        strokeWidth={tuning.channelWidth + 2.2}
         strokeLinecap="round"
       />
       <path
         d={pathD}
         fill="none"
-        stroke={`rgba(255,255,255,${0.04 + tuning.channelHighlight * 0.12})`}
-        strokeWidth={tuning.channelWidth + 0.75}
-        strokeLinecap="round"
-      />
-      <path
-        d={pathD}
-        fill="none"
-        stroke={`rgba(10,10,12,${0.38 + tuning.channelShadow * 0.24})`}
+        stroke={`rgba(10,10,12,${0.3 + tuning.channelShadow * 0.2})`}
         strokeWidth={tuning.channelWidth}
         strokeLinecap="round"
       />
@@ -673,7 +700,7 @@ export function PhasePadHardwareLane({
               height={localPieceThickness}
               rx={tuning.pieceRadius}
               fill={`rgba(128,128,132,${0.22 + tuning.inactiveOpacity * 0.2})`}
-              filter="url(#phase-pad-hardware-shadow)"
+              filter="url(#phase-pad-hardware-piece-shadow)"
             />
             <rect
               x={-localPieceLength / 2}

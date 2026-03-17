@@ -835,6 +835,7 @@ export function Concept8FullLedPerimeter(props: PrototypeControlProps) {
             >
               <PhasePadHardwareLane
                 tuning={hardwareTuning}
+                lightAngle={props.tactileTuning.lighting.lightAngle}
                 segmentStart={perimeterState.segmentStart}
                 segmentLength={perimeterState.segmentLength}
                 totalLights={perimeterState.totalLights}
