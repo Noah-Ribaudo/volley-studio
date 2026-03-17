@@ -153,6 +153,8 @@ interface VolleyballCourtProps {
   onboardingSpotlightRole?: Role | null
   // Show a moving spotlight target on the arrow end while dragging
   showOnboardingArrowEndSpotlight?: boolean
+  // Override SVG alignment inside its container when letterboxing occurs
+  preserveAspectRatio?: string
 }
 
 type PlayAnimState = {
@@ -241,6 +243,7 @@ export function VolleyballCourt({
   suppressHoverHintTooltip = false,
   onboardingSpotlightRole = null,
   showOnboardingArrowEndSpotlight = false,
+  preserveAspectRatio = 'xMidYMid meet',
 }: VolleyballCourtProps) {
   // In simulation mode, disable editing
   const isEditable = mode === 'whiteboard' && editable
@@ -2209,7 +2212,7 @@ export function VolleyballCourt({
           // Disable webkit tap highlight on the entire SVG (mobile polish)
           WebkitTapHighlightColor: 'transparent',
         }}
-        preserveAspectRatio="xMidYMid meet"
+        preserveAspectRatio={preserveAspectRatio}
         role="img"
         aria-label={`Volleyball court ${rotation ? `rotation ${rotation}` : ''} phase ${showZones ? 'with zones' : ''}`}
         onClickCapture={(e) => {
