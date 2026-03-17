@@ -32,15 +32,8 @@ export function RebuildDialKitBridge({
 }: RebuildDialKitBridgeProps) {
   const defaultHardware = DEFAULT_TACTILE_TUNING.phasePadHardware
   const usesPhasePadHardware =
-    activeVariant === 'clean' ||
-    activeVariant === 'machined' ||
-    activeVariant === 'backlit' ||
-    activeVariant === 'glass' ||
-    activeVariant === 'ceramic' ||
     activeVariant === 'rubber' ||
-    activeVariant === 'rubberLight' ||
-    activeVariant === 'instrument' ||
-    activeVariant === 'midnight'
+    activeVariant === 'soft'
   const usesLegacyClusterControls = false
   const [seed, setSeed] = useState<TactileTuning>(DEFAULT_TACTILE_TUNING)
   const [panelVersion, setPanelVersion] = useState(1)

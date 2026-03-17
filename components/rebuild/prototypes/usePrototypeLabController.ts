@@ -13,7 +13,7 @@ import {
 import type { Rotation } from '@/lib/types'
 
 export function usePrototypeLabController(playAdvanceDelayMs: number) {
-  const [activeVariant, setActiveVariant] = useState<PrototypeVariantId>('clean')
+  const [activeVariant, setActiveVariant] = useState<PrototypeVariantId>('rubber')
   const [currentRotation, setCurrentRotation] = useState<Rotation>(1)
   const [currentCorePhase, setCurrentCorePhase] = useState<PrototypePhase>('SERVE')
   const [targetCorePhase, setTargetCorePhase] = useState<PrototypePhase>('SERVE')

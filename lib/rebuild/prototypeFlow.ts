@@ -3,15 +3,8 @@ import type { RallyPhase, Rotation } from '@/lib/types'
 export type CorePhase = 'SERVE' | 'RECEIVE' | 'OFFENSE' | 'DEFENSE'
 export type PrototypePhase = CorePhase | 'FIRST_ATTACK'
 export type PrototypeVariantId =
-  | 'clean'
-  | 'machined'
-  | 'backlit'
-  | 'glass'
-  | 'ceramic'
   | 'rubber'
-  | 'rubberLight'
-  | 'instrument'
-  | 'midnight'
+  | 'soft'
 export type ConnectorStyle = 'static' | 'sweep' | 'relay' | 'pulse'
 export type ReceiveLinkTarget = 'OFFENSE' | 'FIRST_ATTACK'
 export type PrototypePhaseOwnership = 'independent-start' | 'shared-arrival'
@@ -78,15 +71,8 @@ export const PROTOTYPE_VARIANTS: Array<{
   shortLabel: string
   label: string
 }> = [
-  { id: 'clean', shortLabel: 'Clean', label: 'Bare hardware with crisp mechanical buttons' },
-  { id: 'machined', shortLabel: 'Metal', label: 'Machined metal buttons with heavier depth and weight' },
-  { id: 'backlit', shortLabel: 'Glow', label: 'Warm backlit buttons with translucent button faces' },
-  { id: 'glass', shortLabel: 'Glass', label: 'Fluted glass buttons with shader-driven material sheen' },
-  { id: 'ceramic', shortLabel: 'Ceramic', label: 'Bright ceramic buttons with soft depth and glossy edges' },
   { id: 'rubber', shortLabel: 'Rubber', label: 'Chunky rubber pads with matte softness and deep compression' },
-  { id: 'rubberLight', shortLabel: 'Soft', label: 'Bright molded pads with the same thick rubber language in daylight' },
-  { id: 'instrument', shortLabel: 'Lab', label: 'Pale instrument buttons with icy contrast and precise seams' },
-  { id: 'midnight', shortLabel: 'Night', label: 'Dark industrial buttons with neon edge lift and heavy shadow' },
+  { id: 'soft', shortLabel: 'Soft', label: 'Bright molded pads with the same thick rubber language in daylight' },
 ]
 
 export const CONNECTOR_STYLE_OPTIONS: Array<{
