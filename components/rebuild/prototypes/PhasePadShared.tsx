@@ -6,6 +6,7 @@ import { formatCorePhaseLabel, type CorePhase } from '@/lib/rebuild/prototypeFlo
 import type { PhaseEmphasisTuning, PhasePadHardwareTuning } from '@/lib/rebuild/tactileTuning'
 import { TactilePlayJoystick } from './TactilePlayJoystick'
 import { TactileRotationSwitch } from './TactileRotationSwitch'
+import { TACTILE_ACCENT_RGB, TACTILE_ACCENT_SOFT_RGB } from './tactileAccent'
 import type { PrototypeControlProps } from './types'
 
 export type PerimeterEdgeId = 'top' | 'right' | 'bottom' | 'left'
@@ -628,13 +629,13 @@ export function PhasePadHardwareLane({
             dx="0"
             dy="0"
             stdDeviation={1 + tuning.glow * 2.6}
-            floodColor={`rgba(255,142,44,${0.2 + tuning.bloom * 0.18})`}
+            floodColor={`rgba(${TACTILE_ACCENT_RGB.r},${TACTILE_ACCENT_RGB.g},${TACTILE_ACCENT_RGB.b},${0.2 + tuning.bloom * 0.18})`}
           />
           <feDropShadow
             dx="0"
             dy="0"
             stdDeviation={2 + tuning.bloom * 4.2}
-            floodColor={`rgba(210,88,18,${0.1 + tuning.bloom * 0.14})`}
+            floodColor={`rgba(${Math.round(TACTILE_ACCENT_RGB.r * 0.82)},${Math.round(TACTILE_ACCENT_RGB.g * 0.64)},${Math.round(TACTILE_ACCENT_RGB.b * 0.48)},${0.1 + tuning.bloom * 0.14})`}
           />
         </filter>
       </defs>
@@ -664,11 +665,7 @@ export function PhasePadHardwareLane({
         })
         const activeOpacity = strength > 0 ? tuning.inactiveOpacity + strength * (tuning.activeOpacity - tuning.inactiveOpacity) : tuning.inactiveOpacity
         const activeColor = strength > 0
-          ? {
-              r: 255,
-              g: Math.round(140 - strength * 18),
-              b: Math.round(42 - strength * 16),
-            }
+          ? TACTILE_ACCENT_RGB
           : {
               r: 132,
               g: 132,
@@ -712,7 +709,7 @@ export function PhasePadHardwareLane({
               height={highlightHeight}
               rx={Math.max(0.5, tuning.pieceRadius * 0.72)}
               fill={strength > 0
-                ? `rgba(255,198,122,${0.12 + tuning.channelHighlight * 0.1 + strength * 0.14})`
+                ? `rgba(${TACTILE_ACCENT_SOFT_RGB.r},${TACTILE_ACCENT_SOFT_RGB.g},${TACTILE_ACCENT_SOFT_RGB.b},${0.12 + tuning.channelHighlight * 0.1 + strength * 0.14})`
                 : 'rgba(255,255,255,0.03)'}
             />
           </g>

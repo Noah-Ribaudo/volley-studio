@@ -20,6 +20,7 @@ import {
   PhasePadRotationRail,
   useQuarterTrackTravelState,
 } from './PhasePadShared'
+import { TACTILE_ACCENT_HEX, TACTILE_ACCENT_SOFT_HEX } from './tactileAccent'
 
 const C8_PHASE_ORDER: CorePhase[] = ['SERVE', 'DEFENSE', 'OFFENSE', 'RECEIVE']
 const PHASE_PAD_JOYSTICK_FRAME_SIZE = 92
@@ -651,7 +652,7 @@ function PhaseAreaTile({
           background: isActive ? theme.tileActiveBackground : theme.tileInactiveBackground,
           borderColor: isActive ? theme.tileActiveBorder : theme.tileInactiveBorder,
           boxShadow: isActive ? activeShadow : theme.tileInactiveShadow,
-          color: isActive ? theme.tileActiveText : theme.tileInactiveText,
+          color: isActive ? TACTILE_ACCENT_HEX : theme.tileInactiveText,
           backdropFilter: variantId === 'glass' ? 'blur(10px) saturate(1.08)' : variantId === 'backlit' ? 'blur(8px)' : undefined,
           borderRadius: theme.tileRadius,
           clipPath: theme.tileClipPath,
@@ -703,7 +704,9 @@ function PhaseAreaTile({
         <span
           className="relative z-[1] text-[1.02rem] font-semibold tracking-[-0.02em]"
           style={{
-            textShadow: theme.labelShadow,
+            textShadow: isActive
+              ? `0 0 12px color-mix(in srgb, ${TACTILE_ACCENT_SOFT_HEX} 58%, transparent)`
+              : theme.labelShadow,
             opacity: isActive ? 1 : 0.96,
           }}
         >

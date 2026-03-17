@@ -5,6 +5,7 @@ import * as RadioGroup from '@radix-ui/react-radio-group'
 import { cn } from '@/lib/utils'
 import type { SwitchMotionTuning } from '@/lib/rebuild/tactileTuning'
 import type { Rotation } from '@/lib/types'
+import { TACTILE_ACCENT_HEX, TACTILE_ACCENT_SOFT_HEX } from './tactileAccent'
 
 const ROTATIONS: Rotation[] = [1, 2, 3, 4, 5, 6]
 
@@ -56,13 +57,13 @@ export function TactileRotationSwitch({
     >
       {ROTATIONS.map((rotation) => {
         const isActive = value === rotation
+        const backgroundSeed = itemColors?.activeBg ?? itemColors?.bg ?? 'rgba(255,255,255,0.14)'
         const inactiveShadow =
           'inset 0 1px 0 rgba(255,255,255,0.42), inset 0 -1px 0 rgba(0,0,0,0.14), 0 5px 9px rgba(0,0,0,0.16), 0 11px 16px -14px rgba(0,0,0,0.3)'
         const activeShadow =
           'inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(0,0,0,0.2), 0 1px 2px rgba(0,0,0,0.1)'
-        const inactiveBackground = itemColors?.bg ?? 'linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%)'
-        const activeBackground =
-          itemColors?.activeBg ?? 'linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.03) 100%)'
+        const inactiveBackground = `linear-gradient(180deg, color-mix(in oklch, ${backgroundSeed} 26%, white 74%) 0%, color-mix(in oklch, ${backgroundSeed} 14%, white 86%) 100%)`
+        const activeBackground = `linear-gradient(180deg, color-mix(in oklch, ${backgroundSeed} 42%, black 58%) 0%, color-mix(in oklch, ${backgroundSeed} 24%, black 76%) 100%)`
 
         return (
           <RadioGroup.Item
@@ -79,13 +80,14 @@ export function TactileRotationSwitch({
                 'lab-pressable relative flex w-full items-center justify-center overflow-hidden rounded-lg border text-center text-[10px] font-semibold tracking-[0.08em] transition-colors',
                 itemHeight,
                 isActive ? 'lab-pressed border-border/80' : 'border-border/55',
-                !itemColors && (isActive ? 'text-foreground' : 'text-foreground/90 text-muted-foreground')
+                !itemColors && (!isActive ? 'text-foreground/90 text-muted-foreground' : '')
               )}
               style={{
                 ['--lab-switch-knob-glow' as string]: switchMotion.knobGlow,
                 background: isActive ? activeBackground : inactiveBackground,
-                color: itemColors ? (isActive ? itemColors.activeText : itemColors.text) : undefined,
+                color: isActive ? TACTILE_ACCENT_HEX : itemColors?.text,
                 boxShadow: isActive ? activeShadow : inactiveShadow,
+                textShadow: isActive ? `0 0 12px color-mix(in srgb, ${TACTILE_ACCENT_SOFT_HEX} 54%, transparent)` : undefined,
               }}
               transition={transition}
             >

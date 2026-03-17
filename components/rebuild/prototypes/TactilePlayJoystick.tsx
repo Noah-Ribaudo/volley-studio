@@ -5,6 +5,7 @@ import { motion, useReducedMotion } from 'motion/react'
 import type { CorePhase } from '@/lib/rebuild/prototypeFlow'
 import type { JoystickTuning, PhaseEmphasisTuning, SwitchMotionTuning } from '@/lib/rebuild/tactileTuning'
 import { cn } from '@/lib/utils'
+import { TACTILE_ACCENT_HEX, TACTILE_ACCENT_SOFT_HEX } from './tactileAccent'
 import type { ManualJoystickNudge } from './types'
 
 /* ─────────────────────────────────────────────────────────
@@ -442,12 +443,12 @@ export function TactilePlayJoystick({
             style={{
               border: showKnobBorderRing ? undefined : 'none',
               background: [
-                `radial-gradient(circle at 34% 26%, oklch(92% 0.05 72 / ${capHighlight * 0.34}) 0%, transparent 28%)`,
-                'linear-gradient(180deg, oklch(72% 0.18 55) 0%, oklch(64% 0.2 45) 44%, oklch(48% 0.17 35) 100%)',
+                `radial-gradient(circle at 34% 26%, color-mix(in srgb, ${TACTILE_ACCENT_SOFT_HEX} ${Math.round(capHighlight * 34)}%, transparent) 0%, transparent 28%)`,
+                `linear-gradient(180deg, color-mix(in oklch, ${TACTILE_ACCENT_HEX} 88%, white 12%) 0%, ${TACTILE_ACCENT_HEX} 44%, color-mix(in oklch, ${TACTILE_ACCENT_HEX} 58%, black 42%) 100%)`,
               ].join(', '),
               boxShadow: [
                 `0 14px 22px oklch(8% 0.01 255 / ${0.22 + joystickTuning.haloIntensity * 0.18})`,
-                `0 0 ${10 + joystickTuning.haloIntensity * 16}px oklch(88% 0.01 250 / ${shellGlow})`,
+                `0 0 ${10 + joystickTuning.haloIntensity * 16}px color-mix(in srgb, ${TACTILE_ACCENT_SOFT_HEX} ${Math.round(shellGlow * 100)}%, transparent)`,
                 ...(showKnobBorderRing
                   ? [`inset 0 1px 0 oklch(94% 0.03 78 / ${joystickTuning.whiteRingOpacity * (0.14 + capHighlight * 0.22)})`]
                   : []),
@@ -493,8 +494,8 @@ export function TactilePlayJoystick({
               className="pointer-events-none absolute inset-[16%] rounded-full"
               style={{
                 background: [
-                  `radial-gradient(circle at 50% 68%, oklch(88% 0.04 72 / ${0.04 + capHighlight * 0.08}) 0%, transparent 16%)`,
-                  `radial-gradient(circle at 50% 50%, oklch(28% 0.08 34) 0%, oklch(36% 0.1 40) 58%, oklch(48% 0.13 48) 100%)`,
+                  `radial-gradient(circle at 50% 68%, color-mix(in srgb, ${TACTILE_ACCENT_SOFT_HEX} ${Math.round((0.04 + capHighlight * 0.08) * 100)}%, transparent) 0%, transparent 16%)`,
+                  `radial-gradient(circle at 50% 50%, color-mix(in oklch, ${TACTILE_ACCENT_HEX} 36%, black 64%) 0%, color-mix(in oklch, ${TACTILE_ACCENT_HEX} 48%, black 52%) 58%, color-mix(in oklch, ${TACTILE_ACCENT_HEX} 62%, black 38%) 100%)`,
                 ].join(', '),
                 boxShadow: [
                   'inset 0 7px 10px oklch(26% 0.08 32 / 0.52)',
