@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 import {
   EMPTY_PROTOTYPE_COURT_STATE,
+  PROTOTYPE_ARROW_DEADZONE,
   describeSharedIncomingPhases,
   getPrototypeBasePositions,
   getPrototypePositions,
@@ -31,6 +32,15 @@ const resolver: PrototypeCourtStateResolver = {
       isReceiving: phase === 'RECEIVE',
     }).home
   },
+}
+
+function getDeadzoneTarget(position: { x: number; y: number }) {
+  const delta = PROTOTYPE_ARROW_DEADZONE * 0.5
+  const nextX = position.x > 0.5 ? position.x - delta : position.x + delta
+  return {
+    x: Math.max(0.08, Math.min(0.92, nextX)),
+    y: position.y,
+  }
 }
 
 test.describe('Prototype phase links', () => {
@@ -64,7 +74,7 @@ test.describe('Prototype phase links', () => {
 
   test('shared offense arrival syncs receive fallback and defense loop arrows', () => {
     let state = EMPTY_PROTOTYPE_COURT_STATE
-    const offenseTarget = { x: 0.72, y: 0.61 }
+    const offenseTarget = { x: 0.64, y: 0.68 }
 
     state = updatePrototypePosition(state, resolver, 1, 'OFFENSE', 'OH1', offenseTarget)
 
@@ -100,6 +110,102 @@ test.describe('Prototype phase links', () => {
     expect(getPrototypeSecondaryArrows(state, resolver, 1, 'RECEIVE')).toEqual({})
     expect(getAdvanceTargetPhase('RECEIVE', { hasFirstAttack: hasFirstAttackTargetsForRotation(state, 1) })).toBe('OFFENSE')
     expect(getPrototypePositions(state, resolver, 1, 'OFFENSE').OH1).toEqual(revisedFirstAttackTarget)
+  })
+
+  test('clearing a primary arrow makes the next phase stay synced to later source edits', () => {
+    let state = EMPTY_PROTOTYPE_COURT_STATE
+    const movedDefenseTarget = { x: 0.74, y: 0.42 }
+    const revisedOffensePosition = { x: 0.38, y: 0.73 }
+
+    state = updatePrototypeArrowTarget(state, resolver, 1, 'OFFENSE', 'OH1', movedDefenseTarget)
+    state = updatePrototypeArrowTarget(state, resolver, 1, 'OFFENSE', 'OH1', null)
+
+    expect(getPrototypePrimaryArrows(state, resolver, 1, 'OFFENSE').OH1).toBeUndefined()
+    expect(getPrototypePositions(state, resolver, 1, 'DEFENSE').OH1).toEqual(
+      getPrototypePositions(state, resolver, 1, 'OFFENSE').OH1
+    )
+
+    state = updatePrototypePosition(state, resolver, 1, 'OFFENSE', 'OH1', revisedOffensePosition)
+
+    expect(getPrototypePositions(state, resolver, 1, 'DEFENSE').OH1).toEqual(revisedOffensePosition)
+    expect(getPrototypePrimaryArrows(state, resolver, 1, 'OFFENSE').OH1).toBeUndefined()
+  })
+
+  test('deadzone primary targets are treated the same as deleting the arrow', () => {
+    let state = EMPTY_PROTOTYPE_COURT_STATE
+    const offensePosition = getPrototypePositions(state, resolver, 1, 'OFFENSE').OH1
+
+    expect(offensePosition).toBeDefined()
+
+    state = updatePrototypeArrowTarget(
+      state,
+      resolver,
+      1,
+      'OFFENSE',
+      'OH1',
+      getDeadzoneTarget(offensePosition!)
+    )
+
+    expect(getPrototypePrimaryArrows(state, resolver, 1, 'OFFENSE').OH1).toBeUndefined()
+    expect(getPrototypePositions(state, resolver, 1, 'DEFENSE').OH1).toEqual(offensePosition)
+  })
+
+  test('deadzone secondary targets collapse the special branch and keep offense synced to 1st attack', () => {
+    let state = EMPTY_PROTOTYPE_COURT_STATE
+    const firstAttackTarget = { x: 0.22, y: 0.78 }
+    const settledAttackTarget = { x: 0.69, y: 0.58 }
+    const revisedFirstAttackTarget = { x: 0.29, y: 0.69 }
+
+    state = updatePrototypeArrowTarget(state, resolver, 1, 'RECEIVE', 'OH1', firstAttackTarget)
+    state = updatePrototypeSecondaryArrowTarget(state, resolver, 1, 'OH1', settledAttackTarget)
+    state = updatePrototypeSecondaryArrowTarget(
+      state,
+      resolver,
+      1,
+      'OH1',
+      getDeadzoneTarget(firstAttackTarget)
+    )
+
+    expect(hasFirstAttackTargetsForRotation(state, 1)).toBe(false)
+    expect(getPrototypeSecondaryArrows(state, resolver, 1, 'RECEIVE').OH1).toBeUndefined()
+    expect(getPrototypePositions(state, resolver, 1, 'OFFENSE').OH1).toEqual(firstAttackTarget)
+
+    state = updatePrototypePosition(state, resolver, 1, 'FIRST_ATTACK', 'OH1', revisedFirstAttackTarget)
+
+    expect(getPrototypePositions(state, resolver, 1, 'OFFENSE').OH1).toEqual(revisedFirstAttackTarget)
+  })
+
+  test('creating a real arrow again clears the stay-put link', () => {
+    let state = EMPTY_PROTOTYPE_COURT_STATE
+    const offensePosition = { x: 0.3, y: 0.72 }
+    const defenseTarget = { x: 0.63, y: 0.48 }
+    const revisedOffensePosition = { x: 0.25, y: 0.82 }
+
+    state = updatePrototypeArrowTarget(state, resolver, 1, 'OFFENSE', 'OH1', null)
+    state = updatePrototypePosition(state, resolver, 1, 'OFFENSE', 'OH1', offensePosition)
+    state = updatePrototypeArrowTarget(state, resolver, 1, 'OFFENSE', 'OH1', defenseTarget)
+    state = updatePrototypePosition(state, resolver, 1, 'OFFENSE', 'OH1', revisedOffensePosition)
+
+    expect(getPrototypePositions(state, resolver, 1, 'DEFENSE').OH1).toEqual(defenseTarget)
+    expect(getPrototypePrimaryArrows(state, resolver, 1, 'OFFENSE').OH1).toEqual(defenseTarget)
+  })
+
+  test('editing a shared arrival from another incoming path clears stale stay-put links', () => {
+    let state = EMPTY_PROTOTYPE_COURT_STATE
+    const offenseSyncedDefense = getPrototypePositions(state, resolver, 1, 'OFFENSE').S
+    const defenseFromServe = { x: 0.31, y: 0.57 }
+    const revisedOffensePosition = { x: 0.82, y: 0.77 }
+
+    expect(offenseSyncedDefense).toBeDefined()
+
+    state = updatePrototypeArrowTarget(state, resolver, 1, 'OFFENSE', 'S', null)
+    expect(getPrototypePositions(state, resolver, 1, 'DEFENSE').S).toEqual(offenseSyncedDefense)
+
+    state = updatePrototypeArrowTarget(state, resolver, 1, 'SERVE', 'S', defenseFromServe)
+    state = updatePrototypePosition(state, resolver, 1, 'OFFENSE', 'S', revisedOffensePosition)
+
+    expect(getPrototypePositions(state, resolver, 1, 'DEFENSE').S).toEqual(defenseFromServe)
+    expect(getPrototypePrimaryArrows(state, resolver, 1, 'OFFENSE').S).toEqual(defenseFromServe)
   })
 
   test('resetting receive clears first-attack branch state without leaving stale hidden arrivals', () => {

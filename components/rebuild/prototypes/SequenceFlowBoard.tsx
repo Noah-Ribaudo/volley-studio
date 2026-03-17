@@ -60,10 +60,10 @@ const FULL_PHASE_DOCUMENT: FlowDocument = {
   nodes: [
     { id: 'phase-serve', label: 'Serve', notes: 'Use this as the rally start when we have the first touch and put the ball in play.', x: 48, y: 44, kind: 'start' },
     { id: 'start', label: 'Receive', notes: 'Entry point when the other side serves and we need to control the first contact.', x: 48, y: 224, kind: 'start' },
-    { id: 'trigger', label: 'Trigger Read', notes: 'Does any player have a second arrow defined from Receive for this rotation? If yes, the next step is 1st Attack.', x: 276, y: 208, kind: 'decision' },
-    { id: 'attack', label: '1st Attack', notes: 'The temporary first-play attack look when players stay on their side before the rally settles into its normal loop.', x: 536, y: 150, kind: 'step' },
-    { id: 'fallback', label: 'Regular Attack', notes: 'The normal settled attack picture used for receive fallback and every continued rally after defense.', x: 536, y: 286, kind: 'step' },
-    { id: 'phase-defense', label: 'Defense', notes: 'The shared defensive arrival that both Serve and any attack path must land on.', x: 744, y: 218, kind: 'end' },
+    { id: 'trigger', label: 'Trigger Read', notes: 'Does any player have a second arrow defined from Receive for this rotation? If yes, the next step is 1st Attack. If not, Receive goes straight to the regular Attack picture.', x: 276, y: 208, kind: 'decision' },
+    { id: 'attack', label: '1st Attack', notes: 'The temporary first-play attack look when players stay on their side before the rally settles into its normal loop. If a player has no arrow here, Attack keeps that player in the same spot.', x: 536, y: 150, kind: 'step' },
+    { id: 'fallback', label: 'Regular Attack', notes: 'The normal settled attack picture used for receive fallback and every continued rally after defense. No arrow means the next picture keeps that player where they already are.', x: 536, y: 286, kind: 'step' },
+    { id: 'phase-defense', label: 'Defense', notes: 'The shared defensive arrival that both Serve and any attack path must land on. No arrow means the following Attack picture stays matched for that player.', x: 744, y: 218, kind: 'end' },
   ],
   edges: [
     { id: 'edge-0', source: 'phase-serve', target: 'phase-defense', label: 'serve in play' },
@@ -145,7 +145,7 @@ function ensureFullPhaseDocument(document: FlowDocument): FlowDocument {
     ensureNode({
       id: 'trigger',
       label: 'Trigger Read',
-      notes: 'Does any player have a second arrow defined from Receive for this rotation? If yes, the next step is 1st Attack.',
+      notes: 'Does any player have a second arrow defined from Receive for this rotation? If yes, the next step is 1st Attack. If not, Receive goes straight to the regular Attack picture.',
       x: 276,
       y: 208,
       kind: 'decision',
@@ -156,7 +156,7 @@ function ensureFullPhaseDocument(document: FlowDocument): FlowDocument {
     ensureNode({
       id: 'attack',
       label: '1st Attack',
-      notes: 'The temporary first-play attack look when players stay on their side before the rally settles into its normal loop.',
+      notes: 'The temporary first-play attack look when players stay on their side before the rally settles into its normal loop. If a player has no arrow here, Attack keeps that player in the same spot.',
       x: 536,
       y: 150,
       kind: 'step',
@@ -167,7 +167,7 @@ function ensureFullPhaseDocument(document: FlowDocument): FlowDocument {
     ensureNode({
       id: 'fallback',
       label: 'Regular Attack',
-      notes: 'The normal settled attack picture used for receive fallback and every continued rally after defense.',
+      notes: 'The normal settled attack picture used for receive fallback and every continued rally after defense. No arrow means the next picture keeps that player where they already are.',
       x: 536,
       y: 286,
       kind: 'step',
@@ -176,7 +176,7 @@ function ensureFullPhaseDocument(document: FlowDocument): FlowDocument {
   const defenseId = ensureNode({
     id: 'phase-defense',
     label: 'Defense',
-    notes: 'The shared defensive arrival that both Serve and any attack path must land on.',
+    notes: 'The shared defensive arrival that both Serve and any attack path must land on. No arrow means the following Attack picture stays matched for that player.',
     x: 744,
     y: 218,
     kind: 'end',

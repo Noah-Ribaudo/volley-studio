@@ -17,12 +17,16 @@ export type PositionOverrideState = Partial<Record<string, RolePositionMap>>
 export type CurveState = Partial<Record<string, RoleCurveMap>>
 export type ReceiveBranchState = Partial<Record<Rotation, Partial<Record<Role, true>>>>
 export type SecondaryCurveState = Partial<Record<Rotation, RoleCurveMap>>
+export type PrimaryStayPutState = Partial<Record<string, Partial<Record<Role, true>>>>
+export type SecondaryStayPutState = Partial<Record<Rotation, Partial<Record<Role, true>>>>
 
 export interface PrototypeCourtStateData {
   positionOverridesByPhase: PositionOverrideState
   primaryArrowCurvesByPhase: CurveState
   receiveBranchRolesByRotation: ReceiveBranchState
   secondaryArrowCurvesByRotation: SecondaryCurveState
+  primaryStayPutByPhase: PrimaryStayPutState
+  secondaryStayPutByRotation: SecondaryStayPutState
 }
 
 type RoleNestedMap<T> = Partial<Record<string | number, Partial<Record<Role, T>>>>
@@ -36,7 +40,11 @@ export const EMPTY_PROTOTYPE_COURT_STATE: PrototypeCourtStateData = {
   primaryArrowCurvesByPhase: {},
   receiveBranchRolesByRotation: {},
   secondaryArrowCurvesByRotation: {},
+  primaryStayPutByPhase: {},
+  secondaryStayPutByRotation: {},
 }
+
+export const PROTOTYPE_ARROW_DEADZONE = 0.12
 
 export function getPhaseKey(rotation: Rotation, phase: PrototypePhase) {
   return `${rotation}:${phase}`
@@ -97,7 +105,12 @@ function positionsEqual(a?: Position | null, b?: Position | null) {
 
 export function hasMeaningfulMovement(start?: Position | null, end?: Position | null) {
   if (!start || !end) return false
-  return Math.hypot(end.x - start.x, end.y - start.y) >= 0.001
+  return !isWithinPrototypeArrowDeadzone(start, end)
+}
+
+export function isWithinPrototypeArrowDeadzone(start?: Position | null, end?: Position | null) {
+  if (!start || !end) return false
+  return Math.hypot(end.x - start.x, end.y - start.y) < PROTOTYPE_ARROW_DEADZONE
 }
 
 export function getPrototypeBasePositions(
@@ -226,6 +239,25 @@ function clearPhaseCurves(
   }
 }
 
+function clearPhasePrimaryStayPut(
+  state: PrototypeCourtStateData,
+  rotation: Rotation,
+  phase: PrototypePhase
+): PrototypeCourtStateData {
+  const key = getPhaseKey(rotation, phase)
+  if (!(key in state.primaryStayPutByPhase)) {
+    return state
+  }
+
+  const nextStayPut = { ...state.primaryStayPutByPhase }
+  delete nextStayPut[key]
+
+  return {
+    ...state,
+    primaryStayPutByPhase: nextStayPut,
+  }
+}
+
 function setReceiveFirstAttackEnabled(
   state: PrototypeCourtStateData,
   rotation: Rotation,
@@ -246,6 +278,54 @@ function setReceiveFirstAttackEnabled(
   return {
     ...state,
     receiveBranchRolesByRotation: nextRoles,
+  }
+}
+
+function setPrimaryStayPutEnabled(
+  state: PrototypeCourtStateData,
+  rotation: Rotation,
+  phase: PrototypePhase,
+  role: Role,
+  enabled: boolean
+): PrototypeCourtStateData {
+  const key = getPhaseKey(rotation, phase)
+  const nextStayPut = updateRoleMap(
+    state.primaryStayPutByPhase,
+    key,
+    role,
+    enabled ? true : null
+  ) as PrimaryStayPutState
+
+  if (nextStayPut === state.primaryStayPutByPhase) {
+    return state
+  }
+
+  return {
+    ...state,
+    primaryStayPutByPhase: nextStayPut,
+  }
+}
+
+function setSecondaryStayPutEnabled(
+  state: PrototypeCourtStateData,
+  rotation: Rotation,
+  role: Role,
+  enabled: boolean
+): PrototypeCourtStateData {
+  const nextStayPut = updateRoleMap(
+    state.secondaryStayPutByRotation,
+    rotation,
+    role,
+    enabled ? true : null
+  ) as SecondaryStayPutState
+
+  if (nextStayPut === state.secondaryStayPutByRotation) {
+    return state
+  }
+
+  return {
+    ...state,
+    secondaryStayPutByRotation: nextStayPut,
   }
 }
 
@@ -286,6 +366,180 @@ export function getPrimaryTargetPhaseForRole(
   }
 }
 
+function roleUsesPrimaryStayPut(
+  state: PrototypeCourtStateData,
+  rotation: Rotation,
+  phase: PrototypePhase,
+  role: Role
+) {
+  return Boolean(state.primaryStayPutByPhase[getPhaseKey(rotation, phase)]?.[role])
+}
+
+function roleUsesSecondaryStayPut(
+  state: PrototypeCourtStateData,
+  rotation: Rotation,
+  role: Role
+) {
+  return Boolean(state.secondaryStayPutByRotation[rotation]?.[role])
+}
+
+type StayPutLink = {
+  kind: 'primary' | 'secondary'
+  sourcePhase: PrototypePhase
+  targetPhase: PrototypePhase
+}
+
+function getActiveOutgoingStayPutLinks(
+  state: PrototypeCourtStateData,
+  rotation: Rotation,
+  phase: PrototypePhase,
+  role: Role
+): StayPutLink[] {
+  const links: StayPutLink[] = []
+
+  if (roleUsesPrimaryStayPut(state, rotation, phase, role)) {
+    const targetPhase = getPrimaryTargetPhaseForRole(state, rotation, phase, role)
+    if (targetPhase) {
+      links.push({
+        kind: 'primary',
+        sourcePhase: phase,
+        targetPhase,
+      })
+    }
+  }
+
+  if (phase === 'FIRST_ATTACK' && roleUsesSecondaryStayPut(state, rotation, role)) {
+    links.push({
+      kind: 'secondary',
+      sourcePhase: 'FIRST_ATTACK',
+      targetPhase: 'OFFENSE',
+    })
+  }
+
+  return links
+}
+
+function getActiveIncomingStayPutLinks(
+  state: PrototypeCourtStateData,
+  rotation: Rotation,
+  phase: PrototypePhase,
+  role: Role
+): StayPutLink[] {
+  const links: StayPutLink[] = []
+
+  for (const sourcePhase of getPrototypeIncomingPhases(phase)) {
+    if (!roleUsesPrimaryStayPut(state, rotation, sourcePhase, role)) {
+      continue
+    }
+
+    if (getPrimaryTargetPhaseForRole(state, rotation, sourcePhase, role) !== phase) {
+      continue
+    }
+
+    links.push({
+      kind: 'primary',
+      sourcePhase,
+      targetPhase: phase,
+    })
+  }
+
+  if (phase === 'OFFENSE' && roleUsesSecondaryStayPut(state, rotation, role)) {
+    links.push({
+      kind: 'secondary',
+      sourcePhase: 'FIRST_ATTACK',
+      targetPhase: 'OFFENSE',
+    })
+  }
+
+  return links
+}
+
+function clearStayPutLink(
+  state: PrototypeCourtStateData,
+  rotation: Rotation,
+  link: StayPutLink,
+  role: Role
+): PrototypeCourtStateData {
+  if (link.kind === 'secondary') {
+    return setSecondaryStayPutEnabled(state, rotation, role, false)
+  }
+
+  return setPrimaryStayPutEnabled(state, rotation, link.sourcePhase, role, false)
+}
+
+function pruneIncomingStayPutLinksForRole(
+  state: PrototypeCourtStateData,
+  resolver: PrototypeCourtStateResolver,
+  rotation: Rotation,
+  phase: PrototypePhase,
+  role: Role
+): PrototypeCourtStateData {
+  const targetPosition = getPrototypePositions(state, resolver, rotation, phase)[role]
+  if (!targetPosition) {
+    return state
+  }
+
+  let nextState = state
+
+  for (const link of getActiveIncomingStayPutLinks(nextState, rotation, phase, role)) {
+    const sourcePosition = getPrototypePositions(nextState, resolver, rotation, link.sourcePhase)[role]
+    if (positionsEqual(sourcePosition, targetPosition)) {
+      continue
+    }
+
+    nextState = clearStayPutLink(nextState, rotation, link, role)
+  }
+
+  return nextState
+}
+
+function syncStayPutLinksForRole(
+  state: PrototypeCourtStateData,
+  resolver: PrototypeCourtStateResolver,
+  rotation: Rotation,
+  phases: PrototypePhase[],
+  role: Role
+): PrototypeCourtStateData {
+  const queue = [...new Set(phases)]
+  let nextState = state
+  let steps = 0
+
+  while (queue.length > 0 && steps < 24) {
+    const phase = queue.shift()
+    if (!phase) {
+      break
+    }
+
+    nextState = pruneIncomingStayPutLinksForRole(nextState, resolver, rotation, phase, role)
+    const sourcePosition = getPrototypePositions(nextState, resolver, rotation, phase)[role]
+    if (!sourcePosition) {
+      steps += 1
+      continue
+    }
+
+    for (const link of getActiveOutgoingStayPutLinks(nextState, rotation, phase, role)) {
+      const targetPosition = getPrototypePositions(nextState, resolver, rotation, link.targetPhase)[role]
+      if (positionsEqual(targetPosition, sourcePosition)) {
+        continue
+      }
+
+      nextState = setResolvedPhasePosition(
+        nextState,
+        resolver,
+        rotation,
+        link.targetPhase,
+        role,
+        sourcePosition
+      )
+      queue.push(link.targetPhase)
+    }
+
+    steps += 1
+  }
+
+  return nextState
+}
+
 export function getPrototypePrimaryArrows(
   state: PrototypeCourtStateData,
   resolver: PrototypeCourtStateResolver,
@@ -296,6 +550,10 @@ export function getPrototypePrimaryArrows(
   const arrows: ArrowPositions = {}
 
   for (const role of ROLES) {
+    if (roleUsesPrimaryStayPut(state, rotation, phase, role)) {
+      continue
+    }
+
     const targetPhase = getPrimaryTargetPhaseForRole(state, rotation, phase, role)
     if (!targetPhase) continue
 
@@ -321,6 +579,7 @@ export function getPrototypeSecondaryArrows(
   const arrows: ArrowPositions = {}
 
   for (const role of ROLES) {
+    if (roleUsesSecondaryStayPut(state, rotation, role)) continue
     if (!roleUsesFirstAttack(state, rotation, role)) continue
 
     const firstAttackPosition = getPrototypePositions(state, resolver, rotation, 'FIRST_ATTACK')[role]
@@ -403,7 +662,8 @@ export function updatePrototypePosition(
   role: Role,
   position: Position
 ): PrototypeCourtStateData {
-  return setResolvedPhasePosition(state, resolver, rotation, phase, role, position)
+  const nextState = setResolvedPhasePosition(state, resolver, rotation, phase, role, position)
+  return syncStayPutLinksForRole(nextState, resolver, rotation, [phase], role)
 }
 
 export function updatePrototypeArrowTarget(
@@ -419,30 +679,27 @@ export function updatePrototypeArrowTarget(
     return state
   }
 
-  if (phase === 'RECEIVE' && roleUsesFirstAttack(state, rotation, role)) {
-    if (!position) {
-      let nextState = setResolvedPhasePosition(state, resolver, rotation, 'FIRST_ATTACK', role, sourcePosition)
-      nextState = setResolvedPhasePosition(nextState, resolver, rotation, 'OFFENSE', role, sourcePosition)
-      nextState = setReceiveFirstAttackEnabled(nextState, rotation, role, false)
-      return nextState
-    }
-
-    return setResolvedPhasePosition(state, resolver, rotation, 'FIRST_ATTACK', role, position)
-  }
-
   const targetPhase = getPrimaryTargetPhaseForRole(state, rotation, phase, role)
   if (!targetPhase) {
     return state
   }
 
-  return setResolvedPhasePosition(
+  const shouldStayPut = !position || isWithinPrototypeArrowDeadzone(sourcePosition, position)
+  let nextState = setResolvedPhasePosition(
     state,
     resolver,
     rotation,
     targetPhase,
     role,
-    position ?? sourcePosition
+    shouldStayPut ? sourcePosition : position
   )
+  nextState = setPrimaryStayPutEnabled(nextState, rotation, phase, role, shouldStayPut)
+
+  if (shouldStayPut) {
+    nextState = setPrototypePrimaryArrowCurve(nextState, rotation, phase, role, null)
+  }
+
+  return syncStayPutLinksForRole(nextState, resolver, rotation, [targetPhase], role)
 }
 
 export function updatePrototypeSecondaryArrowTarget(
@@ -462,17 +719,22 @@ export function updatePrototypeSecondaryArrowTarget(
     return state
   }
 
-  if (!position || !hasMeaningfulMovement(firstAttackPosition, position)) {
+  const shouldStayPut = !position || isWithinPrototypeArrowDeadzone(firstAttackPosition, position)
+
+  if (shouldStayPut) {
     let nextState = setResolvedPhasePosition(state, resolver, rotation, 'FIRST_ATTACK', role, firstAttackPosition)
     nextState = setResolvedPhasePosition(nextState, resolver, rotation, 'OFFENSE', role, firstAttackPosition)
     nextState = setReceiveFirstAttackEnabled(nextState, rotation, role, false)
-    return nextState
+    nextState = setSecondaryStayPutEnabled(nextState, rotation, role, true)
+    nextState = setPrototypeSecondaryArrowCurve(nextState, rotation, role, null)
+    return syncStayPutLinksForRole(nextState, resolver, rotation, ['FIRST_ATTACK', 'OFFENSE'], role)
   }
 
   let nextState = setReceiveFirstAttackEnabled(state, rotation, role, true)
   nextState = setResolvedPhasePosition(nextState, resolver, rotation, 'FIRST_ATTACK', role, firstAttackPosition)
   nextState = setResolvedPhasePosition(nextState, resolver, rotation, 'OFFENSE', role, position)
-  return nextState
+  nextState = setSecondaryStayPutEnabled(nextState, rotation, role, false)
+  return syncStayPutLinksForRole(nextState, resolver, rotation, ['FIRST_ATTACK', 'OFFENSE'], role)
 }
 
 export function createPrototypeSecondaryArrowTarget(
@@ -494,8 +756,8 @@ export function createPrototypeSecondaryArrowTarget(
   }
 
   const nextAttackTarget = {
-    x: Math.max(0.08, Math.min(0.92, existingPrimaryTarget.x + (existingPrimaryTarget.x > 0.5 ? -0.08 : 0.08))),
-    y: Math.max(0.08, Math.min(0.92, existingPrimaryTarget.y - 0.06)),
+    x: Math.max(0.08, Math.min(0.92, existingPrimaryTarget.x + (existingPrimaryTarget.x > 0.5 ? -0.1 : 0.1))),
+    y: Math.max(0.08, Math.min(0.92, existingPrimaryTarget.y - 0.08)),
   }
 
   return updatePrototypeSecondaryArrowTarget(
@@ -562,6 +824,7 @@ export function resetPrototypePhase(
 ): PrototypeCourtStateData {
   let nextState = clearPhasePositions(state, rotation, phase)
   nextState = clearPhaseCurves(nextState, rotation, phase)
+  nextState = clearPhasePrimaryStayPut(nextState, rotation, phase)
 
   if (phase === 'RECEIVE') {
     if (rotation in nextState.receiveBranchRolesByRotation) {
@@ -582,8 +845,18 @@ export function resetPrototypePhase(
       }
     }
 
+    if (rotation in nextState.secondaryStayPutByRotation) {
+      const nextSecondaryStayPut = { ...nextState.secondaryStayPutByRotation }
+      delete nextSecondaryStayPut[rotation]
+      nextState = {
+        ...nextState,
+        secondaryStayPutByRotation: nextSecondaryStayPut,
+      }
+    }
+
     nextState = clearPhasePositions(nextState, rotation, 'FIRST_ATTACK')
     nextState = clearPhaseCurves(nextState, rotation, 'FIRST_ATTACK')
+    nextState = clearPhasePrimaryStayPut(nextState, rotation, 'FIRST_ATTACK')
   }
 
   return nextState
@@ -595,6 +868,8 @@ export function loadPrototypeSeedState(rotations: Rotation[]): PrototypeCourtSta
     primaryArrowCurvesByPhase: {},
     receiveBranchRolesByRotation: {},
     secondaryArrowCurvesByRotation: {},
+    primaryStayPutByPhase: {},
+    secondaryStayPutByRotation: {},
   }
 
   for (const rotation of rotations) {
@@ -617,17 +892,56 @@ export function loadPrototypeSeedState(rotations: Rotation[]): PrototypeCourtSta
     const firstAttackPositions = nextState.positionOverridesByPhase[getPhaseKey(rotation, 'FIRST_ATTACK')] ?? {}
     const offensePositions = nextState.positionOverridesByPhase[getPhaseKey(rotation, 'OFFENSE')] ?? {}
 
+    const servePositions = nextState.positionOverridesByPhase[getPhaseKey(rotation, 'SERVE')] ?? {}
+    const defensePositions = nextState.positionOverridesByPhase[getPhaseKey(rotation, 'DEFENSE')] ?? {}
+
     for (const role of ROLES) {
-      if (
-        hasMeaningfulMovement(receivePositions[role], firstAttackPositions[role]) &&
-        hasMeaningfulMovement(firstAttackPositions[role], offensePositions[role])
-      ) {
+      const hasReceiveMovement = hasMeaningfulMovement(receivePositions[role], firstAttackPositions[role])
+      const hasSettledAttackMovement = hasMeaningfulMovement(firstAttackPositions[role], offensePositions[role])
+
+      if (hasReceiveMovement && hasSettledAttackMovement) {
         nextState.receiveBranchRolesByRotation = updateRoleMap(
           nextState.receiveBranchRolesByRotation,
           rotation,
           role,
           true
         ) as ReceiveBranchState
+      }
+
+      if (hasReceiveMovement && !hasSettledAttackMovement) {
+        nextState.secondaryStayPutByRotation = updateRoleMap(
+          nextState.secondaryStayPutByRotation,
+          rotation,
+          role,
+          true
+        ) as SecondaryStayPutState
+      }
+    }
+
+    for (const role of ROLES) {
+      const phasePositions: Record<PrototypePhase, Position | undefined> = {
+        SERVE: servePositions[role],
+        RECEIVE: receivePositions[role],
+        FIRST_ATTACK: firstAttackPositions[role],
+        OFFENSE: offensePositions[role],
+        DEFENSE: defensePositions[role],
+      }
+
+      for (const phase of ['SERVE', 'RECEIVE', 'FIRST_ATTACK', 'OFFENSE', 'DEFENSE'] as PrototypePhase[]) {
+        const sourcePosition = phasePositions[phase]
+        const targetPhase = getPrimaryTargetPhaseForRole(nextState, rotation, phase, role)
+        const targetPosition = targetPhase ? phasePositions[targetPhase] : undefined
+
+        if (!sourcePosition || !targetPosition || hasMeaningfulMovement(sourcePosition, targetPosition)) {
+          continue
+        }
+
+        nextState.primaryStayPutByPhase = updateRoleMap(
+          nextState.primaryStayPutByPhase,
+          getPhaseKey(rotation, phase),
+          role,
+          true
+        ) as PrimaryStayPutState
       }
     }
   }

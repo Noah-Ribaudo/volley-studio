@@ -33,7 +33,7 @@ const R1_DEFENSE_POSITIONS: RolePositionMap = withLibero({
 
 const R1_FIRST_ATTACK_POSITIONS: RolePositionMap = withLibero({
   S: { x: 0.66, y: 0.8 },
-  OH1: { x: 0.16, y: 0.74 },
+  OH1: { x: 0.06, y: 0.66 },
   MB1: { x: 0.45, y: 0.61 },
   OPP: { x: 0.83, y: 0.66 },
   OH2: { x: 0.24, y: 0.86 },
@@ -42,7 +42,7 @@ const R1_FIRST_ATTACK_POSITIONS: RolePositionMap = withLibero({
 
 const R1_OFFENSE_POSITIONS: RolePositionMap = withLibero({
   S: { x: 0.55, y: 0.76 },
-  OH1: { x: 0.17, y: 0.79 },
+  OH1: { x: 0.28, y: 0.84 },
   MB1: { x: 0.47, y: 0.63 },
   OPP: { x: 0.85, y: 0.66 },
   OH2: { x: 0.3, y: 0.8 },
