@@ -415,13 +415,12 @@ const PHASE_PAD_VARIANT_THEMES: Record<PrototypeVariantId, PhasePadVisualTheme> 
    RENDERING HELPERS
    ═══════════════════════════════════════════════════════════════════ */
 
-function getInnerCornerPosition(row: 'top' | 'bottom', column: 'left' | 'right', cutoutDiameter: number) {
-  return {
-    top: row === 'top' ? 'auto' : `${cutoutDiameter / -2}px`,
-    bottom: row === 'top' ? `${cutoutDiameter / -2}px` : 'auto',
-    left: column === 'left' ? 'auto' : `${cutoutDiameter / -2}px`,
-    right: column === 'left' ? `${cutoutDiameter / -2}px` : 'auto',
-  }
+function getInnerCornerMask(row: 'top' | 'bottom', column: 'left' | 'right', cutoutRadius: number) {
+  const anchorX = column === 'left' ? '100%' : '0%'
+  const anchorY = row === 'top' ? '100%' : '0%'
+  const featherStart = Math.max(0, cutoutRadius - 0.5)
+  const featherEnd = cutoutRadius + 0.5
+  return `radial-gradient(circle at ${anchorX} ${anchorY}, transparent 0 ${featherStart}px, #000 ${featherEnd}px)`
 }
 
 function PhaseTileShader({
@@ -620,6 +619,7 @@ function PhaseAreaTile({
   const activeShadow = isActive && theme.activeGlow
     ? `${theme.tileActiveShadow}, ${theme.activeGlow}`
     : theme.tileActiveShadow
+  const cutoutRadius = cutoutDiameter / 2
 
   return (
     <button
@@ -655,6 +655,10 @@ function PhaseAreaTile({
           backdropFilter: variantId === 'glass' ? 'blur(10px) saturate(1.08)' : variantId === 'backlit' ? 'blur(8px)' : undefined,
           borderRadius: theme.tileRadius,
           clipPath: theme.tileClipPath,
+          WebkitMaskImage: getInnerCornerMask(row, column, cutoutRadius),
+          maskImage: getInnerCornerMask(row, column, cutoutRadius),
+          WebkitMaskRepeat: 'no-repeat',
+          maskRepeat: 'no-repeat',
         }}
       >
         {/* Backlight layer */}
@@ -695,18 +699,6 @@ function PhaseAreaTile({
             style={{ boxShadow: theme.tileEdgeLight }}
           />
         )}
-        {/* Cutout corner mask */}
-        <span
-          aria-hidden
-          className="pointer-events-none absolute rounded-full"
-          style={{
-            width: `${cutoutDiameter}px`,
-            height: `${cutoutDiameter}px`,
-            ...getInnerCornerPosition(row, column, cutoutDiameter),
-            background: theme.cutoutBackground,
-            boxShadow: theme.cutoutShadow,
-          }}
-        />
         {/* Label */}
         <span
           className="relative z-[1] text-[1.02rem] font-semibold tracking-[-0.02em]"
@@ -869,6 +861,16 @@ export function Concept8FullLedPerimeter(props: PrototypeControlProps) {
                   setPressedPhase(null)
                 }}
               >
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute left-1/2 top-1/2 z-[0] -translate-x-1/2 -translate-y-1/2 rounded-full"
+                  style={{
+                    width: `${cutoutDiameter}px`,
+                    height: `${cutoutDiameter}px`,
+                    background: theme.cutoutBackground,
+                    boxShadow: theme.cutoutShadow,
+                  }}
+                />
                 {PHASE_PAD_LAYOUT.map((item) => (
                   <PhaseAreaTile
                     key={item.phase}
