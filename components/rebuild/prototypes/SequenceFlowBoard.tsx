@@ -60,20 +60,19 @@ const FULL_PHASE_DOCUMENT: FlowDocument = {
   nodes: [
     { id: 'phase-serve', label: 'Serve', notes: 'Use this as the rally start when we have the first touch and put the ball in play.', x: 48, y: 44, kind: 'start' },
     { id: 'start', label: 'Receive', notes: 'Entry point when the other side serves and we need to control the first contact.', x: 48, y: 224, kind: 'start' },
-    { id: 'trigger', label: 'Trigger Read', notes: 'What has to happen for the special attack to become available?', x: 276, y: 208, kind: 'decision' },
-    { id: 'attack', label: 'Special Attack', notes: 'Describe the look, who is involved, and the expected outcome.', x: 536, y: 150, kind: 'step' },
-    { id: 'fallback', label: 'Regular Attack', notes: 'Where the sequence goes when the special attack is not on.', x: 536, y: 286, kind: 'step' },
-    { id: 'phase-defense', label: 'Defense', notes: 'Our read, block, and floor defense after the ball comes back to their side of the net.', x: 744, y: 218, kind: 'end' },
+    { id: 'trigger', label: 'Trigger Read', notes: 'Does any player have a second arrow defined from Receive for this rotation? If yes, the next step is 1st Attack.', x: 276, y: 208, kind: 'decision' },
+    { id: 'attack', label: '1st Attack', notes: 'The temporary first-play attack look when players stay on their side before the rally settles into its normal loop.', x: 536, y: 150, kind: 'step' },
+    { id: 'fallback', label: 'Regular Attack', notes: 'The normal settled attack picture used for receive fallback and every continued rally after defense.', x: 536, y: 286, kind: 'step' },
+    { id: 'phase-defense', label: 'Defense', notes: 'The shared defensive arrival that both Serve and any attack path must land on.', x: 744, y: 218, kind: 'end' },
   ],
   edges: [
     { id: 'edge-0', source: 'phase-serve', target: 'phase-defense', label: 'serve in play' },
     { id: 'edge-1', source: 'start', target: 'trigger', label: 'ball controlled' },
     { id: 'edge-2', source: 'trigger', target: 'attack', label: 'yes' },
     { id: 'edge-3', source: 'trigger', target: 'fallback', label: 'no' },
-    { id: 'edge-4', source: 'attack', target: 'phase-defense', label: 'attack sent over' },
-    { id: 'edge-5', source: 'fallback', target: 'phase-defense', label: 'standard swing' },
-    { id: 'edge-6', source: 'phase-defense', target: 'phase-serve', label: 'we serve next' },
-    { id: 'edge-7', source: 'phase-defense', target: 'start', label: 'they serve next' },
+    { id: 'edge-4', source: 'attack', target: 'phase-defense', label: '1st attack always leads into defense' },
+    { id: 'edge-5', source: 'fallback', target: 'phase-defense', label: 'regular attack always leads into defense' },
+    { id: 'edge-6', source: 'phase-defense', target: 'fallback', label: 'defense always leads into attack' },
   ],
 }
 
@@ -146,7 +145,7 @@ function ensureFullPhaseDocument(document: FlowDocument): FlowDocument {
     ensureNode({
       id: 'trigger',
       label: 'Trigger Read',
-      notes: 'What has to happen for the special attack to become available?',
+      notes: 'Does any player have a second arrow defined from Receive for this rotation? If yes, the next step is 1st Attack.',
       x: 276,
       y: 208,
       kind: 'decision',
@@ -156,8 +155,8 @@ function ensureFullPhaseDocument(document: FlowDocument): FlowDocument {
     findNodeId({ ...document, nodes: nextNodes, edges: nextEdges }, { id: 'attack' }) ??
     ensureNode({
       id: 'attack',
-      label: 'Special Attack',
-      notes: 'Describe the look, who is involved, and the expected outcome.',
+      label: '1st Attack',
+      notes: 'The temporary first-play attack look when players stay on their side before the rally settles into its normal loop.',
       x: 536,
       y: 150,
       kind: 'step',
@@ -168,7 +167,7 @@ function ensureFullPhaseDocument(document: FlowDocument): FlowDocument {
     ensureNode({
       id: 'fallback',
       label: 'Regular Attack',
-      notes: 'Where the sequence goes when the special attack is not on.',
+      notes: 'The normal settled attack picture used for receive fallback and every continued rally after defense.',
       x: 536,
       y: 286,
       kind: 'step',
@@ -177,7 +176,7 @@ function ensureFullPhaseDocument(document: FlowDocument): FlowDocument {
   const defenseId = ensureNode({
     id: 'phase-defense',
     label: 'Defense',
-    notes: 'Our read, block, and floor defense after the ball comes back to their side of the net.',
+    notes: 'The shared defensive arrival that both Serve and any attack path must land on.',
     x: 744,
     y: 218,
     kind: 'end',
@@ -200,10 +199,9 @@ function ensureFullPhaseDocument(document: FlowDocument): FlowDocument {
   ensureEdge(receiveId, triggerId, 'ball controlled')
   ensureEdge(triggerId, attackId, 'yes')
   ensureEdge(triggerId, fallbackId, 'no')
-  ensureEdge(attackId, defenseId, 'attack sent over')
-  ensureEdge(fallbackId, defenseId, 'standard swing')
-  ensureEdge(defenseId, serveId, 'we serve next')
-  ensureEdge(defenseId, receiveId, 'they serve next')
+  ensureEdge(attackId, defenseId, '1st attack always leads into defense')
+  ensureEdge(fallbackId, defenseId, 'regular attack always leads into defense')
+  ensureEdge(defenseId, fallbackId, 'defense always leads into attack')
 
   return {
     ...document,

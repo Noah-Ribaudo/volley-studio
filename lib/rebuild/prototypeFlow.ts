@@ -14,6 +14,7 @@ export type PrototypeVariantId =
   | 'midnight'
 export type ConnectorStyle = 'static' | 'sweep' | 'relay' | 'pulse'
 export type ReceiveLinkTarget = 'OFFENSE' | 'FIRST_ATTACK'
+export type PrototypePhaseOwnership = 'independent-start' | 'shared-arrival'
 
 export type PointWinner = 'us' | 'them'
 
@@ -35,8 +36,42 @@ export interface PrototypeMovementLink {
   targetPhase: PrototypePhase | null
 }
 
+export interface PrototypePhaseLinkDefinition {
+  ownership: PrototypePhaseOwnership
+  incoming: PrototypePhase[]
+  outgoing: PrototypePhase[]
+}
+
 export const CORE_PHASES: CorePhase[] = ['SERVE', 'RECEIVE', 'OFFENSE', 'DEFENSE']
 export const PROTOTYPE_PHASES: PrototypePhase[] = ['SERVE', 'RECEIVE', 'FIRST_ATTACK', 'OFFENSE', 'DEFENSE']
+
+export const PROTOTYPE_PHASE_LINKS: Record<PrototypePhase, PrototypePhaseLinkDefinition> = {
+  SERVE: {
+    ownership: 'independent-start',
+    incoming: [],
+    outgoing: ['DEFENSE'],
+  },
+  RECEIVE: {
+    ownership: 'independent-start',
+    incoming: [],
+    outgoing: ['FIRST_ATTACK', 'OFFENSE'],
+  },
+  FIRST_ATTACK: {
+    ownership: 'shared-arrival',
+    incoming: ['RECEIVE'],
+    outgoing: ['DEFENSE'],
+  },
+  OFFENSE: {
+    ownership: 'shared-arrival',
+    incoming: ['RECEIVE', 'DEFENSE'],
+    outgoing: ['DEFENSE'],
+  },
+  DEFENSE: {
+    ownership: 'shared-arrival',
+    incoming: ['SERVE', 'FIRST_ATTACK', 'OFFENSE'],
+    outgoing: ['OFFENSE'],
+  },
+}
 
 export const PROTOTYPE_VARIANTS: Array<{
   id: PrototypeVariantId
@@ -94,6 +129,22 @@ export function isFoundationalPhase(phase: CorePhase): boolean {
   return phase === 'SERVE' || phase === 'RECEIVE'
 }
 
+export function getPrototypeIncomingPhases(phase: PrototypePhase): PrototypePhase[] {
+  return [...PROTOTYPE_PHASE_LINKS[phase].incoming]
+}
+
+export function getPrototypeOutgoingPhases(phase: PrototypePhase): PrototypePhase[] {
+  return [...PROTOTYPE_PHASE_LINKS[phase].outgoing]
+}
+
+export function isIndependentStartPhase(phase: PrototypePhase): boolean {
+  return PROTOTYPE_PHASE_LINKS[phase].ownership === 'independent-start'
+}
+
+export function isSharedArrivalPhase(phase: PrototypePhase): boolean {
+  return PROTOTYPE_PHASE_LINKS[phase].ownership === 'shared-arrival'
+}
+
 export function toDisplayCorePhase(phase: PrototypePhase): CorePhase {
   return phase === 'FIRST_ATTACK' ? 'OFFENSE' : phase
 }
@@ -108,20 +159,19 @@ export function getLinkedTargetPhase(
 ): PrototypePhase {
   const hasFirstAttack = options?.hasFirstAttack ?? false
 
-  switch (phase) {
-    case 'SERVE':
-      return 'DEFENSE'
-    case 'RECEIVE':
-      return getReceiveLinkTarget(hasFirstAttack)
-    case 'FIRST_ATTACK':
-      return 'OFFENSE'
-    case 'OFFENSE':
-      return 'DEFENSE'
-    case 'DEFENSE':
-      return 'SERVE'
-    default:
-      return 'OFFENSE'
+  if (phase === 'RECEIVE') {
+    return getReceiveLinkTarget(hasFirstAttack)
   }
+
+  if (phase === 'FIRST_ATTACK') {
+    return 'OFFENSE'
+  }
+
+  if (phase === 'DEFENSE') {
+    return 'SERVE'
+  }
+
+  return PROTOTYPE_PHASE_LINKS[phase].outgoing[0] ?? 'OFFENSE'
 }
 
 export function getAdvanceTargetPhase(
@@ -130,20 +180,11 @@ export function getAdvanceTargetPhase(
 ): PrototypePhase | null {
   const hasFirstAttack = options?.hasFirstAttack ?? false
 
-  switch (phase) {
-    case 'SERVE':
-      return 'DEFENSE'
-    case 'RECEIVE':
-      return getReceiveLinkTarget(hasFirstAttack)
-    case 'FIRST_ATTACK':
-      return 'DEFENSE'
-    case 'OFFENSE':
-      return 'DEFENSE'
-    case 'DEFENSE':
-      return 'OFFENSE'
-    default:
-      return 'OFFENSE'
+  if (phase === 'RECEIVE') {
+    return getReceiveLinkTarget(hasFirstAttack)
   }
+
+  return PROTOTYPE_PHASE_LINKS[phase].outgoing[0] ?? 'OFFENSE'
 }
 
 export function getMovementLink(
