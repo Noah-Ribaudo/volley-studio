@@ -1,7 +1,15 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { useMemo, useState, type ComponentType } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentType,
+  type MouseEvent as ReactMouseEvent,
+} from 'react'
 import { motion, useReducedMotion } from 'motion/react'
 import type { CorePhase, PrototypePhase, PrototypeVariantId } from '@/lib/rebuild/prototypeFlow'
 import type { PrototypeControlProps } from './types'
@@ -575,25 +583,30 @@ function PhaseAreaTile({
   phase,
   label,
   isActive,
+  isPressed,
   row,
   column,
   cutoutDiameter,
   variantId,
   switchMotion,
-  onManualPhaseSelect,
+  onPressStart,
+  onPressHover,
+  onKeyboardSelect,
 }: {
   phase: CorePhase
   label: string
   isActive: boolean
+  isPressed: boolean
   row: 'top' | 'bottom'
   column: 'left' | 'right'
   cutoutDiameter: number
   variantId: PrototypeVariantId
   switchMotion: PrototypeControlProps['switchMotion']
-  onManualPhaseSelect: (phase: PrototypePhase) => void
+  onPressStart: (phase: PrototypePhase) => void
+  onPressHover: (phase: PrototypePhase) => void
+  onKeyboardSelect: (phase: PrototypePhase) => void
 }) {
   const prefersReducedMotion = useReducedMotion()
-  const [isPressed, setIsPressed] = useState(false)
   const theme = PHASE_PAD_VARIANT_THEMES[variantId]
   const transition = prefersReducedMotion
     ? { duration: 0.001 }
@@ -611,11 +624,18 @@ function PhaseAreaTile({
   return (
     <button
       type="button"
-      onClick={() => onManualPhaseSelect(phase)}
-      onPointerDown={() => setIsPressed(true)}
-      onPointerUp={() => setIsPressed(false)}
-      onPointerCancel={() => setIsPressed(false)}
-      onPointerLeave={() => setIsPressed(false)}
+      data-phase-button={phase}
+      onClick={(event: ReactMouseEvent<HTMLButtonElement>) => {
+        if (event.detail !== 0) return
+        onKeyboardSelect(phase)
+      }}
+      onMouseDown={() => {
+        onPressStart(phase)
+      }}
+      onMouseEnter={(event: ReactMouseEvent<HTMLButtonElement>) => {
+        if ((event.buttons & 1) !== 1) return
+        onPressHover(phase)
+      }}
       aria-pressed={isActive}
       className="relative rounded-[14px] outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
     >
@@ -731,6 +751,38 @@ export function Concept8FullLedPerimeter(props: PrototypeControlProps) {
   const baseRadius = (PHASE_PAD_JOYSTICK_FRAME_SIZE / 2) * props.tactileTuning.joystick.baseScale
   const cutoutRadius = Math.max(0, baseRadius + props.tactileTuning.joystick.shellCutoutPadding)
   const cutoutDiameter = cutoutRadius * 2
+  const [pressedPhase, setPressedPhase] = useState<PrototypePhase | null>(null)
+  const isPhasePressingRef = useRef(false)
+  const getPhaseAtPoint = useCallback((clientX: number, clientY: number): PrototypePhase | null => {
+    const hovered = document
+      .elementFromPoint(clientX, clientY)
+      ?.closest<HTMLButtonElement>('[data-phase-button]')
+
+    return (hovered?.dataset.phaseButton as PrototypePhase | undefined) ?? null
+  }, [])
+
+  const clearPhasePress = useCallback((cancelNudge: boolean) => {
+    if (!isPhasePressingRef.current && !pressedPhase) return
+    isPhasePressingRef.current = false
+    setPressedPhase(null)
+    if (cancelNudge) {
+      props.onManualPhaseCancel()
+    }
+  }, [pressedPhase, props])
+
+  useEffect(() => {
+    if (!pressedPhase) return
+
+    const handleWindowMouseUp = () => {
+      clearPhasePress(true)
+    }
+
+    window.addEventListener('mouseup', handleWindowMouseUp)
+
+    return () => {
+      window.removeEventListener('mouseup', handleWindowMouseUp)
+    }
+  }, [clearPhasePress, pressedPhase])
 
   return (
     <div className="flex w-full flex-col justify-end">
@@ -791,6 +843,30 @@ export function Concept8FullLedPerimeter(props: PrototypeControlProps) {
               <div
                 className="relative z-[1] grid grid-cols-2 gap-px overflow-visible"
                 style={{ background: theme.dividerColor, borderRadius: theme.frameRadius, boxShadow: theme.dividerInset }}
+                onMouseLeave={(event: ReactMouseEvent<HTMLDivElement>) => {
+                  if (!isPhasePressingRef.current) return
+
+                  const nextTarget = event.relatedTarget
+                  if (nextTarget instanceof Node && event.currentTarget.contains(nextTarget)) {
+                    return
+                  }
+
+                  clearPhasePress(true)
+                }}
+                onMouseUp={(event: ReactMouseEvent<HTMLDivElement>) => {
+                  if (!isPhasePressingRef.current) return
+
+                  const phase = getPhaseAtPoint(event.clientX, event.clientY)
+
+                  if (phase) {
+                    props.onManualPhaseSelect(phase)
+                  } else {
+                    props.onManualPhaseCancel()
+                  }
+
+                  isPhasePressingRef.current = false
+                  setPressedPhase(null)
+                }}
               >
                 {PHASE_PAD_LAYOUT.map((item) => (
                   <PhaseAreaTile
@@ -798,12 +874,23 @@ export function Concept8FullLedPerimeter(props: PrototypeControlProps) {
                     phase={item.phase}
                     label={item.phase === 'OFFENSE' ? offenseLabel : item.label}
                     isActive={item.phase === activeDisplayPhase}
+                    isPressed={pressedPhase === item.phase}
                     row={item.row}
                     column={item.column}
                     cutoutDiameter={cutoutDiameter}
                     variantId={props.variantId}
                     switchMotion={props.switchMotion}
-                    onManualPhaseSelect={props.onManualPhaseSelect}
+                    onPressStart={(phase) => {
+                      isPhasePressingRef.current = true
+                      setPressedPhase(phase)
+                      props.onManualPhasePress(phase)
+                    }}
+                    onPressHover={(phase) => {
+                      if (!isPhasePressingRef.current || pressedPhase === phase) return
+                      setPressedPhase(phase)
+                      props.onManualPhasePress(phase)
+                    }}
+                    onKeyboardSelect={props.onManualPhaseSelect}
                   />
                 ))}
               </div>

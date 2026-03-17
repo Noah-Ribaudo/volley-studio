@@ -58,6 +58,8 @@ export default function RebuildPrototypeLabPage() {
     manualJoystickNudge,
     handleRotationSelect,
     handlePhaseSelect,
+    handleManualPhasePress,
+    handleManualPhaseCancel,
     handleManualPhaseSelect,
     handlePlay,
     handlePoint,
@@ -263,6 +265,8 @@ export default function RebuildPrototypeLabPage() {
       manualJoystickNudge={manualJoystickNudge}
       onRotationSelect={handleRotationSelect}
       onPhaseSelect={handlePhaseSelect}
+      onManualPhasePress={handleManualPhasePress}
+      onManualPhaseCancel={handleManualPhaseCancel}
       onManualPhaseSelect={handleManualPhaseSelect}
       onPlay={() => {
         if (!canPlayAdvance) return

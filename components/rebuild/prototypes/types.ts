@@ -5,6 +5,7 @@ import type { SwitchMotionTuning, TactileTuning } from '@/lib/rebuild/tactileTun
 export interface ManualJoystickNudge {
   phase: CorePhase
   trigger: number
+  active: boolean
 }
 
 export interface PrototypeControlProps {
@@ -31,6 +32,8 @@ export interface PrototypeControlProps {
   manualJoystickNudge: ManualJoystickNudge | null
   onRotationSelect: (rotation: Rotation) => void
   onPhaseSelect: (phase: PrototypePhase) => void
+  onManualPhasePress: (phase: PrototypePhase) => void
+  onManualPhaseCancel: () => void
   onManualPhaseSelect: (phase: PrototypePhase) => void
   onPlay: () => void
   onPoint: (winner: PointWinner) => void

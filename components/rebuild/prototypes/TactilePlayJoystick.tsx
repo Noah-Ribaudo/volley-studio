@@ -162,7 +162,6 @@ export function TactilePlayJoystick({
   const isPointerDownRef = useRef(false)
   const movedSinceDownRef = useRef(false)
   const lastDragPhaseRef = useRef<CorePhase | null>(null)
-  const autoNudgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const consumedNudgeTriggerRef = useRef<number | null>(null)
 
   const defaultFrame = JOYSTICK_FRAME[mode]
@@ -215,10 +214,6 @@ export function TactilePlayJoystick({
       }
 
   const resetStick = () => {
-    if (autoNudgeTimerRef.current) {
-      clearTimeout(autoNudgeTimerRef.current)
-      autoNudgeTimerRef.current = null
-    }
     isPointerDownRef.current = false
     movedSinceDownRef.current = false
     lastDragPhaseRef.current = null
@@ -226,14 +221,6 @@ export function TactilePlayJoystick({
     setDragPhase(null)
     setOffset({ x: 0, y: 0 })
   }
-
-  useEffect(() => {
-    return () => {
-      if (autoNudgeTimerRef.current) {
-        clearTimeout(autoNudgeTimerRef.current)
-      }
-    }
-  }, [])
 
   useEffect(() => {
     if (!manualJoystickNudge || isDragging || isPointerDownRef.current) {
@@ -244,25 +231,17 @@ export function TactilePlayJoystick({
       return
     }
 
-    if (autoNudgeTimerRef.current) {
-      clearTimeout(autoNudgeTimerRef.current)
-      autoNudgeTimerRef.current = null
+    consumedNudgeTriggerRef.current = manualJoystickNudge.trigger
+    if (manualJoystickNudge.active) {
+      setOffset(getAutoNudgeOffset(manualJoystickNudge.phase, joystickTuning.autoNudgeDistance))
+      return
     }
 
-    consumedNudgeTriggerRef.current = manualJoystickNudge.trigger
-    const nudgePhase = manualJoystickNudge.phase
-    setOffset(getAutoNudgeOffset(nudgePhase, joystickTuning.autoNudgeDistance))
-
-    autoNudgeTimerRef.current = setTimeout(() => {
-      setOffset({ x: 0, y: 0 })
-      autoNudgeTimerRef.current = null
-    }, prefersReducedMotion ? 16 : joystickTuning.autoNudgeHoldMs)
+    setOffset({ x: 0, y: 0 })
   }, [
     isDragging,
     joystickTuning.autoNudgeDistance,
-    joystickTuning.autoNudgeHoldMs,
     manualJoystickNudge,
-    prefersReducedMotion,
   ])
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {

@@ -23,11 +23,10 @@ export function usePrototypeLabController(playAdvanceDelayMs: number) {
   const [playAnimationTrigger, setPlayAnimationTrigger] = useState(0)
   const [isLabTrayOpen, setIsLabTrayOpen] = useState(false)
   const [connectorStyle, setConnectorStyle] = useState<ConnectorStyle>('sweep')
-  const [manualJoystickNudge, setManualJoystickNudge] = useState<{ phase: 'SERVE' | 'RECEIVE' | 'OFFENSE' | 'DEFENSE'; trigger: number } | null>(null)
+  const [manualJoystickNudge, setManualJoystickNudge] = useState<{ phase: 'SERVE' | 'RECEIVE' | 'OFFENSE' | 'DEFENSE'; trigger: number; active: boolean } | null>(null)
 
   const playTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const phaseCommitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const manualNudgeClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const manualNudgeTriggerRef = useRef(0)
 
   const clearPlayTimer = useCallback(() => {
@@ -42,19 +41,12 @@ export function usePrototypeLabController(playAdvanceDelayMs: number) {
     phaseCommitTimerRef.current = null
   }, [])
 
-  const clearManualNudgeTimer = useCallback(() => {
-    if (!manualNudgeClearTimerRef.current) return
-    clearTimeout(manualNudgeClearTimerRef.current)
-    manualNudgeClearTimerRef.current = null
-  }, [])
-
   useEffect(() => {
     return () => {
       clearPlayTimer()
       clearPhaseCommitTimer()
-      clearManualNudgeTimer()
     }
-  }, [clearManualNudgeTimer, clearPhaseCommitTimer, clearPlayTimer])
+  }, [clearPhaseCommitTimer, clearPlayTimer])
 
   const resetPreview = useCallback(() => {
     clearPlayTimer()
@@ -126,22 +118,44 @@ export function usePrototypeLabController(playAdvanceDelayMs: number) {
 
   const handleManualPhaseSelect = useCallback(
     (phase: PrototypePhase) => {
-      clearManualNudgeTimer()
       const trigger = manualNudgeTriggerRef.current + 1
       manualNudgeTriggerRef.current = trigger
 
       setManualJoystickNudge({
         phase: toDisplayCorePhase(phase),
         trigger,
+        active: false,
       })
-      manualNudgeClearTimerRef.current = setTimeout(() => {
-        setManualJoystickNudge((current) => (current?.trigger === trigger ? null : current))
-        manualNudgeClearTimerRef.current = null
-      }, 24)
       queuePhaseTravel(phase)
     },
-    [clearManualNudgeTimer, queuePhaseTravel]
+    [queuePhaseTravel]
   )
+
+  const handleManualPhasePress = useCallback(
+    (phase: PrototypePhase) => {
+      const trigger = manualNudgeTriggerRef.current + 1
+      manualNudgeTriggerRef.current = trigger
+
+      setManualJoystickNudge({
+        phase: toDisplayCorePhase(phase),
+        trigger,
+        active: true,
+      })
+    },
+    []
+  )
+
+  const handleManualPhaseCancel = useCallback(() => {
+    setManualJoystickNudge((current) =>
+      current
+        ? {
+            ...current,
+            active: false,
+            trigger: current.trigger + 1,
+          }
+        : null
+    )
+  }, [])
 
   const handlePlay = useCallback((nextPhase: PrototypePhase) => {
     if (isPreviewingMovement) {
@@ -208,6 +222,8 @@ export function usePrototypeLabController(playAdvanceDelayMs: number) {
     setConnectorStyle,
     handleRotationSelect,
     handlePhaseSelect,
+    handleManualPhasePress,
+    handleManualPhaseCancel,
     handleManualPhaseSelect,
     handlePlay,
     handlePoint,
