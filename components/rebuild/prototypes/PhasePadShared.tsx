@@ -650,9 +650,12 @@ export function PhasePadHardwareLane({
         const isHorizontalPiece = piece.angle % 180 === 0
         const scaleX = svgSize.width / 100 || 1
         const scaleY = svgSize.height / 100 || 1
+        const pieceLength = isHorizontalPiece
+          ? tuning.pieceLengthLongSide
+          : tuning.pieceLengthShortSide
         const localPieceLength = isHorizontalPiece
-          ? tuning.pieceLength / scaleX
-          : tuning.pieceLength / scaleY
+          ? pieceLength / scaleX
+          : pieceLength / scaleY
         const localPieceThickness = isHorizontalPiece
           ? tuning.pieceThickness / scaleY
           : tuning.pieceThickness / scaleX

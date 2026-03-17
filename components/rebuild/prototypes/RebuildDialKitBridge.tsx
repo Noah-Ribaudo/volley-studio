@@ -154,7 +154,8 @@ export function RebuildDialKitBridge({
               channelWidth: [seed.phasePadHardware.channelWidth, 0.5, 18],
               piecesPerLongSide: [seed.phasePadHardware.piecesPerLongSide, 2, 32],
               piecesPerShortSide: [seed.phasePadHardware.piecesPerShortSide, 2, 32],
-              pieceLength: [seed.phasePadHardware.pieceLength, 1, 28],
+              pieceLengthLongSide: [seed.phasePadHardware.pieceLengthLongSide, 1, 28],
+              pieceLengthShortSide: [seed.phasePadHardware.pieceLengthShortSide, 1, 28],
               pieceThickness: [seed.phasePadHardware.pieceThickness, 0.75, 16],
               pieceRadius: [seed.phasePadHardware.pieceRadius, 0, 10],
               inactiveOpacity: [seed.phasePadHardware.inactiveOpacity, 0, 0.75],
@@ -348,7 +349,14 @@ export function RebuildDialKitBridge({
                 params.phasePadHardware.piecesPerShortSide ??
                 params.phasePadHardware.piecesPerQuarter ??
                 defaultHardware.piecesPerShortSide,
-              pieceLength: params.phasePadHardware.pieceLength ?? defaultHardware.pieceLength,
+              pieceLengthLongSide:
+                params.phasePadHardware.pieceLengthLongSide ??
+                params.phasePadHardware.pieceLength ??
+                defaultHardware.pieceLengthLongSide,
+              pieceLengthShortSide:
+                params.phasePadHardware.pieceLengthShortSide ??
+                params.phasePadHardware.pieceLength ??
+                defaultHardware.pieceLengthShortSide,
               pieceThickness: params.phasePadHardware.pieceThickness ?? defaultHardware.pieceThickness,
               pieceRadius: params.phasePadHardware.pieceRadius ?? defaultHardware.pieceRadius,
               inactiveOpacity: params.phasePadHardware.inactiveOpacity ?? defaultHardware.inactiveOpacity,

@@ -111,7 +111,8 @@ export interface PhasePadHardwareTuning {
   channelWidth: number
   piecesPerLongSide: number
   piecesPerShortSide: number
-  pieceLength: number
+  pieceLengthLongSide: number
+  pieceLengthShortSide: number
   pieceThickness: number
   pieceRadius: number
   inactiveOpacity: number
@@ -249,7 +250,8 @@ export const DEFAULT_TACTILE_TUNING: TactileTuning = {
     channelWidth: 5.2,
     piecesPerLongSide: 6,
     piecesPerShortSide: 6,
-    pieceLength: 14.1,
+    pieceLengthLongSide: 14.1,
+    pieceLengthShortSide: 14.1,
     pieceThickness: 3.25,
     pieceRadius: 1.3,
     inactiveOpacity: 0.21,
@@ -375,7 +377,8 @@ export function sanitizeTactileTuning(input: TactileTuning): TactileTuning {
       channelWidth: clamp(input.phasePadHardware.channelWidth, 0.5, 18),
       piecesPerLongSide: clamp(Math.round(input.phasePadHardware.piecesPerLongSide), 2, 32),
       piecesPerShortSide: clamp(Math.round(input.phasePadHardware.piecesPerShortSide), 2, 32),
-      pieceLength: clamp(input.phasePadHardware.pieceLength, 1, 28),
+      pieceLengthLongSide: clamp(input.phasePadHardware.pieceLengthLongSide, 1, 28),
+      pieceLengthShortSide: clamp(input.phasePadHardware.pieceLengthShortSide, 1, 28),
       pieceThickness: clamp(input.phasePadHardware.pieceThickness, 0.75, 16),
       pieceRadius: clamp(input.phasePadHardware.pieceRadius, 0, 10),
       inactiveOpacity: clamp(input.phasePadHardware.inactiveOpacity, 0, 0.75),
