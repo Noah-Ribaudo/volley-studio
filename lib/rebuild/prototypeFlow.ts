@@ -9,6 +9,7 @@ export type PrototypeVariantId =
   | 'glass'
   | 'ceramic'
   | 'rubber'
+  | 'rubberLight'
   | 'instrument'
   | 'midnight'
 export type ConnectorStyle = 'static' | 'sweep' | 'relay' | 'pulse'
@@ -48,6 +49,7 @@ export const PROTOTYPE_VARIANTS: Array<{
   { id: 'glass', shortLabel: 'Glass', label: 'Fluted glass buttons with shader-driven material sheen' },
   { id: 'ceramic', shortLabel: 'Ceramic', label: 'Bright ceramic buttons with soft depth and glossy edges' },
   { id: 'rubber', shortLabel: 'Rubber', label: 'Chunky rubber pads with matte softness and deep compression' },
+  { id: 'rubberLight', shortLabel: 'Soft', label: 'Bright molded pads with the same thick rubber language in daylight' },
   { id: 'instrument', shortLabel: 'Lab', label: 'Pale instrument buttons with icy contrast and precise seams' },
   { id: 'midnight', shortLabel: 'Night', label: 'Dark industrial buttons with neon edge lift and heavy shadow' },
 ]

@@ -60,6 +60,7 @@ import {
 } from '@/lib/motion-utils'
 import { DEFAULT_BASE_ORDER, normalizeBaseOrder, getBackRowMiddle, getActiveRoles } from '@/lib/rotations'
 import { PlayerContextUI } from '@/components/player-context'
+import type { PrototypeCourtPalette } from '@/components/rebuild/prototypes/prototypeSurfaceThemes'
 
 interface VolleyballCourtProps {
   positions: PositionCoordinates
@@ -162,6 +163,8 @@ interface VolleyballCourtProps {
   showOnboardingArrowEndSpotlight?: boolean
   // Override SVG alignment inside its container when letterboxing occurs
   preserveAspectRatio?: string
+  courtPalette?: PrototypeCourtPalette
+  courtPaddingBackground?: string
 }
 
 type PlayAnimState = {
@@ -258,6 +261,8 @@ export function VolleyballCourt({
   onboardingSpotlightRole = null,
   showOnboardingArrowEndSpotlight = false,
   preserveAspectRatio = 'xMidYMid meet',
+  courtPalette,
+  courtPaddingBackground,
 }: VolleyballCourtProps) {
   // In simulation mode, disable editing
   const isEditable = mode === 'whiteboard' && editable
@@ -466,7 +471,7 @@ export function VolleyballCourt({
   // Get theme for line color
   const theme = useThemeStore((state) => state.theme)
   const isLightTheme = theme === 'light'
-  const lineColor = isLightTheme ? '#9ca3af' : '#6b7280'
+  const lineColor = courtPalette?.centerLine ?? (isLightTheme ? '#9ca3af' : '#6b7280')
 
   // Determine token scale based on device
   const isMobile = useIsMobile()
@@ -2319,6 +2324,8 @@ export function VolleyballCourt({
           arrows={arrows}
           displayPositions={legalityDisplayPositions}
           lineColor={lineColor}
+          paddingBackground={courtPaddingBackground}
+          palette={courtPalette}
         />
 
         <LegalityViolationLayer

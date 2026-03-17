@@ -5,6 +5,7 @@ import { VolleyballCourt } from '@/components/court'
 import { PrototypeControlPanel } from '@/components/rebuild/prototypes'
 import { RebuildDialKitBridge } from '@/components/rebuild/prototypes/RebuildDialKitBridge'
 import { SequenceFlowBoard } from '@/components/rebuild/prototypes/SequenceFlowBoard'
+import { PROTOTYPE_SURFACE_THEMES } from '@/components/rebuild/prototypes/prototypeSurfaceThemes'
 import { usePrototypeCourtState } from '@/components/rebuild/prototypes/usePrototypeCourtState'
 import { usePrototypeLabController } from '@/components/rebuild/prototypes/usePrototypeLabController'
 import { Button } from '@/components/ui/button'
@@ -30,7 +31,6 @@ import { ROLES, type Position, type Role, type Rotation } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { useDisplayPrefsStore } from '@/store/useDisplayPrefsStore'
 import { useTeamStore } from '@/store/useTeamStore'
-import { useThemeStore } from '@/store/useThemeStore'
 import { useWhiteboardStore } from '@/store/useWhiteboardStore'
 
 export default function RebuildPrototypeLabPage() {
@@ -205,6 +205,7 @@ export default function RebuildPrototypeLabPage() {
   const canPlayAdvance = canAdvanceByPlay(controlCorePhase, { hasFirstAttack: hasFirstAttackTargets })
   const legalPlayLabel = getLegalPlayLabel(controlCorePhase, { hasFirstAttack: hasFirstAttackTargets })
   const scoringEnabled = canVariantScore(activeVariant)
+  const surfaceTheme = PROTOTYPE_SURFACE_THEMES[activeVariant]
   const handleTuningChange = useCallback((next: TactileTuning) => {
     setTactileTuning(next)
   }, [])
@@ -214,30 +215,6 @@ export default function RebuildPrototypeLabPage() {
   const labStatusCopy = `Rotation ${currentRotation} • ${formatPrototypePhaseLabel(currentCorePhase)} • ${
     isOurServe ? 'We Serve' : 'We Receive'
   }`
-
-  useEffect(() => {
-    const root = document.documentElement
-    const previousTheme = root.getAttribute('data-theme')
-    const previousThemeState = useThemeStore.getState()
-    root.setAttribute('data-theme', 'light')
-    useThemeStore.setState({
-      theme: 'light',
-      themePreference: 'light',
-    })
-
-    return () => {
-      if (previousTheme) {
-        root.setAttribute('data-theme', previousTheme)
-      } else {
-        root.removeAttribute('data-theme')
-      }
-
-      useThemeStore.setState({
-        theme: previousThemeState.theme,
-        themePreference: previousThemeState.themePreference,
-      })
-    }
-  }, [])
 
   const prototypeControlPanel = (
     <PrototypeControlPanel
@@ -457,6 +434,8 @@ export default function RebuildPrototypeLabPage() {
             isPreviewingMovement={isPreviewingMovement}
             preserveAspectRatio="xMidYMax meet"
             tagFlags={currentTagFlags}
+            courtPalette={surfaceTheme.court}
+            courtPaddingBackground={surfaceTheme.court.paddingBackground}
             onTagsChange={
                 isEditingAllowed && currentCorePhase !== 'FIRST_ATTACK'
                   ? (role, tags) => {
@@ -484,9 +463,13 @@ export default function RebuildPrototypeLabPage() {
 
   return (
     <div
-      className="lab-light-canvas h-dvh w-full overflow-hidden bg-background text-foreground"
+      className="lab-light-canvas h-dvh w-full overflow-hidden text-foreground"
       data-rebuild-lab="tactile"
-      style={tactileCssVariables}
+      style={{
+        ...tactileCssVariables,
+        background: surfaceTheme.canvasBackground,
+        color: surfaceTheme.mode === 'dark' ? 'oklch(0.95 0.01 95)' : 'oklch(0.24 0.01 260)',
+      }}
     >
       {isMobile ? (
         <div className="relative mx-auto flex h-full w-full flex-col overflow-hidden">{phoneShell}</div>
@@ -495,26 +478,73 @@ export default function RebuildPrototypeLabPage() {
           <div className="flex h-full w-full max-w-[960px] items-center justify-center gap-8">
             <div className="relative flex shrink-0 items-center justify-center">
               <div
-                className="relative rounded-[44px] border border-white/12 bg-[linear-gradient(180deg,rgba(18,18,22,0.98)_0%,rgba(8,8,10,0.98)_100%)] p-[10px] shadow-[0_32px_60px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.06)]"
+                className="relative rounded-[44px] p-[10px]"
                 style={{
                   height: 'min(852px, calc(100dvh - 32px))',
                   aspectRatio: '393 / 852',
+                  background: surfaceTheme.desktopShellBackground,
+                  border: `1px solid ${surfaceTheme.desktopShellBorder}`,
+                  boxShadow: surfaceTheme.desktopShellShadow,
                 }}
               >
-                <div className="pointer-events-none absolute left-1/2 top-[10px] h-[28px] w-[128px] -translate-x-1/2 rounded-full bg-black/55 ring-1 ring-white/10" />
-                <div className="relative h-full w-full overflow-hidden rounded-[34px] border border-white/6 bg-background">
+                <div
+                  className="pointer-events-none absolute left-1/2 top-[10px] h-[28px] w-[128px] -translate-x-1/2 rounded-full"
+                  style={{
+                    background: surfaceTheme.mode === 'dark' ? 'oklch(0.08 0.008 260 / 0.78)' : 'oklch(0.76 0.01 95 / 0.82)',
+                    boxShadow: surfaceTheme.mode === 'dark'
+                      ? 'inset 0 1px 0 oklch(1 0 0 / 0.08)'
+                      : 'inset 0 1px 0 oklch(1 0 0 / 0.7)',
+                  }}
+                />
+                <div
+                  className="relative h-full w-full overflow-hidden rounded-[34px]"
+                  style={{
+                    background: surfaceTheme.phoneScreenBackground,
+                    border: `1px solid ${surfaceTheme.desktopShellBorder}`,
+                  }}
+                >
                   <div className="relative flex h-full w-full flex-col overflow-hidden">{phoneShell}</div>
                 </div>
-                <div className="pointer-events-none absolute bottom-[7px] left-1/2 h-[4px] w-[120px] -translate-x-1/2 rounded-full bg-white/10" />
+                <div
+                  className="pointer-events-none absolute bottom-[7px] left-1/2 h-[4px] w-[120px] -translate-x-1/2 rounded-full"
+                  style={{
+                    background: surfaceTheme.mode === 'dark' ? 'oklch(1 0 0 / 0.1)' : 'oklch(0.46 0.008 250 / 0.16)',
+                  }}
+                />
               </div>
             </div>
 
             <aside className="flex h-full w-[420px] max-w-[420px] shrink-0 flex-col gap-4 py-4">
-              <div className="rounded-[30px] border border-border bg-card/94 p-4 shadow-[0_18px_40px_rgba(0,0,0,0.1)]">
+              <div
+                className="rounded-[30px] p-4"
+                style={{
+                  background: surfaceTheme.sidebarCardBackground,
+                  border: `1px solid ${surfaceTheme.sidebarCardBorder}`,
+                  boxShadow: surfaceTheme.sidebarCardShadow,
+                }}
+              >
                 <div className="pb-3">
-                  <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Mobile Simulator</p>
+                  <p
+                    className="text-[11px] uppercase tracking-[0.12em]"
+                    style={{
+                      color: surfaceTheme.mode === 'dark'
+                        ? 'oklch(0.76 0.012 95 / 0.72)'
+                        : 'oklch(0.42 0.012 250 / 0.62)',
+                    }}
+                  >
+                    Mobile Simulator
+                  </p>
                   <h1 className="text-lg font-semibold">Prototype Lab</h1>
-                  <p className="text-xs text-muted-foreground">{labStatusCopy}</p>
+                  <p
+                    className="text-xs"
+                    style={{
+                      color: surfaceTheme.mode === 'dark'
+                        ? 'oklch(0.8 0.01 95 / 0.72)'
+                        : 'oklch(0.38 0.01 250 / 0.72)',
+                    }}
+                  >
+                    {labStatusCopy}
+                  </p>
                 </div>
                 {labToolContent}
               </div>

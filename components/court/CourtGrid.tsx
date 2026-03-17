@@ -5,6 +5,7 @@ import { Rotation, Role, ROLES, ROLE_INFO } from '@/lib/types'
 import { getRoleZone } from '@/lib/rotations'
 import { useThemeStore } from '@/store/useThemeStore'
 import { getTextColorForOklch } from '@/lib/utils'
+import type { PrototypeCourtPalette } from '@/components/rebuild/prototypes/prototypeSurfaceThemes'
 
 // CourtGrid - SVG volleyball court with lines, zones, and labels
 // Court orientation: Net at top (y=0), baseline at bottom (y=100)
@@ -16,6 +17,7 @@ interface CourtGridProps {
   rotation?: Rotation
   baseOrder?: Role[]
   fullCourt?: boolean
+  palette?: PrototypeCourtPalette
 }
 
 // Get which role is in each zone for a given rotation
@@ -33,14 +35,37 @@ function getZoneRoleMap(rotation: Rotation, baseOrder?: Role[]): Record<number, 
   return zoneRoleMap
 }
 
-function CourtGridImpl({ width, height, showZones = true, rotation, baseOrder, fullCourt = false }: CourtGridProps) {
+function CourtGridImpl({
+  width,
+  height,
+  showZones = true,
+  rotation,
+  baseOrder,
+  fullCourt = false,
+  palette,
+}: CourtGridProps) {
   // Court dimensions as percentages
   const netY = height / 2
 
   // Get current theme to determine court background color
   const theme = useThemeStore((state) => state.theme)
   const isLightTheme = theme === 'light'
-  const courtBackgroundColor = isLightTheme ? '#e5e7eb' : '#1f2937' // Light gray for light themes, dark gray for dark themes
+  const resolvedPalette: PrototypeCourtPalette = palette ?? {
+    stageBackground: isLightTheme ? '#e5e7eb' : '#1f2937',
+    paddingBackground: isLightTheme ? '#e5e7eb' : '#1f2937',
+    courtFill: isLightTheme ? '#e5e7eb' : '#1f2937',
+    courtVignetteEdge: isLightTheme ? '#d1d5db' : '#111827',
+    courtBorder: isLightTheme ? '#374151' : '#e5e7eb',
+    courtInnerBorder: isLightTheme ? '#374151' : '#e5e7eb',
+    divider: isLightTheme ? '#6b7280' : '#9ca3af',
+    attackLine: isLightTheme ? '#6b7280' : '#9ca3af',
+    centerLine: isLightTheme ? '#9ca3af' : '#6b7280',
+    lineLabel: isLightTheme ? '#4b5563' : '#d1d5db',
+    netCore: isLightTheme ? '#1f2937' : '#f3f4f6',
+    netDash: isLightTheme ? '#374151' : '#e5e7eb',
+    neutralZoneFill: isLightTheme ? '#9ca3af' : '#6b7280',
+    neutralZoneStroke: isLightTheme ? '#d1d5db' : '#374151',
+  }
 
   // Get zone-to-role mapping if rotation is provided (HOME team only for now)
   const zoneRoleMap = rotation ? getZoneRoleMap(rotation, baseOrder) : null
@@ -67,9 +92,9 @@ function CourtGridImpl({ width, height, showZones = true, rotation, baseOrder, f
       {/* Radial gradient definition for vignette effect */}
       <defs>
         <radialGradient id={gradientId} cx="50%" cy="50%" r="70%" fx="50%" fy="50%">
-          <stop offset="0%" stopColor={courtBackgroundColor} stopOpacity="1" />
-          <stop offset="60%" stopColor={courtBackgroundColor} stopOpacity="1" />
-          <stop offset="100%" stopColor={isLightTheme ? '#d1d5db' : '#111827'} stopOpacity="1" />
+          <stop offset="0%" stopColor={resolvedPalette.courtFill} stopOpacity="1" />
+          <stop offset="60%" stopColor={resolvedPalette.courtFill} stopOpacity="1" />
+          <stop offset="100%" stopColor={resolvedPalette.courtVignetteEdge} stopOpacity="1" />
         </radialGradient>
       </defs>
 
@@ -84,16 +109,8 @@ function CourtGridImpl({ width, height, showZones = true, rotation, baseOrder, f
       />
 
       {/* Court border */}
-      <rect
-        x={2}
-        y={2}
-        width={width - 4}
-        height={height - 4}
-        fill="none"
-        stroke={isLightTheme ? '#374151' : '#e5e7eb'}
-        strokeWidth={3}
-        rx={2}
-      />
+      <rect x={2} y={2} width={width - 4} height={height - 4} fill="none" stroke={resolvedPalette.courtBorder} strokeWidth={3} rx={2} />
+      <rect x={4} y={4} width={width - 8} height={height - 8} fill="none" stroke={resolvedPalette.courtInnerBorder} strokeWidth={1.2} rx={1.25} opacity={0.72} />
 
       {/* Zone dividers (vertical lines) */}
       <line
@@ -101,7 +118,7 @@ function CourtGridImpl({ width, height, showZones = true, rotation, baseOrder, f
         y1={2}
         x2={(1/3) * width}
         y2={height - 2}
-        stroke={isLightTheme ? '#6b7280' : '#9ca3af'}
+        stroke={resolvedPalette.divider}
         strokeWidth={1}
         opacity={0.4}
       />
@@ -110,7 +127,7 @@ function CourtGridImpl({ width, height, showZones = true, rotation, baseOrder, f
         y1={2}
         x2={(2/3) * width}
         y2={height - 2}
-        stroke={isLightTheme ? '#6b7280' : '#9ca3af'}
+        stroke={resolvedPalette.divider}
         strokeWidth={1}
         opacity={0.4}
       />
@@ -121,7 +138,7 @@ function CourtGridImpl({ width, height, showZones = true, rotation, baseOrder, f
         y1={netY}
         x2={width}
         y2={netY}
-        stroke={isLightTheme ? '#1f2937' : '#f3f4f6'}
+        stroke={resolvedPalette.netCore}
         strokeWidth={6}
       />
       <line
@@ -129,7 +146,7 @@ function CourtGridImpl({ width, height, showZones = true, rotation, baseOrder, f
         y1={netY}
         x2={width}
         y2={netY}
-        stroke={isLightTheme ? '#374151' : '#e5e7eb'}
+        stroke={resolvedPalette.netDash}
         strokeWidth={2}
         strokeDasharray="8,4"
       />
@@ -141,7 +158,7 @@ function CourtGridImpl({ width, height, showZones = true, rotation, baseOrder, f
         y1={0.3333 * height}
         x2={width - 2}
         y2={0.3333 * height}
-        stroke={isLightTheme ? '#6b7280' : '#9ca3af'}
+        stroke={resolvedPalette.attackLine}
         strokeWidth={2}
         strokeDasharray="10,5"
         opacity={0.7}
@@ -152,7 +169,7 @@ function CourtGridImpl({ width, height, showZones = true, rotation, baseOrder, f
         y1={0.6667 * height}
         x2={width - 2}
         y2={0.6667 * height}
-        stroke={isLightTheme ? '#6b7280' : '#9ca3af'}
+        stroke={resolvedPalette.attackLine}
         strokeWidth={2}
         strokeDasharray="10,5"
         opacity={0.7}
@@ -164,7 +181,7 @@ function CourtGridImpl({ width, height, showZones = true, rotation, baseOrder, f
         y1={2}
         x2={width / 2}
         y2={height - 2}
-        stroke={isLightTheme ? '#9ca3af' : '#6b7280'}
+        stroke={resolvedPalette.centerLine}
         strokeWidth={1}
         opacity={0.3}
       />
@@ -175,7 +192,7 @@ function CourtGridImpl({ width, height, showZones = true, rotation, baseOrder, f
         y1={height * 0.25}
         x2={width - 2}
         y2={height * 0.25}
-        stroke={isLightTheme ? '#9ca3af' : '#6b7280'}
+        stroke={resolvedPalette.centerLine}
         strokeWidth={1}
         opacity={0.3}
       />
@@ -184,7 +201,7 @@ function CourtGridImpl({ width, height, showZones = true, rotation, baseOrder, f
         y1={height * 0.75}
         x2={width - 2}
         y2={height * 0.75}
-        stroke={isLightTheme ? '#9ca3af' : '#6b7280'}
+        stroke={resolvedPalette.centerLine}
         strokeWidth={1}
         opacity={0.3}
       />
@@ -198,7 +215,7 @@ function CourtGridImpl({ width, height, showZones = true, rotation, baseOrder, f
             const roleInfo = role ? ROLE_INFO[role] : null
             const circleRadius = 12
             // Make zone tags less vibrant than player tokens by reducing opacity
-            const circleColor = roleInfo?.color || (isLightTheme ? '#9ca3af' : '#6b7280')
+            const circleColor = roleInfo?.color || resolvedPalette.neutralZoneFill
             const textColor = roleInfo
               ? getTextColorForOklch(roleInfo.color)
               : (isLightTheme ? '#000' : '#fff')
@@ -211,7 +228,7 @@ function CourtGridImpl({ width, height, showZones = true, rotation, baseOrder, f
                   cy={pos.y}
                   r={circleRadius}
                   fill={circleColor}
-                  stroke={isLightTheme ? '#d1d5db' : '#374151'}
+                  stroke={roleInfo ? resolvedPalette.neutralZoneStroke : resolvedPalette.neutralZoneStroke}
                   strokeWidth={1.5}
                 />
                 {/* Zone number text */}
@@ -238,7 +255,7 @@ function CourtGridImpl({ width, height, showZones = true, rotation, baseOrder, f
       <text
         x={width - 10}
         y={0.6667 * height - 8}
-        fill={isLightTheme ? '#4b5563' : '#d1d5db'}
+        fill={resolvedPalette.lineLabel}
         fontSize={9}
         textAnchor="end"
         opacity={0.5}
@@ -250,7 +267,7 @@ function CourtGridImpl({ width, height, showZones = true, rotation, baseOrder, f
         <text
           x={width - 10}
           y={0.3333 * height + 14}
-          fill={isLightTheme ? '#4b5563' : '#d1d5db'}
+          fill={resolvedPalette.lineLabel}
           fontSize={9}
           textAnchor="end"
           opacity={0.5}

@@ -38,6 +38,7 @@ export function RebuildDialKitBridge({
     activeVariant === 'glass' ||
     activeVariant === 'ceramic' ||
     activeVariant === 'rubber' ||
+    activeVariant === 'rubberLight' ||
     activeVariant === 'instrument' ||
     activeVariant === 'midnight'
   const usesLegacyClusterControls = false
