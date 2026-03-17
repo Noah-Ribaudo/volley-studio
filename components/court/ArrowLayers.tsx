@@ -1,6 +1,5 @@
 'use client'
 
-import { motion, useReducedMotion } from 'motion/react'
 import { memo } from 'react'
 import { MovementArrow } from './MovementArrow'
 import { computeDefaultControlPoint } from '@/lib/whiteboard-motion'
@@ -50,7 +49,6 @@ interface MovementArrowLayerProps {
   secondaryArrowSources?: ArrowPositions
   secondaryArrowEndpointLabels?: Partial<Record<Role, string>>
   secondaryArrowCurves?: Partial<Record<Role, ArrowCurveConfig>>
-  arrowTagFontSize?: number
   hoveredArrowRole: Role | null
   hoveredArrowVariant?: 'primary' | 'secondary' | null
   selectedArrowRole?: Role | null
@@ -83,12 +81,11 @@ function MovementArrowLayerImpl({
   draggingArrowVariant = 'primary',
   arrowDragPosition,
   arrows,
-  arrowEndpointLabels,
+  arrowEndpointLabels: _arrowEndpointLabels,
   secondaryArrows,
   secondaryArrowSources,
-  secondaryArrowEndpointLabels,
+  secondaryArrowEndpointLabels: _secondaryArrowEndpointLabels,
   secondaryArrowCurves,
-  arrowTagFontSize = 10,
   hoveredArrowRole,
   hoveredArrowVariant = null,
   selectedArrowRole = null,
@@ -107,83 +104,6 @@ function MovementArrowLayerImpl({
   onCreateSecondaryArrow,
   getRoleColor,
 }: MovementArrowLayerProps) {
-  const prefersReducedMotion = useReducedMotion()
-  const labelTransition = prefersReducedMotion
-    ? { duration: 0.001 }
-    : {
-        type: 'spring' as const,
-        stiffness: 420,
-        damping: 34,
-        mass: 0.7,
-      }
-
-  const renderEndpointLabel = ({
-    anchorX,
-    anchorY,
-    align,
-    tone,
-    text,
-    visible,
-    dashed = false,
-  }: {
-    anchorX: number
-    anchorY: number
-    align: 'start' | 'end'
-    tone: 'primary' | 'secondary'
-    text: string
-    visible: boolean
-    dashed?: boolean
-  }) => {
-    const fontSize = arrowTagFontSize
-    const padX = fontSize * 0.5
-    const padY = fontSize * 0.34
-    const measuredTextWidth = measureArrowLabelWidth(text, fontSize)
-    const labelWidth = Math.max(fontSize * 1.9, measuredTextWidth + padX * 2)
-    const labelHeight = fontSize + padY * 2
-    const x = align === 'start' ? 0 : -labelWidth
-    const textX = align === 'start' ? padX : -padX
-
-    return (
-      <motion.g
-        initial={false}
-        animate={{
-          opacity: visible ? 1 : 0,
-          x: anchorX,
-          y: anchorY,
-          scale: visible ? 1 : 0.98,
-        }}
-        transition={labelTransition}
-        style={{ pointerEvents: 'none' }}
-      >
-        <rect
-          x={x}
-          y={-labelHeight / 2}
-          width={labelWidth}
-          height={labelHeight}
-          rx={labelHeight / 2}
-          fill={tone === 'primary' ? 'rgba(255,255,255,0.94)' : 'rgba(255,255,255,0.9)'}
-          stroke={tone === 'primary' ? 'rgba(148,163,184,0.34)' : 'rgba(148,163,184,0.3)'}
-          strokeWidth={1}
-          strokeDasharray={dashed ? '3 2' : undefined}
-        />
-        <text
-          x={textX}
-          y={0}
-          textAnchor={align}
-          dominantBaseline="middle"
-          style={{
-            fill: tone === 'primary' ? 'rgb(71 85 105)' : 'rgb(100 116 139)',
-            fontSize,
-            fontWeight: 600,
-            userSelect: 'none',
-          }}
-        >
-          {text}
-        </text>
-      </motion.g>
-    )
-  }
-
   return (
     <>
       {activeRoles.map((role) => {
@@ -245,16 +165,9 @@ function MovementArrowLayerImpl({
           ? secondaryChosenControl
           : null
         const secondaryControlSvg = validSecondaryControl ? toSvgCoords(validSecondaryControl) : null
-        const endpointLabel = arrowEndpointLabels?.[role] ?? null
-        const secondaryEndpointLabel = secondaryArrowEndpointLabels?.[role] ?? null
         const primaryIsActive =
           (hoveredArrowRole === role && hoveredArrowVariant === 'primary') ||
           (selectedArrowRole === role && selectedArrowVariant === 'primary')
-        const secondaryIsActive =
-          (hoveredArrowRole === role && hoveredArrowVariant === 'secondary') ||
-          (selectedArrowRole === role && selectedArrowVariant === 'secondary')
-        const showPrimaryLabel = Boolean(endpointLabel && primaryIsActive)
-        const showSecondaryLabel = Boolean(secondaryEndpointLabel && secondaryIsActive)
         const showAddSecondaryAction = Boolean(
           onCreateSecondaryArrow &&
           activeArrowTarget &&
@@ -297,16 +210,6 @@ function MovementArrowLayerImpl({
                 onMouseLeave={() => onArrowHoverChange(null)}
                 debugHitboxes={debugHitboxes}
               />
-            ) : null}
-            {hasValidPositions && endpointLabel ? (
-              renderEndpointLabel({
-                anchorX: arrowEndSvg.x + (arrowEndSvg.x >= homeSvgPos.x ? 14 : -14),
-                anchorY: arrowEndSvg.y + ((controlSvg?.y ?? homeSvgPos.y) >= arrowEndSvg.y ? -12 : 12),
-                align: arrowEndSvg.x >= homeSvgPos.x ? 'start' : 'end',
-                tone: 'primary',
-                text: endpointLabel,
-                visible: showPrimaryLabel,
-              })
             ) : null}
             {showAddSecondaryAction ? (
               <g
@@ -372,17 +275,6 @@ function MovementArrowLayerImpl({
                   onMouseLeave={() => onArrowHoverChange(null)}
                   debugHitboxes={debugHitboxes}
                 />
-                {secondaryEndpointLabel ? (
-                  renderEndpointLabel({
-                    anchorX: secondaryArrowEndSvg.x + (secondaryArrowEndSvg.x >= homeSvgPos.x ? 14 : -14),
-                    anchorY: secondaryArrowEndSvg.y + (secondaryArrowEndSvg.y >= homeSvgPos.y ? 12 : -12),
-                    align: secondaryArrowEndSvg.x >= homeSvgPos.x ? 'start' : 'end',
-                    tone: 'secondary',
-                    text: secondaryEndpointLabel,
-                    visible: showSecondaryLabel,
-                    dashed: true,
-                  })
-                ) : null}
               </g>
             ) : null}
           </g>
@@ -410,6 +302,9 @@ interface CurveHandleLayerProps {
   arrows: ArrowPositions
   secondaryArrows?: ArrowPositions
   secondaryArrowSources?: ArrowPositions
+  arrowEndpointLabels?: Partial<Record<Role, string>>
+  secondaryArrowEndpointLabels?: Partial<Record<Role, string>>
+  arrowTagFontSize?: number
   arrowCurves: Partial<Record<Role, ArrowCurveConfig>>
   secondaryArrowCurves?: Partial<Record<Role, ArrowCurveConfig>>
   draggingRole: Role | null
@@ -442,6 +337,9 @@ function CurveHandleLayerImpl({
   arrows,
   secondaryArrows,
   secondaryArrowSources,
+  arrowEndpointLabels,
+  secondaryArrowEndpointLabels,
+  arrowTagFontSize = 10,
   arrowCurves,
   secondaryArrowCurves,
   draggingRole,
@@ -518,6 +416,9 @@ function CurveHandleLayerImpl({
 
         const validControlSvg = controlSvg && !isNaN(controlSvg.x) && !isNaN(controlSvg.y)
           ? controlSvg : null
+        const endpointLabel = activeVariant === 'secondary'
+          ? secondaryArrowEndpointLabels?.[role] ?? null
+          : arrowEndpointLabels?.[role] ?? null
 
         const curveMidpoint = validControlSvg
           ? {
@@ -529,6 +430,17 @@ function CurveHandleLayerImpl({
               y: ((activeVariant === 'secondary' ? secondarySvgStart.y : homeSvgPos.y) + arrowEndSvg.y) / 2,
             }
 
+        const fontSize = arrowTagFontSize
+        const padX = fontSize * 0.5
+        const padY = fontSize * 0.34
+        const measuredTextWidth = endpointLabel ? measureArrowLabelWidth(endpointLabel, fontSize) : 0
+        const labelWidth = Math.max(fontSize * 1.9, measuredTextWidth + padX * 2)
+        const labelHeight = fontSize + padY * 2
+        const usesLabelHandle = Boolean(endpointLabel)
+        const hitRadius = 18
+        const hitWidth = usesLabelHandle ? labelWidth + fontSize * 0.4 : hitRadius * 2
+        const hitHeight = usesLabelHandle ? labelHeight + fontSize * 0.4 : hitRadius * 2
+
         return (
           <g
             key={`curve-handle-${role}`}
@@ -537,26 +449,62 @@ function CurveHandleLayerImpl({
               opacity: showArrows ? 1 : 0,
             }}
           >
-            <circle
-              cx={curveMidpoint.x}
-              cy={curveMidpoint.y}
-              r={6}
-              fill="rgba(0,0,0,0.5)"
-              stroke="white"
-              strokeWidth={1.5}
-              style={{ pointerEvents: 'none' }}
-            />
-            <circle
-              cx={curveMidpoint.x}
-              cy={curveMidpoint.y}
-              r={2.5}
-              fill="white"
-              style={{ pointerEvents: 'none' }}
-            />
-            <circle
-              cx={curveMidpoint.x}
-              cy={curveMidpoint.y}
-              r={18}
+            {usesLabelHandle ? (
+              <>
+                <rect
+                  x={curveMidpoint.x - labelWidth / 2}
+                  y={curveMidpoint.y - labelHeight / 2}
+                  width={labelWidth}
+                  height={labelHeight}
+                  rx={labelHeight / 2}
+                  fill={activeVariant === 'secondary' ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.94)'}
+                  stroke={activeVariant === 'secondary' ? 'rgba(148,163,184,0.3)' : 'rgba(148,163,184,0.34)'}
+                  strokeWidth={1}
+                  strokeDasharray={activeVariant === 'secondary' ? '3 2' : undefined}
+                  style={{ pointerEvents: 'none' }}
+                />
+                <text
+                  x={curveMidpoint.x}
+                  y={curveMidpoint.y}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  style={{
+                    fill: activeVariant === 'secondary' ? 'rgb(100 116 139)' : 'rgb(71 85 105)',
+                    fontSize,
+                    fontWeight: 600,
+                    userSelect: 'none',
+                    pointerEvents: 'none',
+                  }}
+                >
+                  {endpointLabel}
+                </text>
+              </>
+            ) : (
+              <>
+                <circle
+                  cx={curveMidpoint.x}
+                  cy={curveMidpoint.y}
+                  r={6}
+                  fill="rgba(0,0,0,0.5)"
+                  stroke="white"
+                  strokeWidth={1.5}
+                  style={{ pointerEvents: 'none' }}
+                />
+                <circle
+                  cx={curveMidpoint.x}
+                  cy={curveMidpoint.y}
+                  r={2.5}
+                  fill="white"
+                  style={{ pointerEvents: 'none' }}
+                />
+              </>
+            )}
+            <rect
+              x={curveMidpoint.x - hitWidth / 2}
+              y={curveMidpoint.y - hitHeight / 2}
+              width={hitWidth}
+              height={hitHeight}
+              rx={usesLabelHandle ? hitHeight / 2 : hitRadius}
               fill={debugHitboxes ? 'rgba(57, 255, 20, 0.3)' : 'transparent'}
               stroke={debugHitboxes ? 'rgba(57, 255, 20, 0.8)' : 'none'}
               strokeWidth={debugHitboxes ? 2 : 0}

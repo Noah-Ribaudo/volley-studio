@@ -2354,7 +2354,6 @@ export function VolleyballCourt({
           secondaryArrowSources={secondaryArrowSources}
           secondaryArrowEndpointLabels={secondaryArrowEndpointLabels}
           secondaryArrowCurves={secondaryArrowCurves}
-          arrowTagFontSize={arrowTagFontSize}
           hoveredArrowRole={hoveredArrow.role}
           hoveredArrowVariant={hoveredArrow.variant}
           selectedArrowRole={selectedArrow.role}
@@ -2674,6 +2673,9 @@ export function VolleyballCourt({
           arrows={arrows}
           secondaryArrows={secondaryArrows}
           secondaryArrowSources={secondaryArrowSources}
+          arrowEndpointLabels={arrowEndpointLabels}
+          secondaryArrowEndpointLabels={secondaryArrowEndpointLabels}
+          arrowTagFontSize={arrowTagFontSize}
           arrowCurves={arrowCurves}
           secondaryArrowCurves={secondaryArrowCurves}
           draggingRole={draggingRole}
