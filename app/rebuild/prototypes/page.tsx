@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { VolleyballCourt } from '@/components/court'
 import { PrototypeControlPanel } from '@/components/rebuild/prototypes'
 import { RebuildDialKitBridge } from '@/components/rebuild/prototypes/RebuildDialKitBridge'
@@ -27,17 +28,70 @@ import {
 import { DEFAULT_TACTILE_TUNING, toTactileCssVariables, type TactileTuning } from '@/lib/rebuild/tactileTuning'
 import { createRotationPhaseKey, getBackRowMiddle } from '@/lib/rotations'
 import { getCurrentPositions, getCurrentTags } from '@/lib/whiteboardHelpers'
-import { ROLES, type Position, type Role, type Rotation } from '@/lib/types'
+import { ROLE_INFO, ROLES, type Position, type Role, type Rotation, type Team } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { useDisplayPrefsStore } from '@/store/useDisplayPrefsStore'
 import { useTeamStore } from '@/store/useTeamStore'
 import { useWhiteboardStore } from '@/store/useWhiteboardStore'
 
+type TopMenuTab = 'settings' | 'team'
+
+const MAIN_TEAM_ROLES: Role[] = ['S', 'OH1', 'MB1', 'OPP', 'OH2', 'MB2']
+const TEAM_FORM_ROLE_ORDER: Role[] = [...MAIN_TEAM_ROLES, 'L']
+
+interface PrototypeTeamDraft {
+  id: string
+  name: string
+  hasLibero: boolean
+  rosterCount: number
+  roleNames: Record<Role, string>
+}
+
+function createEmptyRoleNames(): Record<Role, string> {
+  return {
+    S: '',
+    OH1: '',
+    OH2: '',
+    MB1: '',
+    MB2: '',
+    OPP: '',
+    L: '',
+  }
+}
+
+function getRoleNamesFromTeam(team: Team | null): Record<Role, string> {
+  const next = createEmptyRoleNames()
+  if (!team) return next
+
+  const rosterById = new Map(team.roster.map((player) => [player.id, player]))
+
+  for (const role of ROLES) {
+    const playerId = team.position_assignments?.[role]
+    if (!playerId) continue
+    next[role] = rosterById.get(playerId)?.name?.trim() ?? ''
+  }
+
+  return next
+}
+
 export default function RebuildPrototypeLabPage() {
   const isDev = process.env.NODE_ENV === 'development'
   const isMobile = useIsMobile()
+  const prefersReducedMotion = useReducedMotion()
   const didBootstrapSeedsRef = useRef(false)
+  const teamFieldRefs = useRef<Array<HTMLInputElement | null>>([])
+  const teamNameInputRef = useRef<HTMLInputElement | null>(null)
   const [isTuneOpen, setIsTuneOpen] = useState(false)
+  const [activeTopMenuTab, setActiveTopMenuTab] = useState<TopMenuTab | null>(null)
+  const [prototypeTeamDrafts, setPrototypeTeamDrafts] = useState<PrototypeTeamDraft[]>([])
+  const [draftTeamName, setDraftTeamName] = useState('New Team')
+  const [draftTeamHasLibero, setDraftTeamHasLibero] = useState(true)
+  const [draftRoleNames, setDraftRoleNames] = useState<Record<Role, string>>(() => createEmptyRoleNames())
+  const [selectedPrototypeTeamId, setSelectedPrototypeTeamId] = useState<string | null>(null)
+  const [isKeyboardSimOpen, setIsKeyboardSimOpen] = useState(false)
+  const [activeDraftId, setActiveDraftId] = useState<string | null>(null)
+  const [isTeamDraftDirty, setIsTeamDraftDirty] = useState(false)
+  const [draftSaveState, setDraftSaveState] = useState<'idle' | 'saving' | 'saved'>('idle')
   const [tactileTuning, setTactileTuning] = useState<TactileTuning>(DEFAULT_TACTILE_TUNING)
   const tactileCssVariables = useMemo(() => toTactileCssVariables(tactileTuning), [tactileTuning])
   const playDurationMs = tactileTuning.c4Literal.connectorMotion.playDurationMs
@@ -211,10 +265,220 @@ export default function RebuildPrototypeLabPage() {
   }, [])
   const mobileDockStyle = undefined
   const mobileCourtAspectRatio = '393 / 696'
+  const topMenuTransition = prefersReducedMotion
+    ? { duration: 0.001 }
+    : {
+        type: 'spring' as const,
+        stiffness: tactileTuning.topMenu.panelSpring.stiffness,
+        damping: tactileTuning.topMenu.panelSpring.damping,
+        mass: tactileTuning.topMenu.panelSpring.mass,
+      }
+  const topTabTransition = prefersReducedMotion
+    ? { duration: 0.001 }
+    : {
+        type: 'spring' as const,
+        stiffness: tactileTuning.topMenu.tabSpring.stiffness,
+        damping: tactileTuning.topMenu.tabSpring.damping,
+        mass: tactileTuning.topMenu.tabSpring.mass,
+      }
+  const topMenuExpandedMinHeight = tactileTuning.topMenu.expandHeight
+  const topMenuRowHeight = 54
+  const topMenuPadding = tactileTuning.topMenu.panelPadding
+  const topTabLift = tactileTuning.topMenu.tabLift * 0.35
+  const keyboardSimHeight = 252
+  const keyboardViewportOffset = isKeyboardSimOpen ? keyboardSimHeight : 0
 
   const labStatusCopy = `Rotation ${currentRotation} • ${formatPrototypePhaseLabel(currentCorePhase)} • ${
     isOurServe ? 'We Serve' : 'We Receive'
   }`
+  const hasAnySavedTeamOptions = prototypeTeamDrafts.length > 0 || Boolean(currentTeam)
+  const filledRoleCount = TEAM_FORM_ROLE_ORDER.reduce((count, role) => {
+    if (role === 'L' && !draftTeamHasLibero) {
+      return count
+    }
+    return draftRoleNames[role].trim() ? count + 1 : count
+  }, 0)
+  const hasMeaningfulDraftContent = filledRoleCount > 0 || draftTeamName.trim() !== '' && draftTeamName.trim() !== 'New Team'
+  const prototypeTeamOptions = useMemo(() => {
+    const savedTeam = currentTeam
+      ? [
+          {
+            id: currentTeam.id,
+            name: currentTeam.name,
+            kind: 'saved' as const,
+            rosterCount: currentTeam.roster.length,
+            hasLibero: showLibero,
+            roleNames: getRoleNamesFromTeam(currentTeam),
+          },
+        ]
+      : []
+
+    return [
+      ...savedTeam,
+      ...prototypeTeamDrafts.map((team) => ({
+        ...team,
+        kind: 'draft' as const,
+      })),
+    ]
+  }, [currentTeam, prototypeTeamDrafts, showLibero])
+
+  const selectedPrototypeTeam = useMemo(
+    () => prototypeTeamOptions.find((team) => team.id === selectedPrototypeTeamId) ?? null,
+    [prototypeTeamOptions, selectedPrototypeTeamId]
+  )
+
+  useEffect(() => {
+    if (selectedPrototypeTeamId) return
+    if (currentTeam?.id) {
+      setSelectedPrototypeTeamId(currentTeam.id)
+    }
+  }, [currentTeam, selectedPrototypeTeamId])
+
+  useEffect(() => {
+    if (currentTeam?.name && draftTeamName === 'New Team') {
+      setDraftTeamName(`${currentTeam.name} Next`)
+    }
+  }, [currentTeam, draftTeamName])
+
+  useEffect(() => {
+    if (!selectedPrototypeTeam) return
+    setDraftTeamName(selectedPrototypeTeam.name)
+    setDraftTeamHasLibero(selectedPrototypeTeam.hasLibero)
+    setDraftRoleNames(selectedPrototypeTeam.roleNames)
+    setActiveDraftId(selectedPrototypeTeam.kind === 'draft' ? selectedPrototypeTeam.id : null)
+    setIsTeamDraftDirty(false)
+    setDraftSaveState(selectedPrototypeTeam.kind === 'draft' ? 'saved' : 'idle')
+  }, [selectedPrototypeTeam])
+
+  const handleTopTabToggle = useCallback((tab: TopMenuTab) => {
+    setActiveTopMenuTab((prev) => (prev === tab ? null : tab))
+  }, [])
+
+  const handleStartFreshTeam = useCallback(() => {
+    setSelectedPrototypeTeamId(null)
+    setDraftTeamName(currentTeam?.name ? `${currentTeam.name} Next` : 'New Team')
+    setDraftTeamHasLibero(true)
+    setDraftRoleNames(createEmptyRoleNames())
+    setActiveDraftId(null)
+    setIsTeamDraftDirty(false)
+    setDraftSaveState('idle')
+    requestAnimationFrame(() => {
+      teamNameInputRef.current?.focus()
+      teamNameInputRef.current?.select()
+    })
+  }, [currentTeam])
+
+  const handleDraftRoleNameChange = useCallback((role: Role, value: string) => {
+    setIsTeamDraftDirty(true)
+    setDraftSaveState('saving')
+    setDraftRoleNames((prev) => ({
+      ...prev,
+      [role]: value,
+    }))
+  }, [])
+
+  const handleTeamFieldKeyDown = useCallback((index: number, event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== 'Enter') return
+    event.preventDefault()
+    if (index === TEAM_FORM_ROLE_ORDER.length - 1) return
+    teamFieldRefs.current[index + 1]?.focus()
+    teamFieldRefs.current[index + 1]?.select()
+  }, [])
+
+  const handleCreateDraftTeam = useCallback(() => {
+    const trimmedName = draftTeamName.trim()
+    if (!trimmedName) return
+    const rosterCount = TEAM_FORM_ROLE_ORDER.reduce((count, role) => {
+      return draftRoleNames[role].trim() ? count + 1 : count
+    }, 0)
+    const nextId = activeDraftId ?? `draft-${crypto.randomUUID()}`
+
+    const nextDraft: PrototypeTeamDraft = {
+      id: nextId,
+      name: trimmedName,
+      hasLibero: draftTeamHasLibero,
+      rosterCount,
+      roleNames: draftRoleNames,
+    }
+
+    setPrototypeTeamDrafts((prev) => {
+      const existingIndex = prev.findIndex((team) => team.id === nextDraft.id)
+      if (existingIndex === -1) {
+        return [nextDraft, ...prev]
+      }
+
+      const next = [...prev]
+      next[existingIndex] = nextDraft
+      return next
+    })
+    setSelectedPrototypeTeamId(nextDraft.id)
+    setActiveDraftId(nextDraft.id)
+    setIsTeamDraftDirty(false)
+    setDraftSaveState('saved')
+  }, [activeDraftId, draftRoleNames, draftTeamHasLibero, draftTeamName])
+
+  useEffect(() => {
+    if (!isTeamDraftDirty || !hasMeaningfulDraftContent) {
+      return
+    }
+
+    setDraftSaveState('saving')
+
+    const timeoutId = window.setTimeout(() => {
+      const trimmedName = draftTeamName.trim() || 'New Team'
+      const rosterCount = TEAM_FORM_ROLE_ORDER.reduce((count, role) => {
+        if (role === 'L' && !draftTeamHasLibero) {
+          return count
+        }
+        return draftRoleNames[role].trim() ? count + 1 : count
+      }, 0)
+
+      const nextDraft: PrototypeTeamDraft = {
+        id: activeDraftId ?? `draft-${crypto.randomUUID()}`,
+        name: trimmedName,
+        hasLibero: draftTeamHasLibero,
+        rosterCount,
+        roleNames: draftRoleNames,
+      }
+
+      setPrototypeTeamDrafts((prev) => {
+        const existingIndex = prev.findIndex((team) => team.id === nextDraft.id)
+        if (existingIndex === -1) {
+          return [nextDraft, ...prev]
+        }
+
+        const next = [...prev]
+        next[existingIndex] = nextDraft
+        return next
+      })
+      setActiveDraftId(nextDraft.id)
+      setSelectedPrototypeTeamId(nextDraft.id)
+      setIsTeamDraftDirty(false)
+      setDraftSaveState('saved')
+    }, 220)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [
+    activeDraftId,
+    draftRoleNames,
+    draftTeamHasLibero,
+    draftTeamName,
+    hasMeaningfulDraftContent,
+    isTeamDraftDirty,
+  ])
+
+  useEffect(() => {
+    if (activeTopMenuTab !== 'team' || hasAnySavedTeamOptions) {
+      return
+    }
+
+    requestAnimationFrame(() => {
+      teamNameInputRef.current?.focus()
+      teamNameInputRef.current?.select()
+    })
+  }, [activeTopMenuTab, hasAnySavedTeamOptions])
 
   const prototypeControlPanel = (
     <PrototypeControlPanel
@@ -255,6 +519,365 @@ export default function RebuildPrototypeLabPage() {
 
   const tuneGuide = null
   const flowBoard = <SequenceFlowBoard className={isMobile ? 'mt-4' : 'h-full'} />
+  const isTopMenuExpanded = activeTopMenuTab !== null
+const topMenuSurfaceShadow = isTopMenuExpanded
+    ? '0 22px 42px rgba(0,0,0,0.18)'
+    : surfaceTheme.sidebarCardShadow
+
+  const settingsTabContent = (
+    <div className="space-y-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Settings</div>
+          <div className="mt-1 text-sm font-semibold">Prototype surface</div>
+        </div>
+        <div className="rounded-full border border-border/60 px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+          {activeVariant === 'soft' ? 'Light' : 'Dark'}
+        </div>
+      </div>
+      <div className="rounded-[18px] border border-border/60 bg-card/65 p-2">
+        <div className="grid grid-cols-2 gap-2">
+          {[
+            { id: 'soft', label: 'Light', detail: 'Soft surface' },
+            { id: 'rubber', label: 'Dark', detail: 'Rubber surface' },
+          ].map((option) => {
+            const isActive = activeVariant === option.id
+
+            return (
+              <motion.button
+                key={option.id}
+                type="button"
+                whileTap={prefersReducedMotion ? undefined : { scale: 0.985 }}
+                animate={{
+                  y: isActive ? topTabLift : 0,
+                  opacity: isActive ? 1 : 0.92,
+                }}
+                transition={topTabTransition}
+                className={cn(
+                  'rounded-[16px] border px-3 py-3 text-left',
+                  isActive ? 'border-border/80' : 'border-border/55'
+                )}
+                style={{
+                  background: isActive
+                    ? surfaceTheme.mode === 'dark'
+                      ? 'linear-gradient(180deg, oklch(0.28 0.02 250 / 0.92) 0%, oklch(0.19 0.02 250 / 0.96) 100%)'
+                      : 'linear-gradient(180deg, oklch(0.98 0.01 95 / 0.98) 0%, oklch(0.93 0.012 95 / 0.98) 100%)'
+                    : surfaceTheme.mode === 'dark'
+                      ? 'linear-gradient(180deg, oklch(0.22 0.015 250 / 0.9) 0%, oklch(0.17 0.015 250 / 0.94) 100%)'
+                      : 'linear-gradient(180deg, oklch(0.99 0.005 95 / 0.9) 0%, oklch(0.95 0.008 95 / 0.96) 100%)',
+                  boxShadow: isActive
+                    ? 'inset 0 1px 0 rgba(255,255,255,0.3), 0 8px 20px rgba(0,0,0,0.12)'
+                    : 'inset 0 1px 0 rgba(255,255,255,0.18)',
+                }}
+                onClick={() => setActiveVariant(option.id as typeof activeVariant)}
+              >
+                <div className="text-[11px] font-semibold uppercase tracking-[0.1em]">{option.label}</div>
+                <div className="mt-1 text-xs text-muted-foreground">{option.detail}</div>
+              </motion.button>
+            )
+          })}
+        </div>
+      </div>
+      <div className="rounded-[18px] border border-border/60 bg-card/60 p-2">
+        <div className="grid grid-cols-2 gap-2">
+          {[
+            { id: 'off', label: 'Keyboard Off', active: !isKeyboardSimOpen },
+            { id: 'on', label: 'Keyboard On', active: isKeyboardSimOpen },
+          ].map((option) => (
+            <motion.button
+              key={option.id}
+              type="button"
+              whileTap={prefersReducedMotion ? undefined : { scale: 0.985 }}
+              animate={{
+                y: option.active ? topTabLift : 0,
+                opacity: option.active ? 1 : 0.92,
+              }}
+              transition={topTabTransition}
+              className={cn(
+                'rounded-[16px] border px-3 py-3 text-left',
+                option.active ? 'border-border/80' : 'border-border/55'
+              )}
+              style={{
+                background: option.active
+                  ? surfaceTheme.mode === 'dark'
+                    ? 'linear-gradient(180deg, oklch(0.28 0.02 250 / 0.92) 0%, oklch(0.19 0.02 250 / 0.96) 100%)'
+                    : 'linear-gradient(180deg, oklch(0.98 0.01 95 / 0.98) 0%, oklch(0.93 0.012 95 / 0.98) 100%)'
+                  : surfaceTheme.mode === 'dark'
+                    ? 'linear-gradient(180deg, oklch(0.22 0.015 250 / 0.9) 0%, oklch(0.17 0.015 250 / 0.94) 100%)'
+                    : 'linear-gradient(180deg, oklch(0.99 0.005 95 / 0.9) 0%, oklch(0.95 0.008 95 / 0.96) 100%)',
+                boxShadow: option.active
+                  ? 'inset 0 1px 0 rgba(255,255,255,0.3), 0 8px 20px rgba(0,0,0,0.12)'
+                  : 'inset 0 1px 0 rgba(255,255,255,0.18)',
+              }}
+              onClick={() => setIsKeyboardSimOpen(option.id === 'on')}
+            >
+              <div className="text-[11px] font-semibold uppercase tracking-[0.1em]">{option.label}</div>
+            </motion.button>
+          ))}
+        </div>
+      </div>
+      <div className="rounded-[18px] border border-border/60 bg-card/55 px-3 py-3 text-sm text-muted-foreground">
+        This only changes the phone prototype surface, so you can compare the mobile feel without changing the rest of the browser.
+      </div>
+    </div>
+  )
+
+  const teamSetupTabContent = (
+    <div className="space-y-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Team Setup</div>
+        {hasAnySavedTeamOptions ? (
+          <div className="rounded-full border border-border/60 px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+            {selectedPrototypeTeam ? selectedPrototypeTeam.name : 'No team'}
+          </div>
+        ) : null}
+      </div>
+
+      {hasAnySavedTeamOptions ? (
+        <div className="space-y-2 rounded-[18px] border border-border/60 bg-card/55 p-2">
+          <div className="flex items-center justify-between gap-3 px-1">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Start From</div>
+            <button
+              type="button"
+              className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground transition hover:text-foreground"
+              onClick={handleStartFreshTeam}
+            >
+              Start Fresh
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {prototypeTeamOptions.map((team) => {
+              const isSelected = team.id === selectedPrototypeTeamId
+
+              return (
+                <motion.button
+                  key={team.id}
+                  type="button"
+                  whileTap={prefersReducedMotion ? undefined : { scale: 0.99 }}
+                  animate={{ y: isSelected ? topTabLift : 0 }}
+                  transition={topTabTransition}
+                  className="rounded-full border px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.08em]"
+                  style={{
+                    background: isSelected
+                      ? surfaceTheme.mode === 'dark'
+                        ? 'linear-gradient(180deg, oklch(0.29 0.018 250 / 0.95) 0%, oklch(0.21 0.018 250 / 0.98) 100%)'
+                        : 'linear-gradient(180deg, oklch(0.985 0.01 95 / 0.98) 0%, oklch(0.94 0.012 95 / 0.98) 100%)'
+                      : 'color-mix(in oklch, white 34%, transparent)',
+                    borderColor: isSelected ? 'color-mix(in oklch, currentColor 24%, transparent)' : undefined,
+                    boxShadow: isSelected ? '0 10px 20px rgba(0,0,0,0.08)' : 'none',
+                  }}
+                  onClick={() => {
+                    setSelectedPrototypeTeamId(team.id)
+                  }}
+                >
+                  {team.name}
+                </motion.button>
+              )
+            })}
+          </div>
+        </div>
+      ) : null}
+
+      <div className="rounded-[18px] border border-border/60 bg-card/60 p-3">
+        <div className="flex items-center justify-between gap-3">
+          <label className="block text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+            Team Name
+          </label>
+          <div className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+            {filledRoleCount} filled
+          </div>
+        </div>
+        <input
+          ref={teamNameInputRef}
+          value={draftTeamName}
+          onChange={(event) => {
+            setIsTeamDraftDirty(true)
+            setDraftSaveState('saving')
+            setDraftTeamName(event.target.value)
+          }}
+          placeholder="New Team"
+          className="mt-2 h-11 w-full rounded-[14px] border border-border/60 bg-background/80 px-3 text-sm outline-none transition focus:border-border"
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        {MAIN_TEAM_ROLES.map((role, index) => (
+          <div key={role} className="rounded-[18px] border border-border/60 bg-card/60 p-3">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">{role}</div>
+            <input
+              ref={(node) => {
+                teamFieldRefs.current[index] = node
+              }}
+              value={draftRoleNames[role]}
+              onChange={(event) => handleDraftRoleNameChange(role, event.target.value)}
+              onKeyDown={(event) => handleTeamFieldKeyDown(index, event)}
+              placeholder={ROLE_INFO[role].name}
+              autoComplete="off"
+              className="mt-2 h-11 w-full rounded-[14px] border border-border/60 bg-background/80 px-3 text-sm outline-none transition focus:border-border"
+            />
+          </div>
+        ))}
+      </div>
+
+      <div className="rounded-[18px] border border-border/60 bg-card/60 p-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Libero</div>
+          <div className="inline-flex rounded-full border border-border/60 bg-card/70 p-1">
+            <button
+              type="button"
+              className={cn(
+                'rounded-full px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] transition',
+                draftTeamHasLibero ? 'bg-foreground text-background' : 'text-muted-foreground'
+              )}
+              onClick={() => {
+                setIsTeamDraftDirty(true)
+                setDraftSaveState('saving')
+                setDraftTeamHasLibero(true)
+              }}
+            >
+              On
+            </button>
+            <button
+              type="button"
+              className={cn(
+                'rounded-full px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] transition',
+                !draftTeamHasLibero ? 'bg-foreground text-background' : 'text-muted-foreground'
+              )}
+              onClick={() => {
+                setIsTeamDraftDirty(true)
+                setDraftSaveState('saving')
+                setDraftTeamHasLibero(false)
+              }}
+            >
+              Off
+            </button>
+          </div>
+        </div>
+        <input
+          ref={(node) => {
+            teamFieldRefs.current[TEAM_FORM_ROLE_ORDER.length - 1] = node
+          }}
+          value={draftRoleNames.L}
+          onChange={(event) => handleDraftRoleNameChange('L', event.target.value)}
+          onKeyDown={(event) => handleTeamFieldKeyDown(TEAM_FORM_ROLE_ORDER.length - 1, event)}
+          placeholder="Libero"
+          autoComplete="off"
+          disabled={!draftTeamHasLibero}
+          className="mt-3 h-11 w-full rounded-[14px] border border-border/60 bg-background/80 px-3 text-sm outline-none transition focus:border-border disabled:cursor-not-allowed disabled:opacity-45"
+        />
+      </div>
+
+      <div className="h-16" />
+
+      <div className="sticky bottom-0 z-10 -mx-1 mt-2 bg-[linear-gradient(180deg,transparent_0%,rgba(10,14,20,0.08)_18%,rgba(10,14,20,0.14)_100%)] px-1 pb-1 pt-4">
+        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)] gap-2">
+          <div aria-hidden="true" />
+          <Button
+            type="button"
+            className="h-11 rounded-[16px] text-[11px] uppercase tracking-[0.1em]"
+            onClick={handleCreateDraftTeam}
+          >
+            {draftSaveState === 'saving' ? 'Saving Draft' : draftSaveState === 'saved' ? 'Draft Saved' : 'Save Draft'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+
+  const miniControlMenu = (
+    <div className="pointer-events-none absolute inset-x-0 inset-y-0 z-20 px-3 pb-3 pt-3">
+      <motion.div
+        className="pointer-events-auto w-full rounded-[22px] border p-1.5 shadow-[0_16px_34px_rgba(0,0,0,0.12)] backdrop-blur-xl"
+        animate={{
+          height: isTopMenuExpanded ? 'calc(100% - 12px)' : topMenuRowHeight + topMenuPadding,
+          y: 0,
+        }}
+        transition={topMenuTransition}
+        style={{
+          background: surfaceTheme.sidebarCardBackground,
+          border: `1px solid ${surfaceTheme.sidebarCardBorder}`,
+          boxShadow: topMenuSurfaceShadow,
+          minHeight: isTopMenuExpanded ? topMenuExpandedMinHeight : undefined,
+        }}
+      >
+        <div
+          className="flex h-full flex-col overflow-hidden rounded-[18px]"
+          style={{ gap: tactileTuning.topMenu.tabGap, padding: `${topMenuPadding / 2}px` }}
+        >
+          <div className="rounded-[18px] border border-border/55 bg-card/40 p-1">
+            <div className="grid grid-cols-2 gap-0">
+            {[
+              { id: 'settings' as const, label: 'Settings' },
+              { id: 'team' as const, label: 'Team Setup' },
+            ].map((tab) => {
+              const isActive = activeTopMenuTab === tab.id
+
+              return (
+                <motion.button
+                  key={tab.id}
+                  type="button"
+                  whileTap={prefersReducedMotion ? undefined : { scale: 0.985 }}
+                  animate={{
+                    y: isActive ? topTabLift : 0,
+                    opacity: isActive || !isTopMenuExpanded ? 1 : 0.96,
+                  }}
+                  transition={topTabTransition}
+                  className={cn(
+                    'h-11 border px-3 text-[11px] font-semibold uppercase tracking-[0.08em]',
+                    tab.id === 'settings' ? 'rounded-l-[14px] rounded-r-[4px]' : 'rounded-l-[4px] rounded-r-[14px]'
+                  )}
+                  style={{
+                    background: isActive
+                      ? surfaceTheme.mode === 'dark'
+                        ? 'linear-gradient(180deg, oklch(0.3 0.02 250 / 0.96) 0%, oklch(0.2 0.02 250 / 0.98) 100%)'
+                        : 'linear-gradient(180deg, oklch(0.995 0.004 95 / 0.98) 0%, oklch(0.94 0.012 95 / 0.98) 100%)'
+                      : surfaceTheme.mode === 'dark'
+                        ? 'linear-gradient(180deg, oklch(0.17 0.01 250 / 0.96) 0%, oklch(0.14 0.01 250 / 0.98) 100%)'
+                        : 'linear-gradient(180deg, oklch(0.92 0.004 95 / 0.74) 0%, oklch(0.89 0.004 95 / 0.82) 100%)',
+                    borderColor: isActive
+                      ? surfaceTheme.mode === 'dark'
+                        ? 'oklch(0.62 0.04 80 / 0.34)'
+                        : 'oklch(0.72 0.04 90 / 0.42)'
+                      : 'transparent',
+                    boxShadow: isActive
+                      ? surfaceTheme.mode === 'dark'
+                        ? 'inset 0 1px 0 rgba(255,255,255,0.08), 0 12px 24px rgba(0,0,0,0.18)'
+                        : 'inset 0 1px 0 rgba(255,255,255,0.72), 0 12px 24px rgba(0,0,0,0.12)'
+                      : 'inset 0 1px 0 rgba(255,255,255,0.08)',
+                    color: isActive
+                      ? undefined
+                      : surfaceTheme.mode === 'dark'
+                        ? 'oklch(0.82 0.01 95 / 0.74)'
+                        : 'oklch(0.34 0.01 260 / 0.74)',
+                  }}
+                  onClick={() => handleTopTabToggle(tab.id)}
+                >
+                  {tab.label}
+                </motion.button>
+              )
+            })}
+            </div>
+          </div>
+
+          <AnimatePresence initial={false}>
+            {activeTopMenuTab ? (
+              <motion.div
+                key="top-menu-panel"
+                initial={{ opacity: 0, y: prefersReducedMotion ? 0 : -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: prefersReducedMotion ? 0 : -6 }}
+                transition={topMenuTransition}
+                className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto rounded-[18px] border border-border/50 bg-card/55"
+                style={{ padding: topMenuPadding }}
+              >
+                {activeTopMenuTab === 'settings' ? settingsTabContent : teamSetupTabContent}
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
+        </div>
+      </motion.div>
+    </div>
+  )
 
   const labToolContent = (
     <>
@@ -311,9 +934,10 @@ export default function RebuildPrototypeLabPage() {
 
   const phoneShell = (
     <>
+      {miniControlMenu}
       {isMobile ? (
         <>
-          <div className="pointer-events-none absolute inset-x-2 top-2 z-20 flex justify-end">
+          <div className="pointer-events-none absolute inset-x-2 top-[4.75rem] z-20 flex justify-end">
             <Button
               type="button"
               size="sm"
@@ -341,9 +965,23 @@ export default function RebuildPrototypeLabPage() {
         </>
       ) : null}
 
-      <main className="flex min-h-0 flex-1 flex-col justify-end overflow-hidden">
+      <main
+        className="flex min-h-0 flex-1 flex-col justify-end overflow-hidden"
+        style={{
+          paddingBottom: keyboardViewportOffset,
+        }}
+      >
         <section className="flex min-h-0 flex-1 items-end overflow-visible">
           <div className="relative w-full shrink-0 overflow-visible" style={{ aspectRatio: mobileCourtAspectRatio }}>
+            <motion.div
+              animate={{
+                opacity: isTopMenuExpanded ? 0.68 : 1,
+                scale: isTopMenuExpanded ? 0.985 : 1,
+                y: isTopMenuExpanded ? 14 : isKeyboardSimOpen ? -22 : 0,
+              }}
+              transition={topMenuTransition}
+              className="h-full w-full"
+            >
             <VolleyballCourt
               positions={positions}
               animationConfig={{ durationMs: playDurationMs }}
@@ -451,13 +1089,71 @@ export default function RebuildPrototypeLabPage() {
                   : undefined
               }
             />
+            </motion.div>
           </div>
         </section>
 
         <section className="w-full shrink-0 overflow-visible" style={mobileDockStyle}>
-          <div className="flex min-h-0 items-end overflow-visible">{prototypeControlPanel}</div>
+          <motion.div
+            animate={{
+              opacity: isTopMenuExpanded ? 0.34 : 1,
+              y: isTopMenuExpanded ? 16 : isKeyboardSimOpen ? -18 : 0,
+            }}
+            transition={topMenuTransition}
+            className="flex min-h-0 items-end overflow-visible"
+          >
+            {prototypeControlPanel}
+          </motion.div>
         </section>
       </main>
+
+      <AnimatePresence initial={false}>
+        {isKeyboardSimOpen ? (
+          <motion.div
+            initial={{ y: keyboardSimHeight, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: keyboardSimHeight, opacity: 0 }}
+            transition={topMenuTransition}
+            className="pointer-events-none absolute inset-x-0 bottom-0 z-30 px-2 pb-2"
+          >
+            <div
+              className="rounded-[26px] border px-3 pb-3 pt-2 shadow-[0_-18px_40px_rgba(0,0,0,0.26)]"
+              style={{
+                height: keyboardSimHeight,
+                background: surfaceTheme.mode === 'dark'
+                  ? 'linear-gradient(180deg, oklch(0.2 0.01 255 / 0.98) 0%, oklch(0.14 0.01 255 / 0.99) 100%)'
+                  : 'linear-gradient(180deg, oklch(0.94 0.008 95 / 0.98) 0%, oklch(0.9 0.01 95 / 0.99) 100%)',
+                borderColor: surfaceTheme.sidebarCardBorder,
+              }}
+            >
+              <div className="flex items-center justify-between gap-3 px-1 pb-2">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Keyboard</div>
+                <div className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Viewport Shrink</div>
+              </div>
+              <div className="grid grid-cols-10 gap-1.5">
+                {Array.from({ length: 30 }, (_, index) => (
+                  <div
+                    key={index}
+                    className="rounded-[10px] border"
+                    style={{
+                      height: 26,
+                      background: surfaceTheme.mode === 'dark'
+                        ? 'oklch(0.28 0.01 255 / 0.94)'
+                        : 'oklch(0.985 0.004 95 / 0.94)',
+                      borderColor: surfaceTheme.sidebarCardBorder,
+                    }}
+                  />
+                ))}
+              </div>
+              <div className="mt-2 grid grid-cols-[1.2fr_5fr_1.6fr] gap-1.5">
+                <div className="h-9 rounded-[12px] border" style={{ borderColor: surfaceTheme.sidebarCardBorder }} />
+                <div className="h-9 rounded-[12px] border" style={{ borderColor: surfaceTheme.sidebarCardBorder }} />
+                <div className="h-9 rounded-[12px] border" style={{ borderColor: surfaceTheme.sidebarCardBorder }} />
+              </div>
+            </div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </>
   )
 
