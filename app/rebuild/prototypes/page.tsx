@@ -867,22 +867,28 @@ const topMenuSurfaceShadow = isTopMenuExpanded
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: prefersReducedMotion ? 0 : -6 }}
                 transition={topMenuTransition}
-                className="min-h-0 flex-1 rounded-[18px] border border-border/50 bg-card/55 relative overflow-y-auto"
+                className="min-h-0 flex-1 overflow-y-auto rounded-[18px] border border-border/50 bg-card/55"
                 style={{ padding: topMenuPadding, overflowX: 'clip' }}
               >
-                <AnimatePresence initial={false} mode="popLayout" custom={activeTopMenuTab}>
-                  <motion.div
-                    key={activeTopMenuTab}
-                    custom={activeTopMenuTab}
-                    initial={(tab) => ({ x: prefersReducedMotion ? 0 : (tab === 'team' ? '110%' : '-110%') })}
-                    animate={{ x: '0%' }}
-                    exit={(tab) => ({ x: prefersReducedMotion ? 0 : (tab === 'team' ? '-110%' : '110%') })}
-                    transition={topMenuTransition}
-                    className="w-full"
-                  >
-                    {activeTopMenuTab === 'settings' ? settingsTabContent : teamSetupTabContent}
-                  </motion.div>
-                </AnimatePresence>
+                <motion.div
+                  initial={false}
+                  animate={{
+                    x: activeTopMenuTab === 'team' ? '-50%' : '0%',
+                  }}
+                  transition={topMenuTransition}
+                  className="grid h-full min-h-0"
+                  style={{
+                    width: '200%',
+                    gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
+                  }}
+                >
+                  <div className="min-h-0 min-w-0">
+                    <div className="min-h-0 h-full min-w-0">{settingsTabContent}</div>
+                  </div>
+                  <div className="min-h-0 min-w-0">
+                    <div className="min-h-0 h-full min-w-0">{teamSetupTabContent}</div>
+                  </div>
+                </motion.div>
               </motion.div>
             ) : null}
           </AnimatePresence>
