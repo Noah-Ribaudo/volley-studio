@@ -658,32 +658,24 @@ const topMenuSurfaceShadow = isTopMenuExpanded
         </div>
       ) : null}
 
-      <div className="rounded-[18px] border border-border/60 bg-card/60 p-3">
-        <div className="flex items-center justify-between gap-3">
-          <label className="block text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-            Team Name
-          </label>
-          <div className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-            {filledRoleCount} filled
-          </div>
-        </div>
-        <input
-          ref={teamNameInputRef}
-          value={draftTeamName}
-          onChange={(event) => {
-            setIsTeamDraftDirty(true)
-            setDraftSaveState('saving')
-            setDraftTeamName(event.target.value)
-          }}
-          placeholder="New Team"
-          className="mt-2 h-11 w-full rounded-[14px] border border-border/60 bg-background/80 px-3 text-sm outline-none transition focus:border-border"
-        />
-      </div>
+      <input
+        ref={teamNameInputRef}
+        value={draftTeamName}
+        onChange={(event) => {
+          setIsTeamDraftDirty(true)
+          setDraftSaveState('saving')
+          setDraftTeamName(event.target.value)
+        }}
+        placeholder="Team name"
+        className="h-11 w-full rounded-[14px] border border-border/60 bg-background/80 px-3 text-sm font-semibold outline-none transition focus:border-border"
+      />
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className="space-y-1.5">
         {MAIN_TEAM_ROLES.map((role, index) => (
-          <div key={role} className="rounded-[18px] border border-border/60 bg-card/60 p-3">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">{role}</div>
+          <div key={role} className="flex items-center gap-2">
+            <div className="w-10 shrink-0 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+              {role}
+            </div>
             <input
               ref={(node) => {
                 teamFieldRefs.current[index] = node
@@ -693,58 +685,39 @@ const topMenuSurfaceShadow = isTopMenuExpanded
               onKeyDown={(event) => handleTeamFieldKeyDown(index, event)}
               placeholder={ROLE_INFO[role].name}
               autoComplete="off"
-              className="mt-2 h-11 w-full rounded-[14px] border border-border/60 bg-background/80 px-3 text-sm outline-none transition focus:border-border"
+              className="h-10 w-full rounded-[12px] border border-border/60 bg-background/80 px-3 text-sm outline-none transition focus:border-border"
             />
           </div>
         ))}
-      </div>
 
-      <div className="rounded-[18px] border border-border/60 bg-card/60 p-3">
-        <div className="flex items-center justify-between gap-3">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Libero</div>
-          <div className="inline-flex rounded-full border border-border/60 bg-card/70 p-1">
-            <button
-              type="button"
-              className={cn(
-                'rounded-full px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] transition',
-                draftTeamHasLibero ? 'bg-foreground text-background' : 'text-muted-foreground'
-              )}
-              onClick={() => {
-                setIsTeamDraftDirty(true)
-                setDraftSaveState('saving')
-                setDraftTeamHasLibero(true)
-              }}
-            >
-              On
-            </button>
-            <button
-              type="button"
-              className={cn(
-                'rounded-full px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] transition',
-                !draftTeamHasLibero ? 'bg-foreground text-background' : 'text-muted-foreground'
-              )}
-              onClick={() => {
-                setIsTeamDraftDirty(true)
-                setDraftSaveState('saving')
-                setDraftTeamHasLibero(false)
-              }}
-            >
-              Off
-            </button>
-          </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setIsTeamDraftDirty(true)
+              setDraftSaveState('saving')
+              setDraftTeamHasLibero((prev) => !prev)
+            }}
+            className="w-10 shrink-0 text-left text-[11px] font-semibold uppercase tracking-[0.08em] transition-opacity"
+            style={{ opacity: draftTeamHasLibero ? 1 : 0.35 }}
+            aria-pressed={draftTeamHasLibero}
+            title={draftTeamHasLibero ? 'Libero enabled — click to disable' : 'Libero disabled — click to enable'}
+          >
+            L
+          </button>
+          <input
+            ref={(node) => {
+              teamFieldRefs.current[TEAM_FORM_ROLE_ORDER.length - 1] = node
+            }}
+            value={draftRoleNames.L}
+            onChange={(event) => handleDraftRoleNameChange('L', event.target.value)}
+            onKeyDown={(event) => handleTeamFieldKeyDown(TEAM_FORM_ROLE_ORDER.length - 1, event)}
+            placeholder="Libero"
+            autoComplete="off"
+            disabled={!draftTeamHasLibero}
+            className="h-10 w-full rounded-[12px] border border-border/60 bg-background/80 px-3 text-sm outline-none transition focus:border-border disabled:cursor-not-allowed disabled:opacity-45"
+          />
         </div>
-        <input
-          ref={(node) => {
-            teamFieldRefs.current[TEAM_FORM_ROLE_ORDER.length - 1] = node
-          }}
-          value={draftRoleNames.L}
-          onChange={(event) => handleDraftRoleNameChange('L', event.target.value)}
-          onKeyDown={(event) => handleTeamFieldKeyDown(TEAM_FORM_ROLE_ORDER.length - 1, event)}
-          placeholder="Libero"
-          autoComplete="off"
-          disabled={!draftTeamHasLibero}
-          className="mt-3 h-11 w-full rounded-[14px] border border-border/60 bg-background/80 px-3 text-sm outline-none transition focus:border-border disabled:cursor-not-allowed disabled:opacity-45"
-        />
       </div>
 
       <div className="h-16" />
