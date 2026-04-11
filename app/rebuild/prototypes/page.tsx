@@ -524,15 +524,6 @@ const topMenuSurfaceShadow = isTopMenuExpanded
 
   const settingsTabContent = (
     <div className="space-y-3">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Settings</div>
-          <div className="mt-1 text-sm font-semibold">Prototype surface</div>
-        </div>
-        <div className="rounded-full border border-border/60 px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-          {activeVariant === 'soft' ? 'Light' : 'Dark'}
-        </div>
-      </div>
       <div className="rounded-[18px] border border-border/60 bg-card/65 p-2">
         <div className="grid grid-cols-2 gap-2">
           {[
@@ -622,15 +613,6 @@ const topMenuSurfaceShadow = isTopMenuExpanded
 
   const teamSetupTabContent = (
     <div className="space-y-3">
-      <div className="flex items-start justify-between gap-3">
-        <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Team Setup</div>
-        {hasAnySavedTeamOptions ? (
-          <div className="rounded-full border border-border/60 px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-            {selectedPrototypeTeam ? selectedPrototypeTeam.name : 'No team'}
-          </div>
-        ) : null}
-      </div>
-
       {hasAnySavedTeamOptions ? (
         <div className="space-y-2 rounded-[18px] border border-border/60 bg-card/55 p-2">
           <div className="flex items-center justify-between gap-3 px-1">
