@@ -781,11 +781,10 @@ const topMenuSurfaceShadow = isTopMenuExpanded
         }}
       >
         <div
-          className="flex h-full flex-col rounded-[18px]"
+          className="flex h-full flex-col"
           style={{ gap: tactileTuning.topMenu.tabGap, padding: `${topMenuPadding / 2}px`, overflow: 'clip' }}
         >
-          <div className="rounded-[18px] border border-border/55 bg-card/40 p-1">
-            <div className="grid grid-cols-2 gap-0">
+          <div className="grid grid-cols-2 gap-0">
             {[
               { id: 'settings' as const, label: 'Settings' },
               { id: 'team' as const, label: 'Team Setup' },
@@ -836,7 +835,6 @@ const topMenuSurfaceShadow = isTopMenuExpanded
                 </motion.button>
               )
             })}
-            </div>
           </div>
 
           <AnimatePresence initial={false}>
@@ -847,7 +845,7 @@ const topMenuSurfaceShadow = isTopMenuExpanded
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: prefersReducedMotion ? 0 : -6 }}
                 transition={topMenuTransition}
-                className="min-h-0 flex-1 rounded-[18px] border border-border/50 bg-card/55"
+                className="min-h-0 flex-1"
                 style={{ overflow: 'clip' }}
               >
                 <motion.div
