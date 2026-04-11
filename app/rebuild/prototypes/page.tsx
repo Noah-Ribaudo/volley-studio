@@ -10,7 +10,15 @@ import { PROTOTYPE_SURFACE_THEMES } from '@/components/rebuild/prototypes/protot
 import { usePrototypeCourtState } from '@/components/rebuild/prototypes/usePrototypeCourtState'
 import { usePrototypeLabController } from '@/components/rebuild/prototypes/usePrototypeLabController'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { ChevronDown } from 'lucide-react'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { validateRotationLegality } from '@/lib/model/legality'
 import {
@@ -28,7 +36,7 @@ import {
 import { DEFAULT_TACTILE_TUNING, toTactileCssVariables, type TactileTuning } from '@/lib/rebuild/tactileTuning'
 import { createRotationPhaseKey, getBackRowMiddle } from '@/lib/rotations'
 import { getCurrentPositions, getCurrentTags } from '@/lib/whiteboardHelpers'
-import { ROLE_INFO, ROLES, type Position, type Role, type Rotation, type Team } from '@/lib/types'
+import { ROLE_INFO, ROLES, type PositionAssignments, type Position, type Role, type RosterPlayer, type Rotation, type Team } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { useDisplayPrefsStore } from '@/store/useDisplayPrefsStore'
 import { useTeamStore } from '@/store/useTeamStore'
@@ -299,6 +307,24 @@ export default function RebuildPrototypeLabPage() {
     return draftRoleNames[role].trim() ? count + 1 : count
   }, 0)
   const hasMeaningfulDraftContent = filledRoleCount > 0 || draftTeamName.trim() !== '' && draftTeamName.trim() !== 'New Team'
+  const hasPrototypeDrafts = prototypeTeamDrafts.length > 0
+  const hasActivatedPrototypeTeam = hasPrototypeDrafts || hasMeaningfulDraftContent
+  const prototypeActiveTeam = useMemo<{ roster: RosterPlayer[]; position_assignments: PositionAssignments } | null>(() => {
+    if (!hasActivatedPrototypeTeam) return null
+    const roster: RosterPlayer[] = []
+    const assignments: PositionAssignments = {}
+    for (const role of TEAM_FORM_ROLE_ORDER) {
+      if (role === 'L' && !draftTeamHasLibero) continue
+      const name = draftRoleNames[role].trim()
+      if (!name) continue
+      const id = `proto-${role}`
+      roster.push({ id, name })
+      assignments[role] = id
+    }
+    return { roster, position_assignments: assignments }
+  }, [hasActivatedPrototypeTeam, draftRoleNames, draftTeamHasLibero])
+  const courtRoster = prototypeActiveTeam?.roster ?? currentTeam?.roster ?? []
+  const courtAssignments = prototypeActiveTeam?.position_assignments ?? currentTeam?.position_assignments ?? {}
   const prototypeTeamOptions = useMemo(() => {
     const savedTeam = currentTeam
       ? [
@@ -613,49 +639,45 @@ const topMenuSurfaceShadow = isTopMenuExpanded
 
   const teamSetupTabContent = (
     <div className="space-y-3">
-      {hasAnySavedTeamOptions ? (
-        <div className="space-y-2 rounded-[18px] border border-border/60 bg-card/55 p-2">
-          <div className="flex items-center justify-between gap-3 px-1">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Start From</div>
-            <button
-              type="button"
-              className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground transition hover:text-foreground"
-              onClick={handleStartFreshTeam}
+      {hasPrototypeDrafts ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              className="h-11 w-full justify-between rounded-[14px] border-border/60 bg-background/80 px-3 text-sm font-semibold"
             >
-              Start Fresh
-            </button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {prototypeTeamOptions.map((team) => {
-              const isSelected = team.id === selectedPrototypeTeamId
-
-              return (
-                <motion.button
-                  key={team.id}
-                  type="button"
-                  whileTap={prefersReducedMotion ? undefined : { scale: 0.99 }}
-                  animate={{ y: isSelected ? topTabLift : 0 }}
-                  transition={topTabTransition}
-                  className="rounded-full border px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.08em]"
-                  style={{
-                    background: isSelected
-                      ? surfaceTheme.mode === 'dark'
-                        ? 'linear-gradient(180deg, oklch(0.29 0.018 250 / 0.95) 0%, oklch(0.21 0.018 250 / 0.98) 100%)'
-                        : 'linear-gradient(180deg, oklch(0.985 0.01 95 / 0.98) 0%, oklch(0.94 0.012 95 / 0.98) 100%)'
-                      : 'color-mix(in oklch, white 34%, transparent)',
-                    borderColor: isSelected ? 'color-mix(in oklch, currentColor 24%, transparent)' : undefined,
-                    boxShadow: isSelected ? '0 10px 20px rgba(0,0,0,0.08)' : 'none',
-                  }}
-                  onClick={() => {
-                    setSelectedPrototypeTeamId(team.id)
-                  }}
-                >
-                  {team.name}
-                </motion.button>
-              )
-            })}
-          </div>
-        </div>
+              <span className="flex items-center gap-2 truncate">
+                <span className="truncate">
+                  {selectedPrototypeTeam?.name ?? 'Select team'}
+                </span>
+                {hasActivatedPrototypeTeam ? (
+                  <span
+                    className="rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em] text-white"
+                    style={{ backgroundColor: '#22c55e' }}
+                  >
+                    Active
+                  </span>
+                ) : null}
+              </span>
+              <ChevronDown className="h-4 w-4 shrink-0 opacity-60" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="min-w-[var(--radix-dropdown-menu-trigger-width)]">
+            {prototypeTeamDrafts.map((team) => (
+              <DropdownMenuItem
+                key={team.id}
+                className={cn(team.id === selectedPrototypeTeamId && 'bg-accent')}
+                onClick={() => setSelectedPrototypeTeamId(team.id)}
+              >
+                {team.name || 'Untitled team'}
+              </DropdownMenuItem>
+            ))}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleStartFreshTeam}>
+              + New Team
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       ) : null}
 
       <input
@@ -804,7 +826,16 @@ const topMenuSurfaceShadow = isTopMenuExpanded
                   }}
                   onClick={() => handleTopTabToggle(tab.id)}
                 >
-                  {tab.label}
+                  <span className="inline-flex items-center gap-1.5">
+                    {tab.label}
+                    {tab.id === 'team' && hasActivatedPrototypeTeam ? (
+                      <span
+                        aria-hidden="true"
+                        className="inline-block h-1.5 w-1.5 rounded-full"
+                        style={{ backgroundColor: '#22c55e' }}
+                      />
+                    ) : null}
+                  </span>
                 </motion.button>
               )
             })}
@@ -964,8 +995,8 @@ const topMenuSurfaceShadow = isTopMenuExpanded
               hideAwayTeam={hideAwayTeam}
               awayTeamHidePercent={awayTeamHidePercent}
               rotation={currentRotation}
-              roster={currentTeam?.roster || []}
-              assignments={currentTeam?.position_assignments || {}}
+              roster={courtRoster}
+              assignments={courtAssignments}
               onPositionChange={
                 isEditingAllowed
                   ? (role, position) => {
@@ -1016,8 +1047,8 @@ const topMenuSurfaceShadow = isTopMenuExpanded
                   : undefined
               }
               showPosition={showPosition}
-              showPlayer={showPlayer}
-              showNumber={showNumber}
+              showPlayer={hasActivatedPrototypeTeam ? true : showPlayer}
+              showNumber={hasActivatedPrototypeTeam ? false : showNumber}
               circleTokens={circleTokens}
               legalityViolations={violations}
               showLibero={showLibero}
