@@ -351,8 +351,17 @@ export default function RebuildPrototypeLabPage() {
   }, [selectedPrototypeTeam])
 
   const handleTopTabToggle = useCallback((tab: TopMenuTab) => {
-    setActiveTopMenuTab((prev) => (prev === tab ? null : tab))
-  }, [])
+    setActiveTopMenuTab((prev) => {
+      const next = prev === tab ? null : tab
+      if (next === 'team' && !hasAnySavedTeamOptions) {
+        requestAnimationFrame(() => {
+          teamNameInputRef.current?.focus({ preventScroll: true })
+          teamNameInputRef.current?.select()
+        })
+      }
+      return next
+    })
+  }, [hasAnySavedTeamOptions])
 
   const handleStartFreshTeam = useCallback(() => {
     setSelectedPrototypeTeamId(null)
@@ -468,17 +477,6 @@ export default function RebuildPrototypeLabPage() {
     hasMeaningfulDraftContent,
     isTeamDraftDirty,
   ])
-
-  useEffect(() => {
-    if (activeTopMenuTab !== 'team' || hasAnySavedTeamOptions) {
-      return
-    }
-
-    requestAnimationFrame(() => {
-      teamNameInputRef.current?.focus({ preventScroll: true })
-      teamNameInputRef.current?.select()
-    })
-  }, [activeTopMenuTab, hasAnySavedTeamOptions])
 
   const prototypeControlPanel = (
     <PrototypeControlPanel
@@ -880,16 +878,17 @@ const topMenuSurfaceShadow = isTopMenuExpanded
                   style={{
                     width: '200%',
                     gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
+                    willChange: 'transform',
                   }}
                 >
                   <div
-                    className="min-h-0 min-w-0 overflow-y-auto"
+                    className="min-h-0 min-w-0 overflow-y-auto scrollbar-hide"
                     style={{ padding: topMenuPadding }}
                   >
                     {settingsTabContent}
                   </div>
                   <div
-                    className="min-h-0 min-w-0 overflow-y-auto"
+                    className="min-h-0 min-w-0 overflow-y-auto scrollbar-hide"
                     style={{ padding: topMenuPadding }}
                   >
                     {teamSetupTabContent}
