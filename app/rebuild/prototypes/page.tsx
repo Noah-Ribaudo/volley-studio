@@ -363,7 +363,7 @@ export default function RebuildPrototypeLabPage() {
     setIsTeamDraftDirty(false)
     setDraftSaveState('idle')
     requestAnimationFrame(() => {
-      teamNameInputRef.current?.focus()
+      teamNameInputRef.current?.focus({ preventScroll: true })
       teamNameInputRef.current?.select()
     })
   }, [currentTeam])
@@ -381,7 +381,7 @@ export default function RebuildPrototypeLabPage() {
     if (event.key !== 'Enter') return
     event.preventDefault()
     if (index === TEAM_FORM_ROLE_ORDER.length - 1) return
-    teamFieldRefs.current[index + 1]?.focus()
+    teamFieldRefs.current[index + 1]?.focus({ preventScroll: true })
     teamFieldRefs.current[index + 1]?.select()
   }, [])
 
@@ -475,7 +475,7 @@ export default function RebuildPrototypeLabPage() {
     }
 
     requestAnimationFrame(() => {
-      teamNameInputRef.current?.focus()
+      teamNameInputRef.current?.focus({ preventScroll: true })
       teamNameInputRef.current?.select()
     })
   }, [activeTopMenuTab, hasAnySavedTeamOptions])
@@ -801,8 +801,8 @@ const topMenuSurfaceShadow = isTopMenuExpanded
         }}
       >
         <div
-          className="flex h-full flex-col overflow-hidden rounded-[18px]"
-          style={{ gap: tactileTuning.topMenu.tabGap, padding: `${topMenuPadding / 2}px` }}
+          className="flex h-full flex-col rounded-[18px]"
+          style={{ gap: tactileTuning.topMenu.tabGap, padding: `${topMenuPadding / 2}px`, overflow: 'clip' }}
         >
           <div className="rounded-[18px] border border-border/55 bg-card/40 p-1">
             <div className="grid grid-cols-2 gap-0">
@@ -867,8 +867,8 @@ const topMenuSurfaceShadow = isTopMenuExpanded
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: prefersReducedMotion ? 0 : -6 }}
                 transition={topMenuTransition}
-                className="min-h-0 flex-1 overflow-y-auto rounded-[18px] border border-border/50 bg-card/55"
-                style={{ padding: topMenuPadding, overflowX: 'clip' }}
+                className="min-h-0 flex-1 rounded-[18px] border border-border/50 bg-card/55"
+                style={{ overflow: 'clip' }}
               >
                 <motion.div
                   initial={false}
@@ -876,17 +876,23 @@ const topMenuSurfaceShadow = isTopMenuExpanded
                     x: activeTopMenuTab === 'team' ? '-50%' : '0%',
                   }}
                   transition={topMenuTransition}
-                  className="grid h-full min-h-0"
+                  className="grid h-full"
                   style={{
                     width: '200%',
                     gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
                   }}
                 >
-                  <div className="min-h-0 min-w-0">
-                    <div className="min-h-0 h-full min-w-0">{settingsTabContent}</div>
+                  <div
+                    className="min-h-0 min-w-0 overflow-y-auto"
+                    style={{ padding: topMenuPadding }}
+                  >
+                    {settingsTabContent}
                   </div>
-                  <div className="min-h-0 min-w-0">
-                    <div className="min-h-0 h-full min-w-0">{teamSetupTabContent}</div>
+                  <div
+                    className="min-h-0 min-w-0 overflow-y-auto"
+                    style={{ padding: topMenuPadding }}
+                  >
+                    {teamSetupTabContent}
                   </div>
                 </motion.div>
               </motion.div>
