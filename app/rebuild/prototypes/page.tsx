@@ -867,10 +867,22 @@ const topMenuSurfaceShadow = isTopMenuExpanded
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: prefersReducedMotion ? 0 : -6 }}
                 transition={topMenuTransition}
-                className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto rounded-[18px] border border-border/50 bg-card/55"
-                style={{ padding: topMenuPadding }}
+                className="min-h-0 flex-1 rounded-[18px] border border-border/50 bg-card/55 relative overflow-y-auto"
+                style={{ padding: topMenuPadding, overflowX: 'clip' }}
               >
-                {activeTopMenuTab === 'settings' ? settingsTabContent : teamSetupTabContent}
+                <AnimatePresence initial={false} mode="popLayout" custom={activeTopMenuTab}>
+                  <motion.div
+                    key={activeTopMenuTab}
+                    custom={activeTopMenuTab}
+                    initial={(tab) => ({ x: prefersReducedMotion ? 0 : (tab === 'team' ? '110%' : '-110%') })}
+                    animate={{ x: '0%' }}
+                    exit={(tab) => ({ x: prefersReducedMotion ? 0 : (tab === 'team' ? '-110%' : '110%') })}
+                    transition={topMenuTransition}
+                    className="w-full"
+                  >
+                    {activeTopMenuTab === 'settings' ? settingsTabContent : teamSetupTabContent}
+                  </motion.div>
+                </AnimatePresence>
               </motion.div>
             ) : null}
           </AnimatePresence>
