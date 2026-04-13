@@ -96,10 +96,10 @@ export default function RebuildPrototypeLabPage() {
   const [draftTeamHasLibero, setDraftTeamHasLibero] = useState(true)
   const [draftRoleNames, setDraftRoleNames] = useState<Record<Role, string>>(() => createEmptyRoleNames())
   const [selectedPrototypeTeamId, setSelectedPrototypeTeamId] = useState<string | null>(null)
+  const [pendingLoadTeamId, setPendingLoadTeamId] = useState<string | 'new' | null>(null)
   const [isKeyboardSimOpen, setIsKeyboardSimOpen] = useState(false)
   const [activeDraftId, setActiveDraftId] = useState<string | null>(null)
   const [isTeamDraftDirty, setIsTeamDraftDirty] = useState(false)
-  const [draftSaveState, setDraftSaveState] = useState<'idle' | 'saving' | 'saved'>('idle')
   const [tactileTuning, setTactileTuning] = useState<TactileTuning>(DEFAULT_TACTILE_TUNING)
   const tactileCssVariables = useMemo(() => toTactileCssVariables(tactileTuning), [tactileTuning])
   const playDurationMs = tactileTuning.c4Literal.connectorMotion.playDurationMs
@@ -375,8 +375,15 @@ export default function RebuildPrototypeLabPage() {
     setDraftRoleNames(selectedPrototypeTeam.roleNames)
     setActiveDraftId(selectedPrototypeTeam.kind === 'draft' ? selectedPrototypeTeam.id : null)
     setIsTeamDraftDirty(false)
-    setDraftSaveState(selectedPrototypeTeam.kind === 'draft' ? 'saved' : 'idle')
   }, [selectedPrototypeTeam])
+
+  // Drop the pending selection if it points at the team we just loaded (so the
+  // dropdown doesn't show a stale "switch to X" label after X is already active).
+  useEffect(() => {
+    if (pendingLoadTeamId && pendingLoadTeamId !== 'new' && pendingLoadTeamId === activeDraftId) {
+      setPendingLoadTeamId(null)
+    }
+  }, [activeDraftId, pendingLoadTeamId])
 
   const handleTopTabToggle = useCallback((tab: TopMenuTab) => {
     setActiveTopMenuTab((prev) => {
@@ -398,16 +405,24 @@ export default function RebuildPrototypeLabPage() {
     setDraftRoleNames(createEmptyRoleNames())
     setActiveDraftId(null)
     setIsTeamDraftDirty(false)
-    setDraftSaveState('idle')
     requestAnimationFrame(() => {
       teamNameInputRef.current?.focus({ preventScroll: true })
       teamNameInputRef.current?.select()
     })
   }, [currentTeam])
 
+  const handleLoadSelectedTeam = useCallback(() => {
+    if (!pendingLoadTeamId) return
+    if (pendingLoadTeamId === 'new') {
+      handleStartFreshTeam()
+    } else {
+      setSelectedPrototypeTeamId(pendingLoadTeamId)
+    }
+    setPendingLoadTeamId(null)
+  }, [pendingLoadTeamId, handleStartFreshTeam])
+
   const handleDraftRoleNameChange = useCallback((role: Role, value: string) => {
     setIsTeamDraftDirty(true)
-    setDraftSaveState('saving')
     setDraftRoleNames((prev) => ({
       ...prev,
       [role]: value,
@@ -422,44 +437,10 @@ export default function RebuildPrototypeLabPage() {
     teamFieldRefs.current[index + 1]?.select()
   }, [])
 
-  const handleCreateDraftTeam = useCallback(() => {
-    const trimmedName = draftTeamName.trim()
-    if (!trimmedName) return
-    const rosterCount = TEAM_FORM_ROLE_ORDER.reduce((count, role) => {
-      return draftRoleNames[role].trim() ? count + 1 : count
-    }, 0)
-    const nextId = activeDraftId ?? `draft-${crypto.randomUUID()}`
-
-    const nextDraft: PrototypeTeamDraft = {
-      id: nextId,
-      name: trimmedName,
-      hasLibero: draftTeamHasLibero,
-      rosterCount,
-      roleNames: draftRoleNames,
-    }
-
-    setPrototypeTeamDrafts((prev) => {
-      const existingIndex = prev.findIndex((team) => team.id === nextDraft.id)
-      if (existingIndex === -1) {
-        return [nextDraft, ...prev]
-      }
-
-      const next = [...prev]
-      next[existingIndex] = nextDraft
-      return next
-    })
-    setSelectedPrototypeTeamId(nextDraft.id)
-    setActiveDraftId(nextDraft.id)
-    setIsTeamDraftDirty(false)
-    setDraftSaveState('saved')
-  }, [activeDraftId, draftRoleNames, draftTeamHasLibero, draftTeamName])
-
   useEffect(() => {
     if (!isTeamDraftDirty || !hasMeaningfulDraftContent) {
       return
     }
-
-    setDraftSaveState('saving')
 
     const timeoutId = window.setTimeout(() => {
       const trimmedName = draftTeamName.trim() || 'New Team'
@@ -491,7 +472,6 @@ export default function RebuildPrototypeLabPage() {
       setActiveDraftId(nextDraft.id)
       setSelectedPrototypeTeamId(nextDraft.id)
       setIsTeamDraftDirty(false)
-      setDraftSaveState('saved')
     }, 220)
 
     return () => {
@@ -641,53 +621,11 @@ const topMenuSurfaceShadow = isTopMenuExpanded
 
   const teamSetupTabContent = (
     <div className="space-y-3">
-      {hasPrototypeDrafts ? (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              className="h-11 w-full justify-between rounded-[14px] border-border/60 bg-background/80 px-3 text-sm font-semibold"
-            >
-              <span className="flex items-center gap-2 truncate">
-                <span className="truncate">
-                  {selectedPrototypeTeam?.name ?? 'Select team'}
-                </span>
-                {hasActivatedPrototypeTeam ? (
-                  <span
-                    className="rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em] text-white"
-                    style={{ backgroundColor: '#22c55e' }}
-                  >
-                    Active
-                  </span>
-                ) : null}
-              </span>
-              <ChevronDown className="h-4 w-4 shrink-0 opacity-60" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="min-w-[var(--radix-dropdown-menu-trigger-width)]">
-            {prototypeTeamDrafts.map((team) => (
-              <DropdownMenuItem
-                key={team.id}
-                className={cn(team.id === selectedPrototypeTeamId && 'bg-accent')}
-                onClick={() => setSelectedPrototypeTeamId(team.id)}
-              >
-                {team.name || 'Untitled team'}
-              </DropdownMenuItem>
-            ))}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleStartFreshTeam}>
-              + New Team
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ) : null}
-
       <input
         ref={teamNameInputRef}
         value={draftTeamName}
         onChange={(event) => {
           setIsTeamDraftDirty(true)
-          setDraftSaveState('saving')
           setDraftTeamName(event.target.value)
         }}
         placeholder="Team name"
@@ -719,7 +657,6 @@ const topMenuSurfaceShadow = isTopMenuExpanded
             type="button"
             onClick={() => {
               setIsTeamDraftDirty(true)
-              setDraftSaveState('saving')
               setDraftTeamHasLibero((prev) => !prev)
             }}
             className="w-10 shrink-0 text-left text-[11px] font-semibold uppercase tracking-[0.08em] transition-opacity"
@@ -744,19 +681,50 @@ const topMenuSurfaceShadow = isTopMenuExpanded
         </div>
       </div>
 
-      <div className="h-16" />
-
-      <div className="sticky bottom-0 z-10 -mx-1 mt-2 bg-[linear-gradient(180deg,transparent_0%,rgba(10,14,20,0.08)_18%,rgba(10,14,20,0.14)_100%)] px-1 pb-1 pt-4">
-        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)] gap-2">
-          <div aria-hidden="true" />
-          <Button
-            type="button"
-            className="h-11 rounded-[16px] text-[11px] uppercase tracking-[0.1em]"
-            onClick={handleCreateDraftTeam}
-          >
-            {draftSaveState === 'saving' ? 'Saving Draft' : draftSaveState === 'saved' ? 'Draft Saved' : 'Save Draft'}
-          </Button>
-        </div>
+      <div className="flex h-11 w-full items-stretch overflow-hidden rounded-[14px] border border-border/60 bg-background/60">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="flex min-w-0 flex-1 items-center justify-between gap-1.5 px-3 text-left text-[12px] font-medium outline-none transition hover:bg-accent/60 focus-visible:bg-accent/60"
+            >
+              <span className="truncate">
+                {pendingLoadTeamId === null
+                  ? 'Select your team'
+                  : pendingLoadTeamId === 'new'
+                    ? 'New Team'
+                    : prototypeTeamDrafts.find((t) => t.id === pendingLoadTeamId)?.name || 'Untitled team'}
+              </span>
+              <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-60" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="min-w-[var(--radix-dropdown-menu-trigger-width)]">
+            <DropdownMenuItem onClick={() => setPendingLoadTeamId('new')}>
+              + New Team
+            </DropdownMenuItem>
+            {prototypeTeamDrafts.filter((t) => t.id !== activeDraftId).length > 0 ? <DropdownMenuSeparator /> : null}
+            {prototypeTeamDrafts
+              .filter((t) => t.id !== activeDraftId)
+              .map((team) => (
+                <DropdownMenuItem
+                  key={team.id}
+                  onClick={() => setPendingLoadTeamId(team.id)}
+                >
+                  {team.name || 'Untitled team'}
+                </DropdownMenuItem>
+              ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <div aria-hidden="true" className="w-px bg-border/60" />
+        <Button
+          type="button"
+          variant="ghost"
+          disabled={pendingLoadTeamId === null}
+          onClick={handleLoadSelectedTeam}
+          className="h-full shrink-0 rounded-none px-3 text-[10px] font-semibold uppercase tracking-[0.08em]"
+        >
+          Load
+        </Button>
       </div>
     </div>
   )
