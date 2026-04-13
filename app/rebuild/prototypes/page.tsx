@@ -129,9 +129,14 @@ export default function RebuildPrototypeLabPage() {
     resetToBaseline,
   } = usePrototypeLabController(playDurationMs)
 
+  // The phase the court + canvas should reflect RIGHT NOW. During a phase
+  // travel we point it at the target so canvas tokens start animating at the
+  // same instant the sliding rail does, instead of waiting for the rail's
+  // setTimeout commit.
+  const controlCorePhase = isPhaseTraveling ? targetCorePhase : currentCorePhase
   const displayCurrentCorePhase = toDisplayCorePhase(currentCorePhase)
   const displayTargetCorePhase = toDisplayCorePhase(targetCorePhase)
-  const rallyPhase = toRallyPhase(displayCurrentCorePhase)
+  const rallyPhase = toRallyPhase(toDisplayCorePhase(controlCorePhase))
   const rotationPhaseKey = createRotationPhaseKey(currentRotation, rallyPhase)
 
   const localPositions = useWhiteboardStore((state) => state.localPositions)
@@ -181,41 +186,41 @@ export default function RebuildPrototypeLabPage() {
   const hasFirstAttackTargets = prototypeCourtState.hasFirstAttackTargets(currentRotation)
 
   const positions = useMemo(
-    () => prototypeCourtState.getPositions(currentRotation, currentCorePhase),
-    [currentCorePhase, currentRotation, prototypeCourtState]
+    () => prototypeCourtState.getPositions(currentRotation, controlCorePhase),
+    [controlCorePhase, currentRotation, prototypeCourtState]
   )
 
   const currentArrows = useMemo(
-    () => prototypeCourtState.getDerivedArrows(currentRotation, currentCorePhase),
-    [currentCorePhase, currentRotation, prototypeCourtState]
+    () => prototypeCourtState.getDerivedArrows(currentRotation, controlCorePhase),
+    [controlCorePhase, currentRotation, prototypeCourtState]
   )
   const currentArrowLabels = useMemo(
-    () => prototypeCourtState.getArrowEndpointLabels(currentRotation, currentCorePhase),
-    [currentCorePhase, currentRotation, prototypeCourtState]
+    () => prototypeCourtState.getArrowEndpointLabels(currentRotation, controlCorePhase),
+    [controlCorePhase, currentRotation, prototypeCourtState]
   )
   const currentSecondaryArrows = useMemo(
-    () => prototypeCourtState.getSecondaryDerivedArrows(currentRotation, currentCorePhase),
-    [currentCorePhase, currentRotation, prototypeCourtState]
+    () => prototypeCourtState.getSecondaryDerivedArrows(currentRotation, controlCorePhase),
+    [controlCorePhase, currentRotation, prototypeCourtState]
   )
   const currentSecondaryArrowLabels = useMemo(
-    () => prototypeCourtState.getSecondaryArrowEndpointLabels(currentRotation, currentCorePhase),
-    [currentCorePhase, currentRotation, prototypeCourtState]
+    () => prototypeCourtState.getSecondaryArrowEndpointLabels(currentRotation, controlCorePhase),
+    [controlCorePhase, currentRotation, prototypeCourtState]
   )
   const currentSecondaryArrowSources = useMemo(
-    () => (currentCorePhase === 'RECEIVE' ? currentArrows : {}),
-    [currentArrows, currentCorePhase]
+    () => (controlCorePhase === 'RECEIVE' ? currentArrows : {}),
+    [currentArrows, controlCorePhase]
   )
 
   const currentArrowCurves = useMemo(
-    () => prototypeCourtState.getArrowCurves(currentRotation, currentCorePhase),
-    [currentCorePhase, currentRotation, prototypeCourtState]
+    () => prototypeCourtState.getArrowCurves(currentRotation, controlCorePhase),
+    [controlCorePhase, currentRotation, prototypeCourtState]
   )
   const currentSecondaryArrowCurves = useMemo(
-    () => prototypeCourtState.getSecondaryArrowCurves(currentRotation, currentCorePhase),
-    [currentCorePhase, currentRotation, prototypeCourtState]
+    () => prototypeCourtState.getSecondaryArrowCurves(currentRotation, controlCorePhase),
+    [controlCorePhase, currentRotation, prototypeCourtState]
   )
   const currentStatusFlags = localStatusFlags[rotationPhaseKey] || {}
-  const currentTagFlags = currentCorePhase === 'FIRST_ATTACK' ? {} : getCurrentTags(currentRotation, rallyPhase, localTagFlags)
+  const currentTagFlags = controlCorePhase === 'FIRST_ATTACK' ? {} : getCurrentTags(currentRotation, rallyPhase, localTagFlags)
 
   const violations = useMemo(() => {
     if (rallyPhase !== 'PRE_SERVE' && rallyPhase !== 'SERVE_RECEIVE') {
@@ -259,9 +264,6 @@ export default function RebuildPrototypeLabPage() {
   }, [handleLoadDemoSeeds])
 
   const isEditingAllowed = !isPreviewingMovement
-  const controlCorePhase = isPhaseTraveling
-    ? targetCorePhase
-    : currentCorePhase
   const displayNextByPlay = toDisplayCorePhase(getNextByPlay(controlCorePhase, { hasFirstAttack: hasFirstAttackTargets }))
   const nextByPlay = getNextByPlay(controlCorePhase, { hasFirstAttack: hasFirstAttackTargets })
   const canPlayAdvance = canAdvanceByPlay(controlCorePhase, { hasFirstAttack: hasFirstAttackTargets })
@@ -1052,8 +1054,8 @@ const topMenuSurfaceShadow = isTopMenuExpanded
               circleTokens={circleTokens}
               legalityViolations={violations}
               showLibero={showLibero}
-              currentPhase={currentCorePhase === 'FIRST_ATTACK' ? 'ATTACK_PHASE' : rallyPhase}
-              attackBallPosition={currentCorePhase === 'FIRST_ATTACK' ? null : currentAttackBallPosition}
+              currentPhase={controlCorePhase === 'FIRST_ATTACK' ? 'ATTACK_PHASE' : rallyPhase}
+              attackBallPosition={controlCorePhase === 'FIRST_ATTACK' ? null : currentAttackBallPosition}
               onAttackBallChange={
                 isEditingAllowed && currentCorePhase !== 'FIRST_ATTACK'
                   ? (position) => {
@@ -1066,7 +1068,7 @@ const topMenuSurfaceShadow = isTopMenuExpanded
                     }
                   : undefined
               }
-              statusFlags={currentCorePhase === 'FIRST_ATTACK' ? {} : currentStatusFlags}
+              statusFlags={controlCorePhase === 'FIRST_ATTACK' ? {} : currentStatusFlags}
               onStatusToggle={
                 isEditingAllowed && currentCorePhase !== 'FIRST_ATTACK'
                   ? (role, status) => {
